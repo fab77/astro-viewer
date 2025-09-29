@@ -1,0 +1,273 @@
+// HiPSShaderProgram.ts
+import global from '../Global.js'
+import ShaderManager from './ShaderManager.js'
+import { colorMap } from '../model/hips/ColorMap.js'
+
+type GL = WebGL2RenderingContext;
+
+type UniformNames = {
+  sampler: string
+  factor: string
+  m_perspective: string
+  m_model: string
+  m_view: string
+  colormapIdx: string
+  colormap_red: string
+  colormap_green: string
+  colormap_blue: string
+}
+
+type AttributeNames = {
+  vertex_pos: string
+  text_coords: string
+}
+
+type Locations = {
+  pMatrix: WebGLUniformLocation | null
+  mMatrix: WebGLUniformLocation | null
+  vMatrix: WebGLUniformLocation | null
+  sampler: WebGLUniformLocation | null
+  textureAlpha: WebGLUniformLocation | null
+  clorMapIdx: WebGLUniformLocation | null
+  vertexPositionAttribute: number
+  textureCoordAttribute: number
+}
+
+export default class HiPSShaderProgram {
+  private _shaderProgram: WebGLProgram | undefined
+  private _vertexShader!: WebGLShader
+  private _fragmentShader!: WebGLShader
+
+  private _UBO_colorMapBuffer: WebGLBuffer | null = null
+  private _UBO_colorMapVariableInfo: Record<
+    'r_palette' | 'g_palette' | 'b_palette',
+    { index: number; offset: number }
+  > = {
+      r_palette: { index: 0, offset: 0 },
+      g_palette: { index: 0, offset: 0 },
+      b_palette: { index: 0, offset: 0 }
+    }
+
+  readonly gl_uniforms: UniformNames
+  readonly gl_attributes: AttributeNames
+  readonly locations: Locations
+
+  constructor() {
+    this.gl_uniforms = {
+      sampler: 'uSampler0',
+      factor: 'uFactor0',
+      m_perspective: 'uPMatrix',
+      m_model: 'uMMatrix',
+      m_view: 'uVMatrix',
+      colormapIdx: 'cmapIdx',
+      colormap_red: 'r',
+      colormap_green: 'g',
+      colormap_blue: 'b'
+    }
+
+    this.gl_attributes = {
+      vertex_pos: 'aVertexPosition',
+      text_coords: 'aTextureCoord'
+    }
+
+    this.locations = {
+      pMatrix: null,
+      mMatrix: null,
+      vMatrix: null,
+      sampler: null,
+      textureAlpha: null,
+      clorMapIdx: null,
+      vertexPositionAttribute: -1,
+      textureCoordAttribute: -1
+    }
+  }
+
+  get shaderProgram(): WebGLProgram {
+    if (!this._shaderProgram) {
+      const gl = global.gl as GL
+      this._shaderProgram = gl.createProgram() as WebGLProgram
+      this.initShaders()
+    }
+    ; (global.gl as GL).useProgram(this._shaderProgram)
+    return this._shaderProgram
+  }
+
+  private initShaders(): void {
+    const gl = global.gl as GL
+
+    const fragmentShaderStr = ShaderManager.hipsNativeFS()
+    this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER) as WebGLShader
+    gl.shaderSource(this._fragmentShader, fragmentShaderStr)
+    gl.compileShader(this._fragmentShader)
+    if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+      alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error')
+      return
+    }
+
+    const vertexShaderStr = ShaderManager.hipsVS()
+    this._vertexShader = gl.createShader(gl.VERTEX_SHADER) as WebGLShader
+    gl.shaderSource(this._vertexShader, vertexShaderStr)
+    gl.compileShader(this._vertexShader)
+    if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+      alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error')
+      return
+    }
+
+    gl.attachShader(this._shaderProgram as WebGLProgram, this._vertexShader)
+    gl.attachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
+    gl.linkProgram(this._shaderProgram as WebGLProgram)
+
+    if (!gl.getProgramParameter(this._shaderProgram as WebGLProgram, gl.LINK_STATUS)) {
+      alert('Could not initialise shaders')
+    }
+  }
+
+  enableProgram(): void {
+    ; (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
+  }
+
+  setGrayscaleShader(): void {
+    const gl = global.gl as GL
+    gl.detachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
+    const fragmentShaderStr = ShaderManager.hipsGrayscaleFS()
+    this.changeFSShader(fragmentShaderStr)
+  }
+
+  setNativeShader(): void {
+    const gl = global.gl as GL
+    gl.detachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
+    const fragmentShaderStr = ShaderManager.hipsNativeFS()
+    this.changeFSShader(fragmentShaderStr)
+  }
+
+  setColorMapShader(): void {
+    const gl = global.gl as GL
+    gl.detachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
+    const fragmentShaderStr = ShaderManager.hipsColorMapFS()
+    this.changeFSShader(fragmentShaderStr)
+
+    // UBO discovery
+    const blockIndex = gl.getUniformBlockIndex(this._shaderProgram as WebGLProgram, 'colormap')
+    const blockSize = gl.getActiveUniformBlockParameter(
+      this._shaderProgram as WebGLProgram,
+      blockIndex,
+      gl.UNIFORM_BLOCK_DATA_SIZE
+    ) as number
+
+    const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'] as const
+    const uboVariableIndices = gl.getUniformIndices(
+      this._shaderProgram as WebGLProgram,
+      uboVariableNames as unknown as string[]
+    ) as number[]
+    const uboVariableOffsets = gl.getActiveUniforms(
+      this._shaderProgram as WebGLProgram,
+      uboVariableIndices,
+      gl.UNIFORM_OFFSET
+    ) as number[]
+
+    this._UBO_colorMapBuffer = gl.createBuffer()
+    gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer)
+
+    // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
+    const BYTES = 12288
+    gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW)
+    gl.bindBuffer(gl.UNIFORM_BUFFER, null)
+
+    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer)
+
+    uboVariableNames.forEach((name, index) => {
+      this._UBO_colorMapVariableInfo[name] = {
+        index: uboVariableIndices[index],
+        offset: uboVariableOffsets[index]
+      }
+    })
+  }
+
+  private changeFSShader(fragmentShaderStr: string): void {
+    const gl = global.gl as GL
+    this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER) as WebGLShader
+    gl.shaderSource(this._fragmentShader, fragmentShaderStr)
+    gl.compileShader(this._fragmentShader)
+    if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+      alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error')
+      return
+    }
+    gl.attachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
+    gl.linkProgram(this._shaderProgram as WebGLProgram)
+    if (!gl.getProgramParameter(this._shaderProgram as WebGLProgram, gl.LINK_STATUS)) {
+      alert('Could not initialise shaders')
+    }
+    gl.useProgram(this._shaderProgram as WebGLProgram)
+  }
+
+  enableShaders(
+    pMatrix: Float32Array,
+    vMatrix: Float32Array,
+    mMatrix: Float32Array,
+    colorMapIdx: number
+  ): void {
+    const gl = global.gl as GL
+    gl.useProgram(this._shaderProgram as WebGLProgram)
+
+    this.locations.pMatrix = gl.getUniformLocation(
+      this._shaderProgram as WebGLProgram,
+      this.gl_uniforms.m_perspective
+    )
+    this.locations.mMatrix = gl.getUniformLocation(
+      this._shaderProgram as WebGLProgram,
+      this.gl_uniforms.m_model
+    )
+    this.locations.vMatrix = gl.getUniformLocation(
+      this._shaderProgram as WebGLProgram,
+      this.gl_uniforms.m_view
+    )
+    this.locations.sampler = gl.getUniformLocation(
+      this._shaderProgram as WebGLProgram,
+      this.gl_uniforms.sampler
+    )
+    this.locations.textureAlpha = gl.getUniformLocation(
+      this._shaderProgram as WebGLProgram,
+      this.gl_uniforms.factor
+    )
+    this.locations.clorMapIdx = gl.getUniformLocation(
+      this._shaderProgram as WebGLProgram,
+      this.gl_uniforms.colormapIdx
+    )
+
+    this.locations.vertexPositionAttribute = gl.getAttribLocation(
+      this._shaderProgram as WebGLProgram,
+      this.gl_attributes.vertex_pos
+    )
+    this.locations.textureCoordAttribute = gl.getAttribLocation(
+      this._shaderProgram as WebGLProgram,
+      this.gl_attributes.text_coords
+    )
+
+    if (colorMapIdx >= 2) {
+      const index = gl.getUniformBlockIndex(this._shaderProgram as WebGLProgram, 'colormap')
+      gl.uniformBlockBinding(this._shaderProgram as WebGLProgram, index, 0)
+      gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer)
+
+      let currentColorMap: { r: Float32Array; g: Float32Array; b: Float32Array } | undefined
+      if (colorMapIdx === 2) currentColorMap = colorMap.PLANCK
+      else if (colorMapIdx === 3) currentColorMap = colorMap.CMB
+      else if (colorMapIdx === 4) currentColorMap = colorMap.RAINBOW
+      else if (colorMapIdx === 5) currentColorMap = colorMap.EOSB
+      else if (colorMapIdx === 6) currentColorMap = colorMap.CUBEHELIX
+
+      if (currentColorMap) {
+        // Offsets match std140 padded arrays (0, 4096, 8192)
+        gl.bufferSubData(gl.UNIFORM_BUFFER, 0, currentColorMap.r, 0)
+        gl.bufferSubData(gl.UNIFORM_BUFFER, 4096, currentColorMap.g, 0)
+        gl.bufferSubData(gl.UNIFORM_BUFFER, 8192, currentColorMap.b, 0)
+      }
+      gl.bindBuffer(gl.UNIFORM_BUFFER, null)
+    }
+
+    gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix)
+    gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix)
+    gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix)
+  }
+}
+
+export const hipsShaderProgram = new HiPSShaderProgram()
