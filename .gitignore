@@ -1,7 +1,1 @@
-node_modules
-.DS_Store
-.history/*
-.vscode/*
-*.tsbuildinfo
-*.bk
-workspace.code-workspace
+node_modules/
