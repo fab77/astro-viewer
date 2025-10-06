@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    
+    "moduleResolution": "NodeNext", // 'node16' or 'nodenext' for Node.js’ ECMAScript Module Support
+    "module": "NodeNext",
+    "target": "ES2022",  // Modern browsers support all ES6 features, so ES6 is a good choice. 
+    "esModuleInterop": true,
+    
+    "lib": ["es6", "dom"],
+    "outDir": "lib-esm",
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "strict": true,
+    
+    
+  },
+  "include": [
+    "src/**/**/*",
+  ],
+  "exclude": [
+    "node_modules",
+    "**/*.spec.ts"
+  ],
+  "compileOnSave": false,
+  "buildOnSave": false
+}

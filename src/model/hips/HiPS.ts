@@ -6,36 +6,26 @@
 import AbstractSkyEntity from '../AbstractSkyEntity.js'
 import { fovHelper } from './FoVHelper.js'
 import { newTileBuffer } from './TileBuffer.js'
-import ColorMaps, {ColorMapName, ColorMap}  from '../ColorMaps'
+import ColorMaps, { ColorMap } from '../ColorMaps.js'
 import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import AncestorTile from './AncestorTile.js'
 import { newVisibleTilesManager } from './VisibleTilesManager.js'
 import AllSky from './AllSky3.js'
 import healpixGridSingleton from '../grid/HealpixGridSingleton.js'
 import global from '../../Global.js'
+import HiPSDescriptor from './HiPSDescriptor.js'
+import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 
-export interface HipsDescriptorLike {
-  _isGalctic: boolean
-  _hipsFrame: string
-  _minOrder: number
-  _maxOrder: number
-  _hipsurl: string
-}
-
-
-type Mat4 = Float32Array
 
 class HiPS extends AbstractSkyEntity {
+  
   private _ancestorTiles: AncestorTile[]
   private _allSkyTile: AllSky | null
 
-  private _descriptor: HipsDescriptorLike
   private _format: string
   private _baseurl: string
   private _maxorder: number
   private _minorder: number
-
-  private _viewmatrix: Mat4 | undefined
 
   private _visibleorder = 3
   private _allSky = true
@@ -44,46 +34,34 @@ class HiPS extends AbstractSkyEntity {
   public colorMapIdx = 0
   public colorMap = ColorMaps['native']
 
-  // for compatibility with callers that expect these fields
-  public shaderProgram!: WebGLProgram
-
   // exposed read-only helpers
   get maxOrder(): number { return this._maxorder }
   get minOrder(): number { return this._minorder }
   get baseURL(): string { return this._baseurl }
   get format(): string { return this._format }
-  get isGalacticHips(): boolean { return this._descriptor._isGalctic }
 
   constructor(
     radius: number,
     position: [number, number, number],
     xrad: number,
     yrad: number,
-    name: string,
-    baseurl: string, // not used directly (we read from descriptor), kept for signature parity
-    format: string,
-    opacity: number, // not used here; keep for parity
-    isgalactic: boolean, // not used (derived from descriptor), keep for parity
-    descriptor: HipsDescriptorLike
+    descriptor: HiPSDescriptor
   ) {
-    super(radius, position, xrad, yrad, name, descriptor._isGalctic)
-    this.initGL((global as any).gl as WebGL2RenderingContext)
+    super(radius, position, xrad, yrad, descriptor.surveyName, descriptor.isGalactic)
+    super.initGL((global as any).gl as WebGL2RenderingContext)
 
     newTileBuffer.addHiPS(this)
 
     // DEBUG logs kept from JS (optional)
     // eslint-disable-next-line no-console
-    console.log('HiPS frame ' + descriptor._hipsFrame)
+    console.log('HiPS frame ' + descriptor.hipsFrame)
     // eslint-disable-next-line no-console
-    console.log('HiPS minOrder ' + descriptor._minOrder)
+    console.log('HiPS minOrder ' + descriptor.minOrder)
 
-    this._descriptor = descriptor
-    this._format = format
-    this._baseurl = descriptor._hipsurl
-    this._maxorder = descriptor._maxOrder
-    this._minorder = descriptor._minOrder
-
-    this._viewmatrix = undefined
+    this._format = descriptor.imgFormats[0]
+    this._baseurl = descriptor.url
+    this._maxorder = descriptor.maxOrder
+    this._minorder = descriptor.minOrder
 
     this.initShaders()
 
@@ -175,13 +153,19 @@ class HiPS extends AbstractSkyEntity {
     return this._visibleorder
   }
 
-  private refresh(_pMatrix: Mat4): void {
+  private refresh(): void {
     const fov = healpixGridSingleton.getMinFoV()
     this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder)
   }
 
-  draw(pMatrix: Mat4, vMatrix: Mat4, _cameraRotated: boolean): void {
-    this.refresh(pMatrix)
+  draw(): void {
+    
+    if (!global.camera || global.camera.getCameraMatrix() === undefined) return
+    this.refresh()
+    
+    const vMatrix = global.camera.getCameraMatrix() as Float32Array
+    const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
+    const mMatrix = this.getModelMatrix() as Float32Array
 
     if (this._allSky && this._allSkyTile) {
       if (this.isGalacticHips) {
@@ -190,7 +174,7 @@ class HiPS extends AbstractSkyEntity {
           newVisibleTilesManager.galAncestorsMap,
           pMatrix,
           vMatrix,
-          this.modelMatrix,
+          mMatrix,
           this.colorMapIdx
         )
       } else {
@@ -199,7 +183,7 @@ class HiPS extends AbstractSkyEntity {
           newVisibleTilesManager.ancestorsMap,
           pMatrix,
           vMatrix,
-          this.modelMatrix,
+          mMatrix,
           this.colorMapIdx
         )
       }
@@ -215,7 +199,7 @@ class HiPS extends AbstractSkyEntity {
       : newVisibleTilesManager.ancestorsMap
 
     this._ancestorTiles.forEach((ancestor) => {
-      ancestor.draw(order, map, pMatrix, vMatrix, this.modelMatrix, this.colorMapIdx)
+      ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx)
     })
   }
 }

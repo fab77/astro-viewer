@@ -1,0 +1,46 @@
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+import Point from '../model/Point.js';
+import { ReadonlyMat4 } from 'gl-matrix';
+import Camera from '../Camera.js';
+import HiPS from '../model/hips/HiPS.js';
+declare class FoVUtils {
+    /**
+     * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
+     * (Kept here for parity; this class doesn’t maintain those fields.)
+     */
+    getMinFoV(this: {
+        _fovY_deg: number;
+        _fovX_deg: number;
+    }): number;
+    /**
+     * Compute the FoV polygon as a list of Points (clockwise).
+     * Uses ray picking + frustum planes against a unit sphere.
+     */
+    static getFoVPolygon(_pMatrix: ReadonlyMat4 | null, camera: Camera, canvas: HTMLCanvasElement, model: HiPS): Point[];
+    /**
+     * Ray pick against 8 key screen positions (corners + midpoints).
+     * Returns Points in clockwise order starting from top-left.
+     */
+    static getScreenCornersIntersection(pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement): Point[];
+    /** Returns the center point (in J2000) of the current view as a `Point`. */
+    static getCenterJ2000(canvas: HTMLCanvasElement, pMatrix: ReadonlyMat4): Point;
+    /** Middle point on the unit sphere along the arc between two 3D points. */
+    static computeMiddlePoint(p1: Point, p2: Point): Point[];
+    /**
+     * Nearest intersection point between a frustum plane and the unit sphere,
+     * using the plane normal.
+     */
+    static getNearestSpherePoint(plane: number[]): Point[];
+    /**
+     * Intersections between a frustum plane and the unit sphere,
+     * computed via two perpendicular planes.
+     * Returns two points (first from `plane4Circle_1`, second from `plane4Circle_2`).
+     */
+    static getFrustumIntersectionWithSphere(_M: ReadonlyMat4, plane4Sphere: number[], plane4Circle_1: number[], plane4Circle_2: number[]): Point[];
+    /** Build ADQL string from an array of Points (ra,dec pairs). */
+    static getAstroFoVPolygon(points: Point[]): string;
+}
+export default FoVUtils;
+//# sourceMappingURL=FoVUtils.d.ts.map

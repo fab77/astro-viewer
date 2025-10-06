@@ -1,8 +1,8 @@
 'use strict';
 
 import { Healpix, Vec3, Pointing } from 'healpixjs';
-import global from '../Global';
-import Point from './Point';
+import global from '../Global.js';
+import Point from './Point.js';
 
 export interface SourceDetail {
   key: string;

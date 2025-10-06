@@ -3,15 +3,10 @@
  */
 
 import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
-import global from "../Global";
+import global from "../Global.js";
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
-type ProgramWithUniforms = WebGLProgram & {
-  mMatrixUniform: WebGLUniformLocation;
-  pMatrixUniform: WebGLUniformLocation;
-  vMatrixUniform: WebGLUniformLocation;
-};
 
 abstract class AbstractSkyEntity {
   // Public-ish properties used elsewhere in the app
@@ -32,7 +27,7 @@ abstract class AbstractSkyEntity {
   protected vertexTextureCoordBuffer: WebGLBuffer | null = null;
   protected vertexPositionBuffer: WebGLBuffer | null = null;
   protected vertexIndexBuffer: WebGLBuffer | null = null;
-  protected shaderProgram: ProgramWithUniforms | null = null;
+  protected shaderProgram: WebGLProgram | null = null;
 
   // Matrices
   protected T: mat4 = mat4.create();
@@ -74,7 +69,7 @@ abstract class AbstractSkyEntity {
     this.vertexTextureCoordBuffer = gl.createBuffer();
     this.vertexPositionBuffer = gl.createBuffer();
     this.vertexIndexBuffer = gl.createBuffer();
-    this.shaderProgram = gl.createProgram() as ProgramWithUniforms | null;
+    this.shaderProgram = gl.createProgram();
 
     // Reset object transforms
     this.T = mat4.create();
@@ -85,11 +80,6 @@ abstract class AbstractSkyEntity {
     // Initial pose
     this.translate(this.center);
     this.rotate(this.xRad, this.yRad);
-  }
-
-  setIsGalacticFrame(isGalacticHips: boolean): void {
-    this.isGalacticHips = isGalacticHips;
-    this.refreshModelMatrix();
   }
 
   translate(translation: ReadonlyVec3): void {
@@ -139,22 +129,6 @@ abstract class AbstractSkyEntity {
     return this.modelMatrix;
   }
 
-  /**
-   * Set standard MVP uniforms on the current program.
-   * Will use `global.gl` unless an explicit GL is provided.
-   */
-  setMatricesUniform(
-    projectionMatrix: ReadonlyMat4,
-    cameraMatrix: ReadonlyMat4,
-    gl: GL = (global.gl as GL)
-  ): void {
-    if (!gl || !this.shaderProgram) return;
-
-    gl.uniformMatrix4fv(this.shaderProgram.mMatrixUniform, false, this.modelMatrix);
-    gl.uniformMatrix4fv(this.shaderProgram.pMatrixUniform, false, projectionMatrix);
-    gl.uniformMatrix4fv(this.shaderProgram.vMatrixUniform, false, cameraMatrix);
-  }
-
   /** Children with hierarchical geometry (e.g., HiPS) can override this. */
   setGeometryNeedsToBeRefreshed(): void {
     (this as any).refreshGeometryOnFoVChanged = false;
@@ -195,17 +169,8 @@ abstract class AbstractSkyEntity {
 
   // ---------- Abstract hooks ----------
   
-  /** Create/populate all GL buffers. */
-  abstract initBuffers(pixels: number[], order: number): void;
-
-  /** Load/bind textures as needed. */
-  abstract initTextures(gl: GL): void;
-
-  /** Issue draw calls. */
   abstract draw(showHPXGrid: boolean): void;
 
-  /** Update geometry/material/etc. depending on FoV/pan/camera. */
-  abstract refreshModel(in_fov: number, in_pan: number, in_camera: unknown): void;
 }
 
 export default AbstractSkyEntity;

@@ -3,7 +3,7 @@
  */
 import { vec3, ReadonlyVec3 } from "gl-matrix";
 import { Vec3, Pointing, Healpix } from "healpixjs";
-import global from "../Global";
+import global from "../Global.js";
 import {
   cartesianToSpherical,
   sphericalToAstroDeg,
@@ -13,7 +13,7 @@ import {
   type AstroCoords,
   type HMS,
   type DMS,
-} from "./Utils";
+} from "./Utils.js";
 
 type XYZ = [number, number, number];
 

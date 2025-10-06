@@ -1,7 +1,6 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import webpack from 'webpack'
-import TerserPlugin from 'terser-webpack-plugin';
 import { createRequire } from "node:module"
 const require = createRequire(import.meta.url)
 const pkg = require('./package.json');
@@ -13,6 +12,7 @@ const PATHS = {
   entryPoint4Browser: path.resolve(__dirname, 'src/index.ts'),
   bundles: path.resolve(__dirname, 'dist'),
 }
+
 
 const ENTRY = path.resolve(__dirname, 'src/index.ts');
 const OUT = path.resolve(__dirname, 'dist');
@@ -41,24 +41,17 @@ const umdConfig = {
   ...common,
   target: 'web',
   entry: {
-    jsfitsio: ENTRY,           // <-- plain string
-    'jsfitsio.min': ENTRY,     // <-- plain string
+    astrocore: ENTRY,           // <-- plain string
+    'astrocore.min': ENTRY,     // <-- plain string
   },
   output: {
     path: OUT,
     filename: '[name].js',
-    library: 'jsfitsio',
+    library: 'astrocore',
     libraryTarget: 'umd',
     umdNamedDefine: true,
     globalObject: 'this',
   },
-  // Optional: only minify the *.min.js file
-  // Requires: npm i -D terser-webpack-plugin
-  // optimization: {
-  //   ...common.optimization,
-  //   minimize: true,
-  //   minimizer: [new TerserPlugin({ include: /\.min\.js$/ })],
-  // },
 };
 
 // CJS build
@@ -68,27 +61,26 @@ const cjsConfig = {
   entry: ENTRY,                  // <-- plain string
   output: {
     path: OUT,
-    filename: 'jsfitsio.cjs',
+    filename: 'astrocore.cjs',
     libraryTarget: 'commonjs2',
   },
   optimization: { splitChunks: false, runtimeChunk: false, minimize: false }
 };
 
-export default [umdConfig, cjsConfig];
 
 
-// var browserConfig = {
+// const browserConfig = {
+//   ...common,
 //   entry: {
-//     'jsfitsio': [PATHS.entryPoint4Browser],
-//     'jsfitsio.min': [PATHS.entryPoint4Browser]
+//     'astrocore': [PATHS.entryPoint4Browser],
+//     'astrocore.min': [PATHS.entryPoint4Browser]
 //   },
 //   target: 'web',
 //   externals: {},
 //   output: {
-//     chunkFilename: '[name].bundle.js?h=[chunkhash]',
 //     path: PATHS.bundles,
 //     libraryTarget: 'umd',
-//     library: 'jsfitsio',
+//     library: 'astrocore',
 //     umdNamedDefine: true
 //   },
 //   resolve: {
@@ -96,34 +88,46 @@ export default [umdConfig, cjsConfig];
 //     extensionAlias: {
 //       '.js': ['.ts', '.js'],
 //       '.mjs': ['.mts', '.mjs']
-//     },
-//     fallback: {
 //     }
 //   },
 //   devtool: 'source-map',
 //   plugins: [
+//     new MiniCssExtractPlugin({
+//       filename: '[name].css',
+//       chunkFilename: '[id].css',
+//     }),
+//     new webpack.ProvidePlugin({
+//       Buffer: ['buffer', 'Buffer'],
+//     }),
 //     new webpack.NormalModuleReplacementPlugin(
 //       /^node:/,
 //       (resource) => {
 //         resource.request = resource.request.replace(/^node:/, '');
 //       },
 //     ),
+//     new CopyPlugin({
+//       patterns: [
+//         { from: "src/media", to: "images" },
+//         { from: "src/css", to: "stylesheets" }
+//       ],
+//     }),
 //   ],
 //   module: {
+
 //     rules: [
 //       {
-//         test: /\.(ts|tsx)$/i,
-//         use: 'ts-loader',
-//         exclude: ["/node_modules/", "/src/getLocalFile.ts"],
+//         test: /\.css$/,
+//         use: ['style-loader', 'css-loader'],
+//       },
+//       {
+//         test: /\.(png|svg|jpg|jpeg|gif)$/i,
+//         type: 'asset/resource',
 //       },
 //     ],
 //   }
 // }
 
+export default [umdConfig, cjsConfig];
 
-
-// export default (env, argv) => {
-//   return [browserConfig];
-// };
 
 

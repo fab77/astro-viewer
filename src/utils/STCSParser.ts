@@ -1,9 +1,9 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import Point from "../model/Point";
-import CoordsType from "./CoordsType";
-import global from "../Global";
+import Point from "../model/Point.js";
+import CoordsType from "./CoordsType.js";
+import global from "../Global.js";
 
 export interface STCSParseResult {
   totpoints: number;
@@ -28,19 +28,24 @@ class STCSParser {
   }
 
   static cleanStcs(stcs: string): string {
-    const stcs2upper = stcs.toUpperCase();
-    const stcsParsed = stcs2upper
-      .replaceAll("'ICRS'", "")
-      .replaceAll("ICRS", "")
-      .replaceAll("J2000", "")
-      .replaceAll("UNION", "")
-      .replaceAll("TOPOCENTER", "")
-      .replaceAll("(", "")
-      .replaceAll(")", "")
-      .trim()
-      .replace(/  +/g, " ")
-      .toUpperCase();
-    return stcsParsed;
+    // Uppercase once
+    let s = stcs.toUpperCase();
+
+    // Remove tokens
+    s = s
+      .replace(/'ICRS'/g, '')
+      .replace(/\bICRS\b/g, '')
+      .replace(/\bJ2000\b/g, '')
+      .replace(/\bUNION\b/g, '')
+      .replace(/\bTOPOCENTER\b/g, '');
+
+    // Remove parentheses
+    s = s.replace(/[()]/g, '');
+
+    // Collapse extra spaces and trim
+    s = s.replace(/ {2,}/g, ' ').trim();
+
+    return s;
   }
 
   static parsePolygon(stcs: string): STCSParseResult {

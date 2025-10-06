@@ -24,7 +24,7 @@ class FoV {
   private _minFoV = 180
   public prevMinFoV = 180
 
-  private constructor() {
+  constructor() {
     
   }
 

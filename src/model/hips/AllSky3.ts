@@ -1,9 +1,9 @@
 'use strict'
 
-import { hipsShaderProgram } from '../../shader/HiPSShaderProgram'
-import global from '../../Global'
-import { newTileBuffer } from './TileBuffer'
-import HiPS from './HiPS'
+import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+import global from '../../Global.js'
+import { newTileBuffer } from './TileBuffer.js'
+import HiPS from './HiPS.js'
 
 
 export default class AllSky {

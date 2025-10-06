@@ -24,8 +24,7 @@ class AncestorTile {
 
   private _ready = false
   private _format: string
-  private _maxorder: number
-  private _minorder: number
+  
   private _isGalacticHips: boolean
 
   public opacity = 1.0
@@ -36,7 +35,6 @@ class AncestorTile {
   private _image!: HTMLImageElement
   private _texurl = ''
 
-  private _textureLoaded = false
 
   private vertexPosition!: Float32Array[]
   private vertexPositionBuffer!: WebGLBuffer[]
@@ -49,8 +47,7 @@ class AncestorTile {
 
     this._format = hips.format
     this._baseurl = hips.baseURL
-    this._maxorder = hips.maxOrder
-    this._minorder = hips.minOrder
+
     this._isGalacticHips = hips.isGalacticHips
 
     this._order = order
@@ -85,7 +82,6 @@ class AncestorTile {
     gl.bindTexture(gl.TEXTURE_2D, this._texture)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image)
 
-    this._textureLoaded = true
     this._ready = true
   }
 

@@ -1,23 +1,23 @@
 'use strict';
 
-import AbstractSkyEntity from '../AbstractSkyEntity';
-import global from '../../Global';
+import AbstractSkyEntity from '../AbstractSkyEntity.js';
+import global from '../../Global.js';
 
 import { mat4, vec4, ReadonlyMat4 } from 'gl-matrix';
 import { Healpix } from 'healpixjs';
 
-import { fovHelper } from '../hips/FoVHelper';
-import FoVUtils from '../../utils/FoVUtils';
-import FoV from '../FoV';
+import { fovHelper } from '../hips/FoVHelper.js';
+import FoVUtils from '../../utils/FoVUtils.js';
+import FoV from '../FoV.js';
 
-import CoordsType from '../../utils/CoordsType';
-import Point from '../Point';
+import CoordsType from '../../utils/CoordsType.js';
+import Point from '../Point.js';
 
-import GridShaderManager from '../../shader/GridShaderManager';
-import GeomUtils from '../../utils/GeomUtils';
-import { gridTextHelper } from './GridTextHelper';
-import { newVisibleTilesManager } from '../hips/VisibleTilesManager';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix';
+import GridShaderManager from '../../shader/GridShaderManager.js';
+import GeomUtils from '../../utils/GeomUtils.js';
+import { gridTextHelper } from './GridTextHelper.js';
+import { newVisibleTilesManager } from '../hips/VisibleTilesManager.js';
+import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -27,19 +27,8 @@ interface BoundVec {
   z: number;
 }
 
-interface VisibleTilesByOrder {
-  pixels: number[];
-  order: number;
-}
 
 class HealpixGridSingleton extends AbstractSkyEntity {
-
-  initTextures(gl: WebGLRenderingContext | WebGL2RenderingContext): void {
-    throw new Error('Method not implemented.');
-  }
-  refreshModel(in_fov: number, in_pan: number, in_camera: unknown): void {
-    throw new Error('Method not implemented.');
-  }
   
   static ELEM_SIZE = 3;
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -98,7 +87,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
     this._vertexCataloguePosition = new Float32Array(0);
 
-    this.fovObj = new FoV(this);
+    this.fovObj = new FoV();
   }
 
   refreshFoV(insideSphere: boolean) {
@@ -277,8 +266,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     let mvMatrix = mat4.create();
     mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
 
-    if (uMV) gl.uniformMatrix4fv(uMV, false, mvMatrix);
-    if (uP) gl.uniformMatrix4fv(uP, false, pMatrix);
+    if (uMV) gl.uniformMatrix4fv(uMV, false, mvMatrix as Float32Array);
+    if (uP) gl.uniformMatrix4fv(uP, false, pMatrix as Float32Array);
   }
 
   draw(showHPXGrid: boolean): void {
@@ -334,7 +323,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     mvpMatrix = mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
 
     // FIX: pass model & pMatrix to match FoVUtils TS signature
-    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this, pMatrix);
+    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, pMatrix);
 
     const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
 

@@ -2,13 +2,13 @@
  * @author Fabrizio Giordano (Fab)
  */
 import { vec3, mat4 } from "gl-matrix";
-import global from "./Global"; // keep your Global.ts exporting a default object
+import global from "./Global.js"; // keep your Global.ts exporting a default object
 import {
   astroDegToSpherical,
   cartesianToSpherical,
   sphericalToCartesian,
   type SphericalCoords,
-} from "./utils/Utils";
+} from "./utils/Utils.js";
 
 type Vec3Tuple = [number, number, number];
 

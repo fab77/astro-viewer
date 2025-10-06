@@ -10,9 +10,9 @@ import {
   sphericalToAstroDeg,
   astroDegToSpherical,
   type SphericalCoords,
-} from '../utils/Utils';
-import CoordsType from '../utils/CoordsType';
-import global from '../Global';
+} from '../utils/Utils.js';
+import CoordsType from '../utils/CoordsType.js';
+import global from '../Global.js';
 
 type CartesianOpts = { x: number; y: number; z: number };
 type AstroOpts = { raDeg: number; decDeg: number };

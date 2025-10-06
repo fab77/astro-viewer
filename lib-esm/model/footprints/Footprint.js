@@ -1,0 +1,105 @@
+'use strict';
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+import { Pointing, Healpix } from 'healpixjs';
+import { degToRad } from '../../utils/Utils.js';
+import GeomUtils from '../../utils/GeomUtils.js';
+import global from '../../Global.js';
+import STCSParser from '../../utils/STCSParser.js';
+// export interface ParsedSTCS {
+//   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
+//   totpoints: number;
+// }
+class Footprint {
+    _polygons = []; // array of polygons (-> array of points)
+    _convexPolygons = []; // convex polygons
+    _stcs; // STC-S string
+    _valid = false;
+    _details;
+    _totPoints = 0;
+    _totConvexPoints = 0;
+    _npix256;
+    _footprintsPointsOrder;
+    _selectionObj;
+    _identifier;
+    _center; // could be typed if you have a Point type
+    /**
+     * @param in_stcs STC-S representation of the footprint
+     * @param in_details optional metadata
+     * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
+     */
+    constructor(in_stcs, in_details = [], footprintsPointsOrder) {
+        if (in_stcs) {
+            this._stcs = in_stcs.toUpperCase();
+            this._details = in_details;
+            this._totPoints = 0;
+            this._totConvexPoints = 0;
+            this._footprintsPointsOrder = footprintsPointsOrder;
+            this.computePoints();
+            this.computeSelectionObject();
+            if (global.healpix4footprints) {
+                this._npix256 = this.computeNpix256();
+            }
+            this._valid = true;
+        }
+        else {
+            this._details = [];
+        }
+    }
+    computeSelectionObject() {
+        this._selectionObj = GeomUtils.computeSelectionObject(this._polygons);
+    }
+    /**
+     * Return array of HEALPix pixels covering the footprint
+     * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
+     */
+    computeNpix256() {
+        const healpix256 = new Healpix(global.nsideForSelection);
+        const points = [];
+        for (const poly of this._convexPolygons) {
+            for (const currPoint of poly) {
+                const phiTheta = currPoint.computeHealpixPhiTheta();
+                const phiRad = degToRad(phiTheta.phi);
+                const thetaRad = degToRad(phiTheta.theta);
+                points.push(new Pointing(null, false, thetaRad, phiRad));
+            }
+        }
+        const rangeSet = healpix256.queryPolygonInclusive(points, 32);
+        return Array.from(rangeSet.r);
+    }
+    computePoints() {
+        const res = STCSParser.parseSTCS(this._stcs);
+        this._polygons = res.polygons;
+        this._totPoints = res.totpoints;
+    }
+    get valid() {
+        return this._valid;
+    }
+    get totPoints() {
+        return this._totPoints;
+    }
+    get totConvexPoints() {
+        return this._totConvexPoints;
+    }
+    get polygons() {
+        return this._polygons;
+    }
+    get convexPolygons() {
+        return this._convexPolygons;
+    }
+    get identifier() {
+        return this._identifier;
+    }
+    get center() {
+        return this._center;
+    }
+    get pixels() {
+        return this._npix256;
+    }
+    get details() {
+        return this._details;
+    }
+}
+export default Footprint;
+//# sourceMappingURL=Footprint.js.map

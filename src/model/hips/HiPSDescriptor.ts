@@ -15,7 +15,7 @@ export default class HiPSDescriptor {
   private _maxOrder: number | undefined
   private _tilewidth: number | undefined
   private _hipsFrame: HiPSFrame | undefined
-  private _hipsName: string | undefined
+  private _hipsName: string = 'NONAME'
   private _hipsurl: string
   private _emMin: number | undefined
   private _emMax: number | undefined
@@ -60,8 +60,12 @@ export default class HiPSDescriptor {
         const n = Number(this.getValue(line))
         this._emMax = Number.isFinite(n) ? n : undefined
       }
+      
     }
 
+    if (!this._hipsName) {
+      console.warn(`[HiPSDescriptor] hipsName not defined in properties of ${this._hipsurl}. Defaulting to 'NONAME'.`)
+    }
     if (!this._hipsFrame) {
       console.warn(
         `[HiPSDescriptor] hips_frame not defined in properties of ${this._hipsurl}. Defaulting to 'equatorial'.`
@@ -84,7 +88,7 @@ export default class HiPSDescriptor {
   }
 
   // --- Getters ---
-  get surveyName(): string | undefined {
+  get surveyName(): string {
     return this._hipsName
   }
 

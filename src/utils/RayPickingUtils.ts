@@ -4,10 +4,9 @@
 "use strict";
 
 import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
-import global from "../Global";
-import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix";
-// import healpixGridSingleton, { HealpixGridSingleton } from "../model/grid/HealpixGridSingleton";
-import healpixGridSingleton from "../model/grid/HealpixGridSingleton";
+import global from "../Global.js";
+import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix.js";
+import healpixGridSingleton from "../model/grid/HealpixGridSingleton.js";
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 

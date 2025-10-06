@@ -1,5 +1,5 @@
-import global from "../Global";
-import ShaderManager from "../shader/ShaderManager";
+import global from "../Global.js";
+import ShaderManager from "../shader/ShaderManager.js";
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 

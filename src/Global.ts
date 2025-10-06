@@ -1,9 +1,9 @@
 'use strict';
 
 import { Healpix } from 'healpixjs';
-import { bootSetup } from './Config';
+import { bootSetup } from './Config.js';
 import type { mat4 } from 'gl-matrix';
-import Camera from './Camera';
+import Camera from './Camera.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 

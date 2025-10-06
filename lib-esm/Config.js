@@ -1,0 +1,29 @@
+export const hipsNodes = [
+    "https://skies.esac.esa.int/",
+    "https://alasky.cds.unistra.fr/",
+];
+// If you want to re-enable multiple TAP repos, just uncomment and extend the array
+// export const tapRepos: string[] = [
+//   "https://archive.eso.org/tap_cat/",
+//   "https://archive.eso.org/tap_obs/",
+//   "https://sky.esa.int/esasky-tap/tap/",
+//   "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/argus",
+// ];
+export const tapRepos = [
+    "https://sky.esa.int/esasky-tap/tap/",
+];
+export const bootSetup = {
+    insideSphere: false,
+    defaultHips: "",
+    camera_fov: 34,
+    camera_near_plane: 0.00001,
+    camera_far_plane: 2.5,
+    corsProxyUrl: "http://localhost:4000/",
+    useCORSProxy: true,
+    maxDecimals: 15,
+    defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
+    version: "Astrobrowser v1.0.0",
+    debug: false,
+    insideView: false,
+};
+//# sourceMappingURL=Config.js.map

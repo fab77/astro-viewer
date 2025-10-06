@@ -3,13 +3,13 @@
  * @author Fabrizio Giordano (Fab)
  */
 
-import Point from '../model/Point';
-import RayPickingUtils from './RayPickingUtils';
-import CoordsType from './CoordsType';
+import Point from '../model/Point.js';
+import RayPickingUtils from './RayPickingUtils.js';
+import CoordsType from './CoordsType.js';
 import { mat4, ReadonlyMat4 } from 'gl-matrix';
-import computePerspectiveMatrixSingleton from './ComputePerspectiveMatrix';
-import Camera from '../Camera';
-import HiPS from '../model/hips/HiPS';
+import computePerspectiveMatrixSingleton from './ComputePerspectiveMatrix.js';
+import Camera from '../Camera.js';
+import HiPS from '../model/hips/HiPS.js';
 
 class FoVUtils {
   /**

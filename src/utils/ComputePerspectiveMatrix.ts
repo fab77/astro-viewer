@@ -1,6 +1,6 @@
-import global from "../Global";
+import global from "../Global.js";
 import { mat4, ReadonlyMat4 } from "gl-matrix";
-import Camera from "../Camera";
+import Camera from "../Camera.js";
 
 class ComputePerspectiveMatrixSingleton {
   private _pMatrix: mat4 | null = null;

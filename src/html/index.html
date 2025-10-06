@@ -1,0 +1,29 @@
+<html>
+
+<head></head>
+
+<body onload="run();">
+    <script src="./javascripts/astrocore.js"></script>
+
+    <script lang="javascript">
+
+        async function run() {
+            const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/"
+            const hipsPropUrl = new URL(hipsUrl + "/properties")
+            const propFile = await fetch(hipsPropUrl)
+            const hipsDescriptor = new HiPSDescriptor(propFile, hipsPropUrl)
+
+            console.log("Inside run")
+            let AC = new astrocore.AstroCore();
+            AC.activateHiPS(hipsDescriptor)
+            AC.run();
+        }
+        
+    </script>
+
+    <canvas id="ab-canvas">
+
+    </canvas>
+</body>
+
+</html>

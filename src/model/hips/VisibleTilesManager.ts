@@ -1,10 +1,10 @@
-import global from '../../Global';
+import global from '../../Global.js';
 import { Pointing, Vec3, Healpix } from 'healpixjs';
-import RayPickingUtils from '../../utils/RayPickingUtils';
-import { newTileBuffer } from './TileBuffer';
+import RayPickingUtils from '../../utils/RayPickingUtils.js';
+import { newTileBuffer } from './TileBuffer.js';
 import { vec4, mat4, ReadonlyMat4 } from 'gl-matrix';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix';
-import healpixGridSingleton from '../grid/HealpixGridSingleton';
+import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 interface VisibleTiles {
