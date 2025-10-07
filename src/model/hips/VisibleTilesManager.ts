@@ -2,8 +2,7 @@ import global from '../../Global.js';
 import { Pointing, Vec3, Healpix } from 'healpixjs';
 import RayPickingUtils from '../../utils/RayPickingUtils.js';
 import { newTileBuffer } from './TileBuffer.js';
-import { vec4, mat4, ReadonlyMat4 } from 'gl-matrix';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+import { vec4, mat4 } from 'gl-matrix';
 import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -46,7 +45,6 @@ class VisibleTilesManager {
       0, 0, 0, 1
     )
     mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
-    // this.init()
   }
 
   init(): void {
@@ -62,9 +60,6 @@ class VisibleTilesManager {
 
   computeVisiblePixels(): void {
     if (!this.initialised) return;
-
-    // Keep in case you want it; current RayPickingUtils TS doesn’t need pMatrix
-    // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
 
     let order = healpixGridSingleton.visibleorder;
     if (global.insideSphere && order < 3) {

@@ -34,6 +34,7 @@ class AstroSphere {
         this.initCamera();
         healpixGridSingleton.init();
         newVisibleTilesManager.init();
+        computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
         this.startup = true;
         this.addEventListeners(canvas);
     }
@@ -161,6 +162,7 @@ class AstroSphere {
             this.inertiaX *= 0.95;
             this.inertiaY *= 0.95;
             this.camera.rotate(PHI, THETA);
+            computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
         }
         else {
             this.inertiaY = 0;

@@ -8282,7 +8282,6 @@ class VisibleTilesManager {
         // This matrix is (galactic -> equatorial); we store its inverse too.
         mat4_set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
         invert(this._galacticMatrix, this._galacticMatrixInverted);
-        // this.init()
     }
     init() {
         this.initialised = true;
@@ -8296,8 +8295,6 @@ class VisibleTilesManager {
     computeVisiblePixels() {
         if (!this.initialised)
             return;
-        // Keep in case you want it; current RayPickingUtils TS doesn’t need pMatrix
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
         let order = grid_HealpixGridSingleton.visibleorder;
         if (src_Global.insideSphere && order < 3) {
             order = 3;
@@ -9730,11 +9727,17 @@ class AllSky {
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        const useMipmaps = true;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, useMipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+        // MAG filter: ONLY NEAREST or LINEAR are valid
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+        // gl.generateMipmap(gl.TEXTURE_2D)
+        if (useMipmaps)
+            gl.generateMipmap(gl.TEXTURE_2D);
     }
     initModelBuffer() {
         const gl = src_Global.gl;
@@ -10079,6 +10082,7 @@ class AstroSphere {
         this.initCamera();
         grid_HealpixGridSingleton.init();
         newVisibleTilesManager.init();
+        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
         this.startup = true;
         this.addEventListeners(canvas);
     }
@@ -10206,6 +10210,7 @@ class AstroSphere {
             this.inertiaX *= 0.95;
             this.inertiaY *= 0.95;
             this.camera.rotate(PHI, THETA);
+            ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
         }
         else {
             this.inertiaY = 0;
