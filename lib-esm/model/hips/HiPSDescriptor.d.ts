@@ -3,7 +3,7 @@ export interface HiPSDataRange {
     max: number | undefined;
 }
 export type HiPSFrame = 'equatorial' | 'galactic' | string;
-export default class HiPSDescriptor {
+export declare class HiPSDescriptor {
     private _minOrder;
     private _imgformats;
     private _datarange;

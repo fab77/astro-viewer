@@ -1,14 +1,14 @@
 // AstroCoreEntryPoint.ts
 import global from './Global.js'
 import AstroSphere from './AstroSphere.js'
-import HiPSDescriptor from './model/hips/HiPSDescriptor.js'
+import {HiPSDescriptor} from './model/hips/HiPSDescriptor.js'
 
 type GL2WithViewport = WebGL2RenderingContext & {
   viewportWidth: number
   viewportHeight: number
 }
 
-export default class AstroCore {
+export class AstroCore {
   private astroSphere!: AstroSphere
   private canvas!: HTMLCanvasElement
   private webgl!: GL2WithViewport
@@ -26,7 +26,7 @@ export default class AstroCore {
   init(): void {
     console.log('init webgl')
 
-    const c = document.getElementById('canvas-ab')
+    const c = document.getElementById('astrocanvas')
     if (!(c instanceof HTMLCanvasElement)) {
       throw new Error("Element with id 'canvas-ab' is not a canvas.")
     }

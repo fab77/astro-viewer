@@ -1,29 +1,30 @@
+<!DOCTYPE html>
 <html>
 
-<head></head>
+<head>
+    <script src="./javascripts/astrocore.js"></script>
+    <script>
+        console.log('astrocore?', window.astrocore);               // deve stampare un oggetto
+        console.log('AstroCore?', window.astrocore?.AstroCore);    // deve esistere
+    </script>
+</head>
 
 <body onload="run();">
-    <script src="./javascripts/astrocore.js"></script>
 
-    <script lang="javascript">
-
+    <script>
         async function run() {
-            const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/"
-            const hipsPropUrl = new URL(hipsUrl + "/properties")
-            const propFile = await fetch(hipsPropUrl)
-            const hipsDescriptor = new HiPSDescriptor(propFile, hipsPropUrl)
+            const AC = new astrocore.AstroCore();
 
-            console.log("Inside run")
-            let AC = new astrocore.AstroCore();
-            AC.activateHiPS(hipsDescriptor)
+            const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
+            const resp = await fetch(hipsUrl + "properties");
+            const propsText = await resp.text();
+
+            const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl + "properties"));
+            AC.activateHiPS(desc);
             AC.run();
         }
-        
     </script>
-
-    <canvas id="ab-canvas">
-
-    </canvas>
+    <canvas id="astrocanvas"></canvas>
 </body>
 
 </html>

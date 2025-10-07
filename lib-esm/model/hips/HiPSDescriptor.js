@@ -1,6 +1,6 @@
 // HiPSDescriptor.ts
 'use strict';
-export default class HiPSDescriptor {
+export class HiPSDescriptor {
     _minOrder = 3;
     _imgformats = [];
     _datarange = { min: undefined, max: undefined };

@@ -8,11 +8,6 @@ const pkg = require('./package.json');
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PATHS = {
-  entryPoint4Browser: path.resolve(__dirname, 'src/index.ts'),
-  bundles: path.resolve(__dirname, 'dist'),
-}
-
 
 const ENTRY = path.resolve(__dirname, 'src/index.ts');
 const OUT = path.resolve(__dirname, 'dist');
@@ -41,7 +36,7 @@ const umdConfig = {
   ...common,
   target: 'web',
   entry: {
-    astrocore: ENTRY,           // <-- plain string
+    'astrocore': ENTRY,           // <-- plain string
     'astrocore.min': ENTRY,     // <-- plain string
   },
   output: {
@@ -50,7 +45,7 @@ const umdConfig = {
     library: 'astrocore',
     libraryTarget: 'umd',
     umdNamedDefine: true,
-    globalObject: 'this',
+    globalObject: 'self',
   },
 };
 

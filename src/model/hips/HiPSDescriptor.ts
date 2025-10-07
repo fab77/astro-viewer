@@ -8,7 +8,7 @@ export interface HiPSDataRange {
 
 export type HiPSFrame = 'equatorial' | 'galactic' | string
 
-export default class HiPSDescriptor {
+export class HiPSDescriptor {
   private _minOrder: number = 3
   private _imgformats: string[] = []
   private _datarange: HiPSDataRange = { min: undefined, max: undefined }

@@ -13,7 +13,7 @@ import { newVisibleTilesManager } from './VisibleTilesManager.js'
 import AllSky from './AllSky3.js'
 import healpixGridSingleton from '../grid/HealpixGridSingleton.js'
 import global from '../../Global.js'
-import HiPSDescriptor from './HiPSDescriptor.js'
+import {HiPSDescriptor} from './HiPSDescriptor.js'
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 
 

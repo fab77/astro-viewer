@@ -3,7 +3,6 @@ import { Pointing, Vec3 } from 'healpixjs';
 import RayPickingUtils from '../../utils/RayPickingUtils.js';
 import { newTileBuffer } from './TileBuffer.js';
 import { vec4, mat4 } from 'gl-matrix';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
 class VisibleTilesManager {
     _visibleTilesByOrder;
@@ -26,7 +25,7 @@ class VisibleTilesManager {
         // This matrix is (galactic -> equatorial); we store its inverse too.
         mat4.set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
         mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
-        this.init();
+        // this.init()
     }
     init() {
         this.initialised = true;
@@ -41,7 +40,7 @@ class VisibleTilesManager {
         if (!this.initialised)
             return;
         // Keep in case you want it; current RayPickingUtils TS doesn’t need pMatrix
-        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
         let order = healpixGridSingleton.visibleorder;
         if (global.insideSphere && order < 3) {
             order = 3;

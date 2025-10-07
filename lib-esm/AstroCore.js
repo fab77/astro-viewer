@@ -1,7 +1,7 @@
 // AstroCoreEntryPoint.ts
 import global from './Global.js';
 import AstroSphere from './AstroSphere.js';
-export default class AstroCore {
+export class AstroCore {
     astroSphere;
     canvas;
     webgl;
@@ -14,7 +14,7 @@ export default class AstroCore {
     }
     init() {
         console.log('init webgl');
-        const c = document.getElementById('canvas-ab');
+        const c = document.getElementById('astrocanvas');
         if (!(c instanceof HTMLCanvasElement)) {
             throw new Error("Element with id 'canvas-ab' is not a canvas.");
         }

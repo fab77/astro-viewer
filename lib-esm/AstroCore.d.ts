@@ -1,5 +1,5 @@
-import HiPSDescriptor from './model/hips/HiPSDescriptor.js';
-export default class AstroCore {
+import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
+export declare class AstroCore {
     private astroSphere;
     private canvas;
     private webgl;

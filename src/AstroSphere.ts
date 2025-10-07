@@ -12,11 +12,11 @@ import {
   raDegToHMS,
   decDegToDMS,
 } from './utils/Utils.js'
-// import { session } from './utils/Session.js'
+
 
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 import HiPS from './model/hips/HiPS.js'
-import HiPSDescriptor from './model/hips/HiPSDescriptor.js'
+import {HiPSDescriptor} from './model/hips/HiPSDescriptor.js'
 
 /**
  * AstroSphere — main WebGL scene controller (TS port)

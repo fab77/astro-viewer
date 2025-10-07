@@ -3,7 +3,7 @@
  */
 import AbstractSkyEntity from '../AbstractSkyEntity.js';
 import { ColorMap } from '../ColorMaps.js';
-import HiPSDescriptor from './HiPSDescriptor.js';
+import { HiPSDescriptor } from './HiPSDescriptor.js';
 declare class HiPS extends AbstractSkyEntity {
     private _ancestorTiles;
     private _allSkyTile;

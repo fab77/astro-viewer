@@ -6,7 +6,6 @@ import global from './Global.js';
 import { newVisibleTilesManager } from './model/hips/VisibleTilesManager.js';
 import MouseHelper from './utils/MouseHelper.js';
 import { cartesianToSpherical, sphericalToAstroDeg, raDegToHMS, decDegToDMS, } from './utils/Utils.js';
-// import { session } from './utils/Session.js'
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js';
 import HiPS from './model/hips/HiPS.js';
 /**

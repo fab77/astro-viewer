@@ -46,7 +46,7 @@ class VisibleTilesManager {
       0, 0, 0, 1
     )
     mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
-    this.init()
+    // this.init()
   }
 
   init(): void {
@@ -64,7 +64,7 @@ class VisibleTilesManager {
     if (!this.initialised) return;
 
     // Keep in case you want it; current RayPickingUtils TS doesn’t need pMatrix
-    const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+    // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
 
     let order = healpixGridSingleton.visibleorder;
     if (global.insideSphere && order < 3) {

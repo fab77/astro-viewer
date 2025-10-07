@@ -1,4 +1,4 @@
-import HiPSDescriptor from './model/hips/HiPSDescriptor.js';
+import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */

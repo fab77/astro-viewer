@@ -1,6 +1,3 @@
-export {default as HiPSDescriptor} from './model/hips/HiPSDescriptor.js'
-export {default as AstroSphere} from './AstroSphere.js'
-export {default as HiPS} from './model/hips/HiPS.js'
-export {default as AstroCore} from './AstroCore.js'
-
-
+export { AstroCore } from './AstroCore.js';
+export { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
+console.log('astrocore UMD loaded')
