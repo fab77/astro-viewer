@@ -19,7 +19,7 @@
             const resp = await fetch(hipsUrl + "properties");
             const propsText = await resp.text();
 
-            const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl + "properties"));
+            const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl));
             AC.activateHiPS(desc);
             AC.run();
         }

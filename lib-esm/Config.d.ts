@@ -3,7 +3,8 @@ export declare const tapRepos: string[];
 export interface BootSetup {
     insideSphere: boolean;
     defaultHips: string;
-    camera_fov: number;
+    camera_fov_deg: number;
+    camera_fov_rad: number;
     camera_near_plane: number;
     camera_far_plane: number;
     corsProxyUrl: string;

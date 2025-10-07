@@ -14,10 +14,9 @@ class ComputePerspectiveMatrixSingleton {
     canvas: HTMLCanvasElement,
     camera: Camera,
     fovDeg: number,
-    aspectRatio?: number,
     nearPlane: number = 0.1
   ): mat4 {
-    this._aspectRatio = aspectRatio ?? canvas.width / canvas.height;
+    this._aspectRatio = canvas.width / canvas.height;
 
     const p = mat4.create();
     let farPlane: number;

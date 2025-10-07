@@ -1473,7 +1473,8 @@ const tapRepos = (/* unused pure expression or super */ null && ([
 const bootSetup = {
     insideSphere: false,
     defaultHips: "",
-    camera_fov: 34,
+    camera_fov_deg: 34,
+    camera_fov_rad: 34 * Math.PI / 180.0,
     camera_near_plane: 0.00001,
     camera_far_plane: 2.5,
     corsProxyUrl: "http://localhost:4000/",
@@ -1581,7 +1582,7 @@ class Global {
     get showPointsInPolygons() { return this._showPointsInPolygons; }
     get blendMode() { return this._blendMode; }
     // Config passthroughs
-    getConfig_cameraFovDeg() { return bootSetup.camera_fov; }
+    getConfig_cameraFovDeg() { return bootSetup.camera_fov_deg; }
     getConfig_nearPlane() { return bootSetup.camera_near_plane; }
     getConfig_cameraFarPlane() { return bootSetup.camera_far_plane; }
 }
@@ -4690,8 +4691,8 @@ class ComputePerspectiveMatrixSingleton {
     get pMatrix() {
         return this._pMatrix;
     }
-    computePerspectiveMatrix(canvas, camera, fovDeg, aspectRatio, nearPlane = 0.1) {
-        this._aspectRatio = aspectRatio ?? canvas.width / canvas.height;
+    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1) {
+        this._aspectRatio = canvas.width / canvas.height;
         const p = mat4_create();
         let farPlane;
         if (src_Global.insideSphere) {
@@ -10052,6 +10053,7 @@ class HiPS extends model_AbstractSkyEntity {
 
 
 
+
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -10094,7 +10096,7 @@ class AstroSphere {
         grid_HealpixGridSingleton.getMinFoV();
     }
     getFoV() {
-        grid_HealpixGridSingleton.refreshFoV(false);
+        return grid_HealpixGridSingleton.refreshFoV(false);
     }
     addEventListeners(canvas) {
         if (src_Global.debug) {
@@ -10182,6 +10184,7 @@ class AstroSphere {
             return;
         src_Global.gl.getExtension('OES_element_index_uint');
         src_Global.gl.clear(src_Global.gl.COLOR_BUFFER_BIT | src_Global.gl.DEPTH_BUFFER_BIT);
+        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;

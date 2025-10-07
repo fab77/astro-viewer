@@ -93,7 +93,7 @@ class Global {
     get showPointsInPolygons() { return this._showPointsInPolygons; }
     get blendMode() { return this._blendMode; }
     // Config passthroughs
-    getConfig_cameraFovDeg() { return bootSetup.camera_fov; }
+    getConfig_cameraFovDeg() { return bootSetup.camera_fov_deg; }
     getConfig_nearPlane() { return bootSetup.camera_near_plane; }
     getConfig_cameraFarPlane() { return bootSetup.camera_far_plane; }
 }

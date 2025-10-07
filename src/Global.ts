@@ -124,7 +124,7 @@ class Global {
   get blendMode(): boolean { return this._blendMode; }
 
   // Config passthroughs
-  getConfig_cameraFovDeg(): number { return bootSetup.camera_fov; }
+  getConfig_cameraFovDeg(): number { return bootSetup.camera_fov_deg; }
   getConfig_nearPlane(): number { return bootSetup.camera_near_plane; }
   getConfig_cameraFarPlane(): number { return bootSetup.camera_far_plane; }
 }

@@ -18,7 +18,7 @@ declare class AstroSphere {
     private init;
     private initCamera;
     refreshFoV(): void;
-    getFoV(): void;
+    getFoV(): import("./model/FoV.js").default;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): import("./utils/Utils.js").SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;

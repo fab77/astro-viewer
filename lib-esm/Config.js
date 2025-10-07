@@ -15,7 +15,8 @@ export const tapRepos = [
 export const bootSetup = {
     insideSphere: false,
     defaultHips: "",
-    camera_fov: 34,
+    camera_fov_deg: 34,
+    camera_fov_rad: 34 * Math.PI / 180.0,
     camera_near_plane: 0.00001,
     camera_far_plane: 2.5,
     corsProxyUrl: "http://localhost:4000/",

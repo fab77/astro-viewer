@@ -17,6 +17,7 @@ import {
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 import HiPS from './model/hips/HiPS.js'
 import {HiPSDescriptor} from './model/hips/HiPSDescriptor.js'
+import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.js'
 
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -72,7 +73,7 @@ class AstroSphere {
   }
 
   getFoV() {
-    healpixGridSingleton.refreshFoV(false)
+    return healpixGridSingleton.refreshFoV(false)
   }
 
   private addEventListeners(canvas: HTMLCanvasElement) {
@@ -187,6 +188,10 @@ class AstroSphere {
 
     global.gl.getExtension('OES_element_index_uint')
     global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
+
+
+    
+    computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane)
 
     let cameraRotated = false
     let THETA = 0

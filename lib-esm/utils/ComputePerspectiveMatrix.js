@@ -6,8 +6,8 @@ class ComputePerspectiveMatrixSingleton {
     get pMatrix() {
         return this._pMatrix;
     }
-    computePerspectiveMatrix(canvas, camera, fovDeg, aspectRatio, nearPlane = 0.1) {
-        this._aspectRatio = aspectRatio ?? canvas.width / canvas.height;
+    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1) {
+        this._aspectRatio = canvas.width / canvas.height;
         const p = mat4.create();
         let farPlane;
         if (global.insideSphere) {

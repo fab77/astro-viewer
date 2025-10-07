@@ -4,7 +4,7 @@ declare class ComputePerspectiveMatrixSingleton {
     private _pMatrix;
     private _aspectRatio;
     get pMatrix(): mat4 | null;
-    computePerspectiveMatrix(canvas: HTMLCanvasElement, camera: Camera, fovDeg: number, aspectRatio?: number, nearPlane?: number): mat4;
+    computePerspectiveMatrix(canvas: HTMLCanvasElement, camera: Camera, fovDeg: number, nearPlane?: number): mat4;
 }
 declare const computePerspectiveMatrixSingleton: ComputePerspectiveMatrixSingleton;
 export default computePerspectiveMatrixSingleton;

@@ -8,6 +8,7 @@ import MouseHelper from './utils/MouseHelper.js';
 import { cartesianToSpherical, sphericalToAstroDeg, raDegToHMS, decDegToDMS, } from './utils/Utils.js';
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js';
 import HiPS from './model/hips/HiPS.js';
+import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -50,7 +51,7 @@ class AstroSphere {
         healpixGridSingleton.getMinFoV();
     }
     getFoV() {
-        healpixGridSingleton.refreshFoV(false);
+        return healpixGridSingleton.refreshFoV(false);
     }
     addEventListeners(canvas) {
         if (global.debug) {
@@ -138,6 +139,7 @@ class AstroSphere {
             return;
         global.gl.getExtension('OES_element_index_uint');
         global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT);
+        computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;
