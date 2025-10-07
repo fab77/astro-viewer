@@ -3,7 +3,7 @@ import { bootSetup } from './Config.js';
 import Camera from './Camera.js';
 import RayPickingUtils from './utils/RayPickingUtils.js';
 import global from './Global.js';
-import { newVisibleTilesManager } from './model/hips/VisibleTilesManager.js';
+import { visibleTilesManager } from './model/hips/VisibleTilesManager.js';
 import MouseHelper from './utils/MouseHelper.js';
 import { cartesianToSpherical, sphericalToAstroDeg, raDegToHMS, decDegToDMS, } from './utils/Utils.js';
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js';
@@ -33,7 +33,7 @@ class AstroSphere {
     init(canvas) {
         this.initCamera();
         healpixGridSingleton.init();
-        newVisibleTilesManager.init();
+        visibleTilesManager.init();
         computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
         this.startup = true;
         this.addEventListeners(canvas);

@@ -177,4 +177,4 @@ class VisibleTilesManager {
   }
 }
 
-export const newVisibleTilesManager = new VisibleTilesManager();
+export const visibleTilesManager = new VisibleTilesManager();

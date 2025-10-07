@@ -132,5 +132,5 @@ class VisibleTilesManager {
         return this._visibleTilesByOrder.order;
     }
 }
-export const newVisibleTilesManager = new VisibleTilesManager();
+export const visibleTilesManager = new VisibleTilesManager();
 //# sourceMappingURL=VisibleTilesManager.js.map

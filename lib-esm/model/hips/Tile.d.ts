@@ -2,24 +2,19 @@ import HiPS from './HiPS.js';
 type Mat4 = Float32Array;
 export default class Tile {
     private _hips;
-    private _tilebuffer?;
     private _tileno;
     private _baseurl;
     private _order;
     private _format;
     private _maxorder;
-    private _minorder;
     private _isGalacticHips;
     private _ready;
     private _abort;
     private _image;
-    private _imageLoaded;
-    private _downloading;
     private _textureLoaded;
     private _texture?;
     private _texurl;
     private _hipsShaderIndex;
-    private _pixels;
     private _cacheTime0?;
     private _inView;
     private _amIStillInFoV_requsetID;
@@ -47,4 +42,4 @@ export default class Tile {
     private drawChildren;
 }
 export {};
-//# sourceMappingURL=Tile2.d.ts.map
+//# sourceMappingURL=Tile.d.ts.map

@@ -1,5 +1,5 @@
 // TileBuffer.ts
-import Tile from './Tile2.js' // adjust if your file is named differently
+import Tile from './Tile.js' // adjust if your file is named differently
 import HiPS from './HiPS.js'
 
 export default class TileBuffer {

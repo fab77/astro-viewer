@@ -7,8 +7,6 @@ export default class AllSky {
     _hips;
     _format;
     _baseurl;
-    _maxorder;
-    _minorder;
     _isGalacticHips;
     _order = 3;
     opacity = 1.0;
@@ -28,8 +26,6 @@ export default class AllSky {
         this._hips = hips;
         this._format = hips.format;
         this._baseurl = hips.baseURL;
-        this._maxorder = hips.maxOrder;
-        this._minorder = hips.minOrder;
         this._isGalacticHips = hips.isGalacticHips;
         this.initImage();
     }
@@ -215,4 +211,4 @@ export default class AllSky {
         return allSkyTiles2Skip;
     }
 }
-//# sourceMappingURL=AllSky3.js.map
+//# sourceMappingURL=AllSky.js.map

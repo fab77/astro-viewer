@@ -1,4 +1,4 @@
-import Tile from './Tile2.js';
+import Tile from './Tile.js';
 import HiPS from './HiPS.js';
 export default class TileBuffer {
     private _tiles;

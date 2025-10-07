@@ -12,8 +12,6 @@ export default class AllSky {
 
   private _format: string
   private _baseurl: string
-  private _maxorder: number
-  private _minorder: number
   private _isGalacticHips: boolean
 
   private _order = 3
@@ -40,8 +38,6 @@ export default class AllSky {
 
     this._format = hips.format
     this._baseurl = hips.baseURL
-    this._maxorder = hips.maxOrder
-    this._minorder = hips.minOrder
     this._isGalacticHips = hips.isGalacticHips
 
     this.initImage()

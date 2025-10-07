@@ -20,6 +20,6 @@ declare class VisibleTilesManager {
     get galAncestorsMap(): Map<number, number[]>;
     get visibleOrder(): number;
 }
-export declare const newVisibleTilesManager: VisibleTilesManager;
+export declare const visibleTilesManager: VisibleTilesManager;
 export {};
 //# sourceMappingURL=VisibleTilesManager.d.ts.map

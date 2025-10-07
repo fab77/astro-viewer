@@ -8,8 +8,8 @@ import { newTileBuffer } from './TileBuffer.js';
 import ColorMaps from '../ColorMaps.js';
 import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js';
 import AncestorTile from './AncestorTile.js';
-import { newVisibleTilesManager } from './VisibleTilesManager.js';
-import AllSky from './AllSky3.js';
+import { visibleTilesManager } from './VisibleTilesManager.js';
+import AllSky from './AllSky.js';
 import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
 import global from '../../Global.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
@@ -73,8 +73,8 @@ class HiPS extends AbstractSkyEntity {
         if (this._tileBuffer)
             this._tileBuffer._format = this._format;
         const pixelByOrder = this.isGalacticHips
-            ? newVisibleTilesManager.galVisibleTilesByOrder
-            : newVisibleTilesManager.visibleTilesByOrder;
+            ? visibleTilesManager.galVisibleTilesByOrder
+            : visibleTilesManager.visibleTilesByOrder;
         // @ts-ignore
         if (this._tileBuffer?.updateTiles)
             this._tileBuffer.updateTiles(pixelByOrder.pixels, pixelByOrder.order);
@@ -141,20 +141,20 @@ class HiPS extends AbstractSkyEntity {
         const mMatrix = this.getModelMatrix();
         if (this._allSky && this._allSkyTile) {
             if (this.isGalacticHips) {
-                this._allSkyTile.draw(newVisibleTilesManager.galVisibleTilesByOrder.order, newVisibleTilesManager.galAncestorsMap, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+                this._allSkyTile.draw(visibleTilesManager.galVisibleTilesByOrder.order, visibleTilesManager.galAncestorsMap, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
             }
             else {
-                this._allSkyTile.draw(newVisibleTilesManager.visibleTilesByOrder.order, newVisibleTilesManager.ancestorsMap, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+                this._allSkyTile.draw(visibleTilesManager.visibleTilesByOrder.order, visibleTilesManager.ancestorsMap, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
             }
             return;
         }
         // Non all-sky path
         const order = this.isGalacticHips
-            ? newVisibleTilesManager.galVisibleTilesByOrder.order
-            : newVisibleTilesManager.visibleTilesByOrder.order;
+            ? visibleTilesManager.galVisibleTilesByOrder.order
+            : visibleTilesManager.visibleTilesByOrder.order;
         const map = this.isGalacticHips
-            ? newVisibleTilesManager.galAncestorsMap
-            : newVisibleTilesManager.ancestorsMap;
+            ? visibleTilesManager.galAncestorsMap
+            : visibleTilesManager.ancestorsMap;
         this._ancestorTiles.forEach((ancestor) => {
             ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
         });

@@ -2,7 +2,7 @@
 import global from '../../Global.js'
 import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import { newTileBuffer } from './TileBuffer.js'
-import { newVisibleTilesManager } from './VisibleTilesManager.js'
+import { visibleTilesManager } from './VisibleTilesManager.js'
 import { fovHelper } from './FoVHelper.js'
 import HiPS from './HiPS.js'
 
@@ -25,27 +25,22 @@ type Mat4 = Float32Array;
 
 export default class Tile {
   private _hips: HiPS 
-  private _tilebuffer?: WebGLBuffer // (unused in original)
   private _tileno: number
   private _baseurl: string
   private _order: number
 
   private _format: string
   private _maxorder: number
-  private _minorder: number
   private _isGalacticHips: boolean
 
   private _ready = false
   private _abort = false
   private _image!: HTMLImageElement
-  private _imageLoaded = false
-  private _downloading = false
   private _textureLoaded = false
   private _texture?: WebGLTexture
   private _texurl = ''
 
   private _hipsShaderIndex = 0
-  private _pixels: number[] = []
 
   private _cacheTime0?: number
   private _inView = true
@@ -66,7 +61,6 @@ export default class Tile {
     this._format = hips.format
     this._baseurl = hips.baseURL
     this._maxorder = hips.maxOrder
-    this._minorder = hips.minOrder
     this._isGalacticHips = hips.isGalacticHips
 
     this._order = order
@@ -100,9 +94,7 @@ export default class Tile {
 
   private initImage(): void {
     this._image = new Image()
-    this._downloading = true
-    this._imageLoaded = false
-
+    
     const dirnumber = Math.floor(this._tileno / 10000) * 10000
     this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`
 
@@ -119,9 +111,7 @@ export default class Tile {
   }
 
   private imageLoaded(): void {
-    this._imageLoaded = true
-    this._downloading = false
-
+    
     this.textureLoaded()
     this.initModelBuffer()
 
@@ -176,7 +166,6 @@ export default class Tile {
 
     const healpix = global.getHealpix(reforder)
 
-    this._pixels = []
     this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, 0, healpix, orderjump, origxyf)
     this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, 1, healpix, orderjump, origxyf)
     this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, 2, healpix, orderjump, origxyf)
@@ -286,32 +275,32 @@ export default class Tile {
     if (this._textureLoaded) this._ready = true
 
     if (this._isGalacticHips) {
-      if (newVisibleTilesManager.galAncestorsMap.has(this._order)) {
-        if (!newVisibleTilesManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
+      if (visibleTilesManager.galAncestorsMap.has(this._order)) {
+        if (!visibleTilesManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
           this.moveToCache()
         } else {
           this._inView = true
         }
       }
 
-      if (this._order == newVisibleTilesManager.visibleOrder) {
-        if (!newVisibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+      if (this._order == visibleTilesManager.visibleOrder) {
+        if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
           this.moveToCache()
         } else {
           this._inView = true
         }
       }
     } else {
-      if (newVisibleTilesManager.ancestorsMap.has(this._order)) {
-        if (!newVisibleTilesManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
+      if (visibleTilesManager.ancestorsMap.has(this._order)) {
+        if (!visibleTilesManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
           this.moveToCache()
         } else {
           this._inView = true
         }
       }
 
-      if (this._order == newVisibleTilesManager.visibleOrder) {
-        if (!newVisibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+      if (this._order == visibleTilesManager.visibleOrder) {
+        if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
           this.moveToCache()
         } else {
           this._inView = true

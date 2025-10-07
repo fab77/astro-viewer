@@ -16,7 +16,7 @@ import Point from '../Point.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import GeomUtils from '../../utils/GeomUtils.js';
 import { gridTextHelper } from './GridTextHelper.js';
-import { newVisibleTilesManager } from '../hips/VisibleTilesManager.js';
+import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
@@ -278,7 +278,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
     if (!showHPXGrid) return;
 
-    const visibleTiles = newVisibleTilesManager.visibleTilesByOrder
+    const visibleTiles = visibleTilesManager.visibleTilesByOrder
     const pixels = visibleTiles.pixels;
     const order = visibleTiles.order;
 

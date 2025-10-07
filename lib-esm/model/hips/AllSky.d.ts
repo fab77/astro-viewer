@@ -4,8 +4,6 @@ export default class AllSky {
     private _hips;
     private _format;
     private _baseurl;
-    private _maxorder;
-    private _minorder;
     private _isGalacticHips;
     private _order;
     opacity: number;
@@ -34,4 +32,4 @@ export default class AllSky {
     draw(visibleOrder: number, visibleTilesMap: Map<number, number[]>, pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, colorMapIdx: number): boolean;
     private drawChildren;
 }
-//# sourceMappingURL=AllSky3.d.ts.map
+//# sourceMappingURL=AllSky.d.ts.map

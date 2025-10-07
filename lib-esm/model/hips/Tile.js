@@ -2,29 +2,24 @@
 import global from '../../Global.js';
 import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js';
 import { newTileBuffer } from './TileBuffer.js';
-import { newVisibleTilesManager } from './VisibleTilesManager.js';
+import { visibleTilesManager } from './VisibleTilesManager.js';
 import { fovHelper } from './FoVHelper.js';
 // ------------------------------------------------------------------------
 export default class Tile {
     _hips;
-    _tilebuffer; // (unused in original)
     _tileno;
     _baseurl;
     _order;
     _format;
     _maxorder;
-    _minorder;
     _isGalacticHips;
     _ready = false;
     _abort = false;
     _image;
-    _imageLoaded = false;
-    _downloading = false;
     _textureLoaded = false;
     _texture;
     _texurl = '';
     _hipsShaderIndex = 0;
-    _pixels = [];
     _cacheTime0;
     _inView = true;
     _amIStillInFoV_requsetID;
@@ -40,7 +35,6 @@ export default class Tile {
         this._format = hips.format;
         this._baseurl = hips.baseURL;
         this._maxorder = hips.maxOrder;
-        this._minorder = hips.minOrder;
         this._isGalacticHips = hips.isGalacticHips;
         this._order = order;
         this._amIStillInFoV_requsetID = window.setInterval(() => {
@@ -65,8 +59,6 @@ export default class Tile {
     }
     initImage() {
         this._image = new Image();
-        this._downloading = true;
-        this._imageLoaded = false;
         const dirnumber = Math.floor(this._tileno / 10000) * 10000;
         this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
         this._image.onload = () => this.imageLoaded();
@@ -80,8 +72,6 @@ export default class Tile {
         this._image.src = this._texurl;
     }
     imageLoaded() {
-        this._imageLoaded = true;
-        this._downloading = false;
         this.textureLoaded();
         this.initModelBuffer();
         const gl = global.gl;
@@ -123,7 +113,6 @@ export default class Tile {
         const dymin = origxyf.iy << orderjump;
         const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
         const healpix = global.getHealpix(reforder);
-        this._pixels = [];
         this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, 0, healpix, orderjump, origxyf);
         this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, 1, healpix, orderjump, origxyf);
         this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, 2, healpix, orderjump, origxyf);
@@ -212,16 +201,16 @@ export default class Tile {
         if (this._textureLoaded)
             this._ready = true;
         if (this._isGalacticHips) {
-            if (newVisibleTilesManager.galAncestorsMap.has(this._order)) {
-                if (!newVisibleTilesManager.galAncestorsMap.get(this._order).includes(this._tileno)) {
+            if (visibleTilesManager.galAncestorsMap.has(this._order)) {
+                if (!visibleTilesManager.galAncestorsMap.get(this._order).includes(this._tileno)) {
                     this.moveToCache();
                 }
                 else {
                     this._inView = true;
                 }
             }
-            if (this._order == newVisibleTilesManager.visibleOrder) {
-                if (!newVisibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+            if (this._order == visibleTilesManager.visibleOrder) {
+                if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
                     this.moveToCache();
                 }
                 else {
@@ -230,16 +219,16 @@ export default class Tile {
             }
         }
         else {
-            if (newVisibleTilesManager.ancestorsMap.has(this._order)) {
-                if (!newVisibleTilesManager.ancestorsMap.get(this._order).includes(this._tileno)) {
+            if (visibleTilesManager.ancestorsMap.has(this._order)) {
+                if (!visibleTilesManager.ancestorsMap.get(this._order).includes(this._tileno)) {
                     this.moveToCache();
                 }
                 else {
                     this._inView = true;
                 }
             }
-            if (this._order == newVisibleTilesManager.visibleOrder) {
-                if (!newVisibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+            if (this._order == visibleTilesManager.visibleOrder) {
+                if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
                     this.moveToCache();
                 }
                 else {
@@ -298,4 +287,4 @@ export default class Tile {
         return quadrantsToDraw;
     }
 }
-//# sourceMappingURL=Tile2.js.map
+//# sourceMappingURL=Tile.js.map
