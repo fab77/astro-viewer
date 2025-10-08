@@ -16,8 +16,9 @@ import {
 
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 import HiPS from './model/hips/HiPS.js'
-import {HiPSDescriptor} from './model/hips/HiPSDescriptor.js'
+import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.js'
+import FoV from './model/FoV.js'
 
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -68,14 +69,14 @@ class AstroSphere {
   }
 
 
-  refreshFoV() {
-    healpixGridSingleton.refreshFoV(false)
-    healpixGridSingleton.getMinFoV()
-  }
+  // refreshFoV() {
+  //   healpixGridSingleton.refreshFoV(false)
+  //   healpixGridSingleton.getMinFoV()
+  // }
 
-  getFoV() {
-    return healpixGridSingleton.refreshFoV(false)
-  }
+  // getFoV() {
+  //   return healpixGridSingleton.refreshFoV(false)
+  // }
 
   private addEventListeners(canvas: HTMLCanvasElement) {
     if (global.debug) {
@@ -85,8 +86,10 @@ class AstroSphere {
     const handleMouseDown = (event: PointerEvent) => {
       canvas.setPointerCapture(event.pointerId)
       this.mouseDown = true
-      this.lastMouseX = event.pageX
-      this.lastMouseY = event.pageY
+      // this.lastMouseX = event.pageX
+      // this.lastMouseY = event.pageY
+      this.lastMouseX = event.clientX
+      this.lastMouseY = event.clientY
 
       // session.clearHoveredFootprints()
       event.preventDefault()
@@ -112,7 +115,7 @@ class AstroSphere {
         document.body.style.cursor = 'grab'
 
         const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width
-        const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.width
+        const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height
 
         this.inertiaX += 0.1 * deltaX
         this.inertiaY += 0.1 * deltaY
@@ -145,12 +148,14 @@ class AstroSphere {
       } else {
         this.zoomInertia += 0.001
       }
+      event.preventDefault()
     }
 
     canvas.onpointerdown = handleMouseDown
     canvas.onpointerup = handleMouseUp
     canvas.onpointermove = handleMouseMove
-    canvas.onwheel = handleMouseWheel
+    // canvas.onwheel = handleMouseWheel
+    canvas.addEventListener('wheel', handleMouseWheel, { passive: false })
   }
 
   // REVIEW THIS METHOD AND MOVE IT
@@ -176,30 +181,27 @@ class AstroSphere {
     )
   }
 
-  setViewport(gl: WebGLRenderingContext) {
-    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-  }
 
   draw(canvas: HTMLCanvasElement) {
+
+    const insideSphere = bootSetup.insideSphere
 
     if (!global.gl) return
     if (!this.activeHiPS) return
     if (!healpixGridSingleton || Object.keys(healpixGridSingleton).length === 0) return
     if ((healpixGridSingleton as any).fovObj === undefined) return
 
-    global.gl.getExtension('OES_element_index_uint')
-    global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
+    // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
+    // global.gl.getExtension('OES_element_index_uint')
+    // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
 
-
-    
     computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane)
 
     let cameraRotated = false
     let THETA = 0
     let PHI = 0
 
-
-    this.setViewport(global.gl) // move this outside the draw
+    global.gl.viewport(0, 0, global.gl.drawingBufferWidth, global.gl.drawingBufferHeight);
     global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
 
     // Zoom inertia
@@ -208,6 +210,8 @@ class AstroSphere {
         this.camera.zoom(this.zoomInertia)
         this.zoomInertia *= 0.95
         console.log('EMIT HERE (fovUpdate)')
+        console.log(healpixGridSingleton.refreshFoV(insideSphere))
+
       }
     }
 

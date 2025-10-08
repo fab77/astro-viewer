@@ -47,13 +47,13 @@ class AstroSphere {
         }
         global.camera = this.camera;
     }
-    refreshFoV() {
-        healpixGridSingleton.refreshFoV(false);
-        healpixGridSingleton.getMinFoV();
-    }
-    getFoV() {
-        return healpixGridSingleton.refreshFoV(false);
-    }
+    // refreshFoV() {
+    //   healpixGridSingleton.refreshFoV(false)
+    //   healpixGridSingleton.getMinFoV()
+    // }
+    // getFoV() {
+    //   return healpixGridSingleton.refreshFoV(false)
+    // }
     addEventListeners(canvas) {
         if (global.debug) {
             console.log('[AstroSphere::addEventListeners]');
@@ -61,8 +61,10 @@ class AstroSphere {
         const handleMouseDown = (event) => {
             canvas.setPointerCapture(event.pointerId);
             this.mouseDown = true;
-            this.lastMouseX = event.pageX;
-            this.lastMouseY = event.pageY;
+            // this.lastMouseX = event.pageX
+            // this.lastMouseY = event.pageY
+            this.lastMouseX = event.clientX;
+            this.lastMouseY = event.clientY;
             // session.clearHoveredFootprints()
             event.preventDefault();
             return false;
@@ -82,7 +84,7 @@ class AstroSphere {
             if (this.mouseDown) {
                 document.body.style.cursor = 'grab';
                 const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
-                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.width;
+                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
                 this.inertiaX += 0.1 * deltaX;
                 this.inertiaY += 0.1 * deltaY;
             }
@@ -110,11 +112,13 @@ class AstroSphere {
             else {
                 this.zoomInertia += 0.001;
             }
+            event.preventDefault();
         };
         canvas.onpointerdown = handleMouseDown;
         canvas.onpointerup = handleMouseUp;
         canvas.onpointermove = handleMouseMove;
-        canvas.onwheel = handleMouseWheel;
+        // canvas.onwheel = handleMouseWheel
+        canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
     }
     // REVIEW THIS METHOD AND MOVE IT
     getPhiThetaDeg(canvas) {
@@ -126,10 +130,8 @@ class AstroSphere {
     activateHiPS(hipsDescriptor) {
         this.activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor);
     }
-    setViewport(gl) {
-        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
-    }
     draw(canvas) {
+        const insideSphere = bootSetup.insideSphere;
         if (!global.gl)
             return;
         if (!this.activeHiPS)
@@ -138,13 +140,14 @@ class AstroSphere {
             return;
         if (healpixGridSingleton.fovObj === undefined)
             return;
-        global.gl.getExtension('OES_element_index_uint');
-        global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT);
+        // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
+        // global.gl.getExtension('OES_element_index_uint')
+        // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
         computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;
-        this.setViewport(global.gl); // move this outside the draw
+        global.gl.viewport(0, 0, global.gl.drawingBufferWidth, global.gl.drawingBufferHeight);
         global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT);
         // Zoom inertia
         if (healpixGridSingleton.fovObj.minFoV > 0.1 || this.zoomInertia > 0) {
@@ -152,6 +155,7 @@ class AstroSphere {
                 this.camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
                 console.log('EMIT HERE (fovUpdate)');
+                console.log(healpixGridSingleton.refreshFoV(insideSphere));
             }
         }
         // Rotation inertia

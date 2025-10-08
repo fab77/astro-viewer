@@ -17,12 +17,9 @@ declare class AstroSphere {
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private init;
     private initCamera;
-    refreshFoV(): void;
-    getFoV(): import("./model/FoV.js").default;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): import("./utils/Utils.js").SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
-    setViewport(gl: WebGLRenderingContext): void;
     draw(canvas: HTMLCanvasElement): void;
 }
 export default AstroSphere;
