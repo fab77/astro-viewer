@@ -1,11 +1,12 @@
 import AbstractSkyEntity from '../AbstractSkyEntity.js';
-import FoV from '../FoV.js';
+import { FoV } from '../FoV.js';
 declare class HealpixGridSingleton extends AbstractSkyEntity {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     private _refreshingBuffers;
     private _visibleorder;
     private _oldorder;
+    private showGrid;
     private _shaderProgram;
     private fragmentShader;
     private vertexShader;
@@ -21,7 +22,7 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     static INITIAL_POSITION: [number, number, number];
     static INITIAL_PhiRad: number;
     static INITIAL_ThetaRad: number;
-    constructor();
+    constructor(insideSphere: boolean);
     init(): void;
     refreshFoV(insideSphere: boolean): FoV;
     getMinFoV(): number;
@@ -30,7 +31,8 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     updateTiles(pixels: number[], order: number): any;
     private refresh;
     private enableShader;
-    draw(showHPXGrid: boolean): void;
+    toggleShowGrid(): void;
+    draw(insideSphere: boolean): void;
     get visibleorder(): number;
 }
 declare const healpixGridSingleton: HealpixGridSingleton;

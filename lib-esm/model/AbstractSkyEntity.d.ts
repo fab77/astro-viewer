@@ -11,6 +11,7 @@ declare abstract class AbstractSkyEntity {
     yRad: number;
     prevFoV: number;
     name: string;
+    insideSphere: boolean;
     center: vec3;
     radius: number;
     isGalacticHips: boolean;
@@ -23,7 +24,7 @@ declare abstract class AbstractSkyEntity {
     protected modelMatrix: mat4;
     protected inverseModelMatrix: mat4;
     protected galacticMatrixInverted: mat4;
-    constructor(in_radius: number, in_position: ReadonlyVec3, in_xRad: number, in_yRad: number, in_name: string, isGalacticHips?: boolean);
+    constructor(in_radius: number, in_position: ReadonlyVec3, in_xRad: number, in_yRad: number, in_name: string, insideSphere: boolean, isGalacticHips?: boolean);
     /** GL setup and initial model transform */
     initGL(gl: GL): void;
     translate(translation: ReadonlyVec3): void;
@@ -36,7 +37,7 @@ declare abstract class AbstractSkyEntity {
     setGeometryNeedsToBeRefreshed(): void;
     rotateX(m: mat4, angle: number): mat4;
     rotateY(m: mat4, angle: number): mat4;
-    abstract draw(showHPXGrid: boolean): void;
+    abstract draw(insideSphere: boolean): void;
 }
 export default AbstractSkyEntity;
 //# sourceMappingURL=AbstractSkyEntity.d.ts.map

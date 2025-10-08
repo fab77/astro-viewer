@@ -4,6 +4,7 @@ import RayPickingUtils from '../../utils/RayPickingUtils.js';
 import { newTileBuffer } from './TileBuffer.js';
 import { vec4, mat4 } from 'gl-matrix';
 import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
+import { bootSetup } from '../../Config.js';
 class VisibleTilesManager {
     _visibleTilesByOrder;
     _ancestorsMap;
@@ -12,6 +13,7 @@ class VisibleTilesManager {
     _galAncestorsMap;
     _galacticMatrixInverted;
     _galacticMatrix;
+    insideSphere = bootSetup.insideSphere;
     constructor() {
         this._visibleTilesByOrder = { pixels: [], order: 0 };
         this._ancestorsMap = new Map();
@@ -26,8 +28,9 @@ class VisibleTilesManager {
         mat4.set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
         mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
     }
-    init() {
+    init(insideSphere) {
         this.initialised = true;
+        this.insideSphere = insideSphere;
         this.computeVisiblePixels();
         // Consider debouncing/throttling in real-time UIs
         setInterval(() => this.computeVisiblePixels(), 500);
@@ -35,11 +38,14 @@ class VisibleTilesManager {
     getVisibleOrder() {
         return healpixGridSingleton.visibleorder;
     }
+    toggleInsideSphere() {
+        this.insideSphere = !this.insideSphere;
+    }
     computeVisiblePixels() {
         if (!this.initialised)
             return;
         let order = healpixGridSingleton.visibleorder;
-        if (global.insideSphere && order < 3) {
+        if (this.insideSphere && order < 3) {
             order = 3;
         }
         this._ancestorsMap.set(order, []);

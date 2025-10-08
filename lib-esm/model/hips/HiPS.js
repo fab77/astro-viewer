@@ -30,9 +30,9 @@ class HiPS extends AbstractSkyEntity {
     get minOrder() { return this._minorder; }
     get baseURL() { return this._baseurl; }
     get format() { return this._format; }
-    constructor(radius, position, xrad, yrad, descriptor) {
-        super(radius, position, xrad, yrad, descriptor.surveyName, descriptor.isGalactic);
-        super.initGL(global.gl);
+    constructor(radius, position, xrad, yrad, descriptor, insideSphere) {
+        super(radius, position, xrad, yrad, descriptor.surveyName, insideSphere, descriptor.isGalactic);
+        this.initGL(global.gl);
         newTileBuffer.addHiPS(this);
         // DEBUG logs kept from JS (optional)
         // eslint-disable-next-line no-console
@@ -132,7 +132,7 @@ class HiPS extends AbstractSkyEntity {
         const fov = healpixGridSingleton.getMinFoV();
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
-    draw() {
+    draw(insideSphere) {
         if (!global.camera || global.camera.getCameraMatrix() === undefined)
             return;
         this.refresh();

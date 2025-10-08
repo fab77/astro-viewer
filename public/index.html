@@ -12,15 +12,18 @@
 <body onload="run();">
 
     <script>
+        let AstroAPI = undefined
         async function run() {
             const AC = new astrocore.AstroCore();
-
+            
             const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
             const resp = await fetch(hipsUrl + "properties");
             const propsText = await resp.text();
 
             const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl));
-            AC.activateHiPS(desc);
+            const insideSphere = false
+            AC.activateHiPS(desc, insideSphere);
+            AstroAPI = AC
             AC.run();
         }
     </script>

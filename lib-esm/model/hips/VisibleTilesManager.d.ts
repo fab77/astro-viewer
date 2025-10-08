@@ -10,9 +10,11 @@ declare class VisibleTilesManager {
     private _galAncestorsMap;
     private _galacticMatrixInverted;
     private _galacticMatrix;
+    private insideSphere;
     constructor();
-    init(): void;
+    init(insideSphere: boolean): void;
     getVisibleOrder(): number;
+    toggleInsideSphere(): void;
     computeVisiblePixels(): void;
     get visibleTilesByOrder(): VisibleTiles;
     get ancestorsMap(): Map<number, number[]>;

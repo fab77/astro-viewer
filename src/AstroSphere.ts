@@ -18,7 +18,7 @@ import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 import HiPS from './model/hips/HiPS.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.js'
-import FoV from './model/FoV.js'
+import { FoV } from './model/FoV.js'
 
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -40,19 +40,25 @@ class AstroSphere {
 
   private startup = true
 
+  private insideSphere: boolean
+  private fov: FoV
+
+
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     // Keep global GL context (as in original JS)
     global.gl = webgl
     this.mouseHelper = new MouseHelper()
     this.init(canvas)
+    this.insideSphere = bootSetup.insideSphere
+    this.fov = healpixGridSingleton.refreshFoV(this.insideSphere)
   }
 
   private init(canvas: HTMLCanvasElement) {
     this.initCamera()
 
     healpixGridSingleton.init()
-    visibleTilesManager.init()
-    computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane)
+    visibleTilesManager.init(bootSetup.insideSphere)
+    computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere)
 
     this.startup = true
 
@@ -67,16 +73,6 @@ class AstroSphere {
     }
     global.camera = this.camera
   }
-
-
-  // refreshFoV() {
-  //   healpixGridSingleton.refreshFoV(false)
-  //   healpixGridSingleton.getMinFoV()
-  // }
-
-  // getFoV() {
-  //   return healpixGridSingleton.refreshFoV(false)
-  // }
 
   private addEventListeners(canvas: HTMLCanvasElement) {
     if (global.debug) {
@@ -170,21 +166,38 @@ class AstroSphere {
     return cartesianToSpherical(pickerPoint)
   }
 
-  activateHiPS(hipsDescriptor: HiPSDescriptor) {
+  activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean) {
 
     this.activeHiPS = new HiPS(
       1,
       [0.0, 0.0, 0.0],
       0,
       0,
-      hipsDescriptor
+      hipsDescriptor,
+      insideSphere
     )
   }
 
 
-  draw(canvas: HTMLCanvasElement) {
+  getFoV(): FoV {
+    // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
+    return this.fov
+  }
 
-    const insideSphere = bootSetup.insideSphere
+  changeFoV(deg: number) {
+    throw new Error("not Implemented")
+  }
+
+  getInsideSphere(): boolean {
+    return this.insideSphere
+  }
+
+  toggleInsideSphere() {
+    this.insideSphere = !this.insideSphere
+    visibleTilesManager.toggleInsideSphere()
+  }
+
+  draw(canvas: HTMLCanvasElement) {
 
     if (!global.gl) return
     if (!this.activeHiPS) return
@@ -195,7 +208,7 @@ class AstroSphere {
     // global.gl.getExtension('OES_element_index_uint')
     // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
 
-    computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane)
+    computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, this.insideSphere)
 
     let cameraRotated = false
     let THETA = 0
@@ -209,9 +222,9 @@ class AstroSphere {
       if (Math.abs(this.zoomInertia) > 0.0001) {
         this.camera.zoom(this.zoomInertia)
         this.zoomInertia *= 0.95
-        console.log('EMIT HERE (fovUpdate)')
-        console.log(healpixGridSingleton.refreshFoV(insideSphere))
-
+        // console.log('EMIT HERE (fovUpdate)')
+        this.fov = healpixGridSingleton.refreshFoV(this.insideSphere)
+        // this.getFoV()
       }
     }
 
@@ -223,7 +236,7 @@ class AstroSphere {
       this.inertiaX *= 0.95
       this.inertiaY *= 0.95
       this.camera.rotate(PHI, THETA)
-      computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane)
+      computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, this.insideSphere)
 
     } else {
       this.inertiaY = 0
@@ -234,13 +247,13 @@ class AstroSphere {
     global.gl.disable(global.gl.DEPTH_TEST)
     global.gl.enable(global.gl.BLEND)
     global.gl.enable(global.gl.CULL_FACE)
-    global.gl.cullFace(global.insideSphere ? global.gl.BACK : global.gl.FRONT)
+    global.gl.cullFace(this.insideSphere ? global.gl.BACK : global.gl.FRONT)
     global.gl.blendFunc(global.gl.SRC_ALPHA, global.gl.ONE_MINUS_SRC_ALPHA)
 
     // DRAW HiPS
 
-    this.activeHiPS.draw()
-    healpixGridSingleton.draw(this.showHPXGrid)
+    this.activeHiPS.draw(this.insideSphere)
+    healpixGridSingleton.draw(this.insideSphere)
 
     global.gl.enable(global.gl.DEPTH_TEST)
     global.gl.disable(global.gl.CULL_FACE)

@@ -4,6 +4,7 @@ import RayPickingUtils from '../../utils/RayPickingUtils.js';
 import { newTileBuffer } from './TileBuffer.js';
 import { vec4, mat4 } from 'gl-matrix';
 import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
+import { bootSetup } from '../../Config.js';
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 interface VisibleTiles {
@@ -22,6 +23,7 @@ class VisibleTilesManager {
   private _galAncestorsMap: Map<number, number[]>;
   private _galacticMatrixInverted: mat4;
   private _galacticMatrix: mat4;
+  private insideSphere: boolean = bootSetup.insideSphere
 
   constructor() {
     this._visibleTilesByOrder = { pixels: [], order: 0 };
@@ -47,8 +49,9 @@ class VisibleTilesManager {
     mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
   }
 
-  init(): void {
+  init(insideSphere: boolean): void {
     this.initialised = true;
+    this.insideSphere = insideSphere
     this.computeVisiblePixels();
     // Consider debouncing/throttling in real-time UIs
     setInterval(() => this.computeVisiblePixels(), 500);
@@ -58,11 +61,15 @@ class VisibleTilesManager {
     return healpixGridSingleton.visibleorder;
   }
 
+  toggleInsideSphere(){
+    this.insideSphere = !this.insideSphere
+  }
+
   computeVisiblePixels(): void {
     if (!this.initialised) return;
 
     let order = healpixGridSingleton.visibleorder;
-    if (global.insideSphere && order < 3) {
+    if (this.insideSphere && order < 3) {
       order = 3;
     }
 

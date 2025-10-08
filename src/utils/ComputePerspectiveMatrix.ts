@@ -1,5 +1,4 @@
-import global from "../Global.js";
-import { mat4, ReadonlyMat4 } from "gl-matrix";
+import { mat4 } from "gl-matrix";
 import Camera from "../Camera.js";
 
 class ComputePerspectiveMatrixSingleton {
@@ -14,14 +13,15 @@ class ComputePerspectiveMatrixSingleton {
     canvas: HTMLCanvasElement,
     camera: Camera,
     fovDeg: number,
-    nearPlane: number = 0.1
+    nearPlane: number = 0.1,
+    insideSphere: boolean
   ): mat4 {
     this._aspectRatio = canvas.width / canvas.height;
 
     const p = mat4.create();
     let farPlane: number;
 
-    if (global.insideSphere) {
+    if (insideSphere) {
       // Inside the sphere: cap slightly beyond radius
       farPlane = 1.1;
     } else {

@@ -58,7 +58,7 @@ class Camera implements CameraLike {
 
   goTo(raDeg: number, decDeg: number): void {
     // eslint-disable-next-line no-console
-    console.log(`global.insideSphere: ${global.insideSphere}`);
+    console.log(`this.insideSphere: ${this.insideSphere}`);
     // mirror RA
     const mirroredRA = 360 - raDeg;
     this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
@@ -136,7 +136,7 @@ class Camera implements CameraLike {
       }
 
       // NOTE: your original code adds move[2] twice; if that's unintended, remove this next line.
-      this.cam_pos[2] += this.move[2];
+      // this.cam_pos[2] += this.move[2];
     }
 
     const identity = mat4.create();

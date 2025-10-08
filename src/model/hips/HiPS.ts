@@ -45,10 +45,11 @@ class HiPS extends AbstractSkyEntity {
     position: [number, number, number],
     xrad: number,
     yrad: number,
-    descriptor: HiPSDescriptor
+    descriptor: HiPSDescriptor,
+    insideSphere: boolean
   ) {
-    super(radius, position, xrad, yrad, descriptor.surveyName, descriptor.isGalactic)
-    super.initGL((global as any).gl as WebGL2RenderingContext)
+    super(radius, position, xrad, yrad, descriptor.surveyName, insideSphere, descriptor.isGalactic)
+    this.initGL((global as any).gl as WebGL2RenderingContext)
 
     newTileBuffer.addHiPS(this)
 
@@ -158,7 +159,7 @@ class HiPS extends AbstractSkyEntity {
     this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder)
   }
 
-  draw(): void {
+  draw(insideSphere: boolean): void {
     
     if (!global.camera || global.camera.getCameraMatrix() === undefined) return
     this.refresh()

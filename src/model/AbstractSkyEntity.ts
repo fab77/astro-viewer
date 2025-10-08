@@ -4,6 +4,7 @@
 
 import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
 import global from "../Global.js";
+import { bootSetup } from "../Config.js";
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -17,6 +18,7 @@ abstract class AbstractSkyEntity {
   public yRad: number;
   public prevFoV = this.fovX_deg;
   public name: string;
+  public insideSphere: boolean = bootSetup.insideSphere
 
   // Picking/sphere
   public center: vec3;
@@ -44,13 +46,15 @@ abstract class AbstractSkyEntity {
     in_xRad: number,
     in_yRad: number,
     in_name: string,
-    isGalacticHips?: boolean
+    insideSphere: boolean,
+    isGalacticHips?: boolean,
   ) {
     this.xRad = in_xRad;
     this.yRad = in_yRad;
     this.name = in_name;
     this.center = vec3.clone(in_position);
     this.radius = in_radius;
+    this.insideSphere = insideSphere
     this.isGalacticHips = !!isGalacticHips;
 
     // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
@@ -106,7 +110,7 @@ abstract class AbstractSkyEntity {
     mat4.multiply(this.modelMatrix, this.T, R_inverse);
 
     // Flip Y if we're outside the sphere
-    if (!global.insideSphere) {
+    if (!this.insideSphere) {
       this.modelMatrix[1]  = -this.modelMatrix[1];
       this.modelMatrix[5]  = -this.modelMatrix[5];
       this.modelMatrix[9]  = -this.modelMatrix[9];
@@ -169,7 +173,7 @@ abstract class AbstractSkyEntity {
 
   // ---------- Abstract hooks ----------
   
-  abstract draw(showHPXGrid: boolean): void;
+  abstract draw(insideSphere: boolean): void;
 
 }
 

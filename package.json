@@ -48,7 +48,8 @@
     "dev": "npm run clean && tsc && webpack --mode=development --watch --progress; cp dist/* webtest/",
     "prod": "npm run clean && tsc && webpack --mode=production && npm run web",
     "web": "cp dist/*.js public/javascripts/; cp dist/*.map public/javascripts/; cp src/html/index.html public/",
-    "start-server": "npx http-server public"
+    "start-server": "npx http-server public",
+    "all": "npm run clean; npm run prod; npm run start-server"
   },
   "engines": {
     "node": ">=22.0.0"

@@ -1,7 +1,8 @@
 // AstroCoreEntryPoint.ts
 import global from './Global.js'
 import AstroSphere from './AstroSphere.js'
-import {HiPSDescriptor} from './model/hips/HiPSDescriptor.js'
+import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
+import { FoV } from './model/FoV.js'
 
 type GL2WithViewport = WebGL2RenderingContext & {
   viewportWidth: number
@@ -14,16 +15,38 @@ export class AstroCore {
   private webgl!: GL2WithViewport
   private rafId: number | null = null
 
+
+
+  // API
+  run(): number {
+    return this.tick()
+  }
+
+  activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void {
+    this.astroSphere.activateHiPS(hipsDescriptor, insideSphere)
+  }
+
+  getFoV(): FoV {
+    return this.astroSphere.getFoV()
+  }
+  changeFoV(deg: number) {
+    this, this.astroSphere.changeFoV(deg)
+  }
+
+  getInsideSphere(): boolean {
+    return this.astroSphere.getInsideSphere()
+  }
+
+  toggleInsideSphere() {
+    this.astroSphere.toggleInsideSphere()
+  }
+
+  // Internal
   constructor() {
     this.init()
   }
 
-  
-  activateHiPS(hipsDescriptor: HiPSDescriptor): void {
-    this.astroSphere.activateHiPS(hipsDescriptor)
-  }
-
-  init(): void {
+  private init(): void {
     console.log('init webgl')
 
     const c = document.getElementById('astrocanvas')
@@ -51,7 +74,7 @@ export class AstroCore {
     }
 
     this.initListeners()
-    ;(global as any).gl = this.webgl
+      ; (global as any).gl = this.webgl
     this.astroSphere = new AstroSphere(this.canvas, this.webgl)
   }
 
@@ -95,9 +118,6 @@ export class AstroCore {
     resizeCanvas()
   }
 
-  run(): number {
-    return this.tick()
-  }
 
   private tick(): number {
     this.drawScene()
@@ -108,5 +128,6 @@ export class AstroCore {
   private drawScene(): void {
     this.astroSphere.draw(this.canvas)
   }
+
 
 }

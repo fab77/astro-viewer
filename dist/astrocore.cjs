@@ -40,6 +40,7 @@ __webpack_require__.r(__webpack_exports__);
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
   AstroCore: () => (/* reexport */ AstroCore),
+  FoV: () => (/* reexport */ FoV),
   HiPSDescriptor: () => (/* reexport */ HiPSDescriptor)
 });
 
@@ -4497,7 +4498,6 @@ function decDegToDMS(decDeg) {
  * @author Fabrizio Giordano (Fab)
  */
 
- // keep your Global.ts exporting a default object
 
 class Camera {
     insideSphere = false;
@@ -4531,7 +4531,7 @@ class Camera {
     }
     goTo(raDeg, decDeg) {
         // eslint-disable-next-line no-console
-        console.log(`global.insideSphere: ${src_Global.insideSphere}`);
+        console.log(`this.insideSphere: ${this.insideSphere}`);
         // mirror RA
         const mirroredRA = 360 - raDeg;
         this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
@@ -4605,7 +4605,7 @@ class Camera {
                 this.cam_pos[2] += this.move[2];
             }
             // NOTE: your original code adds move[2] twice; if that's unintended, remove this next line.
-            this.cam_pos[2] += this.move[2];
+            // this.cam_pos[2] += this.move[2];
         }
         const identity = mat4_create();
         translate(this.T, identity, this.cam_pos);
@@ -4684,18 +4684,17 @@ class Camera {
 
 ;// ./src/utils/ComputePerspectiveMatrix.ts
 
-
 class ComputePerspectiveMatrixSingleton {
     _pMatrix = null;
     _aspectRatio = 1;
     get pMatrix() {
         return this._pMatrix;
     }
-    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1) {
+    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
         this._aspectRatio = canvas.width / canvas.height;
         const p = mat4_create();
         let farPlane;
-        if (src_Global.insideSphere) {
+        if (insideSphere) {
             // Inside the sphere: cap slightly beyond radius
             farPlane = 1.1;
         }
@@ -4732,6 +4731,7 @@ class AbstractSkyEntity {
     yRad;
     prevFoV = this.fovX_deg;
     name;
+    insideSphere = bootSetup.insideSphere;
     // Picking/sphere
     center;
     radius;
@@ -4748,12 +4748,13 @@ class AbstractSkyEntity {
     inverseModelMatrix = mat4_create();
     // Precomputed transform from galactic to equatorial (already inverted)
     galacticMatrixInverted = mat4_create();
-    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, isGalacticHips) {
+    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, insideSphere, isGalacticHips) {
         this.xRad = in_xRad;
         this.yRad = in_yRad;
         this.name = in_name;
         this.center = clone(in_position);
         this.radius = in_radius;
+        this.insideSphere = insideSphere;
         this.isGalacticHips = !!isGalacticHips;
         // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
         mat4_set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
@@ -4794,7 +4795,7 @@ class AbstractSkyEntity {
         invert(R_inverse, this.R);
         mat4_multiply(this.modelMatrix, this.T, R_inverse);
         // Flip Y if we're outside the sphere
-        if (!src_Global.insideSphere) {
+        if (!this.insideSphere) {
             this.modelMatrix[1] = -this.modelMatrix[1];
             this.modelMatrix[5] = -this.modelMatrix[5];
             this.modelMatrix[9] = -this.modelMatrix[9];
@@ -5993,22 +5994,13 @@ class FoVUtils {
 
 
 class FoV {
-    static _instance = null;
     fovXDeg = 180;
     fovYDeg = 180;
     _minFoV = 180;
-    prevMinFoV = 180;
-    constructor() {
-    }
-    static get instance() {
-        if (!FoV._instance)
-            FoV._instance = new FoV();
-        return FoV._instance;
-    }
+    constructor() { }
     /** Recomputes FoV for current camera + projection */
     getFoV(insideSphere) {
         const gl = src_Global.gl;
-        this.prevMinFoV = this._minFoV;
         if (!gl || !gl.canvas) {
             // Handle the error or assign default values
             this.fovXDeg = 180;
@@ -6022,6 +6014,18 @@ class FoV {
         this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere);
         this._minFoV = this.minFoV;
         return this;
+    }
+    changeMinFov(deg) {
+        console.log("inside changeMinFov");
+        if (this.fovYDeg <= this.fovXDeg) {
+            this.fovYDeg = deg;
+        }
+        else {
+            this.fovXDeg = deg;
+        }
+        console.log("changeMinFov: ping");
+        this.minFoV;
+        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
     }
     /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
     computeAngle(canvasX, canvasY, insideSphere) {
@@ -6069,15 +6073,70 @@ class FoV {
         else {
             angleDeg = 180;
         }
-        const inside = insideSphere ?? src_Global.insideSphere;
-        return inside ? 360 - angleDeg : angleDeg;
+        return insideSphere ? 360 - angleDeg : angleDeg;
+    }
+    /**
+   * Computes the camera position (x,y,z) along the current view direction that would
+   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
+   * This method does NOT mutate the camera; it only returns the suggested position.
+   *
+   * Geometry: for a sphere of radius R observed from distance d (from center),
+   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
+   * along the tighter axis; we solve for d and place the camera on the current
+   * center→camera direction with that distance.
+   *
+   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
+   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
+   */
+    computeCameraPositionForMinFoV(targetMinFoVDeg) {
+        const camera = src_Global.camera;
+        const center = grid_HealpixGridSingleton.center;
+        const R = grid_HealpixGridSingleton.radius;
+        if (!camera) {
+            console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.');
+            return [center[0], center[1], center[2] + 2 * R];
+        }
+        // Clamp and validate input
+        const eps = 1e-6;
+        const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg));
+        const halfRad = (clamped * Math.PI / 180) * 0.5;
+        // Distance from center needed to achieve the angular diameter
+        // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
+        const sinHalf = Math.sin(halfRad);
+        if (sinHalf <= 0) {
+            console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.');
+            return [center[0], center[1], center[2] + 2 * R];
+        }
+        let d = R / sinHalf;
+        // Ensure we remain strictly outside the sphere
+        d = Math.max(d, R + 1e-4);
+        // Use the current center→camera direction to keep orientation
+        const camPos = camera.getCameraPosition();
+        let dirX = camPos[0] - center[0];
+        let dirY = camPos[1] - center[1];
+        let dirZ = camPos[2] - center[2];
+        const len = Math.hypot(dirX, dirY, dirZ);
+        if (len < eps) {
+            // If somehow at the center, use +Z as a default direction
+            dirX = 0;
+            dirY = 0;
+            dirZ = 1;
+        }
+        else {
+            dirX /= len;
+            dirY /= len;
+            dirZ /= len;
+        }
+        const newX = center[0] + dirX * d;
+        const newY = center[1] + dirY * d;
+        const newZ = center[2] + dirZ * d;
+        return [newX, newY, newZ];
     }
     get minFoV() {
         this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
         return this._minFoV;
     }
 }
-/* harmony default export */ const model_FoV = (FoV);
 
 ;// ./src/shader/GridShaderManager.ts
 // GridShaderManager.ts
@@ -8250,6 +8309,7 @@ const newTileBuffer = new TileBuffer();
 
 
 
+
 class VisibleTilesManager {
     _visibleTilesByOrder;
     _ancestorsMap;
@@ -8258,6 +8318,7 @@ class VisibleTilesManager {
     _galAncestorsMap;
     _galacticMatrixInverted;
     _galacticMatrix;
+    insideSphere = bootSetup.insideSphere;
     constructor() {
         this._visibleTilesByOrder = { pixels: [], order: 0 };
         this._ancestorsMap = new Map();
@@ -8272,8 +8333,9 @@ class VisibleTilesManager {
         mat4_set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
         invert(this._galacticMatrix, this._galacticMatrixInverted);
     }
-    init() {
+    init(insideSphere) {
         this.initialised = true;
+        this.insideSphere = insideSphere;
         this.computeVisiblePixels();
         // Consider debouncing/throttling in real-time UIs
         setInterval(() => this.computeVisiblePixels(), 500);
@@ -8281,11 +8343,14 @@ class VisibleTilesManager {
     getVisibleOrder() {
         return grid_HealpixGridSingleton.visibleorder;
     }
+    toggleInsideSphere() {
+        this.insideSphere = !this.insideSphere;
+    }
     computeVisiblePixels() {
         if (!this.initialised)
             return;
         let order = grid_HealpixGridSingleton.visibleorder;
-        if (src_Global.insideSphere && order < 3) {
+        if (this.insideSphere && order < 3) {
             order = 3;
         }
         this._ancestorsMap.set(order, []);
@@ -8395,12 +8460,14 @@ const visibleTilesManager = new VisibleTilesManager();
 
 
 
+
 class HealpixGridSingleton extends model_AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
     _refreshingBuffers = false;
     _visibleorder = 0;
     _oldorder = 0;
+    showGrid = false;
     _shaderProgram;
     fragmentShader;
     vertexShader;
@@ -8421,8 +8488,9 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     static INITIAL_POSITION = [0.0, 0.0, 0.0];
     static INITIAL_PhiRad = 0;
     static INITIAL_ThetaRad = 0;
-    constructor() {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', false);
+    constructor(insideSphere) {
+        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', insideSphere);
+        // this.initGL(global.gl as GL);
     }
     init() {
         console.log('HealpixGridSingleton.init()');
@@ -8437,7 +8505,7 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
         this._vertexCataloguePositionBuffer = src_Global.gl.createBuffer();
         this._indexBuffer = src_Global.gl.createBuffer();
         this._vertexCataloguePosition = new Float32Array(0);
-        this.fovObj = new model_FoV();
+        this.fovObj = new FoV();
     }
     refreshFoV(insideSphere) {
         return this.fovObj.getFoV(insideSphere);
@@ -8554,9 +8622,9 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     updateTiles(pixels, order) {
         return this._tileBuffer.updateTiles(pixels, order);
     }
-    refresh() {
+    refresh(insideSphere) {
         this._oldorder = this._visibleorder;
-        this.refreshFoV(src_Global.insideSphere);
+        this.refreshFoV(insideSphere);
         const fov = this.getMinFoV();
         // expose to global (legacy)
         src_Global.hipsFoV = fov;
@@ -8576,11 +8644,14 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
         if (uP)
             gl.uniformMatrix4fv(uP, false, pMatrix);
     }
-    draw(showHPXGrid) {
+    toggleShowGrid() {
+        this.showGrid = !this.showGrid;
+    }
+    draw(insideSphere) {
         const gl = src_Global.gl;
         const mMatrix = this.getModelMatrix();
-        this.refresh();
-        if (!showHPXGrid)
+        this.refresh(insideSphere);
+        if (!this.showGrid)
             return;
         const visibleTiles = visibleTilesManager.visibleTilesByOrder;
         const pixels = visibleTiles.pixels;
@@ -8630,7 +8701,7 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
         return this._visibleorder;
     }
 }
-const healpixGridSingleton = new HealpixGridSingleton();
+const healpixGridSingleton = new HealpixGridSingleton(bootSetup.insideSphere);
 /* harmony default export */ const grid_HealpixGridSingleton = (healpixGridSingleton);
 
 ;// ./src/utils/RayPickingUtils.ts
@@ -9898,9 +9969,9 @@ class HiPS extends model_AbstractSkyEntity {
     get minOrder() { return this._minorder; }
     get baseURL() { return this._baseurl; }
     get format() { return this._format; }
-    constructor(radius, position, xrad, yrad, descriptor) {
-        super(radius, position, xrad, yrad, descriptor.surveyName, descriptor.isGalactic);
-        super.initGL(src_Global.gl);
+    constructor(radius, position, xrad, yrad, descriptor, insideSphere) {
+        super(radius, position, xrad, yrad, descriptor.surveyName, insideSphere, descriptor.isGalactic);
+        this.initGL(src_Global.gl);
         newTileBuffer.addHiPS(this);
         // DEBUG logs kept from JS (optional)
         // eslint-disable-next-line no-console
@@ -10000,7 +10071,7 @@ class HiPS extends model_AbstractSkyEntity {
         const fov = grid_HealpixGridSingleton.getMinFoV();
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
-    draw() {
+    draw(insideSphere) {
         if (!src_Global.camera || src_Global.camera.getCameraMatrix() === undefined)
             return;
         this.refresh();
@@ -10057,17 +10128,21 @@ class AstroSphere {
     zoomInertia = 0.0;
     activeHiPS = null;
     startup = true;
+    insideSphere;
+    fov;
     constructor(canvas, webgl) {
         // Keep global GL context (as in original JS)
         src_Global.gl = webgl;
         this.mouseHelper = new utils_MouseHelper();
         this.init(canvas);
+        this.insideSphere = bootSetup.insideSphere;
+        this.fov = grid_HealpixGridSingleton.refreshFoV(this.insideSphere);
     }
     init(canvas) {
         this.initCamera();
         grid_HealpixGridSingleton.init();
-        visibleTilesManager.init();
-        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
+        visibleTilesManager.init(bootSetup.insideSphere);
+        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
         this.startup = true;
         this.addEventListeners(canvas);
     }
@@ -10080,13 +10155,6 @@ class AstroSphere {
         }
         src_Global.camera = this.camera;
     }
-    // refreshFoV() {
-    //   healpixGridSingleton.refreshFoV(false)
-    //   healpixGridSingleton.getMinFoV()
-    // }
-    // getFoV() {
-    //   return healpixGridSingleton.refreshFoV(false)
-    // }
     addEventListeners(canvas) {
         if (src_Global.debug) {
             console.log('[AstroSphere::addEventListeners]');
@@ -10160,11 +10228,24 @@ class AstroSphere {
         const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2);
         return cartesianToSpherical(pickerPoint);
     }
-    activateHiPS(hipsDescriptor) {
-        this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor);
+    activateHiPS(hipsDescriptor, insideSphere) {
+        this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, insideSphere);
+    }
+    getFoV() {
+        // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
+        return this.fov;
+    }
+    changeFoV(deg) {
+        throw new Error("not Implemented");
+    }
+    getInsideSphere() {
+        return this.insideSphere;
+    }
+    toggleInsideSphere() {
+        this.insideSphere = !this.insideSphere;
+        visibleTilesManager.toggleInsideSphere();
     }
     draw(canvas) {
-        const insideSphere = bootSetup.insideSphere;
         if (!src_Global.gl)
             return;
         if (!this.activeHiPS)
@@ -10176,7 +10257,7 @@ class AstroSphere {
         // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
         // global.gl.getExtension('OES_element_index_uint')
         // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
-        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
+        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, this.insideSphere);
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;
@@ -10187,8 +10268,9 @@ class AstroSphere {
             if (Math.abs(this.zoomInertia) > 0.0001) {
                 this.camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
-                console.log('EMIT HERE (fovUpdate)');
-                console.log(grid_HealpixGridSingleton.refreshFoV(insideSphere));
+                // console.log('EMIT HERE (fovUpdate)')
+                this.fov = grid_HealpixGridSingleton.refreshFoV(this.insideSphere);
+                // this.getFoV()
             }
         }
         // Rotation inertia
@@ -10199,7 +10281,7 @@ class AstroSphere {
             this.inertiaX *= 0.95;
             this.inertiaY *= 0.95;
             this.camera.rotate(PHI, THETA);
-            ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane);
+            ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, this.insideSphere);
         }
         else {
             this.inertiaY = 0;
@@ -10209,11 +10291,11 @@ class AstroSphere {
         src_Global.gl.disable(src_Global.gl.DEPTH_TEST);
         src_Global.gl.enable(src_Global.gl.BLEND);
         src_Global.gl.enable(src_Global.gl.CULL_FACE);
-        src_Global.gl.cullFace(src_Global.insideSphere ? src_Global.gl.BACK : src_Global.gl.FRONT);
+        src_Global.gl.cullFace(this.insideSphere ? src_Global.gl.BACK : src_Global.gl.FRONT);
         src_Global.gl.blendFunc(src_Global.gl.SRC_ALPHA, src_Global.gl.ONE_MINUS_SRC_ALPHA);
         // DRAW HiPS
-        this.activeHiPS.draw();
-        grid_HealpixGridSingleton.draw(this.showHPXGrid);
+        this.activeHiPS.draw(this.insideSphere);
+        grid_HealpixGridSingleton.draw(this.insideSphere);
         src_Global.gl.enable(src_Global.gl.DEPTH_TEST);
         src_Global.gl.disable(src_Global.gl.CULL_FACE);
         if (this.startup) {
@@ -10242,11 +10324,28 @@ class AstroCore {
     canvas;
     webgl;
     rafId = null;
+    // API
+    run() {
+        return this.tick();
+    }
+    activateHiPS(hipsDescriptor, insideSphere) {
+        this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
+    }
+    getFoV() {
+        return this.astroSphere.getFoV();
+    }
+    changeFoV(deg) {
+        this, this.astroSphere.changeFoV(deg);
+    }
+    getInsideSphere() {
+        return this.astroSphere.getInsideSphere();
+    }
+    toggleInsideSphere() {
+        this.astroSphere.toggleInsideSphere();
+    }
+    // Internal
     constructor() {
         this.init();
-    }
-    activateHiPS(hipsDescriptor) {
-        this.astroSphere.activateHiPS(hipsDescriptor);
     }
     init() {
         console.log('init webgl');
@@ -10307,9 +10406,6 @@ class AstroCore {
         this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
         this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
         resizeCanvas();
-    }
-    run() {
-        return this.tick();
     }
     tick() {
         this.drawScene();
@@ -10438,6 +10534,7 @@ class HiPSDescriptor {
 }
 
 ;// ./src/index.ts
+
 
 
 console.log('astrocore UMD loaded');

@@ -2,7 +2,7 @@
  * @author Fabrizio Giordano (Fab)
  */
 import { vec3, mat4 } from "gl-matrix";
-import global from "../Global.js";
+import { bootSetup } from "../Config.js";
 class AbstractSkyEntity {
     // Public-ish properties used elsewhere in the app
     refreshMe = false;
@@ -12,6 +12,7 @@ class AbstractSkyEntity {
     yRad;
     prevFoV = this.fovX_deg;
     name;
+    insideSphere = bootSetup.insideSphere;
     // Picking/sphere
     center;
     radius;
@@ -28,12 +29,13 @@ class AbstractSkyEntity {
     inverseModelMatrix = mat4.create();
     // Precomputed transform from galactic to equatorial (already inverted)
     galacticMatrixInverted = mat4.create();
-    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, isGalacticHips) {
+    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, insideSphere, isGalacticHips) {
         this.xRad = in_xRad;
         this.yRad = in_yRad;
         this.name = in_name;
         this.center = vec3.clone(in_position);
         this.radius = in_radius;
+        this.insideSphere = insideSphere;
         this.isGalacticHips = !!isGalacticHips;
         // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
         mat4.set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
@@ -74,7 +76,7 @@ class AbstractSkyEntity {
         mat4.invert(R_inverse, this.R);
         mat4.multiply(this.modelMatrix, this.T, R_inverse);
         // Flip Y if we're outside the sphere
-        if (!global.insideSphere) {
+        if (!this.insideSphere) {
             this.modelMatrix[1] = -this.modelMatrix[1];
             this.modelMatrix[5] = -this.modelMatrix[5];
             this.modelMatrix[9] = -this.modelMatrix[9];

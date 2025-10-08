@@ -6,11 +6,28 @@ export class AstroCore {
     canvas;
     webgl;
     rafId = null;
+    // API
+    run() {
+        return this.tick();
+    }
+    activateHiPS(hipsDescriptor, insideSphere) {
+        this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
+    }
+    getFoV() {
+        return this.astroSphere.getFoV();
+    }
+    changeFoV(deg) {
+        this, this.astroSphere.changeFoV(deg);
+    }
+    getInsideSphere() {
+        return this.astroSphere.getInsideSphere();
+    }
+    toggleInsideSphere() {
+        this.astroSphere.toggleInsideSphere();
+    }
+    // Internal
     constructor() {
         this.init();
-    }
-    activateHiPS(hipsDescriptor) {
-        this.astroSphere.activateHiPS(hipsDescriptor);
     }
     init() {
         console.log('init webgl');
@@ -71,9 +88,6 @@ export class AstroCore {
         this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
         this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
         resizeCanvas();
-    }
-    run() {
-        return this.tick();
     }
     tick() {
         this.drawScene();

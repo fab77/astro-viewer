@@ -13,31 +13,20 @@ import RayPickingUtils from '../utils/RayPickingUtils.js'
 import { radToDeg } from '../utils/Utils.js'
 import computePerspectiveMatrixSingleton from '../utils/ComputePerspectiveMatrix.js'
 import healpixGridSingleton from './grid/HealpixGridSingleton.js'
+import { bootSetup } from '../Config.js'
 
 
-class FoV {
-  private static _instance: FoV | null = null
+export class FoV {
 
-  
   public fovXDeg = 180
-  public fovYDeg = 180
+  private fovYDeg = 180
   private _minFoV = 180
-  public prevMinFoV = 180
 
-  constructor() {
-    
-  }
-
-  static get instance() {
-    if (!FoV._instance) FoV._instance = new FoV()
-    return FoV._instance
-  }
-
+  constructor() { }
 
   /** Recomputes FoV for current camera + projection */
-  getFoV(insideSphere?: boolean) {
+  public getFoV(insideSphere: boolean) {
     const gl = global.gl
-    this.prevMinFoV = this._minFoV
 
     if (!gl || !gl.canvas) {
       // Handle the error or assign default values
@@ -57,8 +46,23 @@ class FoV {
     return this
   }
 
+  public changeMinFov(deg: number) {
+    console.log("inside changeMinFov")
+    if (this.fovYDeg <= this.fovXDeg) {
+      this.fovYDeg = deg
+    } else {
+      this.fovXDeg = deg
+    }
+    console.log("changeMinFov: ping")
+    this.minFoV
+    // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
+  }
+
+
+
+
   /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-  private computeAngle(canvasX: number, canvasY: number, insideSphere?: boolean): number {
+  private computeAngle(canvasX: number, canvasY: number, insideSphere: boolean): number {
     const camera = global.camera
     const pMatrix = computePerspectiveMatrixSingleton.pMatrix
     if (!pMatrix) {
@@ -114,14 +118,77 @@ class FoV {
       angleDeg = 180
     }
 
-    const inside = insideSphere ?? global.insideSphere
-    return inside ? 360 - angleDeg : angleDeg
+    return insideSphere ? 360 - angleDeg : angleDeg
   }
+
+  /**
+ * Computes the camera position (x,y,z) along the current view direction that would
+ * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
+ * This method does NOT mutate the camera; it only returns the suggested position.
+ *
+ * Geometry: for a sphere of radius R observed from distance d (from center),
+ * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
+ * along the tighter axis; we solve for d and place the camera on the current
+ * center→camera direction with that distance.
+ *
+ * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
+ * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
+ */
+  public computeCameraPositionForMinFoV(targetMinFoVDeg: number): [number, number, number] {
+    const camera = global.camera
+    const center = healpixGridSingleton.center
+    const R = healpixGridSingleton.radius
+
+    if (!camera) {
+      console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.')
+      return [center[0], center[1], center[2] + 2 * R]
+    }
+
+    // Clamp and validate input
+    const eps = 1e-6
+    const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg))
+    const halfRad = (clamped * Math.PI / 180) * 0.5
+
+    // Distance from center needed to achieve the angular diameter
+    // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
+    const sinHalf = Math.sin(halfRad)
+    if (sinHalf <= 0) {
+      console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.')
+      return [center[0], center[1], center[2] + 2 * R]
+    }
+    let d = R / sinHalf
+
+    // Ensure we remain strictly outside the sphere
+    d = Math.max(d, R + 1e-4)
+
+    // Use the current center→camera direction to keep orientation
+    const camPos = camera.getCameraPosition()
+    let dirX = camPos[0] - center[0]
+    let dirY = camPos[1] - center[1]
+    let dirZ = camPos[2] - center[2]
+    const len = Math.hypot(dirX, dirY, dirZ)
+    if (len < eps) {
+      // If somehow at the center, use +Z as a default direction
+      dirX = 0; dirY = 0; dirZ = 1;
+    } else {
+      dirX /= len
+      dirY /= len
+      dirZ /= len
+    }
+
+    const newX = center[0] + dirX * d
+    const newY = center[1] + dirY * d
+    const newZ = center[2] + dirZ * d
+
+    return [newX, newY, newZ]
+
+  }
+
 
   get minFoV() {
     this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg
     return this._minFoV
   }
-}
 
-export default FoV
+
+}
