@@ -3,9 +3,7 @@ import { FoV } from '../FoV.js';
 declare class HealpixGridSingleton extends AbstractSkyEntity {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
-    private _refreshingBuffers;
     private _visibleorder;
-    private _oldorder;
     private showGrid;
     private _shaderProgram;
     private fragmentShader;

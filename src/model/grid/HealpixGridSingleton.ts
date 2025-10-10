@@ -34,9 +34,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   static ELEM_SIZE = 3;
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
 
-  private _refreshingBuffers = false;
   private _visibleorder = 0;
-  private _oldorder = 0;
   private showGrid: boolean = false
   private _shaderProgram!: WebGLProgram;
   private fragmentShader!: WebGLShader;
@@ -81,10 +79,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
     const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
     this._visibleorder = order;
-    this._oldorder = order;
 
     this._nPrimitiveFlags = 0;
-    this._refreshingBuffers = false;
 
     this._vertexCataloguePositionBuffer = (global.gl as GL).createBuffer()!;
     this._indexBuffer = (global.gl as GL).createBuffer()!;
@@ -136,7 +132,6 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   initBuffers(pixels: number[], order: number): void {
 
     this._nPrimitiveFlags = 0;
-    this._refreshingBuffers = true;
 
     const healpix: Healpix = global.getHealpix(order);
     const subhpx: Healpix = global.getHealpix(order + 1);
@@ -238,7 +233,6 @@ class HealpixGridSingleton extends AbstractSkyEntity {
       vIdx += 1;
     }
 
-    this._refreshingBuffers = false;
   }
 
   updateTiles(pixels: number[], order: number) {
@@ -246,7 +240,6 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   }
 
   private refresh(insideSphere: boolean): void {
-    this._oldorder = this._visibleorder;
 
     this.refreshFoV(insideSphere);
 

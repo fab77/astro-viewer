@@ -16,9 +16,7 @@ import { bootSetup } from '../../Config.js';
 class HealpixGridSingleton extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    _refreshingBuffers = false;
     _visibleorder = 0;
-    _oldorder = 0;
     showGrid = false;
     _shaderProgram;
     fragmentShader;
@@ -51,9 +49,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         this.initShaders();
         const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
         this._visibleorder = order;
-        this._oldorder = order;
         this._nPrimitiveFlags = 0;
-        this._refreshingBuffers = false;
         this._vertexCataloguePositionBuffer = global.gl.createBuffer();
         this._indexBuffer = global.gl.createBuffer();
         this._vertexCataloguePosition = new Float32Array(0);
@@ -93,7 +89,6 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     }
     initBuffers(pixels, order) {
         this._nPrimitiveFlags = 0;
-        this._refreshingBuffers = true;
         const healpix = global.getHealpix(order);
         const subhpx = global.getHealpix(order + 1);
         const subsubhpx = global.getHealpix(order + 2);
@@ -169,13 +164,11 @@ class HealpixGridSingleton extends AbstractSkyEntity {
             this._nPrimitiveFlags += 1;
             vIdx += 1;
         }
-        this._refreshingBuffers = false;
     }
     updateTiles(pixels, order) {
         return this._tileBuffer.updateTiles(pixels, order);
     }
     refresh(insideSphere) {
-        this._oldorder = this._visibleorder;
         this.refreshFoV(insideSphere);
         const fov = this.getMinFoV();
         // expose to global (legacy)
