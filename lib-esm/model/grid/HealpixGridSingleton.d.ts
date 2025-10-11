@@ -22,7 +22,9 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     static INITIAL_ThetaRad: number;
     constructor(insideSphere: boolean);
     init(): void;
+    get RADIUS(): number;
     refreshFoV(insideSphere: boolean): FoV;
+    getFoV(): FoV;
     getMinFoV(): number;
     private initShaders;
     initBuffers(pixels: number[], order: number): void;

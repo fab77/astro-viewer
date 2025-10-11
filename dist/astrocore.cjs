@@ -4611,6 +4611,45 @@ class Camera {
         translate(this.T, identity, this.cam_pos);
         this.refreshViewMatrix();
     }
+    /**
+     * Move the camera forward/backward along its current viewing direction.
+     * Positive distance moves *forward* (toward where the camera is looking),
+     * negative distance moves *backward*.
+     *
+     * This does not enforce inside/outside-sphere bounds; if you want clamping,
+     * handle it before calling or we can extend this to mimic `zoom()` bounds.
+     */
+    moveAlongView(distance) {
+        // World-space forward vector: transform camera-space -Z by inverse rotation
+        const R_inverse = mat4_create();
+        invert(R_inverse, this.R);
+        const forwardCam = fromValues(0, 0, -1); // camera looks along -Z in its local space
+        const fwdWorld = create();
+        transformMat4(fwdWorld, forwardCam, R_inverse);
+        // Normalise to get direction only
+        const len = Math.hypot(fwdWorld[0], fwdWorld[1], fwdWorld[2]);
+        if (len > 0) {
+            fwdWorld[0] /= len;
+            fwdWorld[1] /= len;
+            fwdWorld[2] /= len;
+        }
+        // Update camera position
+        this.cam_pos[0] += fwdWorld[0] * distance;
+        this.cam_pos[1] += fwdWorld[1] * distance;
+        this.cam_pos[2] += fwdWorld[2] * distance;
+        // Rebuild translation matrix and view matrix
+        const identity = mat4_create();
+        translate(this.T, identity, this.cam_pos);
+        this.refreshViewMatrix();
+    }
+    translate(distance) {
+        // const pos = this.getCameraPosition();
+        this.cam_pos[2] = distance + 1;
+        // vec3.scale(pos, pos, distance);
+        const identity = mat4_create();
+        translate(this.T, identity, this.cam_pos);
+        this.refreshViewMatrix();
+    }
     rotateZ(sign) {
         const factorRad = sign * 0.01;
         this.phi += factorRad;
@@ -4667,9 +4706,28 @@ class Camera {
         return this.vMatrix;
     }
     getCameraPosition() {
-        const vMatrix_inverse = mat4_create();
-        invert(vMatrix_inverse, this.vMatrix);
-        return [vMatrix_inverse[12], vMatrix_inverse[13], vMatrix_inverse[14]];
+        const inv = mat4_create();
+        if (!invert(inv, this.vMatrix)) {
+            // fallback — we already maintain cam_pos
+            return [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]];
+        }
+        return [inv[12], inv[13], inv[14]];
+    }
+    // setCameraPosition(position: Vec3Tuple) {
+    //   const inv = mat4.create();
+    //   if (mat4.invert(inv, this.vMatrix)) {
+    //     [inv[12], inv[13], inv[14]] = [position[0], position[1], position[2]]
+    //     mat4.invert(this.vMatrix, inv)
+    //   }
+    // }
+    setCameraPosition(position) {
+        // Update authoritative position
+        this.cam_pos = fromValues(position[0], position[1], position[2]);
+        // Rebuild translation matrix from cam_pos
+        translate(this.T, mat4_create(), this.cam_pos);
+        // Do NOT touch this.R here (keep orientation)
+        // Recompute view: vMatrix = inv(T) * inv(R)
+        this.refreshViewMatrix();
     }
     getCameraAngle() {
         const [x, y, z] = this.getCameraPosition();
@@ -5996,6 +6054,7 @@ class FoVUtils {
 class FoV {
     fovXDeg = 180;
     fovYDeg = 180;
+    ratio = +0;
     _minFoV = 180;
     constructor() { }
     /** Recomputes FoV for current camera + projection */
@@ -6009,11 +6068,30 @@ class FoV {
             return this;
         }
         // horizontal FoV: ray through (centerY)
-        this.fovXDeg = this.computeAngle(0, gl.canvas.height / 2, insideSphere);
+        // const x = this.computeAngle(0, gl.canvas.height / 2, insideSphere)
+        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere);
+        this.fovXDeg = xFoVComputed.angleDeg;
+        // this.xDistance = xFoVComputed.distance
+        // this.xAngleRatio = this.fovXDeg / this.xDistance
         // vertical FoV: ray through (centerX)
-        this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere);
+        // this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere)
+        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere);
+        this.fovYDeg = yFoVComputed.angleDeg;
+        // this.yDistance = yFoVComputed.distance
+        // this.yAngleRatio = this.fovYDeg / this.yDistance
         this._minFoV = this.minFoV;
+        this.ratio = this.computeRatio();
         return this;
+    }
+    computeRatio() {
+        const camera = src_Global.camera;
+        if (!camera)
+            throw Error("Camera not defined");
+        const pos = camera.getCameraPosition();
+        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
+        const ratio = distanceFromCenter / this.fovYDeg;
+        return ratio;
     }
     changeMinFov(deg) {
         console.log("inside changeMinFov");
@@ -6027,6 +6105,16 @@ class FoV {
         this.minFoV;
         // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
     }
+    get minFoV() {
+        this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        return this._minFoV;
+    }
+    computeDistanceFromAngle(angleDeg) {
+        const desiredFoV = angleDeg;
+        const distance = desiredFoV * this.ratio;
+        // return Math.abs(distance)
+        return distance;
+    }
     /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
     computeAngle(canvasX, canvasY, insideSphere) {
         const camera = src_Global.camera;
@@ -6034,12 +6122,12 @@ class FoV {
         if (!pMatrix) {
             // Handle the error or assign a default value
             console.warn('FoV: projection matrix is null');
-            return 180;
+            return { angleDeg: 180, distance: 1 };
         }
         if (!camera) {
             // Handle the error or assign a default value
             console.warn('FoV: camera is null');
-            return 180;
+            return { angleDeg: 180, distance: 1 };
         }
         const rayWorld = utils_RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix);
         const intersectionDistance = utils_RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld);
@@ -6073,7 +6161,9 @@ class FoV {
         else {
             angleDeg = 180;
         }
-        return insideSphere ? 360 - angleDeg : angleDeg;
+        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
+        // return insideSphere ? 360 - angleDeg : angleDeg
+        return { angleDeg: finalAngle, distance: intersectionDistance };
     }
     /**
    * Computes the camera position (x,y,z) along the current view direction that would
@@ -6132,9 +6222,95 @@ class FoV {
         const newZ = center[2] + dirZ * d;
         return [newX, newY, newZ];
     }
-    get minFoV() {
-        this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
-        return this._minFoV;
+    /**
+       * Computes the camera world-space position required to achieve a target FoV (deg),
+       * keeping the same viewing direction. Acts as the inverse of computeAngle().
+       *
+       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
+       * @param canvasWidth  canvas width in pixels
+       * @param canvasHeight canvas height in pixels
+       * @returns [x, y, z] coordinates for the new camera position
+       */
+    computeCameraPositionForFoV(targetFoVDeg) {
+        const camera = src_Global.camera;
+        const center = grid_HealpixGridSingleton.center;
+        const R = grid_HealpixGridSingleton.radius;
+        if (!camera) {
+            console.warn("FoV.computeCameraPositionForFoV: camera missing.");
+            return [center[0], center[1], center[2] + 2 * R];
+        }
+        const eps = 1e-6;
+        const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
+        const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
+        // Distance from center that yields this FoV
+        const sinHalf = Math.sin(halfRad);
+        if (sinHalf <= 0) {
+            console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
+            return [center[0], center[1], center[2] + 2 * R];
+        }
+        let d = R / sinHalf;
+        // Slightly outside sphere to avoid clipping
+        d = Math.max(d, R + 1e-4);
+        // Get current viewing direction
+        const camPos = camera.getCameraPosition();
+        let dirX = camPos[0] - center[0];
+        let dirY = camPos[1] - center[1];
+        let dirZ = camPos[2] - center[2];
+        const len = Math.hypot(dirX, dirY, dirZ);
+        if (len < eps) {
+            dirX = 0;
+            dirY = 0;
+            dirZ = 1;
+        }
+        else {
+            dirX /= len;
+            dirY /= len;
+            dirZ /= len;
+        }
+        const newX = center[0] + dirX * d;
+        const newY = center[1] + dirY * d;
+        const newZ = center[2] + dirZ * d;
+        return [newX, newY, newZ];
+    }
+    /**
+   * Return a camera position such that the sphere's apparent angular diameter
+   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
+   * Keeps current view direction; does not mutate the camera.
+   *
+   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
+   * @returns [x,y,z] world position
+   */
+    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
+        const camera = src_Global.camera;
+        const center = grid_HealpixGridSingleton.center;
+        const R = grid_HealpixGridSingleton.radius;
+        if (!camera) {
+            console.warn('computeCameraPositionForAngularDiameter: camera missing.');
+            return [center[0], center[1], center[2] + 2 * R];
+        }
+        const eps = 1e-6;
+        const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
+        const half = (α * Math.PI) / 360.0;
+        const sinHalf = Math.sin(half);
+        // d = R / sin(α/2)
+        let d = R / sinHalf;
+        d = Math.max(d, R + 1e-4); // stay outside
+        // project along current center→camera direction
+        const [cx, cy, cz] = center;
+        const [px, py, pz] = camera.getCameraPosition();
+        let dx = px - cx, dy = py - cy, dz = pz - cz;
+        const L = Math.hypot(dx, dy, dz);
+        if (L < eps) {
+            dx = 0;
+            dy = 0;
+            dz = 1;
+        }
+        else {
+            dx /= L;
+            dy /= L;
+            dz /= L;
+        }
+        return [cx + dx * d, cy + dy * d, cz + dz * d];
     }
 }
 
@@ -8503,8 +8679,14 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
         this._vertexCataloguePosition = new Float32Array(0);
         this.fovObj = new FoV();
     }
+    get RADIUS() {
+        return HealpixGridSingleton.RADIUS;
+    }
     refreshFoV(insideSphere) {
         return this.fovObj.getFoV(insideSphere);
+    }
+    getFoV() {
+        return this.fovObj;
     }
     getMinFoV() {
         return this.fovObj.minFoV;
@@ -10111,6 +10293,7 @@ class HiPS extends model_AbstractSkyEntity {
  */
 class AstroSphere {
     camera;
+    canvas;
     showHPXGrid = false;
     mouseHelper;
     mouseDown = false;
@@ -10127,6 +10310,7 @@ class AstroSphere {
         // Keep global GL context (as in original JS)
         src_Global.gl = webgl;
         this.mouseHelper = new utils_MouseHelper();
+        this.canvas = canvas;
         this.init(canvas);
         this.insideSphere = bootSetup.insideSphere;
         this.fov = grid_HealpixGridSingleton.refreshFoV(this.insideSphere);
@@ -10224,12 +10408,32 @@ class AstroSphere {
     activateHiPS(hipsDescriptor, insideSphere) {
         this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, insideSphere);
     }
+    goTo(raDeg, decDeg) {
+        this.camera.goTo(raDeg, decDeg);
+    }
     getFoV() {
         // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
         return this.fov;
     }
     changeFoV(deg) {
-        throw new Error("not Implemented");
+        // throw new Error("not Implemented")
+        const distance = grid_HealpixGridSingleton.getFoV().computeDistanceFromAngle(deg);
+        // this.camera.moveAlongView(distance)
+        this.camera.translate(distance);
+        grid_HealpixGridSingleton.refreshFoV(this.insideSphere);
+    }
+    changeFoV2(deg) {
+        // throw new Error("not Implemented")
+        const newCameraPos = grid_HealpixGridSingleton.getFoV().computeCameraPositionForFoV(deg);
+        this.camera.setCameraPosition(newCameraPos);
+        // this.camera.moveAlongView(distance)
+        // this.camera.translate(distance)
+    }
+    changeFoV3(deg) {
+        const newPos = grid_HealpixGridSingleton.getFoV().computeCameraPositionForAngularDiameter(deg);
+        this.camera.setCameraPosition(newPos);
+        // Recompute projection after moving the camera
+        ComputePerspectiveMatrix.computePerspectiveMatrix(this.canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
     }
     getInsideSphere() {
         return this.insideSphere;
@@ -10324,11 +10528,20 @@ class AstroCore {
     activateHiPS(hipsDescriptor, insideSphere) {
         this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
     }
+    goTo(raDeg, decDeg) {
+        this.astroSphere.goTo(raDeg, decDeg);
+    }
     getFoV() {
         return this.astroSphere.getFoV();
     }
     changeFoV(deg) {
         this, this.astroSphere.changeFoV(deg);
+    }
+    changeFoV2(deg) {
+        this, this.astroSphere.changeFoV2(deg);
+    }
+    changeFoV3(deg) {
+        this, this.astroSphere.changeFoV3(deg);
     }
     getInsideSphere() {
         return this.astroSphere.getInsideSphere();

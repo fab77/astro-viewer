@@ -14,6 +14,7 @@ import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.
  */
 class AstroSphere {
     camera;
+    canvas;
     showHPXGrid = false;
     mouseHelper;
     mouseDown = false;
@@ -30,6 +31,7 @@ class AstroSphere {
         // Keep global GL context (as in original JS)
         global.gl = webgl;
         this.mouseHelper = new MouseHelper();
+        this.canvas = canvas;
         this.init(canvas);
         this.insideSphere = bootSetup.insideSphere;
         this.fov = healpixGridSingleton.refreshFoV(this.insideSphere);
@@ -127,12 +129,32 @@ class AstroSphere {
     activateHiPS(hipsDescriptor, insideSphere) {
         this.activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, insideSphere);
     }
+    goTo(raDeg, decDeg) {
+        this.camera.goTo(raDeg, decDeg);
+    }
     getFoV() {
         // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
         return this.fov;
     }
     changeFoV(deg) {
-        throw new Error("not Implemented");
+        // throw new Error("not Implemented")
+        const distance = healpixGridSingleton.getFoV().computeDistanceFromAngle(deg);
+        // this.camera.moveAlongView(distance)
+        this.camera.translate(distance);
+        healpixGridSingleton.refreshFoV(this.insideSphere);
+    }
+    changeFoV2(deg) {
+        // throw new Error("not Implemented")
+        const newCameraPos = healpixGridSingleton.getFoV().computeCameraPositionForFoV(deg);
+        this.camera.setCameraPosition(newCameraPos);
+        // this.camera.moveAlongView(distance)
+        // this.camera.translate(distance)
+    }
+    changeFoV3(deg) {
+        const newPos = healpixGridSingleton.getFoV().computeCameraPositionForAngularDiameter(deg);
+        this.camera.setCameraPosition(newPos);
+        // Recompute projection after moving the camera
+        computePerspectiveMatrixSingleton.computePerspectiveMatrix(this.canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
     }
     getInsideSphere() {
         return this.insideSphere;

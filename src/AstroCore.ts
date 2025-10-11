@@ -26,11 +26,22 @@ export class AstroCore {
     this.astroSphere.activateHiPS(hipsDescriptor, insideSphere)
   }
 
+  goTo(raDeg: number, decDeg: number): void {
+    this.astroSphere.goTo(raDeg, decDeg)
+  }
+
   getFoV(): FoV {
     return this.astroSphere.getFoV()
   }
   changeFoV(deg: number) {
     this, this.astroSphere.changeFoV(deg)
+  }
+
+  changeFoV2(deg: number) {
+    this, this.astroSphere.changeFoV2(deg)
+  }
+  changeFoV3(deg: number) {
+    this, this.astroSphere.changeFoV3(deg)
   }
 
   getInsideSphere(): boolean {

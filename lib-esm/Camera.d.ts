@@ -25,6 +25,16 @@ declare class Camera implements CameraLike {
     private goToPhiTheta;
     setInsideSphere(inside: boolean): void;
     zoom(inertia: number): void;
+    /**
+     * Move the camera forward/backward along its current viewing direction.
+     * Positive distance moves *forward* (toward where the camera is looking),
+     * negative distance moves *backward*.
+     *
+     * This does not enforce inside/outside-sphere bounds; if you want clamping,
+     * handle it before calling or we can extend this to mimic `zoom()` bounds.
+     */
+    moveAlongView(distance: number): void;
+    translate(distance: number): void;
     rotateZ(sign: number): void;
     rotateY(sign: number): void;
     rotateXRadian(radian: number): void;
@@ -36,6 +46,7 @@ declare class Camera implements CameraLike {
     refreshFoV(currentFoV: number): void;
     getCameraMatrix(): mat4;
     getCameraPosition(): Vec3Tuple;
+    setCameraPosition(position: [number, number, number]): void;
     getCameraAngle(): SphericalCoords;
 }
 export default Camera;

@@ -5,6 +5,7 @@ import { FoV } from './model/FoV.js';
  */
 declare class AstroSphere {
     private camera;
+    private canvas;
     private showHPXGrid;
     private mouseHelper;
     private mouseDown;
@@ -23,8 +24,11 @@ declare class AstroSphere {
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): import("./utils/Utils.js").SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void;
+    goTo(raDeg: number, decDeg: number): void;
     getFoV(): FoV;
     changeFoV(deg: number): void;
+    changeFoV2(deg: number): void;
+    changeFoV3(deg: number): void;
     getInsideSphere(): boolean;
     toggleInsideSphere(): void;
     draw(canvas: HTMLCanvasElement): void;

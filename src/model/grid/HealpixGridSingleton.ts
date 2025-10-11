@@ -90,8 +90,16 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     this.fovObj = new FoV();
   }
 
+  get RADIUS(): number {
+    return HealpixGridSingleton.RADIUS
+  }
+
   refreshFoV(insideSphere: boolean) {
     return this.fovObj.getFoV(insideSphere);
+  }
+
+  getFoV(): FoV {
+    return this.fovObj
   }
 
   getMinFoV() {

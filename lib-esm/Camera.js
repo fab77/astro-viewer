@@ -115,6 +115,45 @@ class Camera {
         mat4.translate(this.T, identity, this.cam_pos);
         this.refreshViewMatrix();
     }
+    /**
+     * Move the camera forward/backward along its current viewing direction.
+     * Positive distance moves *forward* (toward where the camera is looking),
+     * negative distance moves *backward*.
+     *
+     * This does not enforce inside/outside-sphere bounds; if you want clamping,
+     * handle it before calling or we can extend this to mimic `zoom()` bounds.
+     */
+    moveAlongView(distance) {
+        // World-space forward vector: transform camera-space -Z by inverse rotation
+        const R_inverse = mat4.create();
+        mat4.invert(R_inverse, this.R);
+        const forwardCam = vec3.fromValues(0, 0, -1); // camera looks along -Z in its local space
+        const fwdWorld = vec3.create();
+        vec3.transformMat4(fwdWorld, forwardCam, R_inverse);
+        // Normalise to get direction only
+        const len = Math.hypot(fwdWorld[0], fwdWorld[1], fwdWorld[2]);
+        if (len > 0) {
+            fwdWorld[0] /= len;
+            fwdWorld[1] /= len;
+            fwdWorld[2] /= len;
+        }
+        // Update camera position
+        this.cam_pos[0] += fwdWorld[0] * distance;
+        this.cam_pos[1] += fwdWorld[1] * distance;
+        this.cam_pos[2] += fwdWorld[2] * distance;
+        // Rebuild translation matrix and view matrix
+        const identity = mat4.create();
+        mat4.translate(this.T, identity, this.cam_pos);
+        this.refreshViewMatrix();
+    }
+    translate(distance) {
+        // const pos = this.getCameraPosition();
+        this.cam_pos[2] = distance + 1;
+        // vec3.scale(pos, pos, distance);
+        const identity = mat4.create();
+        mat4.translate(this.T, identity, this.cam_pos);
+        this.refreshViewMatrix();
+    }
     rotateZ(sign) {
         const factorRad = sign * 0.01;
         this.phi += factorRad;
@@ -171,9 +210,28 @@ class Camera {
         return this.vMatrix;
     }
     getCameraPosition() {
-        const vMatrix_inverse = mat4.create();
-        mat4.invert(vMatrix_inverse, this.vMatrix);
-        return [vMatrix_inverse[12], vMatrix_inverse[13], vMatrix_inverse[14]];
+        const inv = mat4.create();
+        if (!mat4.invert(inv, this.vMatrix)) {
+            // fallback — we already maintain cam_pos
+            return [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]];
+        }
+        return [inv[12], inv[13], inv[14]];
+    }
+    // setCameraPosition(position: Vec3Tuple) {
+    //   const inv = mat4.create();
+    //   if (mat4.invert(inv, this.vMatrix)) {
+    //     [inv[12], inv[13], inv[14]] = [position[0], position[1], position[2]]
+    //     mat4.invert(this.vMatrix, inv)
+    //   }
+    // }
+    setCameraPosition(position) {
+        // Update authoritative position
+        this.cam_pos = vec3.fromValues(position[0], position[1], position[2]);
+        // Rebuild translation matrix from cam_pos
+        mat4.translate(this.T, mat4.create(), this.cam_pos);
+        // Do NOT touch this.R here (keep orientation)
+        // Recompute view: vMatrix = inv(T) * inv(R)
+        this.refreshViewMatrix();
     }
     getCameraAngle() {
         const [x, y, z] = this.getCameraPosition();

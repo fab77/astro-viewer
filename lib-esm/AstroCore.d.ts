@@ -7,8 +7,11 @@ export declare class AstroCore {
     private rafId;
     run(): number;
     activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void;
+    goTo(raDeg: number, decDeg: number): void;
     getFoV(): FoV;
     changeFoV(deg: number): void;
+    changeFoV2(deg: number): void;
+    changeFoV3(deg: number): void;
     getInsideSphere(): boolean;
     toggleInsideSphere(): void;
     constructor();

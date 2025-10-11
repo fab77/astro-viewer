@@ -1,11 +1,15 @@
 export declare class FoV {
-    fovXDeg: number;
+    private fovXDeg;
     private fovYDeg;
+    private ratio;
     private _minFoV;
     constructor();
     /** Recomputes FoV for current camera + projection */
     getFoV(insideSphere: boolean): this;
+    private computeRatio;
     changeMinFov(deg: number): void;
+    get minFoV(): number;
+    computeDistanceFromAngle(angleDeg: number): number;
     /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
     private computeAngle;
     /**
@@ -22,6 +26,24 @@ export declare class FoV {
    * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
    */
     computeCameraPositionForMinFoV(targetMinFoVDeg: number): [number, number, number];
-    get minFoV(): number;
+    /**
+       * Computes the camera world-space position required to achieve a target FoV (deg),
+       * keeping the same viewing direction. Acts as the inverse of computeAngle().
+       *
+       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
+       * @param canvasWidth  canvas width in pixels
+       * @param canvasHeight canvas height in pixels
+       * @returns [x, y, z] coordinates for the new camera position
+       */
+    computeCameraPositionForFoV(targetFoVDeg: number): [number, number, number];
+    /**
+   * Return a camera position such that the sphere's apparent angular diameter
+   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
+   * Keeps current view direction; does not mutate the camera.
+   *
+   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
+   * @returns [x,y,z] world position
+   */
+    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg: number): [number, number, number];
 }
 //# sourceMappingURL=FoV.d.ts.map
