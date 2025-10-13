@@ -19,9 +19,12 @@ class FoVUtils {
      * Compute the FoV polygon as a list of Points (clockwise).
      * Uses ray picking + frustum planes against a unit sphere.
      */
-    static getFoVPolygon(_pMatrix, camera, canvas, model) {
-        const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
-            _pMatrix);
+    static getFoVPolygon(
+    // _pMatrix: ReadonlyMat4 | null,
+    camera, canvas, model) {
+        // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
+        //   _pMatrix) as ReadonlyMat4;
+        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
         const vMatrix = camera.getCameraMatrix();
         const mMatrix = model.getModelMatrix();
         const canvasWidth = canvas.clientWidth;

@@ -41,7 +41,9 @@ __webpack_require__.r(__webpack_exports__);
 __webpack_require__.d(__webpack_exports__, {
   AstroCore: () => (/* reexport */ AstroCore),
   FoV: () => (/* reexport */ FoV),
-  HiPSDescriptor: () => (/* reexport */ HiPSDescriptor)
+  HiPSDescriptor: () => (/* reexport */ HiPSDescriptor),
+  TapRepo: () => (/* reexport */ TapRepo),
+  addTAPRepo: () => (/* reexport */ addTAPRepo)
 });
 
 ;// ./node_modules/healpixjs/lib-esm/Constants.js
@@ -1479,7 +1481,7 @@ const bootSetup = {
     camera_near_plane: 0.00001,
     camera_far_plane: 2.5,
     corsProxyUrl: "http://localhost:4000/",
-    useCORSProxy: true,
+    useCORSProxy: false,
     maxDecimals: 15,
     defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
     version: "Astrobrowser v1.0.0",
@@ -5843,9 +5845,12 @@ class FoVUtils {
      * Compute the FoV polygon as a list of Points (clockwise).
      * Uses ray picking + frustum planes against a unit sphere.
      */
-    static getFoVPolygon(_pMatrix, camera, canvas, model) {
-        const pMatrix = (ComputePerspectiveMatrix.pMatrix ??
-            _pMatrix);
+    static getFoVPolygon(
+    // _pMatrix: ReadonlyMat4 | null,
+    camera, canvas, model) {
+        // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
+        //   _pMatrix) as ReadonlyMat4;
+        const pMatrix = ComputePerspectiveMatrix.pMatrix;
         const vMatrix = camera.getCameraMatrix();
         const mMatrix = model.getModelMatrix();
         const canvasWidth = canvas.clientWidth;
@@ -6722,6 +6727,273 @@ const gridTextHelper = new GridTextHelper();
 ;// ./src/shader/ShaderManager.ts
 // ShaderManager.ts
 class ShaderManager {
+    static catalogueVS() {
+        // return `attribute vec4 aCatPosition;
+        //       attribute float a_selected;
+        //       varying float v_selected;
+        //       attribute float a_brightness;
+        //       varying float v_brightness;
+        //       attribute float a_pointsize;
+        //       varying lowp vec4 vColor;
+        //       uniform mat4 uMVMatrix;
+        //       uniform mat4 uPMatrix;
+        //       //varying float vPointSize;
+        //       void main() {
+        //           //vCatPosition = aCatPosition;
+        //           //vPointSize = 3.0;
+        //           gl_Position = (uPMatrix * uMVMatrix * aCatPosition);
+        //           gl_PointSize = a_pointsize;
+        //   //		vColor = vec4(0.0, 1.0, 0.0, 1.0);
+        //   //		if ( a_selected == 1.0 ){
+        //   //			vColor = vec4(1.0, 0.0, 0.0, 1.0);
+        //   //		}
+        //           v_selected = a_selected;
+        //           v_brightness = a_brightness;
+        //       }`;
+        return `#version 300 es
+    in vec4 aCatPosition;
+    in float a_selected;
+    in float a_pointsize;
+    in float a_brightness;
+
+    out float v_selected;
+    out float v_brightness;
+    out lowp vec4 vColor;  // not used
+
+    uniform mat4 uPMatrix;
+    uniform mat4 uMVMatrix;
+
+    void main() {
+
+      gl_Position = (uPMatrix * uMVMatrix * aCatPosition);
+      gl_PointSize = a_pointsize;
+      v_selected = a_selected;
+      v_brightness = a_brightness;
+    }`;
+    }
+    static catalogueFS() {
+        // return `#ifdef GL_OES_standard_derivatives
+        //   #extension GL_OES_standard_derivatives : enable
+        //   #endif
+        //   // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+        //     precision mediump float;
+        //   //varying lowp vec4 vColor;
+        //   varying float v_selected;
+        //   uniform vec4 u_fragcolor;
+        //   const float EPSILON = 1e-10;
+        //   varying float v_brightness;
+        //   vec3 RGBtoHCV(in vec3 rgb) {
+        //       // RGB [0..1] to Hue-Chroma-Value [0..1]
+        //       // Based on work by Sam Hocevar and Emil Persson
+        //       vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
+        //       vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
+        //       float c = q.x - min(q.w, q.y);
+        //       float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
+        //       return vec3(h, c, q.x);
+        //   }
+        //   vec3 RGBtoHSL(in vec3 rgb) {
+        //       // RGB [0..1] to Hue-Saturation-Lightness [0..1]
+        //       vec3 hcv = RGBtoHCV(rgb);
+        //       //vec3 hcv = vec3(1., 1., 1.);
+        //       float z = hcv.z - hcv.y * 0.5;
+        //       float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
+        //       return vec3(hcv.x, s, z);
+        //   }
+        //   vec3 HUEtoRGB(in float hue){
+        //       // Hue [0..1] to RGB [0..1]
+        //       // See http://www.chilliant.com/rgb2hsv.html
+        //       vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
+        //       return clamp(rgb, 0., 1.);
+        //   }
+        //   vec3 HSLtoRGB(in vec3 hsl) {
+        //       // Hue-Saturation-Lightness [0..1] to RGB [0..1]
+        //       vec3 rgb = HUEtoRGB(hsl.x);
+        //       float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
+        //       return (rgb - 0.5) * c + hsl.z;
+        //   }
+        //     void main() {
+        //       //gl_FragColor = vColor;
+        //       float r = 0.0, delta = 0.0, alpha = 1.0;
+        //       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+        //       r = dot(cxy, cxy);
+        //       if (r > 1.0) {
+        //           discard;
+        //       }
+        //   #ifdef GL_OES_standard_derivatives
+        //       delta = fwidth(r);
+        //       alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+        //   #endif
+        //       //gl_FragColor = vColor * (alpha);
+        //       if (v_selected == 1.0){
+        //           gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+        //       } else if (v_selected == 2.0){
+        //           gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+        //       }else{
+        //           if (r < 0.4) {
+        //               discard;
+        //           }
+        //           if ( v_brightness >= -1.0 && v_brightness <= 1.0) {
+        //               // Round-trip RGB->HSL->RGB with time-dependent lightness
+        //               vec3 hsl = RGBtoHSL(vec3(u_fragcolor));
+        //               //hsl.z = pow(hsl.z, sin(iTime) + 1.5);
+        //               // hsl.z = pow(hsl.z, v_brightness + 1.5);
+        //               hsl.z = pow(hsl.z, v_brightness + 1.5);
+        //               vec3 hslcolor = HSLtoRGB(hsl);
+        //               gl_FragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+        //           } else {
+        //               gl_FragColor = u_fragcolor * (alpha);
+        //           }
+        //       }
+        //     }`;
+        return `#version 300 es
+    precision mediump float;
+    
+    #ifdef GL_OES_standard_derivatives
+    #extension GL_OES_standard_derivatives : enable
+    #endif
+
+    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+
+    // precision mediump float;
+
+    in float v_selected;
+    in float v_brightness;
+
+    uniform vec4 u_fragcolor;
+
+    out vec4 fragColor;      // <-- add this
+
+    // varying float v_selected;
+    // varying float v_brightness;
+
+    const float EPSILON = 1e-10;
+    
+    vec3 RGBtoHCV(in vec3 rgb) {
+      // RGB [0..1] to Hue-Chroma-Value [0..1]
+      // Based on work by Sam Hocevar and Emil Persson
+      vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
+      vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
+      float c = q.x - min(q.w, q.y);
+      float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
+      return vec3(h, c, q.x);
+    }
+
+    vec3 RGBtoHSL(in vec3 rgb) {
+      // RGB [0..1] to Hue-Saturation-Lightness [0..1]
+      vec3 hcv = RGBtoHCV(rgb);
+      //vec3 hcv = vec3(1., 1., 1.);
+      float z = hcv.z - hcv.y * 0.5;
+      float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
+      return vec3(hcv.x, s, z);
+    }
+
+    vec3 HUEtoRGB(in float hue){
+      // Hue [0..1] to RGB [0..1]
+      // See http://www.chilliant.com/rgb2hsv.html
+      vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
+      return clamp(rgb, 0., 1.);
+    }
+
+    vec3 HSLtoRGB(in vec3 hsl) {
+      // Hue-Saturation-Lightness [0..1] to RGB [0..1]
+      vec3 rgb = HUEtoRGB(hsl.x);
+      float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
+      return (rgb - 0.5) * c + hsl.z;
+    }
+  
+    void main() {
+
+      float r = 0.0, delta = 0.0, alpha = 1.0;
+      vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      r = dot(cxy, cxy);
+      if (r > 1.0) {
+        discard;
+      }
+
+      #ifdef GL_OES_standard_derivatives
+        delta = fwidth(r);
+        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+      #endif
+
+      if (v_selected == 1.0){
+        // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+        fragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+      } else if (v_selected == 2.0){
+        // gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+        fragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+      }else{
+        if (r < 0.4) {
+          discard;
+        }
+        if ( v_brightness >= -1.0 && v_brightness <= 1.0) {
+          // Round-trip RGB->HSL->RGB with time-dependent lightness
+          vec3 hsl = RGBtoHSL(vec3(u_fragcolor));
+          //hsl.z = pow(hsl.z, sin(iTime) + 1.5);
+          // hsl.z = pow(hsl.z, v_brightness + 1.5);
+          hsl.z = pow(hsl.z, v_brightness + 1.5);
+          vec3 hslcolor = HSLtoRGB(hsl);
+          // gl_FragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+          fragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+        } else {
+          // gl_FragColor = u_fragcolor * (alpha);
+          fragColor = u_fragcolor * (alpha);
+        }
+      }
+    }`;
+    }
+    static fottprintVS() {
+        return `#version 300 es
+    attribute vec4 aCatPosition;
+    //t	attribute float a_selected;
+    //t	varying float v_selected;
+    //t	attribute float a_pointsize;
+    varying lowp vec4 vColor;
+    uniform float u_pointsize;
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    void main() {
+      gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+      //t		gl_PointSize = a_pointsize;
+      gl_PointSize = u_pointsize;
+    }`;
+    }
+    static fottprintFS() {
+        return `#version 300 es
+    //t	#ifdef GL_OES_standard_derivatives
+    //t	#extension GL_OES_standard_derivatives : enable
+    //t	#endif
+    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+    precision mediump float;
+    //t	varying float v_selected;
+    uniform vec4 u_fragcolor;
+
+    void main() {
+
+      gl_FragColor = u_fragcolor;
+      //t		float r = 0.0, delta = 0.0, alpha = 1.0;
+      //t		vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      //t		r = dot(cxy, cxy);
+      //t		if (r > 1.0) {
+      //t			discard;
+      //t		}
+
+      //t	#ifdef GL_OES_standard_derivatives
+      //t		delta = fwidth(r);
+      //t		alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+      //t	#endif
+
+      //t		if (v_selected == 1.0){
+      //t			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+      //t		}else{
+      //t			if (r < 0.4) {
+      //t				discard;
+      //t			}
+      //t			gl_FragColor = u_fragcolor * (alpha);
+      //t		}
+    }
+    `;
+    }
     static hipsVS() {
         return `#version 300 es
     in vec3 aVertexPosition;
@@ -10276,8 +10548,1199 @@ class HiPS extends model_AbstractSkyEntity {
 }
 /* harmony default export */ const hips_HiPS = (HiPS);
 
+;// ./src/model/tap/TapMetadata.ts
+
+/**
+ * @author Fabrizio Giordano (Fab77)
+ */
+class TapMetadata {
+    _name;
+    _description;
+    _unit;
+    _dataType;
+    _ucd;
+    _uType;
+    _index;
+    /**
+     *
+     * @param name - column name
+     * @param description - column description
+     * @param unit - physical unit
+     * @param datatype - ADQL datatype
+     * @param ucd - Unified Content Descriptor
+     * @param utype - ObsCore / STC-S type
+     */
+    constructor(name, description, unit, datatype, ucd, utype) {
+        this._name = name;
+        this._description = description;
+        this._unit = unit;
+        this._dataType = datatype;
+        this._ucd = ucd;
+        this._uType = utype;
+    }
+    get name() {
+        return this._name;
+    }
+    get description() {
+        return this._description;
+    }
+    get unit() {
+        return this._unit;
+    }
+    get datatype() {
+        return this._dataType;
+    }
+    get ucd() {
+        return this._ucd;
+    }
+    get uType() {
+        return this._uType;
+    }
+    get index() {
+        return this._index;
+    }
+    set index(idx) {
+        this._index = idx;
+    }
+}
+/* harmony default export */ const tap_TapMetadata = (TapMetadata);
+
+;// ./src/model/tap/TapMetadataList.ts
+
+class TapMetadataList {
+    _posEqRAMetaColumns; // ucd.includes('pos.eq.ra')
+    _posEqDecMetaColumns; // ucd.includes('pos.eq.dec')
+    _sRegionMetaColumns; // STC-S / s_region candidates
+    _pgSphereMetaColumns; // ucd.includes('pos.outline.meta.pgsphere')
+    _metadataList;
+    constructor() {
+        this._metadataList = [];
+        this._posEqRAMetaColumns = [];
+        this._posEqDecMetaColumns = [];
+        this._sRegionMetaColumns = [];
+        this._pgSphereMetaColumns = [];
+    }
+    /**
+     * Add a TapMetadata entry and classify it into relevant groups
+     */
+    addMetadata(tapMetadata) {
+        const length = this._metadataList.push(tapMetadata);
+        const idx = length - 1;
+        tapMetadata.index = idx;
+        if (tapMetadata.ucd?.includes('pos.eq.ra')) {
+            this._posEqRAMetaColumns.push(tapMetadata);
+        }
+        else if (tapMetadata.ucd?.includes('pos.eq.dec')) {
+            this._posEqDecMetaColumns.push(tapMetadata);
+        }
+        if (tapMetadata.ucd?.includes('pos.outline;meta.pgsphere')) {
+            this._pgSphereMetaColumns.push(tapMetadata);
+        }
+        if (tapMetadata.uType?.includes('Char.SpatialAxis.Coverage.Support.Area') ||
+            tapMetadata.datatype?.includes('adql:REGION') ||
+            tapMetadata.ucd?.includes('pos.outline;obs.field') ||
+            tapMetadata.name === 'stc_s' // for ESASky
+        ) {
+            this._sRegionMetaColumns.push(tapMetadata);
+        }
+    }
+    get metadataList() {
+        return this._metadataList;
+    }
+    set metadataList(metadataList) {
+        this._metadataList = metadataList;
+    }
+    get pgSphereMetaColumns() {
+        return this._pgSphereMetaColumns;
+    }
+    get sRegionMetaColumns() {
+        return this._sRegionMetaColumns;
+    }
+    get posEqRAMetaColumns() {
+        return this._posEqRAMetaColumns;
+    }
+    get posEqDecMetaColumns() {
+        return this._posEqDecMetaColumns;
+    }
+}
+/* harmony default export */ const tap_TapMetadataList = (TapMetadataList);
+
+;// ./src/model/tap/TapRepo.ts
+class TapRepo {
+    _adqlFunctionList;
+    _cataloguesList;
+    _observationsList;
+    _notClassified;
+    _activeObservations;
+    _activeCatalogues;
+    _tapBaseURL;
+    constructor(tapUrl) {
+        this._tapBaseURL = tapUrl;
+        this._cataloguesList = [];
+        this._observationsList = [];
+        this._notClassified = [];
+        this._activeObservations = [];
+        this._activeCatalogues = [];
+        this._adqlFunctionList = [];
+    }
+    get tapBaseUrl() {
+        return this._tapBaseURL;
+    }
+    setCataloguesList(cataloguesList) {
+        this._cataloguesList = cataloguesList;
+    }
+    setObservationsList(observationList) {
+        this._observationsList = observationList;
+    }
+    setNotClassifiedList(notClassifiedList) {
+        this._notClassified = notClassifiedList;
+    }
+    setCatalogueActive(catalogue) {
+        this._activeCatalogues.push(catalogue);
+    }
+    setObservationActive(observation) {
+        this._activeObservations.push(observation);
+    }
+    get cataloguesList() {
+        return this._cataloguesList;
+    }
+    get observationsList() {
+        return this._observationsList;
+    }
+    set adqlFunctionList(adqlFunctionList) {
+        if (adqlFunctionList !== undefined) {
+            this._adqlFunctionList = adqlFunctionList;
+        }
+    }
+    get adqlFunctionList() {
+        return this._adqlFunctionList;
+    }
+}
+
+;// ./src/model/catalogues/CatalogueProps.ts
+function colName(col) {
+    return col?.name ?? col?.name;
+}
+function sameName(a, name) {
+    if (!a || !name)
+        return false;
+    return colName(a) === name;
+}
+class CatalogueProps {
+    raColumn;
+    decColumn;
+    nameColumn;
+    /** Optional: numeric/size-mapped column */
+    shapeSizeColumn;
+    /** Optional: hue/category-mapped column */
+    shapeHueColumn;
+    /** Base color (hex string like #RRGGBB) */
+    shapeColor;
+    /** Full metadata list reference (kept in sync by updateColumnsIndex) */
+    tapMetadataList;
+    constructor(tapMetadataList, color) {
+        this.raColumn = this.setRAColumns(tapMetadataList);
+        this.decColumn = this.setDecColumns(tapMetadataList);
+        this.nameColumn = this.setNameColumn(tapMetadataList);
+        this.shapeSizeColumn = undefined;
+        this.shapeHueColumn = undefined;
+        this.shapeColor = color;
+        this.tapMetadataList = tapMetadataList;
+    }
+    /** Rebinds saved column references to the new metadata objects (preserves indices, etc.). */
+    updateColumnsIndex(metadataList) {
+        for (const col of metadataList) {
+            if (sameName(this.raColumn, colName(col)))
+                this.raColumn = col;
+            else if (sameName(this.decColumn, colName(col)))
+                this.decColumn = col;
+            else if (this.shapeHueColumn && sameName(this.shapeHueColumn, colName(col)))
+                this.shapeHueColumn = col;
+            else if (this.shapeSizeColumn && sameName(this.shapeSizeColumn, colName(col)))
+                this.shapeSizeColumn = col;
+            else if (this.nameColumn && sameName(this.nameColumn, colName(col)))
+                this.nameColumn = col;
+        }
+        // Keep the container reference up to date if needed elsewhere.
+        this.tapMetadataList.metadataList = metadataList;
+    }
+    setRAColumns(tapMetadataList) {
+        let column;
+        for (const tapMetadata of tapMetadataList.posEqRAMetaColumns) {
+            const u = tapMetadata.ucd;
+            if (u && u.includes('pos.eq.ra')) {
+                if (u.includes('meta.main')) {
+                    column = tapMetadata; // prefer the main one
+                    break;
+                }
+                if (!column)
+                    column = tapMetadata; // fallback to first valid one
+            }
+        }
+        if (!column) {
+            throw new Error('No RA column found (UCD pos.eq.ra) in _posEqRAMetaColumns');
+        }
+        return column;
+    }
+    setDecColumns(tapMetadataList) {
+        let column;
+        for (const tapMetadata of tapMetadataList.posEqDecMetaColumns) {
+            const u = tapMetadata.ucd;
+            if (u && u.includes('pos.eq.dec')) {
+                if (u.includes('meta.main')) {
+                    column = tapMetadata; // prefer the main one
+                    break;
+                }
+                if (!column)
+                    column = tapMetadata; // fallback to first valid one
+            }
+        }
+        if (!column) {
+            throw new Error('No Dec column found (UCD pos.eq.dec) in _posEqDecMetaColumns');
+        }
+        return column;
+    }
+    setNameColumn(tapMetadataList) {
+        let column;
+        for (const tapMetadata of tapMetadataList.metadataList) {
+            const u = tapMetadata.ucd;
+            if (u && u.includes('meta.id') && u.includes('meta.main')) {
+                column = tapMetadata; // prefer id+main
+            }
+        }
+        // It’s okay if there’s no strong "name" column; methods below handle undefined.
+        return column;
+    }
+    changeColor(color) {
+        this.shapeColor = color;
+    }
+    changeMetaName(metacolumnName) {
+        if (this.nameColumn && colName(this.nameColumn) === metacolumnName)
+            return;
+        for (const column of this.tapMetadataList.metadataList) {
+            if (colName(column) === metacolumnName) {
+                this.nameColumn = column;
+                break;
+            }
+        }
+    }
+    /** Returns true to indicate a refresh-by-FoV is needed (preserves original behavior). */
+    changeCatalogueMetaRA(metacolumnName) {
+        if (colName(this.raColumn) !== metacolumnName) {
+            for (const column of this.tapMetadataList.metadataList) {
+                if (colName(column) === metacolumnName) {
+                    this.raColumn = column;
+                    break;
+                }
+            }
+        }
+        return true;
+    }
+    /** Returns true to indicate a refresh-by-FoV is needed (preserves original behavior). */
+    changeCatalogueMetaDec(metacolumnName) {
+        if (colName(this.decColumn) !== metacolumnName) {
+            for (const column of this.tapMetadataList.metadataList) {
+                if (colName(column) === metacolumnName) {
+                    this.decColumn = column;
+                    break;
+                }
+            }
+        }
+        return true;
+    }
+    changeCatalogueMetaShapeSize(metacolumnName) {
+        if (!this.shapeSizeColumn || colName(this.shapeSizeColumn) !== metacolumnName) {
+            for (const column of this.tapMetadataList.metadataList) {
+                if (colName(column) === metacolumnName) {
+                    this.shapeSizeColumn = column;
+                    break;
+                }
+            }
+        }
+    }
+    changeCatalogueMetaShapeHue(metacolumnName) {
+        if (!this.shapeHueColumn || colName(this.shapeHueColumn) !== metacolumnName) {
+            for (const column of this.tapMetadataList.metadataList) {
+                if (colName(column) === metacolumnName) {
+                    this.shapeHueColumn = column;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+;// ./src/model/Source.ts
+
+
+
+class Source {
+    _point;
+    _name;
+    _details;
+    _h_pix;
+    _shapesize;
+    _brightnessFactor;
+    /**
+     * @param in_point Point.js (Cartesian/RA-Dec wrapper)
+     * @param in_details Optional array of key/value metadata
+     */
+    constructor(in_point, in_details = []) {
+        this._point = in_point;
+        this._details = in_details;
+        this._shapesize = 8.0;
+        this._brightnessFactor = -99;
+        this.computeHealpixPixel();
+    }
+    getDetailByindex(index) {
+        if (index < 0 || index >= this._details.length) {
+            return undefined;
+        }
+        return this._details[index].value;
+    }
+    getDetailByKey(key) {
+        const detail = this._details.find((d) => d.key === key);
+        return detail ? detail.value : undefined;
+    }
+    get details() {
+        return this._details;
+    }
+    computeHealpixPixel() {
+        // Get Healpix instance from global
+        const healpix = src_Global.getHealpix(src_Global.nsideForSelection);
+        const vec3 = new Vec3(this._point.x, this._point.y, this._point.z);
+        const ptg = new Pointing(vec3, false);
+        this._h_pix = healpix.ang2pix(ptg, false);
+    }
+    get point() {
+        return this._point;
+    }
+    get name() {
+        return this._name;
+    }
+    get healpixPixel() {
+        return this._h_pix;
+    }
+    get shapeSize() {
+        return this._shapesize;
+    }
+    set shapeSize(size) {
+        this._shapesize = size;
+    }
+    get brightnessFactor() {
+        return this._brightnessFactor;
+    }
+    /**
+     * @param factor Must be in [-1..1]
+     */
+    set brightnessFactor(factor) {
+        this._brightnessFactor = factor;
+    }
+}
+/* harmony default export */ const model_Source = (Source);
+
+;// ./src/shader/CatalogueShaderProgram.ts
+// HiPSShaderProgram.ts
+
+
+
+class CatalogueShaderProgram {
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    gl_uniforms;
+    gl_attributes;
+    locations;
+    constructor() {
+        this.gl_uniforms = {
+            vertex_color: 'u_fragcolor',
+            m_perspective: 'uPMatrix',
+            m_model_view: 'uMVMatrix'
+        };
+        this.gl_attributes = {
+            vertex_pos: 'aCatPosition',
+            vertex_selected: 'a_selected',
+            point_size: 'a_pointsize',
+            point_hue: 'a_brightness'
+        };
+        this.locations = {
+            pMatrix: null,
+            mvMatrix: null,
+            color: null,
+            position: -1,
+            hovered: -1,
+            pointSize: -1,
+            brightness: -1
+        };
+    }
+    get shaderProgram() {
+        if (!this._shaderProgram) {
+            const gl = src_Global.gl;
+            this._shaderProgram = gl.createProgram();
+            this.initShaders();
+        }
+        return this._shaderProgram;
+    }
+    initShaders() {
+        const gl = src_Global.gl;
+        const fragmentShaderStr = ShaderManager.catalogueFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        console.log('FS log:', gl.getShaderInfoLog(this._fragmentShader) || 'ok');
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = ShaderManager.catalogueVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vertexShaderStr);
+        gl.compileShader(this._vertexShader);
+        console.log('VS log:', gl.getShaderInfoLog(this._vertexShader) || 'ok');
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this.shaderProgram, this._vertexShader);
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        // shaderUtility.useProgram(this.shaderProgram)
+        gl.useProgram(this.shaderProgram);
+        this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.hovered = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_selected);
+        this.locations.pointSize = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_size);
+        this.locations.brightness = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_hue);
+        this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
+    }
+    enableShaders(pMatrix, modelMatrix, viewMatrix) {
+        const gl = src_Global.gl;
+        // shaderUtility.useProgram(this.shaderProgram)
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
+        let mvMatrix = mat4_create();
+        mvMatrix = mat4_multiply(mvMatrix, viewMatrix, modelMatrix);
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
+    }
+}
+const catalogueShaderProgram = new CatalogueShaderProgram();
+
+;// ./src/model/catalogues/CatalogueGL.ts
+
+
+
+
+
+
+
+
+
+
+// `Source` is assumed to expose at least these:
+class CatalogueGL {
+    static ELEM_SIZE;
+    static BYTES_X_ELEM;
+    // Core state
+    ready;
+    catalogueProps;
+    name;
+    description;
+    tapRepo;
+    // Data
+    sources;
+    // GL & shader
+    // attribLocations: {
+    //     position: number;
+    //     hovered: number;
+    //     pointSize: number;
+    //     color: WebGLUniformLocation | null;
+    //     brightness: number;
+    // };
+    gl;
+    shaderProgram;
+    // Buffers & arrays
+    vertexCataloguePositionBuffer;
+    vertexhoveredCataloguePositionBuffer;
+    vertexCataloguePosition;
+    // Index/selection bookkeeping
+    hoveredIndexes;
+    selectedIndexes;
+    extHoveredIndexes;
+    oldMouseCoords;
+    // Healpix pixel => indices map
+    healpixDensityMap;
+    /**
+     * @param tablename - String
+     * @param tabledesc - String
+     * @param tapRepo   - Object with `_tapBaseURL`
+     * @param tapMetadataList - TapMetadataList (as used by CatalogueProps)
+     */
+    constructor(tablename, tabledesc, provider, tapMetadataList) {
+        this.ready = false;
+        this.TYPE = 'SOURCE_CATALOGUE';
+        CatalogueGL.ELEM_SIZE = 6; // x,y,z, hoveredFlag, size, brightness
+        CatalogueGL.BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+        this.name = tablename;
+        this.description = tabledesc;
+        this.tapRepo = provider;
+        this.sources = [];
+        // GL init
+        this.gl = src_Global.gl;
+        this.shaderProgram = this.gl.createProgram();
+        this.vertexCataloguePositionBuffer = this.gl.createBuffer();
+        this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
+        this.vertexCataloguePosition = new Float32Array(0);
+        this.hoveredIndexes = [];
+        this.selectedIndexes = [];
+        this.extHoveredIndexes = [];
+        this.oldMouseCoords = null;
+        // this.attribLocations = {
+        //     position: 0,
+        //     hovered: 1,
+        //     pointSize: 2,
+        //     color: null,
+        //     brightness: 3
+        // };
+        this.healpixDensityMap = new Map();
+        const defaultColor = '#8F00FF';
+        this.catalogueProps = new CatalogueProps(tapMetadataList, defaultColor);
+        // this.initShaders();
+        // catalogueShaderProgram.initShaders()
+        catalogueShaderProgram.shaderProgram;
+    }
+    minMax(columnindex) {
+        if (!this.sources.length)
+            return { min: 0, max: 0 };
+        let min = this.sources[0].details[columnindex];
+        let max = min;
+        for (const source of this.sources) {
+            const v = source.details[columnindex];
+            if (v < min)
+                min = v;
+            if (v > max)
+                max = v;
+        }
+        return { min, max };
+    }
+    changeCatalogueMetaShapeSize(metacolumnName) {
+        this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
+        const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
+        if (idx == null)
+            return;
+        const minmax = this.minMax(idx);
+        for (const source of this.sources) {
+            const raw = Number(source.getDetailByindex(idx));
+            const min = Number(minmax.min);
+            const max = Number(minmax.max);
+            const norm = (raw - min) / Math.max(1e-12, (max - min));
+            const size = norm * (20 - 8) + 8;
+            source.shapeSize = size;
+        }
+        this.initBuffer();
+    }
+    changeCatalogueMetaShapeHue(metacolumnName) {
+        this.catalogueProps.changeCatalogueMetaShapeHue(metacolumnName);
+        const idx = this.catalogueProps.shapeHueColumn?.index ?? this.catalogueProps.shapeHueColumn?.index;
+        if (idx == null)
+            return;
+        const minmax = this.minMax(idx);
+        for (const source of this.sources) {
+            const raw = Number(source.getDetailByindex(idx));
+            const min = Number(minmax.min);
+            const max = Number(minmax.max);
+            const norm = (raw - min) / Math.max(1e-12, (max - min));
+            // map [0,1] -> [1,-1]
+            source.brightnessFactor = -(norm * 2 - 1);
+        }
+        this.initBuffer();
+    }
+    // private initShaders() {
+    //     // catalogueShaderProgram.enableProgram()
+    //     // this.shaderProgram = catalogueShaderProgram.shaderProgram
+    //     // const fragmentShader = ShaderManager.catalogueFS()
+    //     // const vertexShader = ShaderManager.catalogueVS()
+    //     const fragmentShader = this.loadShaderFromDOM('cat-shader-fs');
+    //     const vertexShader = this.loadShaderFromDOM('cat-shader-vs');
+    //     if (!fragmentShader || !vertexShader) {
+    //         throw new Error('CatalogueGL: missing shaders in DOM (cat-shader-fs / cat-shader-vs)');
+    //     }
+    //     try {
+    //         this.gl.attachShader(this.shaderProgram as WebGLProgram, vertexShader);
+    //         this.gl.attachShader(this.shaderProgram as WebGLProgram, fragmentShader);
+    //         this.gl.linkProgram(this.shaderProgram as WebGLProgram);
+    //     } catch (err: any) {
+    //         console.error(err?.message ?? err)
+    //         console.log(this.shaderProgram)
+    //         console.log(vertexShader)
+    //         console.log(fragmentShader)
+    //         throw new Error('Could not initialise shaders');
+    //     }
+    //     if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
+    //         throw new Error('Could not initialise shaders');
+    //     }
+    //     shaderUtility.useProgram(this.shaderProgram);
+    //     // Resolve locations once (stable)
+    //     this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition');
+    //     this.attribLocations.hovered = this.gl.getAttribLocation(this.shaderProgram, 'a_selected');
+    //     this.attribLocations.pointSize = this.gl.getAttribLocation(this.shaderProgram, 'a_pointsize');
+    //     this.attribLocations.brightness = this.gl.getAttribLocation(this.shaderProgram, 'a_brightness');
+    //     this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor');
+    // }
+    // private loadShaderFromDOM(shaderId: string): WebGLShader | null {
+    //     let shader: WebGLShader | null = null;
+    //     let shaderSource = ""
+    //     if (shaderId == "cat-shader-fs") {
+    //         shaderSource = ShaderManager.catalogueFS()
+    //         shader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
+    //     } else {
+    //         shaderSource = ShaderManager.catalogueVS()
+    //         shader = this.gl.createShader(this.gl.VERTEX_SHADER);
+    //     }
+    //     if (!shader) return null;
+    //     if (shaderSource.length <= 0) return null;
+    //     this.gl.shaderSource(shader, shaderSource);
+    //     this.gl.compileShader(shader);
+    //     if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+    //         const info = this.gl.getShaderInfoLog(shader) || 'Unknown shader compile error';
+    //         this.gl.deleteShader(shader);
+    //         throw new Error(info);
+    //     }
+    //     return shader;
+    // }
+    addSource(source) {
+        this.sources.push(source);
+    }
+    /**
+     * @param in_data Rows of TAP results
+     * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
+     */
+    addSources(in_data, columnsmeta) {
+        this.ready = false;
+        const raDataIndex = this.catalogueProps.raColumn.index ?? this.catalogueProps.raColumn._index;
+        const decDataIndex = this.catalogueProps.decColumn.index ?? this.catalogueProps.decColumn._index;
+        for (let j = 0; j < in_data.length; j++) {
+            const point = new model_Point({
+                raDeg: in_data[j][raDataIndex],
+                decDeg: in_data[j][decDataIndex]
+            }, utils_CoordsType.ASTRO);
+            const source = new model_Source(point, in_data[j]);
+            // Ensure optional fields exist
+            source.shapeSize = source.shapeSize ?? 8.0;
+            source.brightnessFactor = 3;
+            this.addSource(source);
+        }
+        this.initBuffer();
+        this.ready = true;
+    }
+    clearSources() {
+        this.sources = [];
+        this.hoveredIndexes = [];
+        this.healpixDensityMap.clear();
+        this.vertexCataloguePosition = new Float32Array(0);
+    }
+    extHighlightSource(source, highlighted) {
+        const sIdx = this.sources.indexOf(source);
+        if (sIdx < 0)
+            return;
+        if (highlighted) {
+            if (!this.extHoveredIndexes.includes(sIdx)) {
+                this.extHoveredIndexes.push(sIdx);
+            }
+        }
+        else {
+            const i = this.extHoveredIndexes.indexOf(sIdx);
+            if (i >= 0)
+                this.extHoveredIndexes.splice(i, 1);
+        }
+        // const hoveredSources = this.extHoveredIndexes.map(i => this.sources[i]);
+        // session.updateHoveredSources(this, hoveredSources);
+    }
+    extAddSources2Selected(sources) {
+        for (const s of sources) {
+            const sIdx = this.sources.indexOf(s);
+            if (sIdx >= 0 && !this.selectedIndexes.includes(sIdx)) {
+                this.selectedIndexes.push(sIdx);
+            }
+        }
+    }
+    extRemoveSourceFromSelection(source) {
+        const indexOfObject = this.sources.indexOf(source);
+        if (indexOfObject < 0)
+            return;
+        const sidx = this.selectedIndexes.indexOf(indexOfObject);
+        if (sidx >= 0)
+            this.selectedIndexes.splice(sidx, 1);
+        const eidx = this.extHoveredIndexes.indexOf(indexOfObject);
+        if (eidx >= 0)
+            this.extHoveredIndexes.splice(eidx, 1);
+        // Clear hovered flag in buffer view (if present)
+        if (this.vertexCataloguePosition.length >= (indexOfObject + 1) * CatalogueGL.ELEM_SIZE) {
+            this.vertexCataloguePosition[indexOfObject * CatalogueGL.ELEM_SIZE + 3] = 0.0;
+        }
+    }
+    initBuffer() {
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        const nSources = this.sources.length;
+        this.vertexCataloguePosition = new Float32Array(nSources * CatalogueGL.ELEM_SIZE);
+        let positionIndex = 0;
+        for (let j = 0; j < nSources; j++) {
+            const currSource = this.sources[j];
+            const currPix = currSource.healpixPixel;
+            // density map
+            const bucket = this.healpixDensityMap.get(currPix);
+            if (bucket) {
+                if (!bucket.includes(j))
+                    bucket.push(j);
+            }
+            else {
+                this.healpixDensityMap.set(currPix, [j]);
+            }
+            // position
+            this.vertexCataloguePosition[positionIndex + 0] = currSource.point.x;
+            this.vertexCataloguePosition[positionIndex + 1] = currSource.point.y;
+            this.vertexCataloguePosition[positionIndex + 2] = currSource.point.z;
+            // hovered flag
+            this.vertexCataloguePosition[positionIndex + 3] = 0.0;
+            // size
+            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? 8.0;
+            // brightness
+            this.vertexCataloguePosition[positionIndex + 5] = currSource.brightnessFactor ?? 0.0;
+            positionIndex += CatalogueGL.ELEM_SIZE;
+        }
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
+    }
+    getSelectionRadius() {
+        const order = visibleTilesManager.getVisibleOrder();
+        switch (order) {
+            case 0:
+            case 1:
+            case 2:
+                return 0.005;
+            case 3:
+                return 0.001;
+            case 4:
+                return 0.0009;
+            case 5:
+                return 0.0005;
+            case 6:
+                return 0.0001;
+            case 7:
+                return 0.00009;
+            case 8:
+                return 0.00005;
+            case 9:
+                return 0.00001;
+            default:
+                return 0.000005;
+        }
+    }
+    checkSelection(in_mouseHelper) {
+        if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
+            console.log('CatalogueGL.checkSelection: missing mouse coords');
+            return [];
+        }
+        const hoveredIndexes = [];
+        const sourcesHovered = [];
+        const mousePix = in_mouseHelper.computeNpix();
+        if (mousePix != null && this.healpixDensityMap.has(mousePix)) {
+            const candidates = this.healpixDensityMap.get(mousePix);
+            const selR = this.getSelectionRadius();
+            for (let i = 0; i < candidates.length; i++) {
+                const sourceIdx = candidates[i];
+                const source = this.sources[sourceIdx];
+                if (!source)
+                    continue;
+                const dx = source.point.x - in_mouseHelper.x;
+                const dy = source.point.y - in_mouseHelper.y;
+                const dz = source.point.z - in_mouseHelper.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (dist <= selR) {
+                    hoveredIndexes.push(sourceIdx);
+                    sourcesHovered.push(source);
+                }
+            }
+        }
+        // session.updateHoveredSources(this, sourcesHovered);
+        return hoveredIndexes;
+    }
+    enableShader(in_mMatrix) {
+        this.gl.useProgram(this.shaderProgram);
+        const mvLoc = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
+        const projLoc = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
+        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+        let mvMatrix = mat4_create();
+        if (src_Global.camera == null) {
+            console.warn('CatalogueGL.enableShader: missing global.camera');
+            return;
+        }
+        mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), in_mMatrix);
+        this.gl.uniformMatrix4fv(mvLoc, false, mvMatrix);
+        this.gl.uniformMatrix4fv(projLoc, false, pMatrix);
+    }
+    /**
+     * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
+     */
+    draw(in_mMatrix, in_mouseHelper) {
+        if (!this.ready)
+            return;
+        if (!src_Global.camera)
+            return;
+        // this.enableShader(in_mMatrix);
+        catalogueShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, src_Global.camera.getCameraMatrix());
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        // positions
+        this.gl.vertexAttribPointer(
+        // this.attribLocations.position,
+        catalogueShaderProgram.locations.position, 3, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
+        // this.gl.enableVertexAttribArray(this.attribLocations.position);
+        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.position);
+        // hovered flag
+        this.gl.vertexAttribPointer(
+        // this.attribLocations.hovered,
+        catalogueShaderProgram.locations.hovered, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
+        // this.gl.enableVertexAttribArray(this.attribLocations.hovered);
+        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.hovered);
+        // point size
+        this.gl.vertexAttribPointer(
+        // this.attribLocations.pointSize,
+        catalogueShaderProgram.locations.pointSize, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
+        // this.gl.enableVertexAttribArray(this.attribLocations.pointSize);
+        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.pointSize);
+        // brightness
+        this.gl.vertexAttribPointer(
+        // this.attribLocations.brightness,
+        catalogueShaderProgram.locations.brightness, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
+        // this.gl.enableVertexAttribArray(this.attribLocations.brightness);
+        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.brightness);
+        // color
+        const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
+        // if (this.attribLocations.color) {
+        if (catalogueShaderProgram.locations.color) {
+            // this.gl.uniform4f(this.attribLocations.color, rgb[0], rgb[1], rgb[2], 1.0);
+            this.gl.uniform4f(catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+        // Hover logic on mouse move
+        if (in_mouseHelper != null && in_mouseHelper.xyz !== this.oldMouseCoords) {
+            // clear old hovered
+            for (let k = 0; k < this.hoveredIndexes.length; k++) {
+                const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
+                this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
+                this.vertexCataloguePosition[base + 4] = this.sources[this.hoveredIndexes[k]].shapeSize; // size
+            }
+            this.hoveredIndexes = this.checkSelection(in_mouseHelper);
+            // new hovered
+            for (let i = 0; i < this.hoveredIndexes.length; i++) {
+                const idx = this.hoveredIndexes[i];
+                const base = idx * CatalogueGL.ELEM_SIZE;
+                this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+                this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+            }
+        }
+        // selected flags
+        for (let s = 0; s < this.selectedIndexes.length; s++) {
+            const idx = this.selectedIndexes[s];
+            const base = idx * CatalogueGL.ELEM_SIZE;
+            this.vertexCataloguePosition[base + 3] = 2.0; // selected
+            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+        }
+        // external hovered
+        for (let e = 0; e < this.extHoveredIndexes.length; e++) {
+            const idx = this.extHoveredIndexes[e];
+            const base = idx * CatalogueGL.ELEM_SIZE;
+            this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+        }
+        // upload buffer
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
+        // draw
+        const numItems = this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
+        this.gl.drawArrays(this.gl.POINTS, 0, numItems);
+        this.oldMouseCoords = in_mouseHelper.xyz;
+    }
+}
+/* harmony default export */ const catalogues_CatalogueGL = (CatalogueGL);
+
+;// ./src/services/tapRepoService.ts
+// addTAPRepo.ts
+
+
+
+
+
+let catId = 1;
+let obsId = 1;
+/**
+ * Initialize a TapRepo and populate capabilities + datasets.
+ */
+async function addTAPRepo(repoUrl) {
+    const tapRepo = new TapRepo(repoUrl);
+    tapRepo.adqlFunctionList = await loadCapabilities(repoUrl);
+    const datasets = await loadTables(repoUrl, tapRepo);
+    tapRepo.setCataloguesList(datasets.catalogueList);
+    // tapRepo.setObservationsList(datasets.obsList)
+    tapRepo.setNotClassifiedList(datasets.notClassifiedList);
+    return tapRepo;
+}
+async function queryAsync(tapRepo, adql, TAP_QUERY_TIMEOUT_MS) {
+    const base = src_Global.corsProxyUrl.replace(/\/?$/, '/'); // ensure trailing /
+    const url = new URL('adql', base);
+    url.searchParams.set('tapurl', tapRepo.tapBaseUrl);
+    url.searchParams.set('query', adql);
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), TAP_QUERY_TIMEOUT_MS || 30000);
+    try {
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            mode: 'cors',
+            signal: ac.signal,
+            headers: { Accept: 'application/json' }
+        });
+        if (!response.ok) {
+            const text = await response.text().catch(() => '');
+            throw new Error(`HTTP ${response.status} ${response.statusText} – ${text}`);
+        }
+        return await response.json(); // return type is 'any'
+    }
+    catch (err) {
+        console.error('queryAsync error:', err?.message || err);
+        return null;
+    }
+    finally {
+        clearTimeout(t);
+    }
+}
+/**
+ * Fetch and parse tables from a TAP service.
+ */
+const loadTables = async (tapUrl, tapRepo) => {
+    const tablesUrl = `${tapUrl}/tables`;
+    const requestUrl = `${src_Global.corsProxyUrl}exturl?url=${encodeURIComponent(tablesUrl)}`;
+    const result = { obsList: [], catalogueList: [], notClassifiedList: [] };
+    try {
+        const response = await fetch(requestUrl, { method: 'GET', mode: 'cors' });
+        const raw = await response.text();
+        const data = raw.replace(/\n\t|\t|\n/g, '');
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, 'application/xml');
+        const root = doc.firstElementChild;
+        if (!root)
+            throw new Error('Error parsing TAP XML. Missing root element.');
+        if (!/tableset$/i.test(root.nodeName)) {
+            throw new Error(`Error parsing TAP XML. ${root.nodeName} not recognised`);
+        }
+        const catalogueList = [];
+        const obsList = [];
+        const notClassifiedList = [];
+        // schemas
+        for (const schema of Array.from(root.children)) {
+            if (schema.nodeName !== 'schema')
+                continue;
+            for (const table of Array.from(schema.children)) {
+                if (table.nodeName !== 'table')
+                    continue;
+                const dataset = parseTable(table, tablesUrl, tapRepo);
+                if (!dataset)
+                    continue;
+                if (dataset.catalogue) {
+                    ;
+                    dataset.catalogue.id = catId++; // keep parity with existing code
+                    catalogueList.push(dataset.catalogue);
+                }
+                if (dataset.footprint) {
+                    ;
+                    dataset.footprint.id = obsId++;
+                    // obsList.push(dataset.footprint)
+                }
+                if (dataset.notClassified) {
+                    notClassifiedList.push(dataset.notClassified);
+                }
+            }
+        }
+        return { catalogueList, obsList, notClassifiedList };
+    }
+    catch (err) {
+        console.error(err?.message ?? err);
+        return result;
+    }
+};
+/**
+ * Fetch and parse TAP capabilities to extract ADQL functions.
+ */
+const loadCapabilities = async (repoUrl) => {
+    const capabilitiesUrl = `${repoUrl}/capabilities`;
+    const requestUrl = `${src_Global.corsProxyUrl}exturl?url=${encodeURIComponent(capabilitiesUrl)}`;
+    let capabilities = [];
+    try {
+        const response = await fetch(requestUrl, { method: 'GET', mode: 'cors' });
+        const raw = await response.text();
+        const data = raw.replace(/\n\t|\t|\n/g, '');
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, 'application/xml');
+        const root = doc.firstElementChild;
+        if (!root)
+            throw new Error('Error parsing TAP XML. Missing root element.');
+        if (!/capabilities$/i.test(root.nodeName)) {
+            throw new Error(`Error parsing TAP XML. ${root.nodeName} not recognised`);
+        }
+        for (const capability of Array.from(root.children)) {
+            if (capability.nodeName !== 'capability')
+                continue;
+            for (const child of Array.from(capability.children)) {
+                if (child.nodeName === 'language') {
+                    capabilities = parseCapabilities(child);
+                }
+            }
+        }
+        return capabilities;
+    }
+    catch (err) {
+        console.error(err?.message ?? err);
+        return capabilities;
+    }
+};
+/**
+ * Parse the <language> node to extract ADQL functions.
+ */
+const parseCapabilities = (languageNode) => {
+    const out = [];
+    const featuresContainers = languageNode.getElementsByTagName('languageFeatures');
+    if (!featuresContainers.length)
+        return out;
+    const featureNodeList = featuresContainers[0].getElementsByTagName('feature');
+    for (const feature of Array.from(featureNodeList)) {
+        const formNode = feature.getElementsByTagName('form')[0];
+        if (formNode?.textContent)
+            out.push(formNode.textContent);
+    }
+    return out;
+};
+/**
+ * Parse a <table> node and build dataset wrappers.
+ */
+const parseTable = (tableNode, tablesUrl, tapRepo) => {
+    const nameNode = tableNode.getElementsByTagName('name')[0];
+    if (!nameNode?.textContent) {
+        return { catalogue: null, footprint: null, notClassified: 'Missing table name' };
+    }
+    const tableName = nameNode.textContent;
+    const tableDesc = tableNode.getElementsByTagName('description')[0]?.textContent ?? null;
+    const metaColumns = tableNode.getElementsByTagName('column');
+    const tapMetas = new tap_TapMetadataList();
+    for (const col of Array.from(metaColumns)) {
+        const name = col.getElementsByTagName('name')[0]?.textContent ?? '';
+        const description = col.getElementsByTagName('description')[0]?.textContent ?? undefined;
+        const unit = col.getElementsByTagName('unit')[0]?.textContent ?? undefined;
+        const dataType = col.getElementsByTagName('dataType')[0]?.textContent ?? undefined;
+        const ucd = col.getElementsByTagName('ucd')[0]?.textContent ?? undefined;
+        const utype = col.getElementsByTagName('utype')[0]?.textContent ?? undefined;
+        const tapMeta = new tap_TapMetadata(name, description, unit, dataType, ucd, utype);
+        tapMetas.addMetadata(tapMeta);
+    }
+    let catalogue = null;
+    let footprint = null;
+    let notClassified = null;
+    if (tapMetas.pgSphereMetaColumns.length > 0 || tapMetas.sRegionMetaColumns.length > 0) {
+        // footprint = new FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas)
+    }
+    else if (tapMetas.posEqRAMetaColumns.length > 0 && tapMetas.posEqDecMetaColumns.length > 0) {
+        catalogue = new catalogues_CatalogueGL(tableName, tableDesc, tapRepo, tapMetas);
+    }
+    else {
+        notClassified = `TODO: create NC entity for ${tablesUrl}#${tableName}`;
+    }
+    return { catalogue, footprint, notClassified };
+};
+
+;// ./src/services/queryCatalogueByFoV.ts
+// queryCatalogueByFoV.ts
+
+
+
+// export interface TapRepository {
+//   _tapBaseURL: string
+//   /**
+//    * Execute an ADQL query and return rows (each row is an array matching column order).
+//    * The second param is an optional timeout in ms.
+//    */
+//   queryAsync: (adql: string, timeoutMs?: number) => Promise<any[]>
+// }
+// Optional timeout; adjust or remove if you don’t use timeouts.
+const TAP_QUERY_TIMEOUT_MS = 60_000;
+// Small helpers to be robust with slightly different metadata shapes
+function getColName(col) {
+    if (!col)
+        return '';
+    return (col.name ?? col.name ?? '').toString();
+}
+/**
+ * Query a TAP table by the current Field-of-View and return a populated CatalogueGL
+ * (or undefined if nothing found).
+ *
+ * @param tapRepo        TAP backend wrapper
+ * @param tapTable       Fully qualified table name (e.g. schema.table)
+ * @param tableDesc      Human description for UI
+ * @param tapMetadata    Table metadata (UCDs etc.)
+ */
+// export default async function queryCatalogueByFoV(
+//     tapRepo: TapRepo,
+//     tapTable: string,
+//     tableDesc: string,
+//     tapMetadata: TapMetadataList
+// ): Promise<CatalogueGL | undefined> {
+async function queryCatalogueByFoV(catalogue, polygonAdql) {
+    try {
+        // Resolve RA/Dec column names (CatalogueProps already picked them from metadata)
+        const raCol = getColName(catalogue.catalogueProps.raColumn);
+        const decCol = getColName(catalogue.catalogueProps.decColumn);
+        const tapTable = catalogue.name;
+        if (!raCol || !decCol) {
+            console.warn('[queryCatalogueByFoV] RA/Dec columns were not resolved from metadata.');
+            return;
+        }
+        // const adql = `SELECT TOP 200 * FROM ${tapTable} WHERE 1 = CONTAINS(POINT('ICRS', ${raCol}, ${decCol}), POLYGON('ICRS',${polygonAdql}))`
+        const adql = `SELECT TOP 200 * FROM ${tapTable} WHERE 1 = CONTAINS(POINT('ICRS', ${raCol}, ${decCol}), POLYGON('ICRS',${polygonAdql}))`;
+        // Keep it simple: query all columns. You can TOP/N limit here if needed.
+        // const adql = `SELECT * FROM ${tapTable} WHERE ${whereFoV}`
+        // Fire the TAP query
+        const rows = await queryAsync(catalogue.tapRepo, adql, TAP_QUERY_TIMEOUT_MS);
+        console.log(rows);
+        if (rows && rows.data.length > 0) {
+            const metadata = rows.metadata;
+            const data = rows.data;
+            console.log(data.length);
+            let tapMetadataList = new tap_TapMetadataList();
+            for (const element of metadata) {
+                const name = element.name;
+                const description = element.description !== undefined ? element.description : undefined;
+                const unit = element.unit !== undefined ? element.unit : undefined;
+                const datatype = element.datatype !== undefined ? element.datatype : undefined;
+                const ucd = element.ucd !== undefined ? element.ucd : undefined;
+                const utype = element.utype !== undefined ? element.utype : undefined;
+                const tapMeta = new tap_TapMetadata(name, description, unit, datatype, ucd, utype);
+                tapMetadataList.addMetadata(tapMeta);
+            }
+            catalogue.addSources(data, tapMetadataList.metadataList);
+            return catalogue;
+        }
+        else {
+            console.log('[queryCatalogueByFoV] No results found.');
+            return;
+        }
+    }
+    catch (err) {
+        console.error('[queryCatalogueByFoV] Error:', err?.message ?? err);
+        return;
+    }
+}
+
 ;// ./src/AstroSphere.ts
 // AstroSphere.ts
+
+
 
 
 
@@ -10408,12 +11871,25 @@ class AstroSphere {
     activateHiPS(hipsDescriptor, insideSphere) {
         this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, insideSphere);
     }
+    activeCatalogues = [];
+    async showCatalogue(catalogue) {
+        const fovPolyAstro = utils_FoVUtils.getFoVPolygon(this.camera, this.canvas, grid_HealpixGridSingleton);
+        const polygonAdql = utils_FoVUtils.getAstroFoVPolygon(fovPolyAstro); // -> "POLYGON('ICRS', ra1, dec1, ...)"
+        const newcat = await queryCatalogueByFoV(catalogue, polygonAdql);
+        console.log(newcat);
+        if (newcat)
+            this.activeCatalogues.push(newcat);
+        return newcat;
+    }
     goTo(raDeg, decDeg) {
         this.camera.goTo(raDeg, decDeg);
     }
     getFoV() {
         // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
         return this.fov;
+    }
+    getFoVPolygon() {
+        return utils_FoVUtils.getFoVPolygon(this.camera, this.canvas, grid_HealpixGridSingleton);
     }
     changeFoV(deg) {
         // throw new Error("not Implemented")
@@ -10508,6 +11984,13 @@ class AstroSphere {
                 decDMS,
             });
         }
+        this.activeCatalogues.forEach(cat => {
+            if (this.activeHiPS) {
+                // TODO test it using the healpixSingleton
+                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper);
+                // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
+            }
+        });
     }
 }
 /* harmony default export */ const src_AstroSphere = (AstroSphere);
@@ -10525,6 +12008,9 @@ class AstroCore {
     run() {
         return this.tick();
     }
+    showCatalogue(catalogue) {
+        this.astroSphere.showCatalogue(catalogue);
+    }
     activateHiPS(hipsDescriptor, insideSphere) {
         this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
     }
@@ -10533,6 +12019,9 @@ class AstroCore {
     }
     getFoV() {
         return this.astroSphere.getFoV();
+    }
+    getFoVPolygon() {
+        return this.astroSphere.getFoVPolygon();
     }
     changeFoV(deg) {
         this, this.astroSphere.changeFoV(deg);
@@ -10740,6 +12229,8 @@ class HiPSDescriptor {
 }
 
 ;// ./src/index.ts
+
+
 
 
 

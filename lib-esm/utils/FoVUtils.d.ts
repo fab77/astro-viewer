@@ -4,7 +4,7 @@
 import Point from '../model/Point.js';
 import { ReadonlyMat4 } from 'gl-matrix';
 import Camera from '../Camera.js';
-import HiPS from '../model/hips/HiPS.js';
+import AbstractSkyEntity from '../model/AbstractSkyEntity.js';
 declare class FoVUtils {
     /**
      * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
@@ -18,7 +18,7 @@ declare class FoVUtils {
      * Compute the FoV polygon as a list of Points (clockwise).
      * Uses ray picking + frustum planes against a unit sphere.
      */
-    static getFoVPolygon(_pMatrix: ReadonlyMat4 | null, camera: Camera, canvas: HTMLCanvasElement, model: HiPS): Point[];
+    static getFoVPolygon(camera: Camera, canvas: HTMLCanvasElement, model: AbstractSkyEntity): Point[];
     /**
      * Ray pick against 8 key screen positions (corners + midpoints).
      * Returns Points in clockwise order starting from top-left.

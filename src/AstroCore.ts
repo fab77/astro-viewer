@@ -3,6 +3,9 @@ import global from './Global.js'
 import AstroSphere from './AstroSphere.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { FoV } from './model/FoV.js'
+import Point from './model/Point.js'
+import CatalogueGL from './model/catalogues/CatalogueGL.js'
+import { TapRepo } from './model/tap/TapRepo.js'
 
 type GL2WithViewport = WebGL2RenderingContext & {
   viewportWidth: number
@@ -22,6 +25,10 @@ export class AstroCore {
     return this.tick()
   }
 
+  showCatalogue(catalogue: CatalogueGL) {
+    this.astroSphere.showCatalogue(catalogue)
+  }
+
   activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void {
     this.astroSphere.activateHiPS(hipsDescriptor, insideSphere)
   }
@@ -33,6 +40,11 @@ export class AstroCore {
   getFoV(): FoV {
     return this.astroSphere.getFoV()
   }
+
+  getFoVPolygon(): Point[] {
+    return this.astroSphere.getFoVPolygon()
+  }
+
   changeFoV(deg: number) {
     this, this.astroSphere.changeFoV(deg)
   }

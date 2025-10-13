@@ -9,6 +9,8 @@ import { cartesianToSpherical, sphericalToAstroDeg, raDegToHMS, decDegToDMS, } f
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js';
 import HiPS from './model/hips/HiPS.js';
 import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.js';
+import FoVUtils from './utils/FoVUtils.js';
+import queryCatalogueByFoV from './services/queryCatalogueByFoV.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -129,12 +131,25 @@ class AstroSphere {
     activateHiPS(hipsDescriptor, insideSphere) {
         this.activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, insideSphere);
     }
+    activeCatalogues = [];
+    async showCatalogue(catalogue) {
+        const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton);
+        const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro); // -> "POLYGON('ICRS', ra1, dec1, ...)"
+        const newcat = await queryCatalogueByFoV(catalogue, polygonAdql);
+        console.log(newcat);
+        if (newcat)
+            this.activeCatalogues.push(newcat);
+        return newcat;
+    }
     goTo(raDeg, decDeg) {
         this.camera.goTo(raDeg, decDeg);
     }
     getFoV() {
         // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
         return this.fov;
+    }
+    getFoVPolygon() {
+        return FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton);
     }
     changeFoV(deg) {
         // throw new Error("not Implemented")
@@ -229,6 +244,13 @@ class AstroSphere {
                 decDMS,
             });
         }
+        this.activeCatalogues.forEach(cat => {
+            if (this.activeHiPS) {
+                // TODO test it using the healpixSingleton
+                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper);
+                // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
+            }
+        });
     }
 }
 export default AstroSphere;

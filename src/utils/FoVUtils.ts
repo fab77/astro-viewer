@@ -10,6 +10,7 @@ import { mat4, ReadonlyMat4 } from 'gl-matrix';
 import computePerspectiveMatrixSingleton from './ComputePerspectiveMatrix.js';
 import Camera from '../Camera.js';
 import HiPS from '../model/hips/HiPS.js';
+import AbstractSkyEntity from '../model/AbstractSkyEntity.js';
 
 class FoVUtils {
   /**
@@ -25,13 +26,14 @@ class FoVUtils {
    * Uses ray picking + frustum planes against a unit sphere.
    */
   static getFoVPolygon(
-    _pMatrix: ReadonlyMat4 | null,
+    // _pMatrix: ReadonlyMat4 | null,
     camera: Camera,
     canvas: HTMLCanvasElement,
-    model: HiPS
+    model: AbstractSkyEntity
   ): Point[] {
-    const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
-      _pMatrix) as ReadonlyMat4;
+    // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
+    //   _pMatrix) as ReadonlyMat4;
+    const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4 
     const vMatrix = camera.getCameraMatrix();
     const mMatrix = model.getModelMatrix();
     const canvasWidth = canvas.clientWidth;

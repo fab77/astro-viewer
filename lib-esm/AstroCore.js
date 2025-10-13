@@ -10,6 +10,9 @@ export class AstroCore {
     run() {
         return this.tick();
     }
+    showCatalogue(catalogue) {
+        this.astroSphere.showCatalogue(catalogue);
+    }
     activateHiPS(hipsDescriptor, insideSphere) {
         this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
     }
@@ -18,6 +21,9 @@ export class AstroCore {
     }
     getFoV() {
         return this.astroSphere.getFoV();
+    }
+    getFoVPolygon() {
+        return this.astroSphere.getFoVPolygon();
     }
     changeFoV(deg) {
         this, this.astroSphere.changeFoV(deg);

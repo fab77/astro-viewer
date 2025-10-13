@@ -3,6 +3,314 @@
 export type GLSLSource = string;
 
 export default class ShaderManager {
+  static catalogueVS(): GLSLSource {
+    // return `attribute vec4 aCatPosition;
+
+    //       attribute float a_selected;
+    //       varying float v_selected;
+
+    //       attribute float a_brightness;
+    //       varying float v_brightness;
+
+    //       attribute float a_pointsize;
+
+    //       varying lowp vec4 vColor;
+
+    //       uniform mat4 uMVMatrix;
+    //       uniform mat4 uPMatrix;
+
+    //       //varying float vPointSize;
+
+    //       void main() {
+    //           //vCatPosition = aCatPosition;
+    //           //vPointSize = 3.0;
+
+    //           gl_Position = (uPMatrix * uMVMatrix * aCatPosition);
+
+    //           gl_PointSize = a_pointsize;
+
+    //   //		vColor = vec4(0.0, 1.0, 0.0, 1.0);
+    //   //		if ( a_selected == 1.0 ){
+    //   //			vColor = vec4(1.0, 0.0, 0.0, 1.0);
+    //   //		}
+
+    //           v_selected = a_selected;
+    //           v_brightness = a_brightness;
+
+    //       }`;
+    return `#version 300 es
+    in vec4 aCatPosition;
+    in float a_selected;
+    in float a_pointsize;
+    in float a_brightness;
+
+    out float v_selected;
+    out float v_brightness;
+    out lowp vec4 vColor;  // not used
+
+    uniform mat4 uPMatrix;
+    uniform mat4 uMVMatrix;
+
+    void main() {
+
+      gl_Position = (uPMatrix * uMVMatrix * aCatPosition);
+      gl_PointSize = a_pointsize;
+      v_selected = a_selected;
+      v_brightness = a_brightness;
+    }`;
+  }
+
+  static catalogueFS(): GLSLSource {
+    // return `#ifdef GL_OES_standard_derivatives
+    //   #extension GL_OES_standard_derivatives : enable
+    //   #endif
+
+    //   // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+
+    //     precision mediump float;
+
+    //   //varying lowp vec4 vColor;
+
+    //   varying float v_selected;
+
+    //   uniform vec4 u_fragcolor;
+
+    //   const float EPSILON = 1e-10;
+
+    //   varying float v_brightness;
+
+    //   vec3 RGBtoHCV(in vec3 rgb) {
+    //       // RGB [0..1] to Hue-Chroma-Value [0..1]
+    //       // Based on work by Sam Hocevar and Emil Persson
+    //       vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
+    //       vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
+    //       float c = q.x - min(q.w, q.y);
+    //       float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
+    //       return vec3(h, c, q.x);
+    //   }
+
+    //   vec3 RGBtoHSL(in vec3 rgb) {
+    //       // RGB [0..1] to Hue-Saturation-Lightness [0..1]
+    //       vec3 hcv = RGBtoHCV(rgb);
+    //       //vec3 hcv = vec3(1., 1., 1.);
+    //       float z = hcv.z - hcv.y * 0.5;
+    //       float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
+    //       return vec3(hcv.x, s, z);
+    //   }
+
+
+
+    //   vec3 HUEtoRGB(in float hue){
+    //       // Hue [0..1] to RGB [0..1]
+    //       // See http://www.chilliant.com/rgb2hsv.html
+    //       vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
+    //       return clamp(rgb, 0., 1.);
+    //   }
+
+    //   vec3 HSLtoRGB(in vec3 hsl) {
+    //       // Hue-Saturation-Lightness [0..1] to RGB [0..1]
+    //       vec3 rgb = HUEtoRGB(hsl.x);
+    //       float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
+    //       return (rgb - 0.5) * c + hsl.z;
+    //   }
+
+
+    //     void main() {
+
+    //       //gl_FragColor = vColor;
+
+    //       float r = 0.0, delta = 0.0, alpha = 1.0;
+    //       vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+    //       r = dot(cxy, cxy);
+    //       if (r > 1.0) {
+    //           discard;
+    //       }
+
+    //   #ifdef GL_OES_standard_derivatives
+    //       delta = fwidth(r);
+    //       alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+    //   #endif
+
+
+    //       //gl_FragColor = vColor * (alpha);
+
+
+    //       if (v_selected == 1.0){
+    //           gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+    //       } else if (v_selected == 2.0){
+    //           gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+    //       }else{
+    //           if (r < 0.4) {
+    //               discard;
+    //           }
+    //           if ( v_brightness >= -1.0 && v_brightness <= 1.0) {
+    //               // Round-trip RGB->HSL->RGB with time-dependent lightness
+    //               vec3 hsl = RGBtoHSL(vec3(u_fragcolor));
+    //               //hsl.z = pow(hsl.z, sin(iTime) + 1.5);
+    //               // hsl.z = pow(hsl.z, v_brightness + 1.5);
+    //               hsl.z = pow(hsl.z, v_brightness + 1.5);
+    //               vec3 hslcolor = HSLtoRGB(hsl);
+    //               gl_FragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+    //           } else {
+    //               gl_FragColor = u_fragcolor * (alpha);
+    //           }
+
+    //       }
+
+
+    //     }`;
+    return `#version 300 es
+    precision mediump float;
+    
+    #ifdef GL_OES_standard_derivatives
+    #extension GL_OES_standard_derivatives : enable
+    #endif
+
+    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+
+    // precision mediump float;
+
+    in float v_selected;
+    in float v_brightness;
+
+    uniform vec4 u_fragcolor;
+
+    out vec4 fragColor;      // <-- add this
+
+    // varying float v_selected;
+    // varying float v_brightness;
+
+    const float EPSILON = 1e-10;
+    
+    vec3 RGBtoHCV(in vec3 rgb) {
+      // RGB [0..1] to Hue-Chroma-Value [0..1]
+      // Based on work by Sam Hocevar and Emil Persson
+      vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
+      vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
+      float c = q.x - min(q.w, q.y);
+      float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
+      return vec3(h, c, q.x);
+    }
+
+    vec3 RGBtoHSL(in vec3 rgb) {
+      // RGB [0..1] to Hue-Saturation-Lightness [0..1]
+      vec3 hcv = RGBtoHCV(rgb);
+      //vec3 hcv = vec3(1., 1., 1.);
+      float z = hcv.z - hcv.y * 0.5;
+      float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
+      return vec3(hcv.x, s, z);
+    }
+
+    vec3 HUEtoRGB(in float hue){
+      // Hue [0..1] to RGB [0..1]
+      // See http://www.chilliant.com/rgb2hsv.html
+      vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
+      return clamp(rgb, 0., 1.);
+    }
+
+    vec3 HSLtoRGB(in vec3 hsl) {
+      // Hue-Saturation-Lightness [0..1] to RGB [0..1]
+      vec3 rgb = HUEtoRGB(hsl.x);
+      float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
+      return (rgb - 0.5) * c + hsl.z;
+    }
+  
+    void main() {
+
+      float r = 0.0, delta = 0.0, alpha = 1.0;
+      vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      r = dot(cxy, cxy);
+      if (r > 1.0) {
+        discard;
+      }
+
+      #ifdef GL_OES_standard_derivatives
+        delta = fwidth(r);
+        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+      #endif
+
+      if (v_selected == 1.0){
+        // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+        fragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+      } else if (v_selected == 2.0){
+        // gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+        fragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+      }else{
+        if (r < 0.4) {
+          discard;
+        }
+        if ( v_brightness >= -1.0 && v_brightness <= 1.0) {
+          // Round-trip RGB->HSL->RGB with time-dependent lightness
+          vec3 hsl = RGBtoHSL(vec3(u_fragcolor));
+          //hsl.z = pow(hsl.z, sin(iTime) + 1.5);
+          // hsl.z = pow(hsl.z, v_brightness + 1.5);
+          hsl.z = pow(hsl.z, v_brightness + 1.5);
+          vec3 hslcolor = HSLtoRGB(hsl);
+          // gl_FragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+          fragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+        } else {
+          // gl_FragColor = u_fragcolor * (alpha);
+          fragColor = u_fragcolor * (alpha);
+        }
+      }
+    }`;
+  }
+
+  static fottprintVS(): GLSLSource {
+    return `#version 300 es
+    attribute vec4 aCatPosition;
+    //t	attribute float a_selected;
+    //t	varying float v_selected;
+    //t	attribute float a_pointsize;
+    varying lowp vec4 vColor;
+    uniform float u_pointsize;
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    void main() {
+      gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+      //t		gl_PointSize = a_pointsize;
+      gl_PointSize = u_pointsize;
+    }`;
+  }
+
+  static fottprintFS(): GLSLSource {
+    return `#version 300 es
+    //t	#ifdef GL_OES_standard_derivatives
+    //t	#extension GL_OES_standard_derivatives : enable
+    //t	#endif
+    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+    precision mediump float;
+    //t	varying float v_selected;
+    uniform vec4 u_fragcolor;
+
+    void main() {
+
+      gl_FragColor = u_fragcolor;
+      //t		float r = 0.0, delta = 0.0, alpha = 1.0;
+      //t		vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      //t		r = dot(cxy, cxy);
+      //t		if (r > 1.0) {
+      //t			discard;
+      //t		}
+
+      //t	#ifdef GL_OES_standard_derivatives
+      //t		delta = fwidth(r);
+      //t		alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+      //t	#endif
+
+      //t		if (v_selected == 1.0){
+      //t			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+      //t		}else{
+      //t			if (r < 0.4) {
+      //t				discard;
+      //t			}
+      //t			gl_FragColor = u_fragcolor * (alpha);
+      //t		}
+    }
+    `;
+  }
+
   static hipsVS(): GLSLSource {
     return `#version 300 es
     in vec3 aVertexPosition;

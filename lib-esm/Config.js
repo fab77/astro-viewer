@@ -20,7 +20,7 @@ export const bootSetup = {
     camera_near_plane: 0.00001,
     camera_far_plane: 2.5,
     corsProxyUrl: "http://localhost:4000/",
-    useCORSProxy: true,
+    useCORSProxy: false,
     maxDecimals: 15,
     defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
     version: "Astrobrowser v1.0.0",

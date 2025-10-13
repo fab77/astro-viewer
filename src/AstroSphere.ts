@@ -19,6 +19,10 @@ import HiPS from './model/hips/HiPS.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.js'
 import { FoV } from './model/FoV.js'
+import Point from './model/Point.js'
+import FoVUtils from './utils/FoVUtils.js'
+import queryCatalogueByFoV from './services/queryCatalogueByFoV.js'
+import CatalogueGL from './model/catalogues/CatalogueGL.js'
 
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -180,6 +184,17 @@ class AstroSphere {
     )
   }
 
+  private activeCatalogues: CatalogueGL[] = []
+  async showCatalogue(catalogue: CatalogueGL) {
+    const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
+    const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
+    const newcat = await queryCatalogueByFoV(catalogue, polygonAdql)
+    console.log(newcat)
+    if (newcat) this.activeCatalogues.push(newcat)
+    return newcat
+  }
+
+
   goTo(raDeg: number, decDeg: number): void {
     this.camera.goTo(raDeg, decDeg)
   }
@@ -187,6 +202,10 @@ class AstroSphere {
   getFoV(): FoV {
     // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
     return this.fov
+  }
+
+  getFoVPolygon(): Point[] {
+    return FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
   }
 
   changeFoV(deg: number) {
@@ -289,6 +308,10 @@ class AstroSphere {
     global.gl.disable(global.gl.CULL_FACE)
 
 
+
+
+
+
     if (this.startup) {
       this.startup = false
       const phiTheta = this.getPhiThetaDeg(canvas)
@@ -302,6 +325,16 @@ class AstroSphere {
         decDMS,
       })
     }
+
+
+    this.activeCatalogues.forEach(cat => {
+      if (this.activeHiPS) {
+        // TODO test it using the healpixSingleton
+        cat.draw(this.activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper )
+        // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
+      }
+    })
+
   }
 }
 

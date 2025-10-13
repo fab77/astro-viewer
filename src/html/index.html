@@ -3,10 +3,6 @@
 
 <head>
     <script src="./javascripts/astrocore.js"></script>
-    <script>
-        console.log('astrocore?', window.astrocore);               // deve stampare un oggetto
-        console.log('AstroCore?', window.astrocore?.AstroCore);    // deve esistere
-    </script>
 </head>
 
 <body onload="run();">
@@ -15,7 +11,7 @@
         let AstroAPI = undefined
         async function run() {
             const AC = new astrocore.AstroCore();
-            
+
             const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
             const resp = await fetch(hipsUrl + "properties");
             const propsText = await resp.text();
@@ -25,7 +21,15 @@
             AC.activateHiPS(desc, insideSphere);
             AstroAPI = AC
             AC.run();
+
+            const tapRepo = await astrocore.addTAPRepo("https://sky.esa.int/esasky-tap/tap")
+            console.log(tapRepo)
+
+            const catalogue = tapRepo.cataloguesList.find(cat => cat.name === "catalogues.mv_chandra_csc211_fdw")
+            console.log(catalogue)
+            AC.showCatalogue(catalogue)
         }
+
     </script>
     <canvas id="astrocanvas"></canvas>
 </body>

@@ -1,5 +1,7 @@
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
+import Point from './model/Point.js';
+import CatalogueGL from './model/catalogues/CatalogueGL.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -24,8 +26,11 @@ declare class AstroSphere {
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): import("./utils/Utils.js").SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void;
+    private activeCatalogues;
+    showCatalogue(catalogue: CatalogueGL): Promise<CatalogueGL | undefined>;
     goTo(raDeg: number, decDeg: number): void;
     getFoV(): FoV;
+    getFoVPolygon(): Point[];
     changeFoV(deg: number): void;
     changeFoV2(deg: number): void;
     changeFoV3(deg: number): void;
