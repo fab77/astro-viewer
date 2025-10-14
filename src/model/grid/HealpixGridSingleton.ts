@@ -65,8 +65,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
 
 
-  constructor(insideSphere: boolean) {
-    super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', insideSphere);
+  constructor() {
+    super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid');
     // this.initGL(global.gl as GL);
   }
 
@@ -94,8 +94,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     return HealpixGridSingleton.RADIUS
   }
 
-  refreshFoV(insideSphere: boolean) {
-    return this.fovObj.getFoV(insideSphere);
+  refreshFoV() {
+    return this.fovObj.getFoV(global.insideSphere);
   }
 
   getFoV(): FoV {
@@ -247,9 +247,9 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     return (this as any)._tileBuffer.updateTiles(pixels, order);
   }
 
-  private refresh(insideSphere: boolean): void {
+  private refresh(): void {
 
-    this.refreshFoV(insideSphere);
+    this.refreshFoV();
 
     const fov = this.getMinFoV();
 
@@ -280,11 +280,11 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     this.showGrid = !this.showGrid
   }
 
-  draw(insideSphere: boolean): void {
+  draw(): void {
     const gl = global.gl as GL;
 
     const mMatrix = this.getModelMatrix();
-    this.refresh(insideSphere);
+    this.refresh();
 
     if (!this.showGrid) return;
 
@@ -371,5 +371,5 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   }
 }
 
-const healpixGridSingleton = new HealpixGridSingleton(bootSetup.insideSphere);
+const healpixGridSingleton = new HealpixGridSingleton();
 export default healpixGridSingleton;

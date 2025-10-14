@@ -30,8 +30,8 @@ export class AstroCore {
         this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);
     }
     // HIPS
-    activateHiPS(hipsDescriptor, insideSphere) {
-        this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
+    activateHiPS(hipsDescriptor) {
+        this.astroSphere.activateHiPS(hipsDescriptor);
     }
     // GOTOs and COORDS
     goTo(raDeg, decDeg) {

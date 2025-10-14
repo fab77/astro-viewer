@@ -27,7 +27,6 @@ declare class AstroSphere {
     private zoomInertia;
     private activeHiPS;
     private startup;
-    private insideSphere;
     private fov;
     private activeCatalogues;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
@@ -39,7 +38,7 @@ declare class AstroSphere {
     private initCamera;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
-    activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void;
+    activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     showCatalogue(catalogue: CatalogueGL): Promise<CatalogueGL | undefined>;
     hideCatalogue(catalogue: CatalogueGL, isVisible: boolean): void;
     deleteCatalogue(catalogue: CatalogueGL): void;

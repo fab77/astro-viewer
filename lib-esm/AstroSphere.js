@@ -29,7 +29,7 @@ class AstroSphere {
     zoomInertia = 0.0;
     activeHiPS = null;
     startup = true;
-    insideSphere;
+    // private insideSphere: boolean
     fov;
     activeCatalogues = [];
     constructor(canvas, webgl) {
@@ -37,9 +37,10 @@ class AstroSphere {
         global.gl = webgl;
         this.mouseHelper = new MouseHelper();
         this.canvas = canvas;
+        // this.insideSphere = bootSetup.insideSphere
+        global.insideSphere = bootSetup.insideSphere;
         this.init(canvas);
-        this.insideSphere = bootSetup.insideSphere;
-        this.fov = healpixGridSingleton.refreshFoV(this.insideSphere);
+        this.fov = healpixGridSingleton.refreshFoV();
     }
     updateCentralPoint() {
         // const sphericalCoords = cartesianToSpherical(this.camera.getCameraPosition())
@@ -77,8 +78,8 @@ class AstroSphere {
     init(canvas) {
         this.initCamera();
         healpixGridSingleton.init();
-        visibleTilesManager.init(bootSetup.insideSphere);
         computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        visibleTilesManager.init(bootSetup.insideSphere);
         this.updateCentralPoint();
         this.startup = true;
         this.addEventListeners(canvas);
@@ -167,8 +168,8 @@ class AstroSphere {
         const pickerPoint = RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2);
         return cartesianToSpherical(pickerPoint);
     }
-    activateHiPS(hipsDescriptor, insideSphere) {
-        this.activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, insideSphere);
+    activateHiPS(hipsDescriptor) {
+        this.activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor);
     }
     async showCatalogue(catalogue) {
         const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton);
@@ -209,7 +210,7 @@ class AstroSphere {
         const distance = healpixGridSingleton.getFoV().computeDistanceFromAngle(deg);
         // this.camera.moveAlongView(distance)
         this.camera.translate(distance);
-        healpixGridSingleton.refreshFoV(this.insideSphere);
+        healpixGridSingleton.refreshFoV();
     }
     changeFoV2(deg) {
         // throw new Error("not Implemented")
@@ -225,11 +226,14 @@ class AstroSphere {
         computePerspectiveMatrixSingleton.computePerspectiveMatrix(this.canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
     }
     getInsideSphere() {
-        return this.insideSphere;
+        return global.insideSphere;
     }
     toggleInsideSphere() {
-        this.insideSphere = !this.insideSphere;
-        visibleTilesManager.toggleInsideSphere();
+        // this.insideSphere = !this.insideSphere
+        global.insideSphere = !global.insideSphere;
+        console.log(global.insideSphere);
+        this.camera.toggleInsideSphere();
+        // visibleTilesManager.toggleInsideSphere()
     }
     draw(canvas) {
         if (!global.gl)
@@ -243,7 +247,7 @@ class AstroSphere {
         // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
         // global.gl.getExtension('OES_element_index_uint')
         // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
-        computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, this.insideSphere);
+        computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere);
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;
@@ -255,7 +259,7 @@ class AstroSphere {
                 this.camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
                 // console.log('EMIT HERE (fovUpdate)')
-                this.fov = healpixGridSingleton.refreshFoV(this.insideSphere);
+                this.fov = healpixGridSingleton.refreshFoV();
                 // this.getFoV()
             }
         }
@@ -267,7 +271,7 @@ class AstroSphere {
             this.inertiaX *= 0.95;
             this.inertiaY *= 0.95;
             this.camera.rotate(PHI, THETA);
-            computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, this.insideSphere);
+            computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere);
         }
         else {
             this.inertiaY = 0;
@@ -277,11 +281,11 @@ class AstroSphere {
         global.gl.disable(global.gl.DEPTH_TEST);
         global.gl.enable(global.gl.BLEND);
         global.gl.enable(global.gl.CULL_FACE);
-        global.gl.cullFace(this.insideSphere ? global.gl.BACK : global.gl.FRONT);
+        global.gl.cullFace(global.insideSphere ? global.gl.BACK : global.gl.FRONT);
         global.gl.blendFunc(global.gl.SRC_ALPHA, global.gl.ONE_MINUS_SRC_ALPHA);
         // DRAW HiPS
-        this.activeHiPS.draw(this.insideSphere);
-        healpixGridSingleton.draw(this.insideSphere);
+        this.activeHiPS.draw();
+        healpixGridSingleton.draw();
         global.gl.enable(global.gl.DEPTH_TEST);
         global.gl.disable(global.gl.CULL_FACE);
         if (this.startup) {

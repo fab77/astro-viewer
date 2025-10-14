@@ -38,14 +38,15 @@ class VisibleTilesManager {
     getVisibleOrder() {
         return healpixGridSingleton.visibleorder;
     }
-    toggleInsideSphere() {
-        this.insideSphere = !this.insideSphere;
-    }
+    // toggleInsideSphere(){
+    //   this.insideSphere = !this.insideSphere
+    //   this.computeVisiblePixels();
+    // }
     computeVisiblePixels() {
         if (!this.initialised)
             return;
         let order = healpixGridSingleton.visibleorder;
-        if (this.insideSphere && order < 3) {
+        if (global.insideSphere && order < 3) {
             order = 3;
         }
         this._ancestorsMap.set(order, []);

@@ -3,6 +3,7 @@
  */
 import { vec3, mat4 } from "gl-matrix";
 import { astroDegToSpherical, cartesianToSpherical, sphericalToCartesian, } from "./utils/Utils.js";
+import global from './Global.js';
 class Camera {
     insideSphere = false;
     cam_pos = vec3.create(); // camera position
@@ -35,7 +36,7 @@ class Camera {
     }
     goTo(raDeg, decDeg) {
         // eslint-disable-next-line no-console
-        console.log(`this.insideSphere: ${this.insideSphere}`);
+        console.log(`global.insideSphere: ${global.insideSphere}`);
         // mirror RA
         const mirroredRA = 360 - raDeg;
         this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
@@ -58,28 +59,28 @@ class Camera {
         }
         this.vMatrix = viewMatrix;
     }
-    setInsideSphere(inside) {
-        if (inside !== this.insideSphere) {
-            this.insideSphere = inside;
-            if (this.insideSphere) {
-                if (this.cam_pos[2] <= 2) {
-                    this.cam_pos[2] = -2 + this.cam_pos[2];
-                }
-                else {
-                    this.cam_pos[2] = -0.005;
-                }
+    toggleInsideSphere() {
+        // if (inside !== global.insideSphere) {
+        //   global.insideSphere = inside;
+        if (global.insideSphere) {
+            if (this.cam_pos[2] <= 2) {
+                this.cam_pos[2] = -2 + this.cam_pos[2];
             }
             else {
-                this.cam_pos[2] = 2.0 + this.cam_pos[2];
+                this.cam_pos[2] = -0.005;
             }
-            mat4.translate(this.T, mat4.create(), this.cam_pos);
-            this.refreshViewMatrix();
         }
+        else {
+            this.cam_pos[2] = 2.0 + this.cam_pos[2];
+        }
+        mat4.translate(this.T, mat4.create(), this.cam_pos);
+        this.refreshViewMatrix();
+        // }
     }
     zoom(inertia) {
         this.move = vec3.clone([0, 0, 0]);
         this.move[2] += this.cam_speed * inertia;
-        if (this.insideSphere) {
+        if (global.insideSphere) {
             if (this.cam_pos[2] + this.move[2] >= -0.005 && inertia > 0) {
                 this.cam_pos[2] = -0.005;
                 inertia = 0;

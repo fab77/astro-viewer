@@ -20,10 +20,10 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     static INITIAL_POSITION: [number, number, number];
     static INITIAL_PhiRad: number;
     static INITIAL_ThetaRad: number;
-    constructor(insideSphere: boolean);
+    constructor();
     init(): void;
     get RADIUS(): number;
-    refreshFoV(insideSphere: boolean): FoV;
+    refreshFoV(): FoV;
     getFoV(): FoV;
     getMinFoV(): number;
     private initShaders;
@@ -32,7 +32,7 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     private refresh;
     private enableShader;
     toggleShowGrid(): void;
-    draw(insideSphere: boolean): void;
+    draw(): void;
     get visibleorder(): number;
 }
 declare const healpixGridSingleton: HealpixGridSingleton;

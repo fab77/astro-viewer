@@ -23,7 +23,7 @@ declare class Camera implements CameraLike {
     private init;
     goTo(raDeg: number, decDeg: number): void;
     private goToPhiTheta;
-    setInsideSphere(inside: boolean): void;
+    toggleInsideSphere(): void;
     zoom(inertia: number): void;
     /**
      * Move the camera forward/backward along its current viewing direction.

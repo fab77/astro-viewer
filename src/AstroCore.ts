@@ -48,8 +48,8 @@ export class AstroCore {
   }
 
   // HIPS
-  activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void {
-    this.astroSphere.activateHiPS(hipsDescriptor, insideSphere)
+  activateHiPS(hipsDescriptor: HiPSDescriptor): void {
+    this.astroSphere.activateHiPS(hipsDescriptor)
   }
 
   // GOTOs and COORDS

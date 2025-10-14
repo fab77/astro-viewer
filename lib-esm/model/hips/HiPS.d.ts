@@ -20,7 +20,7 @@ declare class HiPS extends AbstractSkyEntity {
     get minOrder(): number;
     get baseURL(): string;
     get format(): string;
-    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, descriptor: HiPSDescriptor, insideSphere: boolean);
+    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, descriptor: HiPSDescriptor);
     changeFormat(format: string): void;
     /**
      * Shader colormap switcher
@@ -36,7 +36,7 @@ declare class HiPS extends AbstractSkyEntity {
     private initShaders;
     getCurrentHealpixOrder(): number;
     private refresh;
-    draw(insideSphere: boolean): void;
+    draw(): void;
 }
 export default HiPS;
 //# sourceMappingURL=HiPS.d.ts.map

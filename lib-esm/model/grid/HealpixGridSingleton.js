@@ -12,7 +12,6 @@ import GeomUtils from '../../utils/GeomUtils.js';
 import { gridTextHelper } from './GridTextHelper.js';
 import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
-import { bootSetup } from '../../Config.js';
 class HealpixGridSingleton extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -38,8 +37,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     static INITIAL_POSITION = [0.0, 0.0, 0.0];
     static INITIAL_PhiRad = 0;
     static INITIAL_ThetaRad = 0;
-    constructor(insideSphere) {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', insideSphere);
+    constructor() {
+        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid');
         // this.initGL(global.gl as GL);
     }
     init() {
@@ -58,8 +57,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     get RADIUS() {
         return HealpixGridSingleton.RADIUS;
     }
-    refreshFoV(insideSphere) {
-        return this.fovObj.getFoV(insideSphere);
+    refreshFoV() {
+        return this.fovObj.getFoV(global.insideSphere);
     }
     getFoV() {
         return this.fovObj;
@@ -174,8 +173,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     updateTiles(pixels, order) {
         return this._tileBuffer.updateTiles(pixels, order);
     }
-    refresh(insideSphere) {
-        this.refreshFoV(insideSphere);
+    refresh() {
+        this.refreshFoV();
         const fov = this.getMinFoV();
         // expose to global (legacy)
         global.hipsFoV = fov;
@@ -198,10 +197,10 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     toggleShowGrid() {
         this.showGrid = !this.showGrid;
     }
-    draw(insideSphere) {
+    draw() {
         const gl = global.gl;
         const mMatrix = this.getModelMatrix();
-        this.refresh(insideSphere);
+        this.refresh();
         if (!this.showGrid)
             return;
         const visibleTiles = visibleTilesManager.visibleTilesByOrder;
@@ -252,6 +251,6 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         return this._visibleorder;
     }
 }
-const healpixGridSingleton = new HealpixGridSingleton(bootSetup.insideSphere);
+const healpixGridSingleton = new HealpixGridSingleton();
 export default healpixGridSingleton;
 //# sourceMappingURL=HealpixGridSingleton.js.map

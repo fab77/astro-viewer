@@ -4502,6 +4502,7 @@ function decDegToDMS(decDeg) {
  */
 
 
+
 class Camera {
     insideSphere = false;
     cam_pos = create(); // camera position
@@ -4534,7 +4535,7 @@ class Camera {
     }
     goTo(raDeg, decDeg) {
         // eslint-disable-next-line no-console
-        console.log(`this.insideSphere: ${this.insideSphere}`);
+        console.log(`global.insideSphere: ${src_Global.insideSphere}`);
         // mirror RA
         const mirroredRA = 360 - raDeg;
         this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
@@ -4557,28 +4558,28 @@ class Camera {
         }
         this.vMatrix = viewMatrix;
     }
-    setInsideSphere(inside) {
-        if (inside !== this.insideSphere) {
-            this.insideSphere = inside;
-            if (this.insideSphere) {
-                if (this.cam_pos[2] <= 2) {
-                    this.cam_pos[2] = -2 + this.cam_pos[2];
-                }
-                else {
-                    this.cam_pos[2] = -0.005;
-                }
+    toggleInsideSphere() {
+        // if (inside !== global.insideSphere) {
+        //   global.insideSphere = inside;
+        if (src_Global.insideSphere) {
+            if (this.cam_pos[2] <= 2) {
+                this.cam_pos[2] = -2 + this.cam_pos[2];
             }
             else {
-                this.cam_pos[2] = 2.0 + this.cam_pos[2];
+                this.cam_pos[2] = -0.005;
             }
-            translate(this.T, mat4_create(), this.cam_pos);
-            this.refreshViewMatrix();
         }
+        else {
+            this.cam_pos[2] = 2.0 + this.cam_pos[2];
+        }
+        translate(this.T, mat4_create(), this.cam_pos);
+        this.refreshViewMatrix();
+        // }
     }
     zoom(inertia) {
         this.move = clone([0, 0, 0]);
         this.move[2] += this.cam_speed * inertia;
-        if (this.insideSphere) {
+        if (src_Global.insideSphere) {
             if (this.cam_pos[2] + this.move[2] >= -0.005 && inertia > 0) {
                 this.cam_pos[2] = -0.005;
                 inertia = 0;
@@ -4792,7 +4793,7 @@ class AbstractSkyEntity {
     yRad;
     prevFoV = this.fovX_deg;
     name;
-    insideSphere = bootSetup.insideSphere;
+    // public insideSphere: boolean = bootSetup.insideSphere
     // Picking/sphere
     center;
     radius;
@@ -4809,13 +4810,13 @@ class AbstractSkyEntity {
     inverseModelMatrix = mat4_create();
     // Precomputed transform from galactic to equatorial (already inverted)
     galacticMatrixInverted = mat4_create();
-    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, insideSphere, isGalacticHips) {
+    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, isGalacticHips) {
         this.xRad = in_xRad;
         this.yRad = in_yRad;
         this.name = in_name;
         this.center = clone(in_position);
         this.radius = in_radius;
-        this.insideSphere = insideSphere;
+        // this.insideSphere = global.insideSphere
         this.isGalacticHips = !!isGalacticHips;
         // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
         mat4_set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
@@ -4856,7 +4857,7 @@ class AbstractSkyEntity {
         invert(R_inverse, this.R);
         mat4_multiply(this.modelMatrix, this.T, R_inverse);
         // Flip Y if we're outside the sphere
-        if (!this.insideSphere) {
+        if (!src_Global.insideSphere) {
             this.modelMatrix[1] = -this.modelMatrix[1];
             this.modelMatrix[5] = -this.modelMatrix[5];
             this.modelMatrix[9] = -this.modelMatrix[9];
@@ -8697,14 +8698,15 @@ class VisibleTilesManager {
     getVisibleOrder() {
         return grid_HealpixGridSingleton.visibleorder;
     }
-    toggleInsideSphere() {
-        this.insideSphere = !this.insideSphere;
-    }
+    // toggleInsideSphere(){
+    //   this.insideSphere = !this.insideSphere
+    //   this.computeVisiblePixels();
+    // }
     computeVisiblePixels() {
         if (!this.initialised)
             return;
         let order = grid_HealpixGridSingleton.visibleorder;
-        if (this.insideSphere && order < 3) {
+        if (src_Global.insideSphere && order < 3) {
             order = 3;
         }
         this._ancestorsMap.set(order, []);
@@ -8814,7 +8816,6 @@ const visibleTilesManager = new VisibleTilesManager();
 
 
 
-
 class HealpixGridSingleton extends model_AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -8840,8 +8841,8 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     static INITIAL_POSITION = [0.0, 0.0, 0.0];
     static INITIAL_PhiRad = 0;
     static INITIAL_ThetaRad = 0;
-    constructor(insideSphere) {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', insideSphere);
+    constructor() {
+        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid');
         // this.initGL(global.gl as GL);
     }
     init() {
@@ -8860,8 +8861,8 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     get RADIUS() {
         return HealpixGridSingleton.RADIUS;
     }
-    refreshFoV(insideSphere) {
-        return this.fovObj.getFoV(insideSphere);
+    refreshFoV() {
+        return this.fovObj.getFoV(src_Global.insideSphere);
     }
     getFoV() {
         return this.fovObj;
@@ -8976,8 +8977,8 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     updateTiles(pixels, order) {
         return this._tileBuffer.updateTiles(pixels, order);
     }
-    refresh(insideSphere) {
-        this.refreshFoV(insideSphere);
+    refresh() {
+        this.refreshFoV();
         const fov = this.getMinFoV();
         // expose to global (legacy)
         src_Global.hipsFoV = fov;
@@ -9000,10 +9001,10 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     toggleShowGrid() {
         this.showGrid = !this.showGrid;
     }
-    draw(insideSphere) {
+    draw() {
         const gl = src_Global.gl;
         const mMatrix = this.getModelMatrix();
-        this.refresh(insideSphere);
+        this.refresh();
         if (!this.showGrid)
             return;
         const visibleTiles = visibleTilesManager.visibleTilesByOrder;
@@ -9054,7 +9055,7 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
         return this._visibleorder;
     }
 }
-const healpixGridSingleton = new HealpixGridSingleton(bootSetup.insideSphere);
+const healpixGridSingleton = new HealpixGridSingleton();
 /* harmony default export */ const grid_HealpixGridSingleton = (healpixGridSingleton);
 
 ;// ./src/utils/RayPickingUtils.ts
@@ -10322,8 +10323,8 @@ class HiPS extends model_AbstractSkyEntity {
     get minOrder() { return this._minorder; }
     get baseURL() { return this._baseurl; }
     get format() { return this._format; }
-    constructor(radius, position, xrad, yrad, descriptor, insideSphere) {
-        super(radius, position, xrad, yrad, descriptor.surveyName, insideSphere, descriptor.isGalactic);
+    constructor(radius, position, xrad, yrad, descriptor) {
+        super(radius, position, xrad, yrad, descriptor.surveyName, descriptor.isGalactic);
         this.initGL(src_Global.gl);
         newTileBuffer.addHiPS(this);
         // DEBUG logs kept from JS (optional)
@@ -10424,7 +10425,7 @@ class HiPS extends model_AbstractSkyEntity {
         const fov = grid_HealpixGridSingleton.getMinFoV();
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
-    draw(insideSphere) {
+    draw() {
         if (!src_Global.camera || src_Global.camera.getCameraMatrix() === undefined)
             return;
         this.refresh();
@@ -11668,7 +11669,7 @@ class AstroSphere {
     zoomInertia = 0.0;
     activeHiPS = null;
     startup = true;
-    insideSphere;
+    // private insideSphere: boolean
     fov;
     activeCatalogues = [];
     constructor(canvas, webgl) {
@@ -11676,9 +11677,10 @@ class AstroSphere {
         src_Global.gl = webgl;
         this.mouseHelper = new utils_MouseHelper();
         this.canvas = canvas;
+        // this.insideSphere = bootSetup.insideSphere
+        src_Global.insideSphere = bootSetup.insideSphere;
         this.init(canvas);
-        this.insideSphere = bootSetup.insideSphere;
-        this.fov = grid_HealpixGridSingleton.refreshFoV(this.insideSphere);
+        this.fov = grid_HealpixGridSingleton.refreshFoV();
     }
     updateCentralPoint() {
         // const sphericalCoords = cartesianToSpherical(this.camera.getCameraPosition())
@@ -11716,8 +11718,8 @@ class AstroSphere {
     init(canvas) {
         this.initCamera();
         grid_HealpixGridSingleton.init();
-        visibleTilesManager.init(bootSetup.insideSphere);
         ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        visibleTilesManager.init(bootSetup.insideSphere);
         this.updateCentralPoint();
         this.startup = true;
         this.addEventListeners(canvas);
@@ -11806,8 +11808,8 @@ class AstroSphere {
         const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2);
         return cartesianToSpherical(pickerPoint);
     }
-    activateHiPS(hipsDescriptor, insideSphere) {
-        this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, insideSphere);
+    activateHiPS(hipsDescriptor) {
+        this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor);
     }
     async showCatalogue(catalogue) {
         const fovPolyAstro = utils_FoVUtils.getFoVPolygon(this.camera, this.canvas, grid_HealpixGridSingleton);
@@ -11848,7 +11850,7 @@ class AstroSphere {
         const distance = grid_HealpixGridSingleton.getFoV().computeDistanceFromAngle(deg);
         // this.camera.moveAlongView(distance)
         this.camera.translate(distance);
-        grid_HealpixGridSingleton.refreshFoV(this.insideSphere);
+        grid_HealpixGridSingleton.refreshFoV();
     }
     changeFoV2(deg) {
         // throw new Error("not Implemented")
@@ -11864,11 +11866,14 @@ class AstroSphere {
         ComputePerspectiveMatrix.computePerspectiveMatrix(this.canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
     }
     getInsideSphere() {
-        return this.insideSphere;
+        return src_Global.insideSphere;
     }
     toggleInsideSphere() {
-        this.insideSphere = !this.insideSphere;
-        visibleTilesManager.toggleInsideSphere();
+        // this.insideSphere = !this.insideSphere
+        src_Global.insideSphere = !src_Global.insideSphere;
+        console.log(src_Global.insideSphere);
+        this.camera.toggleInsideSphere();
+        // visibleTilesManager.toggleInsideSphere()
     }
     draw(canvas) {
         if (!src_Global.gl)
@@ -11882,7 +11887,7 @@ class AstroSphere {
         // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
         // global.gl.getExtension('OES_element_index_uint')
         // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
-        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, this.insideSphere);
+        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;
@@ -11894,7 +11899,7 @@ class AstroSphere {
                 this.camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
                 // console.log('EMIT HERE (fovUpdate)')
-                this.fov = grid_HealpixGridSingleton.refreshFoV(this.insideSphere);
+                this.fov = grid_HealpixGridSingleton.refreshFoV();
                 // this.getFoV()
             }
         }
@@ -11906,7 +11911,7 @@ class AstroSphere {
             this.inertiaX *= 0.95;
             this.inertiaY *= 0.95;
             this.camera.rotate(PHI, THETA);
-            ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, this.insideSphere);
+            ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
         }
         else {
             this.inertiaY = 0;
@@ -11916,11 +11921,11 @@ class AstroSphere {
         src_Global.gl.disable(src_Global.gl.DEPTH_TEST);
         src_Global.gl.enable(src_Global.gl.BLEND);
         src_Global.gl.enable(src_Global.gl.CULL_FACE);
-        src_Global.gl.cullFace(this.insideSphere ? src_Global.gl.BACK : src_Global.gl.FRONT);
+        src_Global.gl.cullFace(src_Global.insideSphere ? src_Global.gl.BACK : src_Global.gl.FRONT);
         src_Global.gl.blendFunc(src_Global.gl.SRC_ALPHA, src_Global.gl.ONE_MINUS_SRC_ALPHA);
         // DRAW HiPS
-        this.activeHiPS.draw(this.insideSphere);
-        grid_HealpixGridSingleton.draw(this.insideSphere);
+        this.activeHiPS.draw();
+        grid_HealpixGridSingleton.draw();
         src_Global.gl.enable(src_Global.gl.DEPTH_TEST);
         src_Global.gl.disable(src_Global.gl.CULL_FACE);
         if (this.startup) {
@@ -11982,8 +11987,8 @@ class AstroCore {
         this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);
     }
     // HIPS
-    activateHiPS(hipsDescriptor, insideSphere) {
-        this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
+    activateHiPS(hipsDescriptor) {
+        this.astroSphere.activateHiPS(hipsDescriptor);
     }
     // GOTOs and COORDS
     goTo(raDeg, decDeg) {

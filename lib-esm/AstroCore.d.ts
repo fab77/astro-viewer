@@ -15,7 +15,7 @@ export declare class AstroCore {
     changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): void;
     setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): void;
     setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): void;
-    activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void;
+    activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     goTo(raDeg: number, decDeg: number): void;
     getCenterCoordinates(): PointCoordinates | undefined;
     getCoordinatesFromMouse(): PointCoordinates | undefined;

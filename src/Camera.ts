@@ -9,6 +9,8 @@ import {
   type SphericalCoords,
 } from "./utils/Utils.js";
 
+import global from './Global.js'
+
 type Vec3Tuple = [number, number, number];
 
 interface CameraLike {
@@ -57,7 +59,7 @@ class Camera implements CameraLike {
 
   goTo(raDeg: number, decDeg: number): void {
     // eslint-disable-next-line no-console
-    console.log(`this.insideSphere: ${this.insideSphere}`);
+    console.log(`global.insideSphere: ${global.insideSphere}`);
     // mirror RA
     const mirroredRA = 360 - raDeg;
     this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
@@ -87,11 +89,11 @@ class Camera implements CameraLike {
     this.vMatrix = viewMatrix;
   }
 
-  setInsideSphere(inside: boolean): void {
-    if (inside !== this.insideSphere) {
-      this.insideSphere = inside;
+  toggleInsideSphere(): void {
+    // if (inside !== global.insideSphere) {
+    //   global.insideSphere = inside;
 
-      if (this.insideSphere) {
+      if (global.insideSphere) {
         if (this.cam_pos[2] <= 2) {
           this.cam_pos[2] = -2 + this.cam_pos[2];
         } else {
@@ -103,14 +105,14 @@ class Camera implements CameraLike {
 
       mat4.translate(this.T, mat4.create(), this.cam_pos);
       this.refreshViewMatrix();
-    }
+    // }
   }
 
   zoom(inertia: number): void {
     this.move = vec3.clone([0, 0, 0]);
     this.move[2] += this.cam_speed * inertia;
 
-    if (this.insideSphere) {
+    if (global.insideSphere) {
       if (this.cam_pos[2] + this.move[2] >= -0.005 && inertia > 0) {
         this.cam_pos[2] = -0.005;
         inertia = 0;

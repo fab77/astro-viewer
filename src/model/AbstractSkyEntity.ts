@@ -18,7 +18,7 @@ abstract class AbstractSkyEntity {
   public yRad: number;
   public prevFoV = this.fovX_deg;
   public name: string;
-  public insideSphere: boolean = bootSetup.insideSphere
+  // public insideSphere: boolean = bootSetup.insideSphere
 
   // Picking/sphere
   public center: vec3;
@@ -46,7 +46,6 @@ abstract class AbstractSkyEntity {
     in_xRad: number,
     in_yRad: number,
     in_name: string,
-    insideSphere: boolean,
     isGalacticHips?: boolean,
   ) {
     this.xRad = in_xRad;
@@ -54,7 +53,7 @@ abstract class AbstractSkyEntity {
     this.name = in_name;
     this.center = vec3.clone(in_position);
     this.radius = in_radius;
-    this.insideSphere = insideSphere
+    // this.insideSphere = global.insideSphere
     this.isGalacticHips = !!isGalacticHips;
 
     // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
@@ -110,7 +109,7 @@ abstract class AbstractSkyEntity {
     mat4.multiply(this.modelMatrix, this.T, R_inverse);
 
     // Flip Y if we're outside the sphere
-    if (!this.insideSphere) {
+    if (!global.insideSphere) {
       this.modelMatrix[1]  = -this.modelMatrix[1];
       this.modelMatrix[5]  = -this.modelMatrix[5];
       this.modelMatrix[9]  = -this.modelMatrix[9];
@@ -173,7 +172,7 @@ abstract class AbstractSkyEntity {
 
   // ---------- Abstract hooks ----------
   
-  abstract draw(insideSphere: boolean): void;
+  abstract draw(): void;
 
 }
 
