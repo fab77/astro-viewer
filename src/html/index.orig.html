@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="./javascripts/astrocore.js"></script>
+</head>
+
+<body onload="run();">
+
+    <script>
+        let AstroAPI = undefined
+        async function run() {
+            const AC = new astrocore.AstroCore();
+
+            const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
+            const resp = await fetch(hipsUrl + "properties");
+            const propsText = await resp.text();
+
+            const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl));
+            const insideSphere = false
+            AC.activateHiPS(desc, insideSphere);
+            AstroAPI = AC
+            AC.run();
+
+            // const tapRepo = await astrocore.addTAPRepo("https://sky.esa.int/esasky-tap/tap")
+            // console.log(tapRepo)
+
+            // const catalogue = tapRepo.cataloguesList.find(cat => cat.name === "catalogues.mv_chandra_csc211_fdw")
+            // console.log(catalogue)
+            // AC.showCatalogue(catalogue)
+        }
+
+    </script>
+
+    
+    <canvas id="astrocanvas"></canvas>
+</body>
+
+</html>

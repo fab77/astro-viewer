@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <title>AstroCore – Dev Panel (lean)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./javascripts/astrocore.js"></script>
+    <script type="module" src="./javascripts/dev/boot.js"></script>
+    
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+
+        #astrocanvas {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            background: #000;
+        }
+
+        /* Dev panel */
+        #devpanel {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 10;
+            background: rgba(20, 20, 24, .95);
+            color: #eaeaea;
+            border: 1px solid #3a3a45;
+            border-radius: 14px;
+            padding: 12px;
+            width: min(480px, 92vw);
+            box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+            backdrop-filter: blur(3px);
+            font: 13px/1.35 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            transition: height .15s ease, opacity .15s ease;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .row3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .stack {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        input,
+        button,
+        select {
+            font: inherit;
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid #555;
+            background: #0e0e12;
+            color: #eee;
+        }
+
+        button {
+            background: #1e88e5;
+            border-color: #1669b9;
+            cursor: pointer;
+        }
+
+        button.secondary {
+            background: #2f3340;
+            border-color: #454b5f;
+        }
+
+        button:disabled {
+            opacity: .6;
+            cursor: progress;
+        }
+
+        label {
+            font-weight: 600
+        }
+
+        #status {
+            margin-top: 6px;
+            color: #a9d;
+            min-height: 1.2em;
+        }
+
+        details {
+            margin-top: 10px;
+            border-top: 1px solid #343;
+            padding-top: 8px;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .hint {
+            font-size: 12px;
+            opacity: .8
+        }
+
+        /* restore button that appears when minimised */
+        #restoreBtn {
+            position: fixed;
+            left: 12px;
+            top: 12px;
+            z-index: 11;
+            display: none;
+            padding: 8px 10px;
+            border-radius: 999px;
+            border: 1px solid #3a3a45;
+            background: rgba(20, 20, 24, .95);
+            color: #eaeaea;
+            cursor: pointer;
+            font: 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, .45);
+            backdrop-filter: blur(3px);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            border: 1px solid #333;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        .table th {
+            background: #171923;
+            position: sticky;
+            top: 0;
+        }
+
+        .ctrlrow {
+            display: grid;
+            grid-template-columns: 1fr auto auto;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .tag {
+            font-size: 11px;
+            opacity: .8;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 1px 6px;
+        }
+
+        .sel-compact {
+            max-width: 220px;
+        }
+
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Restore button (shows only when minimised) -->
+    <button id="restoreBtn" title="Show Dev Panel">Dev Panel ▲</button>
+
+    <!-- Dev panel -->
+    <div id="devpanel">
+        <!-- Go To (RA, Dec) -->
+        <div class="stack" style="margin-top:8px;">
+            <label for="goRa">Go to (RA°, Dec°)</label>
+            <div class="row3">
+                <input id="goRa" type="number" step="0.0001" placeholder="RA 0–360">
+                <input id="goDec" type="number" step="0.0001" placeholder="Dec −90–+90">
+                <button id="btnGoTo">Go</button>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:800;">AstroCore – Dev Panel</div>
+            <div class="hint">Globals: <code>AstroAPI</code> · <code>TAP</code></div>
+        </div>
+
+        <!-- HiPS controls -->
+        <div class="stack" style="margin-top:8px;">
+            <label for="hipsUrl">HiPS URL</label>
+            <div class="row">
+                <input id="hipsUrl" type="url" value="https://alasky.cds.unistra.fr/DSS/DSSColor/"
+                    placeholder="https://…/HiPS/" />
+                <button id="btnLoadHiPS">Load HiPS</button>
+            </div>
+        </div>
+
+        <!-- TAP -->
+        <div class="stack" style="margin-top:8px;">
+            <label for="tapUrl">TAP URL</label>
+            <div class="row">
+                <input id="tapUrl" type="url" placeholder="https://…/tap" value="https://sky.esa.int/esasky-tap/tap" />
+                <button id="btnLoadTap">Load TAP</button>
+            </div>
+        </div>
+
+        <div id="status"></div>
+
+        <!-- Datasets -->
+        <details id="datasetsPanel" open style="display:none;">
+            <summary>Datasets</summary>
+            <div class="stack">
+                <label>Catalogues</label>
+
+                <!-- quick actions + filter -->
+                <div class="ctrlrow">
+                    <input id="catFilter" type="search" placeholder="Filter catalogues by name…" />
+                    <button id="btnShowAll" class="secondary" title="Show all filtered">Show all</button>
+                    <button id="btnHideAll" class="secondary" title="Hide all filtered">Hide all</button>
+                </div>
+
+                <!-- manager table -->
+                <div id="catTableWrap" class="scrollbox"
+                    style="max-height:220px; overflow:auto; border:1px solid #333; border-radius:10px; margin-top:6px;">
+                    <table id="catTable" class="table"></table>
+                </div>
+
+                <!-- keep your original single-select controls (optional) -->
+                <div class="row" style="margin-top:6px;">
+                    <select id="catalogues"></select>
+                    <button id="btnShowCat">Load / Show</button>
+                </div>
+                <div class="row">
+                    <label class="hint" style="display:flex; align-items:center; gap:6px; user-select:none;">
+                        <input id="catVisible" type="checkbox" checked />
+                        Visible (selected)
+                    </label>
+                    <button id="btnDeleteCat" class="secondary" title="Remove selected from engine">Delete
+                        (selected)</button>
+                </div>
+                <div class="hint">Tip: the table has its own per-row controls; the selector above is convenient for
+                    quick single actions.</div>
+
+
+                <label>Footprints / Observations</label>
+                <div class="row">
+                    <select id="footprints"></select>
+                    <button id="btnShowFp">Show</button>
+                    <button id="btnHideFp" class="secondary">Hide</button>
+                </div>
+            </div>
+        </details>
+
+        <div style="margin-top:10px;">
+            <button id="btnCamInfo" class="secondary">Camera position</button>
+            <button id="btnTogglePanel" class="secondary">Minimise</button>
+        </div>
+    </div>
+
+    <canvas id="astrocanvas"></canvas>
+
+    <script>
+        // ===== Fixed proxy (optional) =====
+        const FIXED_PROXY_BASE = ""; // e.g. "https://my-proxy.example/"
+        (function applyFixedProxy() {
+            try {
+                if (FIXED_PROXY_BASE) {
+                    if (astrocore?.Global) astrocore.Global.corsProxyUrl = FIXED_PROXY_BASE;
+                    if (astrocore?.global) astrocore.global.corsProxyUrl = FIXED_PROXY_BASE;
+                    window.corsProxyUrl = FIXED_PROXY_BASE;
+                }
+            } catch { }
+        })();
+
+        // ===== Globals =====
+        let AstroAPI, TAP;
+        window.AstroAPI = AstroAPI;
+        window.TAP = TAP;
+        let CAT_LIST = [], FP_LIST = [];
+        // --- persistence keys ---
+        const LS_KEYS = {
+            hipsUrl: 'dev_hips_url',
+            tapUrl: 'dev_tap_url',
+            catVis: 'dev_cat_visibility', // map name->bool
+            catSizeBy: 'dev_cat_sizeby'
+        };
+        const CAT_SIZEBY = new Map();            // in-memory cache
+        // local visibility override (also backed by localStorage)
+        const CAT_VIS = new Map(); // you already had this — keep it
+        function loadPersisted() {
+            try {
+                const hips = localStorage.getItem(LS_KEYS.hipsUrl);
+                const tap = localStorage.getItem(LS_KEYS.tapUrl);
+                if (hips) el('hipsUrl').value = hips;
+                if (tap) el('tapUrl').value = tap;
+
+                const visJson = localStorage.getItem(LS_KEYS.catVis);
+                if (visJson) {
+                    const obj = JSON.parse(visJson);
+                    Object.entries(obj).forEach(([k, v]) => CAT_VIS.set(k, !!v));
+                }
+
+                const sizeByJson = localStorage.getItem(LS_KEYS.catSizeBy);
+                if (sizeByJson) {
+                    const obj = JSON.parse(sizeByJson);
+                    Object.entries(obj).forEach(([k, v]) => CAT_SIZEBY.set(k, v));
+                }
+            } catch { }
+        }
+
+        function persistBasic() {
+            try {
+                localStorage.setItem(LS_KEYS.hipsUrl, el('hipsUrl').value.trim());
+                localStorage.setItem(LS_KEYS.tapUrl, el('tapUrl').value.trim());
+                const visObj = Object.fromEntries(CAT_VIS.entries());
+                const sizeByObj = Object.fromEntries(CAT_SIZEBY.entries());
+                localStorage.setItem(LS_KEYS.catVis, JSON.stringify(visObj));
+                localStorage.setItem(LS_KEYS.catSizeBy, JSON.stringify(sizeByObj));
+            } catch { }
+        }
+        function catalogueKey(c) { return c?.name || String(c?.id) || c?.table || JSON.stringify(c); }
+
+        window.addEventListener('load', bootstrap);
+
+        async function bootstrap() {
+            try {
+                loadPersisted();
+                const AC = new astrocore.AstroCore();
+                window.AstroAPI = AstroAPI = AC;
+
+                // Initial HiPS from input value
+                await loadHiPS(el('hipsUrl').value.trim());
+                AC.run();
+
+                wireUI();
+                setStatus("Ready ✅ Load a TAP to begin.");
+            } catch (e) {
+                console.error(e);
+                setStatus("Init error: " + (e.message || e));
+            }
+        }
+
+        function wireUI() {
+            const btnLoadHiPS = el('btnLoadHiPS');
+            const btnLoadTap = el('btnLoadTap');
+
+            const catSel = el('catalogues');
+            const catVisibleEl = el('catVisible');
+            const btnShowCat = el('btnShowCat');
+            const btnDeleteCat = el('btnDeleteCat');
+
+            const fpSel = el('footprints');
+
+            // --- GoTo RA/Dec ---
+            const goRa = el('goRa');
+            const goDec = el('goDec');
+            const btnGo = el('btnGoTo');
+
+            btnGo.onclick = () => {
+                const ra = Number(goRa.value);
+                const dec = Number(goDec.value);
+                if (!Number.isFinite(ra) || !Number.isFinite(dec)) {
+                    setStatus("Enter valid RA and Dec in degrees.");
+                    return;
+                }
+                const raN = ((ra % 360) + 360) % 360;
+                const decC = Math.max(-90, Math.min(90, dec));
+                if (!AstroAPI?.goTo) return setStatus("AstroAPI.goTo unavailable.");
+                try {
+                    AstroAPI.goTo(raN, decC);
+                    setStatus(`➡️ Slewed to RA=${raN.toFixed(5)}°, Dec=${decC.toFixed(5)}°`);
+                } catch (e) { setStatus("goTo error: " + (e.message || e)); }
+            };
+            [goRa, goDec].forEach(inp => inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') btnGo.click(); }));
+
+            // HiPS load
+            btnLoadHiPS.onclick = async () => {
+                const url = el('hipsUrl').value.trim();
+                if (!url) return setStatus("Insert a HiPS URL.");
+                try {
+                    await loadHiPS(url);
+                    setStatus("✅ HiPS loaded.");
+                } catch (e) { setStatus("HiPS load error: " + (e.message || e)); }
+            };
+
+            // TAP load
+            btnLoadTap.onclick = async () => {
+                const tapUrl = el('tapUrl').value.trim();
+                if (!tapUrl) return setStatus("Insert a TAP URL.");
+                setStatus("Loading TAP…");
+                btnLoadTap.disabled = true;
+                try {
+                    TAP = await astrocore.addTAPRepo(tapUrl);
+                    window.TAP = TAP;
+
+                    CAT_LIST = TAP.catalogueList || TAP.cataloguesList || [];
+                    FP_LIST = TAP.obsList || TAP.footprintsList || [];
+
+                    populateSelect(catSel, CAT_LIST, 'name');
+                    renderCatalogueManager();
+                    wireCatalogueManagerControls(); // call this once per page; it attaches delegated listeners safely
+                    persistBasic();
+                    CAT_LIST.forEach(c => {
+                        const key = catalogueKey(c);
+                        if (!CAT_VIS.has(key)) CAT_VIS.set(key, true); // default visible
+                    });
+                    syncCatalogueUI();
+
+                    populateSelect(fpSel, FP_LIST, 'name');
+                    el('datasetsPanel').style.display = (CAT_LIST.length || FP_LIST.length) ? '' : 'none';
+
+                    setStatus(`✅ TAP loaded (${CAT_LIST.length} catalogues, ${FP_LIST.length} footprints).`);
+                } catch (e) {
+                    console.error(e);
+                    setStatus("TAP load error: " + (e.message || e));
+                } finally {
+                    btnLoadTap.disabled = false;
+                }
+            };
+
+            // ===== Catalogues wiring =====
+            catSel.addEventListener('change', syncCatalogueUI);
+
+            // Load/Show (initial load or re-show after delete+reload)
+            btnShowCat.onclick = () => {
+                const cat = getSelectedCatalogue();
+                if (!cat) return setStatus("Select a catalogue.");
+                try {
+                    AstroAPI?.showCatalogue?.(cat);
+                    CAT_VIS.set(catalogueKey(cat), true);
+                    // apply remembered size-by if any
+                    const key = catalogueKey(cat);
+                    const remembered = CAT_SIZEBY.get(key);
+                    if (remembered && AstroAPI?.setCatalogueShapeSize) {
+                        AstroAPI.setCatalogueShapeSize(cat, remembered);
+                    }
+                    catVisibleEl.checked = true;
+                    setStatus(`📡 Catalogue loaded: ${cat.name || cat.id || cat.table}`);
+                } catch (e) { setStatus("Show error: " + (e.message || e)); }
+            };
+
+            // Visibility checkbox -> hideCatalogue(catalogue, isVisible)
+            catVisibleEl.addEventListener('change', () => {
+                const cat = getSelectedCatalogue();
+                if (!cat) return setStatus("Select a catalogue.");
+                const isVisible = !!catVisibleEl.checked;
+                try {
+                    AstroAPI?.hideCatalogue?.(cat, isVisible);
+                    CAT_VIS.set(catalogueKey(cat), isVisible);
+                    setStatus(`${isVisible ? "👁️ Visible" : "🙈 Hidden"} → ${cat.name || cat.id || cat.table}`);
+                } catch (e) { setStatus("Visibility toggle error: " + (e.message || e)); }
+            });
+
+            // Delete (one-shot)
+            btnDeleteCat.onclick = () => {
+                const cat = getSelectedCatalogue();
+                if (!cat) return setStatus("Select a catalogue.");
+
+                const label = cat.name || cat.id || cat.table || "(unnamed)";
+                try {
+                    AstroAPI?.deleteCatalogue?.(cat);
+
+                    // mark as not visible in our local toggle + reflect in UI
+                    CAT_VIS.set(catalogueKey(cat), false);
+                    catVisibleEl.checked = false;
+
+                    // keep the item in CAT_LIST and in the <select>; user can click "Load / Show" to reload it
+                    setStatus(`🗑️ Catalogue removed from engine (still selectable): ${label}`);
+                } catch (e) {
+                    setStatus("Delete error: " + (e.message || e));
+                }
+            };
+
+            // ===== Footprints wiring (unchanged) =====
+            el('btnShowFp').onclick = () => showDataset(fpSel.value, FP_LIST, "Footprint");
+            el('btnHideFp').onclick = () => hideDataset("Footprint");
+
+            // Camera info
+            el('btnCamInfo').onclick = () => {
+                if (!AstroAPI?.camera?.getCameraPosition) return setStatus("Camera API unavailable.");
+                const p = AstroAPI.camera.getCameraPosition();
+                setStatus(`Camera @ [${p.map(n => n.toFixed(3)).join(", ")}]`);
+            };
+
+            // minimise / restore
+            el('btnTogglePanel').onclick = minimisePanel;
+            el('restoreBtn').onclick = restorePanel;
+
+            // --- helpers specific to catalogues ---
+            function getSelectedCatalogue() {
+                const selVal = catSel.value;
+                return CAT_LIST.find(c =>
+                    (c.name === selVal) || (String(c.id) === selVal) || (c.table === selVal)
+                );
+            }
+            function catalogueKey(c) {
+                return c?.name || String(c?.id) || c?.table || JSON.stringify(c);
+            }
+            function syncCatalogueUI() {
+                const cat = getSelectedCatalogue();
+                const has = !!cat;
+                catVisibleEl.disabled = !has;
+                btnShowCat.disabled = !has;
+                btnDeleteCat.disabled = !has;
+                if (!has) return;
+                const key = catalogueKey(cat);
+                const vis = CAT_VIS.has(key) ? CAT_VIS.get(key) : true;
+                catVisibleEl.checked = !!vis;
+            }
+        }
+
+        async function loadHiPS(baseUrl) {
+            const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+            const resp = await fetch(hipsUrl + 'properties');
+            if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching properties`);
+            const propsText = await resp.text();
+            const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl));
+            AstroAPI.activateHiPS(desc, false); // insideSphere=false
+        }
+
+        // Generic show for footprints
+        function showDataset(sel, list, label) {
+            if (!sel) return setStatus(`Select a ${label}.`);
+            const item = list.find(c => (c.name === sel) || (String(c.id) === sel) || (c.table === sel));
+            if (!item) return setStatus(`${label} not found.`);
+            try {
+                const fn = label === "Catalogue" ? "showCatalogue" : "showFootprints";
+                AstroAPI?.[fn]?.(item);
+                setStatus(`${label} shown: ${item.name || item.id || item.table}`);
+            } catch (e) { setStatus(`Error showing ${label.toLowerCase()}: ` + (e.message || e)); }
+        }
+
+        // Generic hide for footprints only (catalogues handled by checkbox)
+        function hideDataset(label) {
+            if (label === "Footprint") {
+                try { AstroAPI?.hideFootprints?.(); setStatus("Footprints hidden."); }
+                catch (e) { setStatus("Error hiding footprints: " + (e.message || e)); }
+            }
+        }
+
+        // ===== minimise / restore =====
+        function minimisePanel() {
+            const panel = el('devpanel');
+            panel.dataset.min = "1";
+            panel.style.height = "44px";
+            panel.style.overflow = "hidden";
+            panel.style.opacity = "0";
+            el('restoreBtn').style.display = "inline-block";
+        }
+        function restorePanel() {
+            const panel = el('devpanel');
+            panel.dataset.min = "0";
+            panel.style.height = "";
+            panel.style.overflow = "";
+            panel.style.opacity = "1";
+            el('restoreBtn').style.display = "none";
+        }
+
+        // ===== helpers =====
+        function el(id) { return document.getElementById(id); }
+        function setStatus(t) { el('status').textContent = t; }
+        function populateSelect(sel, arr, key) {
+            sel.innerHTML = "";
+            arr.forEach((o, i) => {
+                const opt = document.createElement('option');
+                opt.value = o[key] || o.id || o.table || `#${i}`;
+                opt.textContent = o[key] || o.id || o.table || `Item ${i + 1}`;
+                sel.appendChild(opt);
+            });
+        }
+
+        function renderCatalogueManager() {
+            const table = el('catTable');
+            const filter = el('catFilter').value.trim().toLowerCase();
+            table.innerHTML = "";
+
+            // header
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+  <tr>
+    <th style="width:38%;">Name</th>
+    <th style="width:22%;">Size by</th>
+    <th style="width:10%;">Visible</th>
+    <th style="width:12%;">Status</th>
+    <th>Actions</th>
+  </tr>`;
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            const rows = CAT_LIST
+                .map((c, idx) => ({ c, idx, key: catalogueKey(c) }))
+                .filter(({ c }) => !filter || (c.name?.toLowerCase().includes(filter) || c.table?.toLowerCase().includes(filter)));
+
+            rows.forEach(({ c, idx, key }) => {
+                const vis = CAT_VIS.has(key) ? CAT_VIS.get(key) : true;
+                const columns = extractTapMetadataColumnNames(c);
+                const chosen = CAT_SIZEBY.get(key) || "";
+
+                const tr = document.createElement('tr');
+                tr.dataset.idx = String(idx);
+                tr.innerHTML = `
+  <td>
+    <div>${c.name || c.table || c.id || "(unnamed)"}</div>
+    <div class="hint mono">${key}</div>
+  </td>
+  <td>
+    <select class="size-by sel-compact" ${columns.length ? "" : "disabled"}>
+      <option value="">— choose —</option>
+      ${columns.map(col => `<option value="${col}" ${col === chosen ? "selected" : ""}>${col}</option>`).join('')}
+    </select>
+    ${!columns.length ? `<div class="hint">No TAP metadata</div>` : ""}
+  </td>
+  <td style="text-align:center;">
+    <input type="checkbox" class="cat-vis" ${vis ? "checked" : ""} />
+  </td>
+  <td><span class="tag">${vis ? "visible" : "hidden"}</span></td>
+  <td>
+    <div style="display:flex; gap:6px; flex-wrap:wrap;">
+      <button class="row-show">Load/Show</button>
+      <button class="row-del secondary" title="Remove from engine (keep in list)">Delete</button>
+    </div>
+  </td>`;
+                tbody.appendChild(tr);
+            });
+
+            table.appendChild(tbody);
+            // after building rows
+            rows.forEach(({ idx }) => {
+                const tr = table.querySelector(`tr[data-idx="${idx}"]`);
+                if (!tr) return;
+                const sel = tr.querySelector('select.size-by');
+                const visNow = tr.querySelector('.cat-vis')?.checked;
+                if (sel) sel.disabled = !visNow || sel.options.length <= 1;
+            });
+        }
+
+        // event delegation for row controls
+        function wireCatalogueManagerControls() {
+            // existing click handler: keep your row-show / row-del branches
+            el('catTable').addEventListener('click', (ev) => {
+                const tr = ev.target.closest('tr');
+                if (!tr) return;
+                const idx = Number(tr.dataset.idx);
+                const cat = CAT_LIST[idx];
+                if (!cat) return;
+                const key = catalogueKey(cat);
+                const target = ev.target;
+
+                if (target.classList.contains('row-show')) {
+                    try {
+                        AstroAPI?.showCatalogue?.(cat);
+                        CAT_VIS.set(key, true);
+
+                        // re-apply persisted size-by if present
+                        const remembered = CAT_SIZEBY.get(key);
+                        if (remembered && AstroAPI?.setCatalogueShapeSize) {
+                            AstroAPI.setCatalogueShapeSize(cat, remembered);
+                        }
+
+                        renderCatalogueManager();
+                        setStatus(`📡 Catalogue loaded: ${cat.name || cat.id || cat.table}`);
+                        persistBasic();
+                    } catch (e) { setStatus("Show error: " + (e.message || e)); }
+                }
+
+                if (target.classList.contains('row-del')) {
+                    try {
+                        AstroAPI?.deleteCatalogue?.(cat);
+                        CAT_VIS.set(key, false);
+                        renderCatalogueManager();
+                        setStatus(`🗑️ Catalogue removed from engine: ${cat.name || cat.id || cat.table}`);
+                        persistBasic();
+                    } catch (e) { setStatus("Delete error: " + (e.message || e)); }
+                }
+            });
+
+            // NEW: handle 'Size by' changes
+            el('catTable').addEventListener('change', (ev) => {
+                const tr = ev.target.closest('tr');
+                if (!tr) return;
+
+                // visibility checkbox branch (you already had this)
+                if (ev.target.classList.contains('cat-vis')) {
+                    const idx = Number(tr.dataset.idx);
+                    const cat = CAT_LIST[idx]; if (!cat) return;
+                    const key = catalogueKey(cat);
+                    const isVisible = !!ev.target.checked;
+
+                    try {
+                        AstroAPI?.hideCatalogue?.(cat, isVisible);
+                        CAT_VIS.set(key, isVisible);
+
+                        // enable/disable the 'size by' select in this row
+                        const sel = tr.querySelector('select.size-by');
+                        if (sel) sel.disabled = !isVisible || sel.options.length <= 1;
+
+                        tr.querySelector('.tag').textContent = isVisible ? "visible" : "hidden";
+                        persistBasic();
+                        setStatus(`${isVisible ? "👁️ Visible" : "🙈 Hidden"} → ${cat.name || cat.id || cat.table}`);
+                    } catch (e) { setStatus("Visibility error: " + (e.message || e)); }
+                    return;
+                }
+
+                // NEW: size-by select branch
+                if (ev.target.classList.contains('size-by')) {
+                    const idx = Number(tr.dataset.idx);
+                    const cat = CAT_LIST[idx]; if (!cat) return;
+                    const key = catalogueKey(cat);
+                    const column = String(ev.target.value || "");
+
+                    if (!column) {
+                        CAT_SIZEBY.delete(key);
+                        persistBasic();
+                        setStatus(`Size by cleared for ${cat.name || cat.id || cat.table}`);
+                        return;
+                    }
+                    // only act if visible; otherwise store choice and apply later when shown
+                    const isVisible = !!(tr.querySelector('.cat-vis')?.checked);
+                    CAT_SIZEBY.set(key, column);
+                    persistBasic();
+
+                    if (!isVisible) {
+                        setStatus(`Saved "Size by: ${column}" (will apply when visible).`);
+                        return;
+                    }
+                    if (!AstroAPI?.setCatalogueShapeSize) {
+                        setStatus("setCatalogueShapeSize not available on AstroAPI.");
+                        return;
+                    }
+                    try {
+                        AstroAPI.setCatalogueShapeSize(cat, column);
+                        setStatus(`🎛️ Size by → ${column} for ${cat.name || cat.id || cat.table}`);
+                    } catch (e) { setStatus("Size-by error: " + (e.message || e)); }
+                }
+            });
+
+            // filter + batch actions
+            el('catFilter').addEventListener('input', () => renderCatalogueManager());
+            el('btnShowAll').addEventListener('click', () => batchSetVisibility(true));
+            el('btnHideAll').addEventListener('click', () => batchSetVisibility(false));
+        }
+
+        function batchSetVisibility(newState) {
+            const filter = el('catFilter').value.trim().toLowerCase();
+            const affected = CAT_LIST.filter(c =>
+                !filter || (c.name?.toLowerCase().includes(filter) || c.table?.toLowerCase().includes(filter))
+            );
+            let ok = 0;
+            for (const c of affected) {
+                const key = catalogueKey(c);
+                try {
+                    AstroAPI?.hideCatalogue?.(c, newState);
+                    CAT_VIS.set(key, newState);
+                    ok++;
+                } catch { }
+            }
+            renderCatalogueManager();
+            persistBasic();
+            setStatus(`${newState ? "👁️ Shown" : "🙈 Hidden"} ${ok} catalogue(s)${filter ? " (filtered)" : ""}.`);
+
+        }
+
+        function extractTapMetadataColumnNames(catalogue) {
+            const ml = catalogue?.catalogueProps?.tapMetadataList.metadataList;
+            if (!ml) return [];
+
+            // try common shapes
+            const candidates = [];
+            const add = (x) => { if (x && typeof x === 'string') candidates.push(x); };
+
+            if (Array.isArray(ml)) {
+                ml.forEach(item => {
+                    if (item._)
+                        add(item._name)
+                });
+            }
+
+
+
+            // dedupe + filter empties
+            return [...new Set(candidates.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+        }
+    </script>
+</body>
+
+</html>

@@ -23,11 +23,7 @@ class Source {
         if (index < 0 || index >= this._details.length) {
             return undefined;
         }
-        return this._details[index].value;
-    }
-    getDetailByKey(key) {
-        const detail = this._details.find((d) => d.key === key);
-        return detail ? detail.value : undefined;
+        return this._details[index];
     }
     get details() {
         return this._details;

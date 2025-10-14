@@ -10,15 +10,34 @@ export class AstroCore {
     run() {
         return this.tick();
     }
+    // CATALOGUES
     showCatalogue(catalogue) {
         this.astroSphere.showCatalogue(catalogue);
     }
+    hideCatalogue(catalogue, isVisible) {
+        this.astroSphere.hideCatalogue(catalogue, isVisible);
+    }
+    deleteCatalogue(catalogue) {
+        this.astroSphere.deleteCatalogue(catalogue);
+    }
+    changeCatalogueColor(catalogue, hexColor) {
+        this.astroSphere.changeCatalogueColor(catalogue, hexColor);
+    }
+    setCatalogueHue(catalogue, metadataColumnName) {
+        this.astroSphere.setCatalogueHue(catalogue, metadataColumnName);
+    }
+    setCatalogueShapeSize(catalogue, metadataColumnName) {
+        this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);
+    }
+    // HIPS
     activateHiPS(hipsDescriptor, insideSphere) {
         this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
     }
+    // GOTOs
     goTo(raDeg, decDeg) {
         this.astroSphere.goTo(raDeg, decDeg);
     }
+    // FOV
     getFoV() {
         return this.astroSphere.getFoV();
     }

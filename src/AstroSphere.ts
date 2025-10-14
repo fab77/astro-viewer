@@ -48,6 +48,7 @@ class AstroSphere {
   private insideSphere: boolean
   private fov: FoV
 
+  private activeCatalogues: CatalogueGL[] = []
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     // Keep global GL context (as in original JS)
@@ -184,16 +185,35 @@ class AstroSphere {
     )
   }
 
-  private activeCatalogues: CatalogueGL[] = []
+
   async showCatalogue(catalogue: CatalogueGL) {
     const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
     const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
-    const newcat = await queryCatalogueByFoV(catalogue, polygonAdql)
-    console.log(newcat)
-    if (newcat) this.activeCatalogues.push(newcat)
-    return newcat
+    const cat = await queryCatalogueByFoV(catalogue, polygonAdql)
+    console.log(cat)
+    if (cat) this.activeCatalogues.push(cat)
+    return cat
   }
 
+  hideCatalogue(catalogue: CatalogueGL, isVisible: boolean) {
+    catalogue.setIsVisible(isVisible)
+  }
+
+  deleteCatalogue(catalogue: CatalogueGL) {
+    this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
+  }
+
+  changeCatalogueColor(catalogue: CatalogueGL, hexColor: string) {
+    catalogue.catalogueProps.changeColor(hexColor)
+  }
+
+  setCatalogueHue(catalogue: CatalogueGL, metadataColumnName: string) {
+    catalogue.changeCatalogueMetaShapeHue(metadataColumnName)
+  }
+  
+  setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string) {
+    catalogue.changeCatalogueMetaShapeSize(metadataColumnName)
+  }
 
   goTo(raDeg: number, decDeg: number): void {
     this.camera.goTo(raDeg, decDeg)
@@ -330,7 +350,7 @@ class AstroSphere {
     this.activeCatalogues.forEach(cat => {
       if (this.activeHiPS) {
         // TODO test it using the healpixSingleton
-        cat.draw(this.activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper )
+        cat.draw(this.activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper)
         // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
       }
     })

@@ -29,6 +29,7 @@ class AstroSphere {
     startup = true;
     insideSphere;
     fov;
+    activeCatalogues = [];
     constructor(canvas, webgl) {
         // Keep global GL context (as in original JS)
         global.gl = webgl;
@@ -131,15 +132,29 @@ class AstroSphere {
     activateHiPS(hipsDescriptor, insideSphere) {
         this.activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, insideSphere);
     }
-    activeCatalogues = [];
     async showCatalogue(catalogue) {
         const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton);
         const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro); // -> "POLYGON('ICRS', ra1, dec1, ...)"
-        const newcat = await queryCatalogueByFoV(catalogue, polygonAdql);
-        console.log(newcat);
-        if (newcat)
-            this.activeCatalogues.push(newcat);
-        return newcat;
+        const cat = await queryCatalogueByFoV(catalogue, polygonAdql);
+        console.log(cat);
+        if (cat)
+            this.activeCatalogues.push(cat);
+        return cat;
+    }
+    hideCatalogue(catalogue, isVisible) {
+        catalogue.setIsVisible(isVisible);
+    }
+    deleteCatalogue(catalogue) {
+        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
+    }
+    changeCatalogueColor(catalogue, hexColor) {
+        catalogue.catalogueProps.changeColor(hexColor);
+    }
+    setCatalogueHue(catalogue, metadataColumnName) {
+        catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
+    }
+    setCatalogueShapeSize(catalogue, metadataColumnName) {
+        catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
     }
     goTo(raDeg, decDeg) {
         this.camera.goTo(raDeg, decDeg);

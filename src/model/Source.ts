@@ -14,7 +14,7 @@ export interface SourceDetail {
 class Source {
   private _point: Point;
   private _name?: string;
-  private _details: SourceDetail[];
+  private _details: any[];
   private _h_pix!: number;
   private _shapesize: number;
   private _brightnessFactor: number;
@@ -23,7 +23,7 @@ class Source {
    * @param in_point Point.js (Cartesian/RA-Dec wrapper)
    * @param in_details Optional array of key/value metadata
    */
-  constructor(in_point: Point, in_details: SourceDetail[] = []) {
+  constructor(in_point: Point, in_details: any[] = []) {
     this._point = in_point;
     this._details = in_details;
     this._shapesize = 8.0;
@@ -36,15 +36,10 @@ class Source {
     if (index < 0 || index >= this._details.length) {
       return undefined;
     }
-    return this._details[index].value;
+    return this._details[index];
   }
 
-  getDetailByKey(key: string): string | number | undefined {
-    const detail = this._details.find((d) => d.key === key);
-    return detail ? detail.value : undefined;
-  }
-
-  get details(): SourceDetail[] {
+  get details(): any[] {
     return this._details;
   }
   private computeHealpixPixel(): void {

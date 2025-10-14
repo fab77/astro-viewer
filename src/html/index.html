@@ -1,37 +1,112 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="utf-8" />
+    <title>AstroCore – Dev Panel (lean)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="./javascripts/astrocore.js"></script>
+    <script type="module" src="./javascripts/dev/boot.js"></script>
+    <link rel="stylesheet" href="./css/devpanel.css" />
+    
 </head>
 
-<body onload="run();">
+<body>
+    <!-- Restore button (shows only when minimised) -->
+    <button id="restoreBtn" title="Show Dev Panel">Dev Panel ▲</button>
 
-    <script>
-        let AstroAPI = undefined
-        async function run() {
-            const AC = new astrocore.AstroCore();
+    <!-- Dev panel -->
+    <div id="devpanel">
+        <!-- Go To (RA, Dec) -->
+        <div class="stack" style="margin-top:8px;">
+            <label for="goRa">Go to (RA°, Dec°)</label>
+            <div class="row3">
+                <input id="goRa" type="number" step="0.0001" placeholder="RA 0–360">
+                <input id="goDec" type="number" step="0.0001" placeholder="Dec −90–+90">
+                <button id="btnGoTo">Go</button>
+            </div>
+        </div>
 
-            const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
-            const resp = await fetch(hipsUrl + "properties");
-            const propsText = await resp.text();
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-weight:800;">AstroCore – Dev Panel</div>
+            <div class="hint">Globals: <code>AstroAPI</code> · <code>TAP</code></div>
+        </div>
 
-            const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl));
-            const insideSphere = false
-            AC.activateHiPS(desc, insideSphere);
-            AstroAPI = AC
-            AC.run();
+        <!-- HiPS controls -->
+        <div class="stack" style="margin-top:8px;">
+            <label for="hipsUrl">HiPS URL</label>
+            <div class="row">
+                <input id="hipsUrl" type="url" value="https://alasky.cds.unistra.fr/DSS/DSSColor/"
+                    placeholder="https://…/HiPS/" />
+                <button id="btnLoadHiPS">Load HiPS</button>
+            </div>
+        </div>
 
-            const tapRepo = await astrocore.addTAPRepo("https://sky.esa.int/esasky-tap/tap")
-            console.log(tapRepo)
+        <!-- TAP -->
+        <div class="stack" style="margin-top:8px;">
+            <label for="tapUrl">TAP URL</label>
+            <div class="row">
+                <input id="tapUrl" type="url" placeholder="https://…/tap" value="https://sky.esa.int/esasky-tap/tap" />
+                <button id="btnLoadTap">Load TAP</button>
+            </div>
+        </div>
 
-            const catalogue = tapRepo.cataloguesList.find(cat => cat.name === "catalogues.mv_chandra_csc211_fdw")
-            console.log(catalogue)
-            AC.showCatalogue(catalogue)
-        }
+        <div id="status"></div>
 
-    </script>
+        <!-- Datasets -->
+        <details id="datasetsPanel" open style="display:none;">
+            <summary>Datasets</summary>
+            <div class="stack">
+                <label>Catalogues</label>
+
+                <!-- quick actions + filter -->
+                <div class="ctrlrow">
+                    <input id="catFilter" type="search" placeholder="Filter catalogues by name…" />
+                    <button id="btnShowAll" class="secondary" title="Show all filtered">Show all</button>
+                    <button id="btnHideAll" class="secondary" title="Hide all filtered">Hide all</button>
+                </div>
+
+                <!-- manager table -->
+                <div id="catTableWrap" class="scrollbox"
+                    style="max-height:220px; overflow:auto; border:1px solid #333; border-radius:10px; margin-top:6px;">
+                    <table id="catTable" class="table"></table>
+                </div>
+
+                <!-- keep your original single-select controls (optional) -->
+                <div class="row" style="margin-top:6px;">
+                    <select id="catalogues"></select>
+                    <button id="btnShowCat">Load / Show</button>
+                </div>
+                <div class="row">
+                    <label class="hint" style="display:flex; align-items:center; gap:6px; user-select:none;">
+                        <input id="catVisible" type="checkbox" checked />
+                        Visible (selected)
+                    </label>
+                    <button id="btnDeleteCat" class="secondary" title="Remove selected from engine">Delete
+                        (selected)</button>
+                </div>
+                <div class="hint">Tip: the table has its own per-row controls; the selector above is convenient for
+                    quick single actions.</div>
+
+
+                <label>Footprints / Observations</label>
+                <div class="row">
+                    <select id="footprints"></select>
+                    <button id="btnShowFp">Show</button>
+                    <button id="btnHideFp" class="secondary">Hide</button>
+                </div>
+            </div>
+        </details>
+
+        <div style="margin-top:10px;">
+            <button id="btnCamInfo" class="secondary">Camera position</button>
+            <button id="btnTogglePanel" class="secondary">Minimise</button>
+        </div>
+    </div>
+
     <canvas id="astrocanvas"></canvas>
+
+    
 </body>
 
 </html>

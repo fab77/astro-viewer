@@ -23,6 +23,7 @@ declare class CatalogueGL {
     selectedIndexes: number[];
     extHoveredIndexes: number[];
     oldMouseCoords: [number, number, number] | null;
+    _isVisible: boolean;
     healpixDensityMap: Map<number, number[]>;
     /**
      * @param tablename - String
@@ -31,6 +32,8 @@ declare class CatalogueGL {
      * @param tapMetadataList - TapMetadataList (as used by CatalogueProps)
      */
     constructor(tablename: string, tabledesc: string, provider: TapRepo, tapMetadataList: TapMetadataList);
+    setIsVisible(visibility: boolean): void;
+    get isVisible(): boolean;
     private minMax;
     changeCatalogueMetaShapeSize(metacolumnName: string): void;
     changeCatalogueMetaShapeHue(metacolumnName: string): void;

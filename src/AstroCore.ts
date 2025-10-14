@@ -5,7 +5,6 @@ import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { FoV } from './model/FoV.js'
 import Point from './model/Point.js'
 import CatalogueGL from './model/catalogues/CatalogueGL.js'
-import { TapRepo } from './model/tap/TapRepo.js'
 
 type GL2WithViewport = WebGL2RenderingContext & {
   viewportWidth: number
@@ -25,18 +24,40 @@ export class AstroCore {
     return this.tick()
   }
 
+  // CATALOGUES
   showCatalogue(catalogue: CatalogueGL) {
     this.astroSphere.showCatalogue(catalogue)
   }
+  hideCatalogue(catalogue: CatalogueGL, isVisible: boolean) {
+    this.astroSphere.hideCatalogue(catalogue, isVisible)
+  }
+  deleteCatalogue(catalogue: CatalogueGL) {
+    this.astroSphere.deleteCatalogue(catalogue)
+  }
 
+  changeCatalogueColor(catalogue: CatalogueGL, hexColor: string) {
+    this.astroSphere.changeCatalogueColor(catalogue, hexColor)
+  }
+
+  setCatalogueHue(catalogue: CatalogueGL, metadataColumnName: string) {
+    this.astroSphere.setCatalogueHue(catalogue, metadataColumnName)
+  }
+  
+  setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string) {
+    this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName)
+  }
+
+  // HIPS
   activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void {
     this.astroSphere.activateHiPS(hipsDescriptor, insideSphere)
   }
 
+  // GOTOs
   goTo(raDeg: number, decDeg: number): void {
     this.astroSphere.goTo(raDeg, decDeg)
   }
 
+  // FOV
   getFoV(): FoV {
     return this.astroSphere.getFoV()
   }

@@ -31,14 +31,6 @@ class CatalogueGL {
     // Data
     sources: Source[];
 
-    // GL & shader
-    // attribLocations: {
-    //     position: number;
-    //     hovered: number;
-    //     pointSize: number;
-    //     color: WebGLUniformLocation | null;
-    //     brightness: number;
-    // };
     gl: GL;
     shaderProgram: WebGLProgram;
 
@@ -53,6 +45,8 @@ class CatalogueGL {
     extHoveredIndexes: number[];
 
     oldMouseCoords: [number, number, number] | null;
+
+    _isVisible: boolean = true
 
     // Healpix pixel => indices map
     healpixDensityMap: Map<number, number[]>;
@@ -78,7 +72,7 @@ class CatalogueGL {
         this.name = tablename;
         this.description = tabledesc;
         this.tapRepo = provider;
-        
+
 
         this.sources = [];
 
@@ -96,43 +90,67 @@ class CatalogueGL {
 
         this.oldMouseCoords = null;
 
-        // this.attribLocations = {
-        //     position: 0,
-        //     hovered: 1,
-        //     pointSize: 2,
-        //     color: null,
-        //     brightness: 3
-        // };
 
         this.healpixDensityMap = new Map<number, number[]>();
         const defaultColor = '#8F00FF';
 
         this.catalogueProps = new CatalogueProps(tapMetadataList, defaultColor);
 
-        // this.initShaders();
-        // catalogueShaderProgram.initShaders()
+        // call catalogueShaderProgram to init shaders if they are not yet initialised 
         catalogueShaderProgram.shaderProgram
-        
+
+        this._isVisible = true
+
     }
 
-    private minMax(columnindex: number) {
+    public setIsVisible(visibility: boolean) {
+        this._isVisible = visibility
+    }
+
+    get isVisible() {
+        return this._isVisible
+    }
+
+    private minMax(columnindex: number): { min: number, max: number } {
         if (!this.sources.length) return { min: 0, max: 0 };
-        let min = this.sources[0].details[columnindex];
+        let min = this.sources[0].details[columnindex]
+
+        if (isNaN(Number(min))) {
+            // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
+            console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`)
+            return { min: 0, max: 0 };
+        }
         let max = min;
 
         for (const source of this.sources) {
-            const v = source.details[columnindex];
+            const v = source.details[columnindex]
+            if (isNaN(Number(v))) {
+                console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
+                return { min: 0, max: 0 };
+            }
             if (v < min) min = v;
             if (v > max) max = v;
         }
-        return { min, max };
+        return {
+            min: Number(min),
+            max: Number(max)
+        };
     }
 
     changeCatalogueMetaShapeSize(metacolumnName: string) {
+        const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
         this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
         const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
-        if (idx == null) return;
+        if (idx == null) {
+            if (oldShapeSizeName) this.catalogueProps.changeCatalogueMetaShapeSize(oldShapeSizeName);
+            return;
+        }
         const minmax = this.minMax(idx);
+        if (minmax.min == minmax.max) {
+            console.warn(`${minmax} min and max are equals. No resizing will be applied.`)
+            return
+        }
+
 
         for (const source of this.sources) {
             const raw = Number(source.getDetailByindex(idx));
@@ -162,73 +180,6 @@ class CatalogueGL {
         this.initBuffer();
     }
 
-    // private initShaders() {
-
-    //     // catalogueShaderProgram.enableProgram()
-    //     // this.shaderProgram = catalogueShaderProgram.shaderProgram
-    //     // const fragmentShader = ShaderManager.catalogueFS()
-    //     // const vertexShader = ShaderManager.catalogueVS()
-
-    //     const fragmentShader = this.loadShaderFromDOM('cat-shader-fs');
-    //     const vertexShader = this.loadShaderFromDOM('cat-shader-vs');
-
-    //     if (!fragmentShader || !vertexShader) {
-    //         throw new Error('CatalogueGL: missing shaders in DOM (cat-shader-fs / cat-shader-vs)');
-    //     }
-
-    //     try {
-    //         this.gl.attachShader(this.shaderProgram as WebGLProgram, vertexShader);
-    //         this.gl.attachShader(this.shaderProgram as WebGLProgram, fragmentShader);
-    //         this.gl.linkProgram(this.shaderProgram as WebGLProgram);
-
-    //     } catch (err: any) {
-
-    //         console.error(err?.message ?? err)
-    //         console.log(this.shaderProgram)
-    //         console.log(vertexShader)
-    //         console.log(fragmentShader)
-    //         throw new Error('Could not initialise shaders');
-    //     }
-
-    //     if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
-    //         throw new Error('Could not initialise shaders');
-    //     }
-
-    //     shaderUtility.useProgram(this.shaderProgram);
-
-    //     // Resolve locations once (stable)
-    //     this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition');
-    //     this.attribLocations.hovered = this.gl.getAttribLocation(this.shaderProgram, 'a_selected');
-    //     this.attribLocations.pointSize = this.gl.getAttribLocation(this.shaderProgram, 'a_pointsize');
-    //     this.attribLocations.brightness = this.gl.getAttribLocation(this.shaderProgram, 'a_brightness');
-    //     this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor');
-    // }
-
-    // private loadShaderFromDOM(shaderId: string): WebGLShader | null {
-
-    //     let shader: WebGLShader | null = null;
-    //     let shaderSource = ""
-    //     if (shaderId == "cat-shader-fs") {
-    //         shaderSource = ShaderManager.catalogueFS()
-    //         shader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-    //     } else {
-    //         shaderSource = ShaderManager.catalogueVS()
-    //         shader = this.gl.createShader(this.gl.VERTEX_SHADER);
-    //     }
-    //     if (!shader) return null;
-    //     if (shaderSource.length <= 0) return null;
-
-    //     this.gl.shaderSource(shader, shaderSource);
-    //     this.gl.compileShader(shader);
-    //     if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-    //         const info = this.gl.getShaderInfoLog(shader) || 'Unknown shader compile error';
-    //         this.gl.deleteShader(shader);
-    //         throw new Error(info);
-    //     }
-    //     return shader;
-
-    // }
-
     addSource(source: Source) {
         this.sources.push(source);
     }
@@ -239,6 +190,7 @@ class CatalogueGL {
      */
     addSources(in_data: any[][], columnsmeta: any) {
         this.ready = false;
+        this.sources = []
 
         const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
         const decDataIndex = (this.catalogueProps.decColumn as any).index ?? (this.catalogueProps.decColumn as any)._index;
@@ -435,8 +387,9 @@ class CatalogueGL {
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
     draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper) {
-        if (!this.ready) return;
-        if (!global.camera) return 
+        if (!this.isVisible) return
+        if (!this.ready) return
+        if (!global.camera) return
 
         // this.enableShader(in_mMatrix);
         catalogueShaderProgram.enableShaders(computePerspectiveMatrixSingleton.pMatrix as Float32Array,
@@ -551,111 +504,7 @@ class CatalogueGL {
 
         this.oldMouseCoords = in_mouseHelper.xyz;
     }
-    
-    
-    // draw(in_mouseHelper: MouseHelper, modelMatrix: Float32Array) {
-    //     if (!this.ready) return;
-    //     if (!global.camera) return 
 
-    //     catalogueShaderProgram.enableShaders(computePerspectiveMatrixSingleton.pMatrix as Float32Array, modelMatrix as Float32Array, global.camera);
-
-    //     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-
-    //     // positions
-    //     this.gl.vertexAttribPointer(
-    //         catalogueShaderProgram.locations.position,
-    //         3,
-    //         this.gl.FLOAT,
-    //         false,
-    //         CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE,
-    //         0
-    //     );
-    //     this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.position);
-
-    //     // hovered flag
-    //     this.gl.vertexAttribPointer(
-    //         catalogueShaderProgram.locations.hovered,
-    //         1,
-    //         this.gl.FLOAT,
-    //         false,
-    //         CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE,
-    //         CatalogueGL.BYTES_X_ELEM * 3
-    //     );
-    //     this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.hovered);
-
-    //     // point size
-    //     this.gl.vertexAttribPointer(
-    //         catalogueShaderProgram.locations.pointSize,
-    //         1,
-    //         this.gl.FLOAT,
-    //         false,
-    //         CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE,
-    //         CatalogueGL.BYTES_X_ELEM * 4
-    //     );
-    //     this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.pointSize);
-
-    //     // brightness
-    //     this.gl.vertexAttribPointer(
-    //         catalogueShaderProgram.locations.brightness,
-    //         1,
-    //         this.gl.FLOAT,
-    //         false,
-    //         CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE,
-    //         CatalogueGL.BYTES_X_ELEM * 5
-    //     );
-    //     this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.brightness);
-
-    //     // color
-    //     const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
-    //     if (catalogueShaderProgram.locations.color) {
-    //         this.gl.uniform4f(catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
-    //     }
-
-    //     // Hover logic on mouse move
-    //     if (in_mouseHelper != null && in_mouseHelper.xyz !== this.oldMouseCoords) {
-    //         // clear old hovered
-    //         for (let k = 0; k < this.hoveredIndexes.length; k++) {
-    //             const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
-    //             this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-    //             this.vertexCataloguePosition[base + 4] = this.sources[this.hoveredIndexes[k]].shapeSize; // size
-    //         }
-
-    //         this.hoveredIndexes = this.checkSelection(in_mouseHelper);
-
-    //         // new hovered
-    //         for (let i = 0; i < this.hoveredIndexes.length; i++) {
-    //             const idx = this.hoveredIndexes[i];
-    //             const base = idx * CatalogueGL.ELEM_SIZE;
-    //             this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-    //             this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-    //         }
-    //     }
-
-    //     // selected flags
-    //     for (let s = 0; s < this.selectedIndexes.length; s++) {
-    //         const idx = this.selectedIndexes[s];
-    //         const base = idx * CatalogueGL.ELEM_SIZE;
-    //         this.vertexCataloguePosition[base + 3] = 2.0; // selected
-    //         this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-    //     }
-
-    //     // external hovered
-    //     for (let e = 0; e < this.extHoveredIndexes.length; e++) {
-    //         const idx = this.extHoveredIndexes[e];
-    //         const base = idx * CatalogueGL.ELEM_SIZE;
-    //         this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-    //         this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-    //     }
-
-    //     // upload buffer
-    //     this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
-
-    //     // draw
-    //     const numItems = this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
-    //     this.gl.drawArrays(this.gl.POINTS, 0, numItems);
-
-    //     this.oldMouseCoords = in_mouseHelper.xyz;
-    // }
 }
 
 export default CatalogueGL;

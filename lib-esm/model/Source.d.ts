@@ -16,10 +16,9 @@ declare class Source {
      * @param in_point Point.js (Cartesian/RA-Dec wrapper)
      * @param in_details Optional array of key/value metadata
      */
-    constructor(in_point: Point, in_details?: SourceDetail[]);
+    constructor(in_point: Point, in_details?: any[]);
     getDetailByindex(index: number): string | number | undefined;
-    getDetailByKey(key: string): string | number | undefined;
-    get details(): SourceDetail[];
+    get details(): any[];
     private computeHealpixPixel;
     get point(): Point;
     get name(): string | undefined;

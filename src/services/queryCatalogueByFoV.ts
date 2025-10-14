@@ -58,7 +58,7 @@ export default async function queryCatalogueByFoV(
         }
 
         // const adql = `SELECT TOP 200 * FROM ${tapTable} WHERE 1 = CONTAINS(POINT('ICRS', ${raCol}, ${decCol}), POLYGON('ICRS',${polygonAdql}))`
-        const adql = `SELECT TOP 200 * FROM ${tapTable} WHERE 1 = CONTAINS(POINT('ICRS', ${raCol}, ${decCol}), POLYGON('ICRS',${polygonAdql}))`
+        const adql = `SELECT * FROM ${tapTable} WHERE 1 = CONTAINS(POINT('ICRS', ${raCol}, ${decCol}), POLYGON('ICRS',${polygonAdql}))`
 
         // Keep it simple: query all columns. You can TOP/N limit here if needed.
         // const adql = `SELECT * FROM ${tapTable} WHERE ${whereFoV}`

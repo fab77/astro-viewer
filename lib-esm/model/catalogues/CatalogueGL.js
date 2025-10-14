@@ -20,14 +20,6 @@ class CatalogueGL {
     tapRepo;
     // Data
     sources;
-    // GL & shader
-    // attribLocations: {
-    //     position: number;
-    //     hovered: number;
-    //     pointSize: number;
-    //     color: WebGLUniformLocation | null;
-    //     brightness: number;
-    // };
     gl;
     shaderProgram;
     // Buffers & arrays
@@ -39,6 +31,7 @@ class CatalogueGL {
     selectedIndexes;
     extHoveredIndexes;
     oldMouseCoords;
+    _isVisible = true;
     // Healpix pixel => indices map
     healpixDensityMap;
     /**
@@ -66,40 +59,59 @@ class CatalogueGL {
         this.selectedIndexes = [];
         this.extHoveredIndexes = [];
         this.oldMouseCoords = null;
-        // this.attribLocations = {
-        //     position: 0,
-        //     hovered: 1,
-        //     pointSize: 2,
-        //     color: null,
-        //     brightness: 3
-        // };
         this.healpixDensityMap = new Map();
         const defaultColor = '#8F00FF';
         this.catalogueProps = new CatalogueProps(tapMetadataList, defaultColor);
-        // this.initShaders();
-        // catalogueShaderProgram.initShaders()
+        // call catalogueShaderProgram to init shaders if they are not yet initialised 
         catalogueShaderProgram.shaderProgram;
+        this._isVisible = true;
+    }
+    setIsVisible(visibility) {
+        this._isVisible = visibility;
+    }
+    get isVisible() {
+        return this._isVisible;
     }
     minMax(columnindex) {
         if (!this.sources.length)
             return { min: 0, max: 0 };
         let min = this.sources[0].details[columnindex];
+        if (isNaN(Number(min))) {
+            // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
+            console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`);
+            return { min: 0, max: 0 };
+        }
         let max = min;
         for (const source of this.sources) {
             const v = source.details[columnindex];
+            if (isNaN(Number(v))) {
+                console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`);
+                return { min: 0, max: 0 };
+            }
             if (v < min)
                 min = v;
             if (v > max)
                 max = v;
         }
-        return { min, max };
+        return {
+            min: Number(min),
+            max: Number(max)
+        };
     }
     changeCatalogueMetaShapeSize(metacolumnName) {
+        const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name;
         this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
         const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
-        if (idx == null)
+        if (idx == null) {
+            if (oldShapeSizeName)
+                this.catalogueProps.changeCatalogueMetaShapeSize(oldShapeSizeName);
             return;
+        }
         const minmax = this.minMax(idx);
+        if (minmax.min == minmax.max) {
+            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
+            return;
+        }
         for (const source of this.sources) {
             const raw = Number(source.getDetailByindex(idx));
             const min = Number(minmax.min);
@@ -126,59 +138,6 @@ class CatalogueGL {
         }
         this.initBuffer();
     }
-    // private initShaders() {
-    //     // catalogueShaderProgram.enableProgram()
-    //     // this.shaderProgram = catalogueShaderProgram.shaderProgram
-    //     // const fragmentShader = ShaderManager.catalogueFS()
-    //     // const vertexShader = ShaderManager.catalogueVS()
-    //     const fragmentShader = this.loadShaderFromDOM('cat-shader-fs');
-    //     const vertexShader = this.loadShaderFromDOM('cat-shader-vs');
-    //     if (!fragmentShader || !vertexShader) {
-    //         throw new Error('CatalogueGL: missing shaders in DOM (cat-shader-fs / cat-shader-vs)');
-    //     }
-    //     try {
-    //         this.gl.attachShader(this.shaderProgram as WebGLProgram, vertexShader);
-    //         this.gl.attachShader(this.shaderProgram as WebGLProgram, fragmentShader);
-    //         this.gl.linkProgram(this.shaderProgram as WebGLProgram);
-    //     } catch (err: any) {
-    //         console.error(err?.message ?? err)
-    //         console.log(this.shaderProgram)
-    //         console.log(vertexShader)
-    //         console.log(fragmentShader)
-    //         throw new Error('Could not initialise shaders');
-    //     }
-    //     if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
-    //         throw new Error('Could not initialise shaders');
-    //     }
-    //     shaderUtility.useProgram(this.shaderProgram);
-    //     // Resolve locations once (stable)
-    //     this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition');
-    //     this.attribLocations.hovered = this.gl.getAttribLocation(this.shaderProgram, 'a_selected');
-    //     this.attribLocations.pointSize = this.gl.getAttribLocation(this.shaderProgram, 'a_pointsize');
-    //     this.attribLocations.brightness = this.gl.getAttribLocation(this.shaderProgram, 'a_brightness');
-    //     this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor');
-    // }
-    // private loadShaderFromDOM(shaderId: string): WebGLShader | null {
-    //     let shader: WebGLShader | null = null;
-    //     let shaderSource = ""
-    //     if (shaderId == "cat-shader-fs") {
-    //         shaderSource = ShaderManager.catalogueFS()
-    //         shader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-    //     } else {
-    //         shaderSource = ShaderManager.catalogueVS()
-    //         shader = this.gl.createShader(this.gl.VERTEX_SHADER);
-    //     }
-    //     if (!shader) return null;
-    //     if (shaderSource.length <= 0) return null;
-    //     this.gl.shaderSource(shader, shaderSource);
-    //     this.gl.compileShader(shader);
-    //     if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-    //         const info = this.gl.getShaderInfoLog(shader) || 'Unknown shader compile error';
-    //         this.gl.deleteShader(shader);
-    //         throw new Error(info);
-    //     }
-    //     return shader;
-    // }
     addSource(source) {
         this.sources.push(source);
     }
@@ -188,6 +147,7 @@ class CatalogueGL {
      */
     addSources(in_data, columnsmeta) {
         this.ready = false;
+        this.sources = [];
         const raDataIndex = this.catalogueProps.raColumn.index ?? this.catalogueProps.raColumn._index;
         const decDataIndex = this.catalogueProps.decColumn.index ?? this.catalogueProps.decColumn._index;
         for (let j = 0; j < in_data.length; j++) {
@@ -353,6 +313,8 @@ class CatalogueGL {
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
     draw(in_mMatrix, in_mouseHelper) {
+        if (!this.isVisible)
+            return;
         if (!this.ready)
             return;
         if (!global.camera)
