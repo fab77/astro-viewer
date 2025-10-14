@@ -20,6 +20,7 @@ type GL = WebGL2RenderingContext;
 class CatalogueGL {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
+    static STANDARD_SHAPE_SIZE: number = 8.0
 
     // Core state
     ready: boolean;
@@ -137,7 +138,17 @@ class CatalogueGL {
         };
     }
 
+
     changeCatalogueMetaShapeSize(metacolumnName: string) {
+        if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
+            this.catalogueProps.resetCatalogueMetaShapeSize()
+            for (const source of this.sources) {
+                const size = CatalogueGL.STANDARD_SHAPE_SIZE;
+                source.shapeSize = size;
+            }
+            this.initBuffer();
+            return
+        }
         const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
         this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
         const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
@@ -206,7 +217,7 @@ class CatalogueGL {
 
             const source = new Source(point, in_data[j]);
             // Ensure optional fields exist
-            source.shapeSize = source.shapeSize ?? 8.0;
+            source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             source.brightnessFactor = 3;
             this.addSource(source);
         }
@@ -292,7 +303,7 @@ class CatalogueGL {
             this.vertexCataloguePosition[positionIndex + 3] = 0.0;
 
             // size
-            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? 8.0;
+            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
 
             // brightness
             this.vertexCataloguePosition[positionIndex + 5] = currSource.brightnessFactor ?? 0.0;

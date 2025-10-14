@@ -10632,6 +10632,7 @@ function sameName(a, name) {
     return colName(a) === name;
 }
 class CatalogueProps {
+    static STANDARD_SIZE = "STANDARD_SIZE";
     raColumn;
     decColumn;
     nameColumn;
@@ -10752,6 +10753,9 @@ class CatalogueProps {
             }
         }
         return true;
+    }
+    resetCatalogueMetaShapeSize() {
+        this.shapeSizeColumn = undefined;
     }
     changeCatalogueMetaShapeSize(metacolumnName) {
         if (!this.shapeSizeColumn || colName(this.shapeSizeColumn) !== metacolumnName) {
@@ -10945,6 +10949,7 @@ const catalogueShaderProgram = new CatalogueShaderProgram();
 class CatalogueGL {
     static ELEM_SIZE;
     static BYTES_X_ELEM;
+    static STANDARD_SHAPE_SIZE = 8.0;
     // Core state
     ready;
     catalogueProps;
@@ -11032,6 +11037,15 @@ class CatalogueGL {
         };
     }
     changeCatalogueMetaShapeSize(metacolumnName) {
+        if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
+            this.catalogueProps.resetCatalogueMetaShapeSize();
+            for (const source of this.sources) {
+                const size = CatalogueGL.STANDARD_SHAPE_SIZE;
+                source.shapeSize = size;
+            }
+            this.initBuffer();
+            return;
+        }
         const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name;
         this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
         const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
@@ -11090,7 +11104,7 @@ class CatalogueGL {
             }, utils_CoordsType.ASTRO);
             const source = new model_Source(point, in_data[j]);
             // Ensure optional fields exist
-            source.shapeSize = source.shapeSize ?? 8.0;
+            source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             source.brightnessFactor = 3;
             this.addSource(source);
         }
@@ -11167,7 +11181,7 @@ class CatalogueGL {
             // hovered flag
             this.vertexCataloguePosition[positionIndex + 3] = 0.0;
             // size
-            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? 8.0;
+            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             // brightness
             this.vertexCataloguePosition[positionIndex + 5] = currSource.brightnessFactor ?? 0.0;
             positionIndex += CatalogueGL.ELEM_SIZE;

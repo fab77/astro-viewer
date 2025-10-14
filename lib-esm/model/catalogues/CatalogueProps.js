@@ -7,6 +7,7 @@ function sameName(a, name) {
     return colName(a) === name;
 }
 export default class CatalogueProps {
+    static STANDARD_SIZE = "STANDARD_SIZE";
     raColumn;
     decColumn;
     nameColumn;
@@ -127,6 +128,9 @@ export default class CatalogueProps {
             }
         }
         return true;
+    }
+    resetCatalogueMetaShapeSize() {
+        this.shapeSizeColumn = undefined;
     }
     changeCatalogueMetaShapeSize(metacolumnName) {
         if (!this.shapeSizeColumn || colName(this.shapeSizeColumn) !== metacolumnName) {

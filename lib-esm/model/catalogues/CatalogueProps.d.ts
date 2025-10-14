@@ -1,6 +1,7 @@
 import TapMetadata from "../tap/TapMetadata.js";
 import TapMetadataList from "../tap/TapMetadataList.js";
 export default class CatalogueProps {
+    static STANDARD_SIZE: string;
     raColumn: TapMetadata;
     decColumn: TapMetadata;
     nameColumn?: TapMetadata;
@@ -24,6 +25,7 @@ export default class CatalogueProps {
     changeCatalogueMetaRA(metacolumnName: string): boolean;
     /** Returns true to indicate a refresh-by-FoV is needed (preserves original behavior). */
     changeCatalogueMetaDec(metacolumnName: string): boolean;
+    resetCatalogueMetaShapeSize(): void;
     changeCatalogueMetaShapeSize(metacolumnName: string): void;
     changeCatalogueMetaShapeHue(metacolumnName: string): void;
 }

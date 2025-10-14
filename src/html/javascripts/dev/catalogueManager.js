@@ -70,7 +70,7 @@ export function renderCatalogueManager() {
       </td>
       <td>
         <select class="size-by sel-compact" ${columns.length ? "" : "disabled"}>
-          <option value="">— choose —</option>
+          <option value="STANDARD_SIZE">— choose —</option>
           ${columns.map(col => `<option value="${col}" ${col===chosen ? "selected":""}>${col}</option>`).join('')}
         </select>
         ${!columns.length ? `<div class="hint">No TAP metadata</div>` : ""}
