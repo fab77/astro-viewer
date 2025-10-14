@@ -23,8 +23,8 @@ export class AstroCore {
     changeCatalogueColor(catalogue, hexColor) {
         this.astroSphere.changeCatalogueColor(catalogue, hexColor);
     }
-    setCatalogueHue(catalogue, metadataColumnName) {
-        this.astroSphere.setCatalogueHue(catalogue, metadataColumnName);
+    setCatalogueShapeHue(catalogue, metadataColumnName) {
+        this.astroSphere.setCatalogueShapeHue(catalogue, metadataColumnName);
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
         this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);

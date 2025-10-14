@@ -14,7 +14,7 @@ import { wireGoto } from './goto.js';
       if (astrocore?.global) astrocore.global.corsProxyUrl = FIXED_PROXY_BASE;
       window.corsProxyUrl = FIXED_PROXY_BASE;
     }
-  } catch {}
+  } catch { }
 })();
 
 window.addEventListener('load', bootstrap);
@@ -25,7 +25,7 @@ async function bootstrap() {
 
     const AC = new astrocore.AstroCore();
     window.AstroAPI = state.AstroAPI = AC;
-    window.TAP      = state.TAP;
+    window.TAP = state.TAP;
 
     await loadHiPS(el('hipsUrl').value.trim());
     AC.run();
@@ -46,7 +46,7 @@ function wireUI() {
   el('btnLoadHiPS')?.addEventListener('click', async () => {
     const url = el('hipsUrl').value.trim();
     if (!url) return setStatus("Insert a HiPS URL.");
-    try { await loadHiPS(url); persistBasic(); } 
+    try { await loadHiPS(url); persistBasic(); }
     catch (e) { setStatus("HiPS load error: " + (e.message || e)); }
   });
 
@@ -62,7 +62,7 @@ function wireUI() {
   // single-select quick controls
   el('btnShowCat')?.addEventListener('click', () => {
     const selVal = el('catalogues').value;
-    const cat = state.CAT_LIST.find(c => (c.name===selVal) || (String(c.id)===selVal) || (c.table===selVal));
+    const cat = state.CAT_LIST.find(c => (c.name === selVal) || (String(c.id) === selVal) || (c.table === selVal));
     if (!cat) return setStatus("Select a catalogue.");
     try {
       state.AstroAPI?.showCatalogue?.(cat);
@@ -74,6 +74,11 @@ function wireUI() {
         state.AstroAPI.setCatalogueShapeSize(cat, remembered);
       }
 
+      const rememberedHue = state.CAT_HUEBY.get(key);
+      if (rememberedHue && state.AstroAPI?.setCatalogueShapeHue) {
+        state.AstroAPI.setCatalogueShapeHue(cat, rememberedHue);
+      }
+
       renderCatalogueManager();
       persistBasic();
       setStatus(`📡 Catalogue loaded: ${cat.name || cat.id || cat.table}`);
@@ -82,7 +87,7 @@ function wireUI() {
 
   el('catVisible')?.addEventListener('change', () => {
     const selVal = el('catalogues').value;
-    const cat = state.CAT_LIST.find(c => (c.name===selVal) || (String(c.id)===selVal) || (c.table===selVal));
+    const cat = state.CAT_LIST.find(c => (c.name === selVal) || (String(c.id) === selVal) || (c.table === selVal));
     if (!cat) return setStatus("Select a catalogue.");
     const key = (c => c?.name || String(c?.id) || c?.table || JSON.stringify(c))(cat);
     const isVisible = el('catVisible').checked;
@@ -97,7 +102,7 @@ function wireUI() {
 
   el('btnDeleteCat')?.addEventListener('click', () => {
     const selVal = el('catalogues').value;
-    const cat = state.CAT_LIST.find(c => (c.name===selVal) || (String(c.id)===selVal) || (c.table===selVal));
+    const cat = state.CAT_LIST.find(c => (c.name === selVal) || (String(c.id) === selVal) || (c.table === selVal));
     if (!cat) return setStatus("Select a catalogue.");
     const key = (c => c?.name || String(c?.id) || c?.table || JSON.stringify(c))(cat);
     try {

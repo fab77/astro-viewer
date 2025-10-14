@@ -2,8 +2,6 @@
 import { mat4 } from 'gl-matrix';
 import global from '../Global.js'
 import ShaderManager from './ShaderManager.js'
-import Camera from '../Camera.js';
-import { shaderUtility } from '../utils/ShaderUtility.js';
 
 type GL = WebGL2RenderingContext;
 

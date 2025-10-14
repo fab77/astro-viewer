@@ -150,7 +150,7 @@ class AstroSphere {
     changeCatalogueColor(catalogue, hexColor) {
         catalogue.catalogueProps.changeColor(hexColor);
     }
-    setCatalogueHue(catalogue, metadataColumnName) {
+    setCatalogueShapeHue(catalogue, metadataColumnName) {
         catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {

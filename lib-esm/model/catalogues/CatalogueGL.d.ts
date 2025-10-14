@@ -9,6 +9,7 @@ declare class CatalogueGL {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     static STANDARD_SHAPE_SIZE: number;
+    static STANDARD_SHAPE_HUE: number;
     ready: boolean;
     catalogueProps: CatalogueProps;
     name: string;

@@ -10767,6 +10767,9 @@ class CatalogueProps {
             }
         }
     }
+    resetCatalogueMetaShapeHue() {
+        this.shapeHueColumn = undefined;
+    }
     changeCatalogueMetaShapeHue(metacolumnName) {
         if (!this.shapeHueColumn || colName(this.shapeHueColumn) !== metacolumnName) {
             for (const column of this.tapMetadataList.metadataList) {
@@ -10950,6 +10953,7 @@ class CatalogueGL {
     static ELEM_SIZE;
     static BYTES_X_ELEM;
     static STANDARD_SHAPE_SIZE = 8.0;
+    static STANDARD_SHAPE_HUE = 3.0;
     // Core state
     ready;
     catalogueProps;
@@ -11070,11 +11074,28 @@ class CatalogueGL {
         this.initBuffer();
     }
     changeCatalogueMetaShapeHue(metacolumnName) {
+        if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
+            this.catalogueProps.resetCatalogueMetaShapeHue();
+            for (const source of this.sources) {
+                const hue = CatalogueGL.STANDARD_SHAPE_HUE;
+                source.brightnessFactor = hue;
+            }
+            this.initBuffer();
+            return;
+        }
+        const oldHueSizeName = this.catalogueProps.shapeHueColumn?.name;
         this.catalogueProps.changeCatalogueMetaShapeHue(metacolumnName);
         const idx = this.catalogueProps.shapeHueColumn?.index ?? this.catalogueProps.shapeHueColumn?.index;
-        if (idx == null)
+        if (idx == null) {
+            if (oldHueSizeName)
+                this.catalogueProps.changeCatalogueMetaShapeHue(oldHueSizeName);
             return;
+        }
         const minmax = this.minMax(idx);
+        if (minmax.min == minmax.max) {
+            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
+            return;
+        }
         for (const source of this.sources) {
             const raw = Number(source.getDetailByindex(idx));
             const min = Number(minmax.min);
@@ -11767,7 +11788,7 @@ class AstroSphere {
     changeCatalogueColor(catalogue, hexColor) {
         catalogue.catalogueProps.changeColor(hexColor);
     }
-    setCatalogueHue(catalogue, metadataColumnName) {
+    setCatalogueShapeHue(catalogue, metadataColumnName) {
         catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
@@ -11913,8 +11934,8 @@ class AstroCore {
     changeCatalogueColor(catalogue, hexColor) {
         this.astroSphere.changeCatalogueColor(catalogue, hexColor);
     }
-    setCatalogueHue(catalogue, metadataColumnName) {
-        this.astroSphere.setCatalogueHue(catalogue, metadataColumnName);
+    setCatalogueShapeHue(catalogue, metadataColumnName) {
+        this.astroSphere.setCatalogueShapeHue(catalogue, metadataColumnName);
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
         this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);

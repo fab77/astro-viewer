@@ -142,6 +142,9 @@ export default class CatalogueProps {
             }
         }
     }
+    resetCatalogueMetaShapeHue() {
+        this.shapeHueColumn = undefined;
+    }
     changeCatalogueMetaShapeHue(metacolumnName) {
         if (!this.shapeHueColumn || colName(this.shapeHueColumn) !== metacolumnName) {
             for (const column of this.tapMetadataList.metadataList) {

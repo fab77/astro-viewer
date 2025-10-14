@@ -27,6 +27,7 @@ export default class CatalogueProps {
     changeCatalogueMetaDec(metacolumnName: string): boolean;
     resetCatalogueMetaShapeSize(): void;
     changeCatalogueMetaShapeSize(metacolumnName: string): void;
+    resetCatalogueMetaShapeHue(): void;
     changeCatalogueMetaShapeHue(metacolumnName: string): void;
 }
 //# sourceMappingURL=CatalogueProps.d.ts.map

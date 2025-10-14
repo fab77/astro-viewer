@@ -207,10 +207,10 @@ class AstroSphere {
     catalogue.catalogueProps.changeColor(hexColor)
   }
 
-  setCatalogueHue(catalogue: CatalogueGL, metadataColumnName: string) {
+  setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string) {
     catalogue.changeCatalogueMetaShapeHue(metadataColumnName)
   }
-  
+
   setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string) {
     catalogue.changeCatalogueMetaShapeSize(metadataColumnName)
   }

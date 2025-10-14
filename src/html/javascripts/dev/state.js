@@ -4,6 +4,7 @@ export const LS_KEYS = {
   tapUrl:   'dev_tap_url',
   catVis:   'dev_cat_visibility',
   catSizeBy:'dev_cat_sizeby',
+  catHueBy: 'dev_cat_hueby',
 };
 
 export const state = {
@@ -13,6 +14,7 @@ export const state = {
   FP_LIST: [],
   CAT_VIS: new Map(),     // catalogueKey -> boolean
   CAT_SIZEBY: new Map(),  // catalogueKey -> columnName
+  CAT_HUEBY: new Map(),   // catalogueKey -> columnName
 };
 
 export function catalogueKey(c) {
@@ -33,6 +35,9 @@ export function loadPersisted() {
 
     const sz  = JSON.parse(localStorage.getItem(LS_KEYS.catSizeBy) || '{}');
     Object.entries(sz).forEach(([k,v]) => state.CAT_SIZEBY.set(k, v));
+
+    const hue = JSON.parse(localStorage.getItem(LS_KEYS.catHueBy) || '{}');
+    Object.entries(hue).forEach(([k,v]) => state.CAT_HUEBY.set(k, v));
   } catch {}
 }
 
@@ -44,5 +49,6 @@ export function persistBasic() {
     if (tapEl)  localStorage.setItem(LS_KEYS.tapUrl,  tapEl.value.trim());
     localStorage.setItem(LS_KEYS.catVis,   JSON.stringify(Object.fromEntries(state.CAT_VIS)));
     localStorage.setItem(LS_KEYS.catSizeBy,JSON.stringify(Object.fromEntries(state.CAT_SIZEBY)));
+    localStorage.setItem(LS_KEYS.catHueBy, JSON.stringify(Object.fromEntries(state.CAT_HUEBY)));
   } catch {}
 }

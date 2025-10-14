@@ -31,7 +31,7 @@ declare class AstroSphere {
     hideCatalogue(catalogue: CatalogueGL, isVisible: boolean): void;
     deleteCatalogue(catalogue: CatalogueGL): void;
     changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): void;
-    setCatalogueHue(catalogue: CatalogueGL, metadataColumnName: string): void;
+    setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): void;
     setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): void;
     goTo(raDeg: number, decDeg: number): void;
     getFoV(): FoV;

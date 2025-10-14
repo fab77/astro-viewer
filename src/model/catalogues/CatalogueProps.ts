@@ -16,9 +16,9 @@ function sameName(a?: TapMetadata, name?: string): boolean {
 
 
 export default class CatalogueProps {
-  
+
   static STANDARD_SIZE: string = "STANDARD_SIZE"
-  
+
   raColumn!: TapMetadata;
   decColumn!: TapMetadata;
   nameColumn?: TapMetadata;
@@ -154,7 +154,7 @@ export default class CatalogueProps {
   resetCatalogueMetaShapeSize(): void {
     this.shapeSizeColumn = undefined;
   }
-  
+
   changeCatalogueMetaShapeSize(metacolumnName: string): void {
     if (!this.shapeSizeColumn || colName(this.shapeSizeColumn) !== metacolumnName) {
       for (const column of this.tapMetadataList.metadataList) {
@@ -164,6 +164,10 @@ export default class CatalogueProps {
         }
       }
     }
+  }
+
+  resetCatalogueMetaShapeHue() {
+    this.shapeHueColumn = undefined;
   }
 
   changeCatalogueMetaShapeHue(metacolumnName: string): void {

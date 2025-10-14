@@ -12,7 +12,7 @@ export declare class AstroCore {
     hideCatalogue(catalogue: CatalogueGL, isVisible: boolean): void;
     deleteCatalogue(catalogue: CatalogueGL): void;
     changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): void;
-    setCatalogueHue(catalogue: CatalogueGL, metadataColumnName: string): void;
+    setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): void;
     setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): void;
     activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void;
     goTo(raDeg: number, decDeg: number): void;
