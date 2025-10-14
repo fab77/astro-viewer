@@ -11779,7 +11779,7 @@ class AstroSphere {
                     this.updateLastMousePoint();
                 }
             }
-            // this.updateCentralPoint()
+            this.updateCentralPoint();
             this.lastMouseX = newX;
             this.lastMouseY = newY;
             event.preventDefault();
@@ -11944,7 +11944,7 @@ class AstroSphere {
             }
         });
         // this.updateLastMousePoint()
-        this.updateCentralPoint();
+        // this.updateCentralPoint()
     }
 }
 /* harmony default export */ const src_AstroSphere = (AstroSphere);

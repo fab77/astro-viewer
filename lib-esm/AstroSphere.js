@@ -140,7 +140,7 @@ class AstroSphere {
                     this.updateLastMousePoint();
                 }
             }
-            // this.updateCentralPoint()
+            this.updateCentralPoint();
             this.lastMouseX = newX;
             this.lastMouseY = newY;
             event.preventDefault();
@@ -305,7 +305,7 @@ class AstroSphere {
             }
         });
         // this.updateLastMousePoint()
-        this.updateCentralPoint();
+        // this.updateCentralPoint()
     }
 }
 export default AstroSphere;
