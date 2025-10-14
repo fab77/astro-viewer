@@ -133,4 +133,14 @@ function wireUI() {
   });
   el('btnTogglePanel')?.addEventListener('click', minimisePanel);
   el('restoreBtn')?.addEventListener('click', restorePanel);
+
+  // inside sphere toggle
+  el('insideSphereChk')?.addEventListener('change', () => {
+    try {
+      state.AstroAPI?.toggleInsideSphere?.();
+    } finally {
+      // store preference regardless of API success
+      persistBasic();
+    }
+  });
 }

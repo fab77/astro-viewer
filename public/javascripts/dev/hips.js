@@ -1,5 +1,5 @@
 // hips.js
-import { setStatus } from './ui.js';
+import { setStatus, el } from './ui.js';
 import { state } from './state.js';
 
 export async function loadHiPS(baseUrl) {
@@ -9,5 +9,10 @@ export async function loadHiPS(baseUrl) {
   const propsText = await resp.text();
   const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl));
   state.AstroAPI.activateHiPS(desc, false);
+  // if user prefers inside view, toggle now
+  const inside = el('insideSphereChk')?.checked;
+  if (inside && state.AstroAPI?.toggleInsideSphere) {
+    state.AstroAPI.toggleInsideSphere();
+  }
   setStatus("✅ HiPS loaded.");
 }
