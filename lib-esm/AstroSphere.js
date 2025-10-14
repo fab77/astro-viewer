@@ -16,6 +16,8 @@ import queryCatalogueByFoV from './services/queryCatalogueByFoV.js';
  */
 class AstroSphere {
     camera;
+    centralPoinCoords;
+    mousePointCoords;
     canvas;
     showHPXGrid = false;
     mouseHelper;
@@ -39,11 +41,45 @@ class AstroSphere {
         this.insideSphere = bootSetup.insideSphere;
         this.fov = healpixGridSingleton.refreshFoV(this.insideSphere);
     }
+    updateCentralPoint() {
+        // const sphericalCoords = cartesianToSpherical(this.camera.getCameraPosition())
+        const sphericalCoords = this.getPhiThetaDeg(this.canvas);
+        const astroCoords = sphericalToAstroDeg(sphericalCoords.phi, sphericalCoords.theta);
+        const raHMS = raDegToHMS(astroCoords.ra);
+        const decDMS = decDegToDMS(astroCoords.dec);
+        this.centralPoinCoords = {
+            astroDeg: astroCoords,
+            sphericalDeg: sphericalCoords,
+            raHMS: raHMS,
+            decDMS: decDMS
+        };
+        return this.centralPoinCoords;
+    }
+    updateLastMousePoint() {
+        const sphericalCoords = { phi: this.mouseHelper.phi, theta: this.mouseHelper.theta };
+        const astroCoords = { ra: this.mouseHelper.ra, dec: this.mouseHelper.dec };
+        const raHMS = this.mouseHelper.raHMS;
+        const decDMS = this.mouseHelper.decDMS;
+        this.mousePointCoords = {
+            astroDeg: astroCoords,
+            sphericalDeg: sphericalCoords,
+            raHMS: raHMS,
+            decDMS: decDMS
+        };
+        return this.mousePointCoords;
+    }
+    getCentralPointCoordinates() {
+        return this.centralPoinCoords;
+    }
+    getLastMousePointCoordinates() {
+        return this.mousePointCoords;
+    }
     init(canvas) {
         this.initCamera();
         healpixGridSingleton.init();
         visibleTilesManager.init(bootSetup.insideSphere);
         computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        this.updateCentralPoint();
         this.startup = true;
         this.addEventListeners(canvas);
     }
@@ -101,8 +137,10 @@ class AstroSphere {
                     //   raHMS: this.mouseHelper.raHMS,
                     //   decDMS: this.mouseHelper.decDMS,
                     // })
+                    this.updateLastMousePoint();
                 }
             }
+            // this.updateCentralPoint()
             this.lastMouseX = newX;
             this.lastMouseY = newY;
             event.preventDefault();
@@ -266,6 +304,8 @@ class AstroSphere {
                 // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
             }
         });
+        // this.updateLastMousePoint()
+        this.updateCentralPoint();
     }
 }
 export default AstroSphere;

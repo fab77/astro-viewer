@@ -5,6 +5,7 @@ import { loadHiPS } from './hips.js';
 import { loadTapRepo, showFootprint, hideFootprints } from './tap.js';
 import { renderCatalogueManager, wireCatalogueManagerControls } from './catalogueManager.js';
 import { wireGoto } from './goto.js';
+import { wireCoords } from './coords.js';
 
 (function applyFixedProxy() {
   const FIXED_PROXY_BASE = ""; // set if needed
@@ -34,6 +35,7 @@ async function bootstrap() {
     renderCatalogueManager();
     wireCatalogueManagerControls();
     wireGoto();
+    wireCoords();
 
     setStatus("Ready ✅ Load a TAP to begin.");
   } catch (e) {
@@ -83,7 +85,7 @@ function wireUI() {
       if (rememberedColor && state.AstroAPI?.changeCatalogueColor) {
         state.AstroAPI.changeCatalogueColor(cat, rememberedColor);
       }
-      
+
       renderCatalogueManager();
       persistBasic();
       setStatus(`📡 Catalogue loaded: ${cat.name || cat.id || cat.table}`);

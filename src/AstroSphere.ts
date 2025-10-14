@@ -11,6 +11,10 @@ import {
   sphericalToAstroDeg,
   raDegToHMS,
   decDegToDMS,
+  AstroCoords,
+  HMS,
+  SphericalCoords,
+  DMS,
 } from './utils/Utils.js'
 
 
@@ -24,11 +28,21 @@ import FoVUtils from './utils/FoVUtils.js'
 import queryCatalogueByFoV from './services/queryCatalogueByFoV.js'
 import CatalogueGL from './model/catalogues/CatalogueGL.js'
 
+export type PointCoordinates = {
+  astroDeg: AstroCoords
+  raHMS: HMS
+  decDMS: DMS
+  sphericalDeg: SphericalCoords
+}
+
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
 class AstroSphere {
   private camera!: Camera
+
+  private centralPoinCoords: PointCoordinates | undefined
+  private mousePointCoords: PointCoordinates | undefined
 
   private canvas: HTMLCanvasElement
   private showHPXGrid = false
@@ -60,12 +74,54 @@ class AstroSphere {
     this.fov = healpixGridSingleton.refreshFoV(this.insideSphere)
   }
 
+  private updateCentralPoint(): PointCoordinates {
+
+    // const sphericalCoords = cartesianToSpherical(this.camera.getCameraPosition())
+    const sphericalCoords = this.getPhiThetaDeg(this.canvas)
+    const astroCoords = sphericalToAstroDeg(sphericalCoords.phi, sphericalCoords.theta)
+    const raHMS = raDegToHMS(astroCoords.ra)
+    const decDMS = decDegToDMS(astroCoords.dec)
+    this.centralPoinCoords = {
+      astroDeg: astroCoords,
+      sphericalDeg: sphericalCoords,
+      raHMS: raHMS,
+      decDMS: decDMS
+    }
+    return this.centralPoinCoords
+  }
+
+
+  private updateLastMousePoint(): PointCoordinates {
+
+    const sphericalCoords = { phi: this.mouseHelper.phi, theta: this.mouseHelper.theta } as SphericalCoords
+    const astroCoords = { ra: this.mouseHelper.ra, dec: this.mouseHelper.dec } as AstroCoords
+    const raHMS = this.mouseHelper.raHMS as HMS
+    const decDMS = this.mouseHelper.decDMS as DMS
+    this.mousePointCoords = {
+      astroDeg: astroCoords,
+      sphericalDeg: sphericalCoords,
+      raHMS: raHMS,
+      decDMS: decDMS
+    }
+    return this.mousePointCoords
+  }
+
+  getCentralPointCoordinates(): PointCoordinates | undefined {
+    return this.centralPoinCoords
+  }
+
+  getLastMousePointCoordinates(): PointCoordinates | undefined {
+    return this.mousePointCoords
+  }
+
   private init(canvas: HTMLCanvasElement) {
     this.initCamera()
 
     healpixGridSingleton.init()
     visibleTilesManager.init(bootSetup.insideSphere)
     computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere)
+
+    this.updateCentralPoint()
 
     this.startup = true
 
@@ -137,8 +193,11 @@ class AstroSphere {
           //   raHMS: this.mouseHelper.raHMS,
           //   decDMS: this.mouseHelper.decDMS,
           // })
+
+          this.updateLastMousePoint()
         }
       }
+      // this.updateCentralPoint()
 
       this.lastMouseX = newX
       this.lastMouseY = newY
@@ -354,6 +413,9 @@ class AstroSphere {
         // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
       }
     })
+    // this.updateLastMousePoint()
+    this.updateCentralPoint()
+
 
   }
 }

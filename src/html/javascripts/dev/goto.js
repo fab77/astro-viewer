@@ -1,6 +1,7 @@
 // goto.js
 import { setStatus, el } from './ui.js';
 import { state } from './state.js';
+import { refreshCenter } from './coords.js';
 
 export function wireGoto() {
   const goRa  = el('goRa');
@@ -14,7 +15,11 @@ export function wireGoto() {
     const raN = ((ra % 360) + 360) % 360;
     const decC = Math.max(-90, Math.min(90, dec));
     if (!state.AstroAPI?.goTo) return setStatus("AstroAPI.goTo unavailable.");
-    try { state.AstroAPI.goTo(raN, decC); setStatus(`➡️ Slewed to RA=${raN.toFixed(5)}°, Dec=${decC.toFixed(5)}°`); }
+    try { 
+      state.AstroAPI.goTo(raN, decC); 
+      setStatus(`➡️ Slewed to RA=${raN.toFixed(5)}°, Dec=${decC.toFixed(5)}°`); 
+      refreshCenter();
+  }
     catch(e){ setStatus("goTo error: " + (e.message || e)); }
   };
 

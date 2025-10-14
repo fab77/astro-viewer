@@ -2,7 +2,6 @@
  * @author Fabrizio Giordano (Fab)
  */
 import { vec3, mat4 } from "gl-matrix";
-import global from "./Global.js"; // keep your Global.ts exporting a default object
 import {
   astroDegToSpherical,
   cartesianToSpherical,

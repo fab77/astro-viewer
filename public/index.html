@@ -8,7 +8,7 @@
     <script src="./javascripts/astrocore.js"></script>
     <script type="module" src="./javascripts/dev/boot.js"></script>
     <link rel="stylesheet" href="./css/devpanel.css" />
-    
+
 </head>
 
 <body>
@@ -24,6 +24,21 @@
                 <input id="goRa" type="number" step="0.0001" placeholder="RA 0–360">
                 <input id="goDec" type="number" step="0.0001" placeholder="Dec −90–+90">
                 <button id="btnGoTo">Go</button>
+            </div>
+        </div>
+
+        <!-- Coordinates readouts -->
+        <div class="stack" style="margin-top:8px;">
+            <label>Coordinates</label>
+
+            <div class="row">
+                <input id="centerCoords" class="mono" type="text" readonly value="Center: —" />
+                <button id="btnRefreshCenter" class="secondary" title="Update center coordinates">Refresh</button>
+            </div>
+
+            <div class="row">
+                <input id="hoverCoords" class="mono" type="text" readonly value="Hover: —" />
+                <span class="hint">Move the mouse over the sphere</span>
             </div>
         </div>
 
@@ -106,7 +121,7 @@
 
     <canvas id="astrocanvas"></canvas>
 
-    
+
 </body>
 
 </html>

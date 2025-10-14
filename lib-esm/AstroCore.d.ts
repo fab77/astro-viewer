@@ -2,6 +2,7 @@ import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
 import Point from './model/Point.js';
 import CatalogueGL from './model/catalogues/CatalogueGL.js';
+import type { PointCoordinates } from './AstroSphere.js';
 export declare class AstroCore {
     private astroSphere;
     private canvas;
@@ -16,6 +17,8 @@ export declare class AstroCore {
     setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): void;
     activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void;
     goTo(raDeg: number, decDeg: number): void;
+    getCenterCoordinates(): PointCoordinates | undefined;
+    getCoordinatesFromMouse(): PointCoordinates | undefined;
     getFoV(): FoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;

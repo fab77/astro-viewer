@@ -3,4 +3,5 @@ export { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 export { FoV } from './model/FoV.js'
 export { TapRepo } from './model/tap/TapRepo.js'
 export { addTAPRepo } from './services/tapRepoService.js'
+export type {PointCoordinates} from './AstroSphere.js';
 console.log('astrocore UMD loaded')

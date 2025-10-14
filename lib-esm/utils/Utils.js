@@ -2,6 +2,7 @@
  * @author Fabrizio Giordano (Fab)
  */
 import { vec3 } from "gl-matrix";
+// results in degrees
 export function cartesianToSpherical(xyz) {
     const dotXYZ = vec3.dot(xyz, xyz);
     const r = Math.sqrt(dotXYZ);

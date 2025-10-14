@@ -25,6 +25,7 @@ export interface DMS {
   s: number;
 }
 
+// results in degrees
 export function cartesianToSpherical(xyz: vec3): SphericalCoords {
   const dotXYZ = vec3.dot(xyz, xyz);
   const r = Math.sqrt(dotXYZ);

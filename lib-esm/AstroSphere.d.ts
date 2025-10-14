@@ -1,12 +1,21 @@
+import { AstroCoords, HMS, SphericalCoords, DMS } from './utils/Utils.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
 import Point from './model/Point.js';
 import CatalogueGL from './model/catalogues/CatalogueGL.js';
+export type PointCoordinates = {
+    astroDeg: AstroCoords;
+    raHMS: HMS;
+    decDMS: DMS;
+    sphericalDeg: SphericalCoords;
+};
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
 declare class AstroSphere {
     private camera;
+    private centralPoinCoords;
+    private mousePointCoords;
     private canvas;
     private showHPXGrid;
     private mouseHelper;
@@ -22,10 +31,14 @@ declare class AstroSphere {
     private fov;
     private activeCatalogues;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
+    private updateCentralPoint;
+    private updateLastMousePoint;
+    getCentralPointCoordinates(): PointCoordinates | undefined;
+    getLastMousePointCoordinates(): PointCoordinates | undefined;
     private init;
     private initCamera;
     private addEventListeners;
-    getPhiThetaDeg(canvas: HTMLCanvasElement): import("./utils/Utils.js").SphericalCoords;
+    getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor, insideSphere: boolean): void;
     showCatalogue(catalogue: CatalogueGL): Promise<CatalogueGL | undefined>;
     hideCatalogue(catalogue: CatalogueGL, isVisible: boolean): void;

@@ -5,7 +5,7 @@ import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { FoV } from './model/FoV.js'
 import Point from './model/Point.js'
 import CatalogueGL from './model/catalogues/CatalogueGL.js'
-
+import type {PointCoordinates} from './AstroSphere.js'
 type GL2WithViewport = WebGL2RenderingContext & {
   viewportWidth: number
   viewportHeight: number
@@ -52,10 +52,18 @@ export class AstroCore {
     this.astroSphere.activateHiPS(hipsDescriptor, insideSphere)
   }
 
-  // GOTOs
+  // GOTOs and COORDS
   goTo(raDeg: number, decDeg: number): void {
     this.astroSphere.goTo(raDeg, decDeg)
   }
+  getCenterCoordinates(): PointCoordinates | undefined{
+    return this.astroSphere.getCentralPointCoordinates()
+  }
+
+  getCoordinatesFromMouse(): PointCoordinates | undefined{
+    return this.astroSphere.getLastMousePointCoordinates()
+  }
+  
 
   // FOV
   getFoV(): FoV {

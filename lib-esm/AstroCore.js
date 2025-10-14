@@ -33,9 +33,15 @@ export class AstroCore {
     activateHiPS(hipsDescriptor, insideSphere) {
         this.astroSphere.activateHiPS(hipsDescriptor, insideSphere);
     }
-    // GOTOs
+    // GOTOs and COORDS
     goTo(raDeg, decDeg) {
         this.astroSphere.goTo(raDeg, decDeg);
+    }
+    getCenterCoordinates() {
+        return this.astroSphere.getCentralPointCoordinates();
+    }
+    getCoordinatesFromMouse() {
+        return this.astroSphere.getLastMousePointCoordinates();
     }
     // FOV
     getFoV() {
