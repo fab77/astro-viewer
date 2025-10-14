@@ -2,6 +2,14 @@
 import { el, setStatus } from './ui.js';
 import { state, catalogueKey, persistBasic } from './state.js';
 
+const HEX6 = /^#?[0-9a-fA-F]{6}$/;
+function sanitizeHex(v) {
+  if (!v) return '';
+  const s = String(v).trim();
+  if (HEX6.test(s)) return s.startsWith('#') ? s : '#' + s;
+  return '';
+}
+
 export function extractTapMetadataColumnNames(catalogue) {
   // Try common shapes; adjust if your TapMetadataList differs.
   const tml = catalogue?.catalogueProps?.tapMetadataList;
@@ -97,6 +105,8 @@ export function renderCatalogueManager() {
         <div style="display:flex; gap:6px; flex-wrap:wrap;">
           <button class="row-show">Load/Show</button>
           <button class="row-del secondary" title="Remove from engine (keep in list)">Delete</button>
+          <input type="color" class="row-color" title="Change colour"
+               value="${sanitizeHex(state.CAT_COLOR.get(key)) || '#00ffff'}" />
         </div>
       </td>`;
     tbody.appendChild(tr);
@@ -133,6 +143,11 @@ export function wireCatalogueManagerControls() {
         const rememberedHue = state.CAT_HUEBY.get(key);
         if (rememberedHue && state.AstroAPI?.setCatalogueShapeHue) {
           state.AstroAPI.setCatalogueShapeHue(cat, rememberedHue);
+        }
+
+        const rememberedColor = state.CAT_COLOR.get(key);
+        if (rememberedColor && state.AstroAPI?.changeCatalogueColor) {
+          state.AstroAPI.changeCatalogueColor(cat, sanitizeHex(rememberedColor));
         }
 
         renderCatalogueManager();
@@ -224,6 +239,30 @@ export function wireCatalogueManagerControls() {
       } catch (e) { setStatus("Hue-by error: " + (e.message || e)); }
     }
 
+    if (ev.target.classList.contains('row-color')) {
+      const hex = sanitizeHex(ev.target.value);
+      if (!hex) {
+        setStatus("Invalid hex colour. Use #RRGGBB.");
+        return;
+      }
+      state.CAT_COLOR.set(key, hex);
+      persistBasic();
+
+      // Only apply immediately if visible; otherwise it will apply on next Show
+      const isVisible = !!(tr.querySelector('.cat-vis')?.checked);
+      if (!isVisible) {
+        setStatus(`Saved colour ${hex} (will apply when visible).`);
+        return;
+      }
+      if (!state.AstroAPI?.changeCatalogueColor) {
+        setStatus("changeCatalogueColor not available on AstroAPI.");
+        return;
+      }
+      try {
+        state.AstroAPI.changeCatalogueColor(cat, hex);
+        setStatus(`🎨 Colour → ${hex} for ${cat.name || cat.id || cat.table}`);
+      } catch (e) { setStatus("Colour change error: " + (e.message || e)); }
+    }
   });
 }
 

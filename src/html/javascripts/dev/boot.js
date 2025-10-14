@@ -79,6 +79,11 @@ function wireUI() {
         state.AstroAPI.setCatalogueShapeHue(cat, rememberedHue);
       }
 
+      const rememberedColor = state.CAT_COLOR.get(key);
+      if (rememberedColor && state.AstroAPI?.changeCatalogueColor) {
+        state.AstroAPI.changeCatalogueColor(cat, rememberedColor);
+      }
+      
       renderCatalogueManager();
       persistBasic();
       setStatus(`📡 Catalogue loaded: ${cat.name || cat.id || cat.table}`);

@@ -43,6 +43,16 @@ body {
     align-items: center;
 }
 
+/* small colour input in Actions */
+.row-color {
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #555;
+    border-radius: 6px;
+    background: #0e0e12;
+}
+
 .stack {
     display: flex;
     flex-direction: column;
