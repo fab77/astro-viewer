@@ -6684,7 +6684,7 @@ class GridTextHelper {
         divSet.textNode.nodeValue = msg;
     }
 }
-const gridTextHelper = new GridTextHelper();
+// export const gridTextHelper = new GridTextHelper();
 /* harmony default export */ const grid_GridTextHelper = (GridTextHelper);
 
 ;// ./src/shader/ShaderManager.ts

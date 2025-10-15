@@ -193,14 +193,6 @@ class AstroSphere {
 
         if (mousePoint && mousePoint.length > 0) {
           this.mouseHelper.update(mousePoint)
-          console.log('EMIT HERE')
-          // this.emit('coordsUpdate', {
-          //   raDeg: this.mouseHelper.raDecDeg.ra,
-          //   decDeg: this.mouseHelper.raDecDeg.dec,
-          //   raHMS: this.mouseHelper.raHMS,
-          //   decDMS: this.mouseHelper.decDMS,
-          // })
-
           this.updateLastMousePoint()
         }
       }
@@ -369,9 +361,7 @@ class AstroSphere {
       if (Math.abs(this.zoomInertia) > 0.0001) {
         this.camera.zoom(this.zoomInertia)
         this.zoomInertia *= 0.95
-        // console.log('EMIT HERE (fovUpdate)')
         this.fov = healpixGridSingleton.refreshFoV()
-        // this.getFoV()
       }
     }
 
@@ -417,7 +407,7 @@ class AstroSphere {
       const raDecDeg = sphericalToAstroDeg(phiTheta.phi, phiTheta.theta)
       const raHMS = raDegToHMS(raDecDeg.ra)
       const decDMS = decDegToDMS(raDecDeg.dec)
-      console.log('EMIT HERE (startup coords)', {
+      console.log('(startup coords)', {
         raDeg: raDecDeg.ra,
         decDeg: raDecDeg.dec,
         raHMS,

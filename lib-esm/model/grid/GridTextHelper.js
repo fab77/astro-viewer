@@ -87,6 +87,6 @@ class GridTextHelper {
         divSet.textNode.nodeValue = msg;
     }
 }
-export const gridTextHelper = new GridTextHelper();
+// export const gridTextHelper = new GridTextHelper();
 export default GridTextHelper;
 //# sourceMappingURL=GridTextHelper.js.map

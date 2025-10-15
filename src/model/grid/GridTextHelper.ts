@@ -110,5 +110,5 @@ class GridTextHelper {
   }
 }
 
-export const gridTextHelper = new GridTextHelper();
+// export const gridTextHelper = new GridTextHelper();
 export default GridTextHelper;
