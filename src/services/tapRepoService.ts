@@ -25,7 +25,7 @@ export async function addTAPRepo(repoUrl: string): Promise<TapRepo> {
 
   const datasets = await loadTables(repoUrl, tapRepo)
   tapRepo.setCataloguesList(datasets.catalogueList)
-  // tapRepo.setObservationsList(datasets.obsList)
+  tapRepo.setObservationsList(datasets.obsList)
   tapRepo.setNotClassifiedList(datasets.notClassifiedList)
 
   return tapRepo
@@ -107,7 +107,7 @@ const loadTables = async (tapUrl: string, tapRepo: TapRepo): Promise<TapDatasets
         }
         if (dataset.footprint) {
           ; (dataset.footprint as any).id = obsId++
-          // obsList.push(dataset.footprint)
+          obsList.push(dataset.footprint)
         }
         if (dataset.notClassified) {
           notClassifiedList.push(dataset.notClassified)
@@ -215,7 +215,7 @@ const parseTable = (tableNode: Element, tablesUrl: string, tapRepo: TapRepo): Ta
   let notClassified: string | null = null
 
   if (tapMetas.pgSphereMetaColumns.length > 0 || tapMetas.sRegionMetaColumns.length > 0) {
-    // footprint = new FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas)
+    footprint = new FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas)
   } else if (tapMetas.posEqRAMetaColumns.length > 0 && tapMetas.posEqDecMetaColumns.length > 0) {
     catalogue = new CatalogueGL(tableName, tableDesc, tapRepo, tapMetas)
   } else {

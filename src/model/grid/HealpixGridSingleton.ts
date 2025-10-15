@@ -333,7 +333,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     mvpMatrix = mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
 
     // FIX: pass model & pMatrix to match FoVUtils TS signature
-    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, pMatrix);
+    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement);
 
     const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
 

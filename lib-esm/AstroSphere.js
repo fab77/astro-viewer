@@ -11,6 +11,7 @@ import HiPS from './model/hips/HiPS.js';
 import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.js';
 import FoVUtils from './utils/FoVUtils.js';
 import queryCatalogueByFoV from './services/queryCatalogueByFoV.js';
+import queryFootprintSetByFov from './services/queryFootprintSetByFov.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -32,6 +33,7 @@ class AstroSphere {
     // private insideSphere: boolean
     fov;
     activeCatalogues = [];
+    activeFootprintSets = [];
     constructor(canvas, webgl) {
         // Keep global GL context (as in original JS)
         global.gl = webgl;
@@ -171,6 +173,7 @@ class AstroSphere {
     activateHiPS(hipsDescriptor) {
         this.activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor);
     }
+    // Catalogue section
     async showCatalogue(catalogue) {
         const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton);
         const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro); // -> "POLYGON('ICRS', ra1, dec1, ...)"
@@ -195,11 +198,32 @@ class AstroSphere {
     setCatalogueShapeSize(catalogue, metadataColumnName) {
         catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
     }
+    // End Catalogue section
+    // Footprint section
+    async showFootprintSet(footprintSet) {
+        const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton);
+        const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro); // -> "POLYGON('ICRS', ra1, dec1, ...)"
+        const centralPoint = FoVUtils.getCenterJ2000(this.canvas);
+        const fset = await queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint);
+        console.log(fset);
+        if (fset)
+            this.activeFootprintSets.push(fset);
+        return fset;
+    }
+    hideFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteFootprintSet(footprintSet) {
+        this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
+    }
+    changeFootprintSetColor(footprintSet, hexColor) {
+        footprintSet.footprintsetProps.changeColor(hexColor);
+    }
+    // End Footprint section
     goTo(raDeg, decDeg) {
         this.camera.goTo(raDeg, decDeg);
     }
     getFoV() {
-        // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
         return this.fov;
     }
     getFoVPolygon() {
@@ -303,13 +327,14 @@ class AstroSphere {
         }
         this.activeCatalogues.forEach(cat => {
             if (this.activeHiPS) {
-                // TODO test it using the healpixSingleton
                 cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper);
-                // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
             }
         });
-        // this.updateLastMousePoint()
-        // this.updateCentralPoint()
+        this.activeFootprintSets.forEach(fst => {
+            if (this.activeHiPS) {
+                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper);
+            }
+        });
     }
 }
 export default AstroSphere;

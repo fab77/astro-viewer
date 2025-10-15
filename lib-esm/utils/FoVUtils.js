@@ -128,7 +128,7 @@ class FoVUtils {
         return out;
     }
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas, pMatrix) {
+    static getCenterJ2000(canvas) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
         const center = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2);

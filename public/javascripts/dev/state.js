@@ -7,6 +7,8 @@ export const LS_KEYS = {
   catHueBy: 'dev_cat_hueby',
   catColor: 'dev_cat_color',
   insideSphere: 'dev_inside_sphere',
+  fpVis: 'dev_fp_visibility',
+  fpColor: 'dev_fp_color',
 };
 
 export const state = {
@@ -18,6 +20,8 @@ export const state = {
   CAT_SIZEBY: new Map(),  // catalogueKey -> columnName
   CAT_HUEBY: new Map(),   // catalogueKey -> columnName
   CAT_COLOR: new Map(),   // catalogueKey -> "#RRGGBB"
+  FP_VIS: new Map(),     // footprintKey -> boolean
+  FP_COLOR: new Map(),   // footprintKey -> "#RRGGBB"
 };
 
 export function catalogueKey(c) {
@@ -49,6 +53,11 @@ export function loadPersisted() {
     const colors = JSON.parse(localStorage.getItem(LS_KEYS.catColor) || '{}');
     Object.entries(colors).forEach(([k, v]) => state.CAT_COLOR.set(k, v));
 
+    const fpVis = JSON.parse(localStorage.getItem(LS_KEYS.fpVis) || '{}');
+    Object.entries(fpVis).forEach(([k, v]) => state.FP_VIS.set(k, !!v));
+    const fpCol = JSON.parse(localStorage.getItem(LS_KEYS.fpColor) || '{}');
+    Object.entries(fpCol).forEach(([k, v]) => state.FP_COLOR.set(k, v));
+
   } catch { }
 }
 
@@ -64,5 +73,7 @@ export function persistBasic() {
     localStorage.setItem(LS_KEYS.catSizeBy, JSON.stringify(Object.fromEntries(state.CAT_SIZEBY)));
     localStorage.setItem(LS_KEYS.catHueBy, JSON.stringify(Object.fromEntries(state.CAT_HUEBY)));
     localStorage.setItem(LS_KEYS.catColor, JSON.stringify(Object.fromEntries(state.CAT_COLOR)));
+    localStorage.setItem(LS_KEYS.fpVis,   JSON.stringify(Object.fromEntries(state.FP_VIS)));
+    localStorage.setItem(LS_KEYS.fpColor, JSON.stringify(Object.fromEntries(state.FP_COLOR)));
   } catch { }
 }

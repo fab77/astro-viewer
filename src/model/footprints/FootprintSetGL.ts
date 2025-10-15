@@ -8,6 +8,7 @@ import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMat
 import { TapRepo } from '../tap/TapRepo.js'
 import TapMetadataList from '../tap/TapMetadataList.js'
 import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
+import TapMetadata from '../tap/TapMetadata.js'
 
 type GL = WebGL2RenderingContext;
 
@@ -189,12 +190,20 @@ class FootprintSetGL {
   //   }
   //   return shader
   // }
+  
+  public setIsVisible(visibility: boolean) {
+    this._isVisible = visibility
+  }
+
+  get isVisible() {
+    return this._isVisible
+  }
 
   addFootprint(in_footprint: Footprint): void {
     this.footprintPolygons.push(in_footprint)
   }
 
-  addFootprints(in_data: any[]): void {
+  addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void {
     this.ready = false
     const geomDataIndex = this.footprintsetProps.geomColumn?.index
     if (geomDataIndex === undefined) {
@@ -311,9 +320,6 @@ class FootprintSetGL {
   //   this.gl.uniformMatrix4fv(catUniformProjMatrixLoc, false, pMatrix as Float32Array)
   //   this.gl.uniform1f(pointsize, 14.0)
   // }
-  get isVisible() {
-    return this._isVisible
-  }
 
   draw(in_mMatrix: mat4, in_mouseHelper: any): void {
     if (!this.isVisible) return

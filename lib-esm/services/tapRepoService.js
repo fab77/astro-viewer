@@ -4,6 +4,7 @@ import TapMetadata from '../model/tap/TapMetadata.js';
 import TapMetadataList from '../model/tap/TapMetadataList.js';
 import global from '../Global.js';
 import CatalogueGL from '../model/catalogues/CatalogueGL.js';
+import FootprintSetGL from '../model/footprints/FootprintSetGL.js';
 let catId = 1;
 let obsId = 1;
 /**
@@ -14,7 +15,7 @@ export async function addTAPRepo(repoUrl) {
     tapRepo.adqlFunctionList = await loadCapabilities(repoUrl);
     const datasets = await loadTables(repoUrl, tapRepo);
     tapRepo.setCataloguesList(datasets.catalogueList);
-    // tapRepo.setObservationsList(datasets.obsList)
+    tapRepo.setObservationsList(datasets.obsList);
     tapRepo.setNotClassifiedList(datasets.notClassifiedList);
     return tapRepo;
 }
@@ -86,7 +87,7 @@ const loadTables = async (tapUrl, tapRepo) => {
                 if (dataset.footprint) {
                     ;
                     dataset.footprint.id = obsId++;
-                    // obsList.push(dataset.footprint)
+                    obsList.push(dataset.footprint);
                 }
                 if (dataset.notClassified) {
                     notClassifiedList.push(dataset.notClassified);
@@ -177,7 +178,7 @@ const parseTable = (tableNode, tablesUrl, tapRepo) => {
     let footprint = null;
     let notClassified = null;
     if (tapMetas.pgSphereMetaColumns.length > 0 || tapMetas.sRegionMetaColumns.length > 0) {
-        // footprint = new FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas)
+        footprint = new FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas);
     }
     else if (tapMetas.posEqRAMetaColumns.length > 0 && tapMetas.posEqDecMetaColumns.length > 0) {
         catalogue = new CatalogueGL(tableName, tableDesc, tapRepo, tapMetas);

@@ -3,6 +3,7 @@ import FootprintProps from './FootprintProps.js';
 import { mat4 } from 'gl-matrix';
 import { TapRepo } from '../tap/TapRepo.js';
 import TapMetadataList from '../tap/TapMetadataList.js';
+import TapMetadata from '../tap/TapMetadata.js';
 type GL = WebGL2RenderingContext;
 declare class FootprintSetGL {
     static ELEM_SIZE: number;
@@ -45,11 +46,12 @@ declare class FootprintSetGL {
     constructor(tablename: string, tabledesc: string, tapRepo: TapRepo, tapMetadataList: TapMetadataList);
     private initFootprintArrays;
     private initGLBuffers;
+    setIsVisible(visibility: boolean): void;
+    get isVisible(): boolean;
     addFootprint(in_footprint: Footprint): void;
-    addFootprints(in_data: any[]): void;
+    addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void;
     clearFootprints(): void;
     private initBuffer;
-    get isVisible(): boolean;
     draw(in_mMatrix: mat4, in_mouseHelper: any): void;
 }
 export default FootprintSetGL;

@@ -1,0 +1,96 @@
+import healpixGridSingleton from '../model/grid/HealpixGridSingleton.js';
+import TapMetadata from '../model/tap/TapMetadata.js';
+import TapMetadataList from '../model/tap/TapMetadataList.js';
+import { queryAsync } from './tapRepoService.js';
+// Optional timeout; adjust or remove if you don’t use timeouts.
+const TAP_QUERY_TIMEOUT_MS = 60_000;
+// --- Function ---
+// Small helpers to be robust with slightly different metadata shapes
+function getColName(col) {
+    if (!col)
+        return '';
+    return (col.name ?? col.name ?? '').toString();
+}
+function prepareADQL(tapTable, tapRa, tapDec, polygonAdql, tapRepo, centralPoint) {
+    let adql = "";
+    if (tapRepo.adqlFunctionList.includes('POLYGON')) {
+        adql =
+            'select * from ' +
+                tapTable +
+                ' where 1=CONTAINS(POINT(\'ICRS\',' +
+                tapRa +
+                ',' +
+                tapDec +
+                '), POLYGON(\'ICRS\', ' +
+                polygonAdql +
+                '))';
+    }
+    else {
+        const radius = healpixGridSingleton.getMinFoV() / 2;
+        adql =
+            'select * from ' +
+                tapTable +
+                ' where 1=CONTAINS(POINT(\'ICRS\',' +
+                tapRa +
+                ',' +
+                tapDec +
+                '), CIRCLE(\'ICRS\', ' +
+                centralPoint.raDeg +
+                ', ' +
+                centralPoint.decDeg +
+                ', ' +
+                radius +
+                '))';
+    }
+    return adql;
+}
+/**
+ * Builds an ADQL query from current FoV and fetches footprints.
+ * Returns the enriched FootprintSet (if any rows were found), otherwise undefined.
+ */
+export default async function queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint) {
+    try {
+        // Resolve RA/Dec column names (CatalogueProps already picked them from metadata)
+        const raCol = getColName(footprintSet.footprintsetProps.raColumn);
+        const decCol = getColName(footprintSet.footprintsetProps.decColumn);
+        const tapTable = footprintSet.name;
+        if (!raCol || !decCol) {
+            console.warn('[queryCatalogueByFoV] RA/Dec columns were not resolved from metadata.');
+            return;
+        }
+        const adql = prepareADQL(tapTable, raCol, decCol, polygonAdql, footprintSet.tapRepo, centralPoint);
+        const rows = await queryAsync(footprintSet.tapRepo, adql, TAP_QUERY_TIMEOUT_MS);
+        console.log(rows);
+        // if (rows && rows.data.length > 0) {
+        // const metadata = rows.metadata
+        // const data = rows.data
+        if (typeof rows === 'object' &&
+            rows !== null &&
+            Array.isArray(rows.metadata) &&
+            Array.isArray(rows.data)) {
+            const { metadata, data } = rows;
+            const tapMetadataList = new TapMetadataList();
+            for (const m of metadata) {
+                const tapMeta = new TapMetadata(m.name, m.description ?? undefined, m.unit ?? undefined, m.datatype ?? undefined, m.ucd ?? undefined, m.utype ?? undefined);
+                tapMetadataList.addMetadata(tapMeta);
+            }
+            if (data.length > 0) {
+                footprintSet.addFootprints(data, tapMetadataList.metadataList);
+                return footprintSet;
+            }
+            else {
+                console.log('No results found');
+            }
+            // }
+        }
+        else {
+            console.log('[queryFootprintSetByFov] No results found.');
+            return;
+        }
+    }
+    catch (err) {
+        console.error('[queryFootprintSetByFov] Error:', err?.message ?? err);
+        return;
+    }
+}
+//# sourceMappingURL=queryFootprintSetByFov.js.map

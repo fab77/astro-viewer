@@ -143,10 +143,16 @@ class FootprintSetGL {
     //   }
     //   return shader
     // }
+    setIsVisible(visibility) {
+        this._isVisible = visibility;
+    }
+    get isVisible() {
+        return this._isVisible;
+    }
     addFootprint(in_footprint) {
         this.footprintPolygons.push(in_footprint);
     }
-    addFootprints(in_data) {
+    addFootprints(in_data, columnsmeta) {
         this.ready = false;
         const geomDataIndex = this.footprintsetProps.geomColumn?.index;
         if (geomDataIndex === undefined) {
@@ -244,9 +250,6 @@ class FootprintSetGL {
     //   this.gl.uniformMatrix4fv(catUniformProjMatrixLoc, false, pMatrix as Float32Array)
     //   this.gl.uniform1f(pointsize, 14.0)
     // }
-    get isVisible() {
-        return this._isVisible;
-    }
     draw(in_mMatrix, in_mouseHelper) {
         if (!this.isVisible)
             return;

@@ -3,6 +3,7 @@ import { FoV } from './model/FoV.js';
 import Point from './model/Point.js';
 import CatalogueGL from './model/catalogues/CatalogueGL.js';
 import type { PointCoordinates } from './AstroSphere.js';
+import FootprintSetGL from './model/footprints/FootprintSetGL.js';
 export declare class AstroCore {
     private astroSphere;
     private canvas;
@@ -15,6 +16,10 @@ export declare class AstroCore {
     changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): void;
     setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): void;
     setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): void;
+    showFootprintSet(footprintSet: FootprintSetGL): void;
+    hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean): void;
+    deleteFootprintSet(footprintSet: FootprintSetGL): void;
+    changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string): void;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     goTo(raDeg: number, decDeg: number): void;
     getCenterCoordinates(): PointCoordinates | undefined;

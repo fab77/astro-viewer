@@ -3,6 +3,7 @@ import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
 import Point from './model/Point.js';
 import CatalogueGL from './model/catalogues/CatalogueGL.js';
+import FootprintSetGL from './model/footprints/FootprintSetGL.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -29,6 +30,7 @@ declare class AstroSphere {
     private startup;
     private fov;
     private activeCatalogues;
+    private activeFootprintSets;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private updateCentralPoint;
     private updateLastMousePoint;
@@ -45,6 +47,10 @@ declare class AstroSphere {
     changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): void;
     setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): void;
     setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): void;
+    showFootprintSet(footprintSet: FootprintSetGL): Promise<FootprintSetGL | undefined>;
+    hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean): void;
+    deleteFootprintSet(footprintSet: FootprintSetGL): void;
+    changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string): void;
     goTo(raDeg: number, decDeg: number): void;
     getFoV(): FoV;
     getFoVPolygon(): Point[];

@@ -113,11 +113,27 @@
 
 
                 <label>Footprints / Observations</label>
-                <div class="row">
+
+                <!-- quick actions + filter -->
+                <div class="ctrlrow">
+                    <input id="fpFilter" type="search" placeholder="Filter footprint sets by name…" />
+                    <button id="btnShowAllFp" class="secondary" title="Show all filtered">Show all</button>
+                    <button id="btnHideAllFp" class="secondary" title="Hide all filtered">Hide all</button>
+                </div>
+
+                <!-- manager table -->
+                <div id="fpTableWrap" class="scrollbox"
+                    style="max-height:220px; overflow:auto; border:1px solid #333; border-radius:10px; margin-top:6px;">
+                    <table id="fpTable" class="table"></table>
+                </div>
+
+                <!-- keep single-select quick controls -->
+                <div class="row" style="margin-top:6px;">
                     <select id="footprints"></select>
                     <button id="btnShowFp">Show</button>
                     <button id="btnHideFp" class="secondary">Hide</button>
                 </div>
+                <div class="hint">Tip: per-row colour, visibility, and delete are available in the table above.</div>
             </div>
         </details>
 

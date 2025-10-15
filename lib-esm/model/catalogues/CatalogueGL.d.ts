@@ -4,6 +4,7 @@ import { mat4 } from 'gl-matrix';
 import MouseHelper from '../../utils/MouseHelper.js';
 import { TapRepo } from '../tap/TapRepo.js';
 import TapMetadataList from '../tap/TapMetadataList.js';
+import TapMetadata from '../tap/TapMetadata.js';
 type GL = WebGL2RenderingContext;
 declare class CatalogueGL {
     static ELEM_SIZE: number;
@@ -43,7 +44,7 @@ declare class CatalogueGL {
      * @param in_data Rows of TAP results
      * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
      */
-    addSources(in_data: any[][], columnsmeta: any): void;
+    addSources(in_data: any[][], columnsmeta: TapMetadata[]): void;
     clearSources(): void;
     extHighlightSource(source: Source, highlighted: boolean): void;
     extAddSources2Selected(sources: Source[]): void;

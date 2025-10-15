@@ -27,6 +27,8 @@ import Point from './model/Point.js'
 import FoVUtils from './utils/FoVUtils.js'
 import queryCatalogueByFoV from './services/queryCatalogueByFoV.js'
 import CatalogueGL from './model/catalogues/CatalogueGL.js'
+import FootprintSetGL from './model/footprints/FootprintSetGL.js'
+import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -63,6 +65,7 @@ class AstroSphere {
   private fov: FoV
 
   private activeCatalogues: CatalogueGL[] = []
+  private activeFootprintSets: FootprintSetGL[] = []
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     // Keep global GL context (as in original JS)
@@ -244,7 +247,7 @@ class AstroSphere {
     )
   }
 
-
+  // Catalogue section
   async showCatalogue(catalogue: CatalogueGL) {
     const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
     const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
@@ -273,13 +276,39 @@ class AstroSphere {
   setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string) {
     catalogue.changeCatalogueMetaShapeSize(metadataColumnName)
   }
+  // End Catalogue section
+
+  // Footprint section
+  async showFootprintSet(footprintSet: FootprintSetGL) {
+    const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
+    const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
+    const centralPoint = FoVUtils.getCenterJ2000(this.canvas)
+
+    const fset = await queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint)
+    console.log(fset)
+    if (fset) this.activeFootprintSets.push(fset)
+    return fset
+  }
+
+  hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean) {
+    footprintSet.setIsVisible(isVisible)
+  }
+
+  deleteFootprintSet(footprintSet: FootprintSetGL) {
+    this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
+  }
+
+  changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {
+    footprintSet.footprintsetProps.changeColor(hexColor)
+  }
+  // End Footprint section
+
 
   goTo(raDeg: number, decDeg: number): void {
     this.camera.goTo(raDeg, decDeg)
   }
 
   getFoV(): FoV {
-    // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
     return this.fov
   }
 
@@ -293,8 +322,8 @@ class AstroSphere {
     // this.camera.moveAlongView(distance)
     this.camera.translate(distance)
     healpixGridSingleton.refreshFoV()
-
   }
+  
   changeFoV2(deg: number) {
     // throw new Error("not Implemented")
     const newCameraPos = healpixGridSingleton.getFoV().computeCameraPositionForFoV(deg)
@@ -411,13 +440,14 @@ class AstroSphere {
 
     this.activeCatalogues.forEach(cat => {
       if (this.activeHiPS) {
-        // TODO test it using the healpixSingleton
         cat.draw(this.activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper)
-        // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
       }
     })
-    // this.updateLastMousePoint()
-    // this.updateCentralPoint()
+    this.activeFootprintSets.forEach(fst => {
+      if (this.activeHiPS) {
+        fst.draw(this.activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper)
+      }
+    })
 
 
   }

@@ -52,7 +52,6 @@ class CatalogueGL {
         this.sources = [];
         // GL init
         this.gl = global.gl;
-        // this.shaderProgram = this.gl.createProgram() as WebGLProgram;
         this.vertexCataloguePositionBuffer = this.gl.createBuffer();
         this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
         this.vertexCataloguePosition = new Float32Array(0);
@@ -211,8 +210,6 @@ class CatalogueGL {
             if (i >= 0)
                 this.extHoveredIndexes.splice(i, 1);
         }
-        // const hoveredSources = this.extHoveredIndexes.map(i => this.sources[i]);
-        // session.updateHoveredSources(this, hoveredSources);
     }
     extAddSources2Selected(sources) {
         for (const s of sources) {
@@ -322,20 +319,6 @@ class CatalogueGL {
         // session.updateHoveredSources(this, sourcesHovered);
         return hoveredIndexes;
     }
-    // private enableShader(in_mMatrix: mat4) {
-    //     this.gl.useProgram(this.shaderProgram);
-    //     const mvLoc = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
-    //     const projLoc = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
-    //     const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-    //     let mvMatrix = mat4.create();
-    //     if (global.camera == null) {
-    //         console.warn('CatalogueGL.enableShader: missing global.camera');
-    //         return;
-    //     }
-    //     mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix);
-    //     this.gl.uniformMatrix4fv(mvLoc, false, mvMatrix as Float32Array);
-    //     this.gl.uniformMatrix4fv(projLoc, false, pMatrix as Float32Array);
-    // }
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
@@ -346,38 +329,23 @@ class CatalogueGL {
             return;
         if (!global.camera)
             return;
-        // this.enableShader(in_mMatrix);
         catalogueShaderProgram.enableShaders(computePerspectiveMatrixSingleton.pMatrix, in_mMatrix, global.camera.getCameraMatrix());
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
         // positions
-        this.gl.vertexAttribPointer(
-        // this.attribLocations.position,
-        catalogueShaderProgram.locations.position, 3, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
-        // this.gl.enableVertexAttribArray(this.attribLocations.position);
+        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.position, 3, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.position);
         // hovered flag
-        this.gl.vertexAttribPointer(
-        // this.attribLocations.hovered,
-        catalogueShaderProgram.locations.hovered, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
-        // this.gl.enableVertexAttribArray(this.attribLocations.hovered);
+        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.hovered, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.hovered);
         // point size
-        this.gl.vertexAttribPointer(
-        // this.attribLocations.pointSize,
-        catalogueShaderProgram.locations.pointSize, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
-        // this.gl.enableVertexAttribArray(this.attribLocations.pointSize);
+        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.pointSize, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.pointSize);
         // brightness
-        this.gl.vertexAttribPointer(
-        // this.attribLocations.brightness,
-        catalogueShaderProgram.locations.brightness, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
-        // this.gl.enableVertexAttribArray(this.attribLocations.brightness);
+        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.brightness, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.brightness);
         // color
         const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
-        // if (this.attribLocations.color) {
         if (catalogueShaderProgram.locations.color) {
-            // this.gl.uniform4f(this.attribLocations.color, rgb[0], rgb[1], rgb[2], 1.0);
             this.gl.uniform4f(catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
         }
         // Hover logic on mouse move

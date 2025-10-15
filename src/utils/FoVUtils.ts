@@ -249,10 +249,7 @@ class FoVUtils {
   }
 
   /** Returns the center point (in J2000) of the current view as a `Point`. */
-  static getCenterJ2000(
-    canvas: HTMLCanvasElement,
-    pMatrix: ReadonlyMat4
-  ): Point {
+  static getCenterJ2000(canvas: HTMLCanvasElement): Point {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
 

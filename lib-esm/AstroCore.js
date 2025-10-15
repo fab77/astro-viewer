@@ -29,6 +29,19 @@ export class AstroCore {
     setCatalogueShapeSize(catalogue, metadataColumnName) {
         this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);
     }
+    //FOOTPRINT
+    showFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideFootprintSet(footprintSet, isVisible) {
+        this.astroSphere.hideFootprintSet(footprintSet, isVisible);
+    }
+    deleteFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    changeFootprintSetColor(footprintSet, hexColor) {
+        this.astroSphere.changeFootprintSetColor(footprintSet, hexColor);
+    }
     // HIPS
     activateHiPS(hipsDescriptor) {
         this.astroSphere.activateHiPS(hipsDescriptor);

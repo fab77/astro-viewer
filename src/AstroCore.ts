@@ -6,6 +6,7 @@ import { FoV } from './model/FoV.js'
 import Point from './model/Point.js'
 import CatalogueGL from './model/catalogues/CatalogueGL.js'
 import type {PointCoordinates} from './AstroSphere.js'
+import FootprintSetGL from './model/footprints/FootprintSetGL.js'
 type GL2WithViewport = WebGL2RenderingContext & {
   viewportWidth: number
   viewportHeight: number
@@ -46,6 +47,22 @@ export class AstroCore {
   setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string) {
     this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName)
   }
+
+  //FOOTPRINT
+  showFootprintSet(footprintSet: FootprintSetGL) {
+    this.astroSphere.showFootprintSet(footprintSet)
+  }
+  hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean) {
+    this.astroSphere.hideFootprintSet(footprintSet, isVisible)
+  }
+  deleteFootprintSet(footprintSet: FootprintSetGL) {
+    this.astroSphere.deleteFootprintSet(footprintSet)
+  }
+
+  changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {
+    this.astroSphere.changeFootprintSetColor(footprintSet, hexColor)
+  }
+
 
   // HIPS
   activateHiPS(hipsDescriptor: HiPSDescriptor): void {

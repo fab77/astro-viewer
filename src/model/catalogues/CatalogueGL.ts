@@ -11,6 +11,7 @@ import MouseHelper from '../../utils/MouseHelper.js';
 import { TapRepo } from '../tap/TapRepo.js';
 import TapMetadataList from '../tap/TapMetadataList.js';
 import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
+import TapMetadata from '../tap/TapMetadata.js';
 
 // ---- Minimal typings for external classes you already have ----
 type GL = WebGL2RenderingContext;
@@ -215,7 +216,7 @@ class CatalogueGL {
      * @param in_data Rows of TAP results
      * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
      */
-    addSources(in_data: any[][], columnsmeta: any) {
+    addSources(in_data: any[][], columnsmeta: TapMetadata[]) {
         this.ready = false;
         this.sources = []
 

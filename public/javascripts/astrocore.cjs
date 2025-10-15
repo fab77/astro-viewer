@@ -5914,7 +5914,7 @@ class FoVUtils {
         return out;
     }
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas, pMatrix) {
+    static getCenterJ2000(canvas) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
         const center = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2);
@@ -9006,7 +9006,7 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
         let mvpMatrix = mat4_create();
         mvpMatrix = mat4_multiply(mvpMatrix, pMatrix, mvMatrix);
         // FIX: pass model & pMatrix to match FoVUtils TS signature
-        const center = utils_FoVUtils.getCenterJ2000(gl.canvas, pMatrix);
+        const center = utils_FoVUtils.getCenterJ2000(gl.canvas);
         const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
         for (let p = 0; p < pixels.length; p++) {
             const pixCenter = src_Global.getHealpix(this._visibleorder).pix2vec(pixels[p]);
@@ -10971,7 +10971,6 @@ class CatalogueGL {
         this.sources = [];
         // GL init
         this.gl = src_Global.gl;
-        // this.shaderProgram = this.gl.createProgram() as WebGLProgram;
         this.vertexCataloguePositionBuffer = this.gl.createBuffer();
         this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
         this.vertexCataloguePosition = new Float32Array(0);
@@ -11130,8 +11129,6 @@ class CatalogueGL {
             if (i >= 0)
                 this.extHoveredIndexes.splice(i, 1);
         }
-        // const hoveredSources = this.extHoveredIndexes.map(i => this.sources[i]);
-        // session.updateHoveredSources(this, hoveredSources);
     }
     extAddSources2Selected(sources) {
         for (const s of sources) {
@@ -11241,20 +11238,6 @@ class CatalogueGL {
         // session.updateHoveredSources(this, sourcesHovered);
         return hoveredIndexes;
     }
-    // private enableShader(in_mMatrix: mat4) {
-    //     this.gl.useProgram(this.shaderProgram);
-    //     const mvLoc = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
-    //     const projLoc = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
-    //     const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-    //     let mvMatrix = mat4.create();
-    //     if (global.camera == null) {
-    //         console.warn('CatalogueGL.enableShader: missing global.camera');
-    //         return;
-    //     }
-    //     mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix);
-    //     this.gl.uniformMatrix4fv(mvLoc, false, mvMatrix as Float32Array);
-    //     this.gl.uniformMatrix4fv(projLoc, false, pMatrix as Float32Array);
-    // }
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
@@ -11265,38 +11248,23 @@ class CatalogueGL {
             return;
         if (!src_Global.camera)
             return;
-        // this.enableShader(in_mMatrix);
         catalogueShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, src_Global.camera.getCameraMatrix());
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
         // positions
-        this.gl.vertexAttribPointer(
-        // this.attribLocations.position,
-        catalogueShaderProgram.locations.position, 3, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
-        // this.gl.enableVertexAttribArray(this.attribLocations.position);
+        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.position, 3, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.position);
         // hovered flag
-        this.gl.vertexAttribPointer(
-        // this.attribLocations.hovered,
-        catalogueShaderProgram.locations.hovered, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
-        // this.gl.enableVertexAttribArray(this.attribLocations.hovered);
+        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.hovered, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.hovered);
         // point size
-        this.gl.vertexAttribPointer(
-        // this.attribLocations.pointSize,
-        catalogueShaderProgram.locations.pointSize, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
-        // this.gl.enableVertexAttribArray(this.attribLocations.pointSize);
+        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.pointSize, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.pointSize);
         // brightness
-        this.gl.vertexAttribPointer(
-        // this.attribLocations.brightness,
-        catalogueShaderProgram.locations.brightness, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
-        // this.gl.enableVertexAttribArray(this.attribLocations.brightness);
+        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.brightness, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.brightness);
         // color
         const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
-        // if (this.attribLocations.color) {
         if (catalogueShaderProgram.locations.color) {
-            // this.gl.uniform4f(this.attribLocations.color, rgb[0], rgb[1], rgb[2], 1.0);
             this.gl.uniform4f(catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
         }
         // Hover logic on mouse move
@@ -11340,8 +11308,667 @@ class CatalogueGL {
 }
 /* harmony default export */ const catalogues_CatalogueGL = (CatalogueGL);
 
+;// ./src/utils/STCSParser.ts
+/**
+ * @author Fabrizio Giordano (Fab77)
+ */
+
+
+
+class STCSParser {
+    static parseSTCS(stcs) {
+        const stcsParsed = STCSParser.cleanStcs(stcs);
+        let totPoints = 0;
+        const polygons = [];
+        if (stcsParsed.includes("POLYGON")) {
+            return STCSParser.parsePolygon(stcsParsed);
+        }
+        else if (stcsParsed.includes("CIRCLE")) {
+            return STCSParser.parseCircle(stcsParsed);
+        }
+        else {
+            console.warn("STCS not recognised");
+        }
+        return { totpoints: totPoints, polygons };
+    }
+    static cleanStcs(stcs) {
+        // Uppercase once
+        let s = stcs.toUpperCase();
+        // Remove tokens
+        s = s
+            .replace(/'ICRS'/g, '')
+            .replace(/\bICRS\b/g, '')
+            .replace(/\bJ2000\b/g, '')
+            .replace(/\bUNION\b/g, '')
+            .replace(/\bTOPOCENTER\b/g, '');
+        // Remove parentheses
+        s = s.replace(/[()]/g, '');
+        // Collapse extra spaces and trim
+        s = s.replace(/ {2,}/g, ' ').trim();
+        return s;
+    }
+    static parsePolygon(stcs) {
+        let totPoints = 0;
+        const polygons = [];
+        const MAX_DECIMALS = src_Global.MAX_DECIMALS ?? 12;
+        const polys = stcs.split("POLYGON ");
+        for (let i = 1; i < polys.length; i++) {
+            const currPoly = [];
+            const points = polys[i].trim().split(" ");
+            // If first point is repeated as last, remove the duplicate
+            const p0 = Number(parseFloat(points[0]).toFixed(MAX_DECIMALS));
+            const p1 = Number(parseFloat(points[1]).toFixed(MAX_DECIMALS));
+            const plast0 = Number(parseFloat(points[points.length - 2]).toFixed(MAX_DECIMALS));
+            const plast1 = Number(parseFloat(points[points.length - 1]).toFixed(MAX_DECIMALS));
+            if (p0 === plast0 && p1 === plast1) {
+                points.splice(points.length - 2, 2);
+            }
+            if (points.length > 2) {
+                for (let p = 0; p < points.length - 1; p += 2) {
+                    const raDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
+                    const decDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
+                    const point = new model_Point({ raDeg, decDeg }, utils_CoordsType.ASTRO);
+                    currPoly.push(point);
+                    totPoints += 1;
+                }
+                polygons.push(currPoly);
+            }
+        }
+        return { totpoints: totPoints, polygons };
+    }
+    // Example format: "CIRCLE ICRS 8.739685 4.38147 0.027833"
+    static parseCircle(stcs) {
+        let totPoints = 0;
+        const polygons = [];
+        const polys = stcs.split("CIRCLE ");
+        for (let i = 1; i < polys.length; i++) {
+            const currPoly = [];
+            const tokens = polys[i].trim().split(" ");
+            const ra = Number(tokens[0]);
+            const dec = Number(tokens[1]);
+            const radius = Number(tokens[2]);
+            const POINTS_PER_QUADRANT = 6;
+            const npoints = POINTS_PER_QUADRANT * 4;
+            const alpha = (2 * Math.PI) / npoints;
+            // Generate points around the circle
+            for (let p = npoints; p > 0; p--) {
+                const curra = radius * Math.cos(p * alpha) + ra;
+                const curdec = radius * Math.sin(p * alpha) + dec;
+                const point = new model_Point({ raDeg: curra, decDeg: curdec }, utils_CoordsType.ASTRO);
+                currPoly.push(point);
+                totPoints += 1;
+            }
+            polygons.push(currPoly);
+        }
+        return { totpoints: totPoints, polygons };
+    }
+}
+/* harmony default export */ const utils_STCSParser = (STCSParser);
+
+;// ./src/model/footprints/Footprint.ts
+
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+
+
+
+
+
+// export interface ParsedSTCS {
+//   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
+//   totpoints: number;
+// }
+class Footprint {
+    _polygons = []; // array of polygons (-> array of points)
+    _convexPolygons = []; // convex polygons
+    _stcs; // STC-S string
+    _valid = false;
+    _details;
+    _totPoints = 0;
+    _totConvexPoints = 0;
+    _npix256;
+    _footprintsPointsOrder;
+    _selectionObj;
+    _identifier;
+    _center; // could be typed if you have a Point type
+    /**
+     * @param in_stcs STC-S representation of the footprint
+     * @param in_details optional metadata
+     * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
+     */
+    constructor(in_stcs, in_details = [], footprintsPointsOrder) {
+        if (in_stcs) {
+            this._stcs = in_stcs.toUpperCase();
+            this._details = in_details;
+            this._totPoints = 0;
+            this._totConvexPoints = 0;
+            this._footprintsPointsOrder = footprintsPointsOrder;
+            this.computePoints();
+            this.computeSelectionObject();
+            if (src_Global.healpix4footprints) {
+                this._npix256 = this.computeNpix256();
+            }
+            this._valid = true;
+        }
+        else {
+            this._details = [];
+        }
+    }
+    computeSelectionObject() {
+        this._selectionObj = utils_GeomUtils.computeSelectionObject(this._polygons);
+    }
+    /**
+     * Return array of HEALPix pixels covering the footprint
+     * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
+     */
+    computeNpix256() {
+        const healpix256 = new Healpix(src_Global.nsideForSelection);
+        const points = [];
+        for (const poly of this._convexPolygons) {
+            for (const currPoint of poly) {
+                const phiTheta = currPoint.computeHealpixPhiTheta();
+                const phiRad = degToRad(phiTheta.phi);
+                const thetaRad = degToRad(phiTheta.theta);
+                points.push(new Pointing(null, false, thetaRad, phiRad));
+            }
+        }
+        const rangeSet = healpix256.queryPolygonInclusive(points, 32);
+        return Array.from(rangeSet.r);
+    }
+    computePoints() {
+        const res = utils_STCSParser.parseSTCS(this._stcs);
+        this._polygons = res.polygons;
+        this._totPoints = res.totpoints;
+    }
+    get valid() {
+        return this._valid;
+    }
+    get totPoints() {
+        return this._totPoints;
+    }
+    get totConvexPoints() {
+        return this._totConvexPoints;
+    }
+    get polygons() {
+        return this._polygons;
+    }
+    get convexPolygons() {
+        return this._convexPolygons;
+    }
+    get identifier() {
+        return this._identifier;
+    }
+    get center() {
+        return this._center;
+    }
+    get pixels() {
+        return this._npix256;
+    }
+    get details() {
+        return this._details;
+    }
+}
+/* harmony default export */ const footprints_Footprint = (Footprint);
+
+;// ./src/model/footprints/FootprintProps.ts
+class FootprintProps {
+    // resolved columns
+    pgSphereColumn;
+    geomColumn;
+    raColumn;
+    decColumn;
+    nameColumn;
+    shapeColor;
+    tapMetadataList;
+    constructor(tapMetadataList, color) {
+        this.tapMetadataList = tapMetadataList;
+        this.shapeColor = color;
+        this.setPositionColumns(tapMetadataList);
+        this.nameColumn = this.setNameColumn(tapMetadataList);
+    }
+    setPositionColumns(tapMetadataList) {
+        // pgSphere
+        for (const meta of tapMetadataList.pgSphereMetaColumns) {
+            this.pgSphereColumn = meta;
+        }
+        // s_region (choose the 'pos.outline;obs.field' if available; otherwise first)
+        for (const meta of tapMetadataList.sRegionMetaColumns) {
+            if (meta.ucd && meta.ucd.includes('pos.outline;obs.field')) {
+                this.geomColumn = meta;
+                break;
+            }
+            if (!this.geomColumn) {
+                this.geomColumn = meta;
+            }
+        }
+        // RA (prefer meta.main)
+        for (const meta of tapMetadataList.posEqRAMetaColumns) {
+            if (meta.ucd && meta.ucd.includes('meta.main')) {
+                this.raColumn = meta;
+                break;
+            }
+            if (!this.raColumn) {
+                this.raColumn = meta;
+            }
+        }
+        // DEC (prefer meta.main) – supports both posEqDecMetaColumns and _posEqDecMetaColumns
+        const decList = tapMetadataList.posEqDecMetaColumns?.length
+            ? tapMetadataList.posEqDecMetaColumns
+            : tapMetadataList.posEqDecMetaColumns ?? [];
+        for (const meta of decList) {
+            if (meta.ucd && meta.ucd.includes('meta.main')) {
+                this.decColumn = meta;
+                break;
+            }
+            if (!this.decColumn) {
+                this.decColumn = meta;
+            }
+        }
+    }
+    setNameColumn(tapMetadataList) {
+        let nameColumn;
+        for (const meta of tapMetadataList.metadataList) {
+            if (meta.ucd?.includes('meta.id') && meta.ucd?.includes('meta.main')) {
+                nameColumn = meta;
+            }
+        }
+        return nameColumn;
+    }
+    changeColor(color) {
+        this.shapeColor = color;
+    }
+    changeMetaName(metacolumnName) {
+        const currentName = this.getMetaName(this.nameColumn);
+        if (currentName !== metacolumnName) {
+            for (const column of this.tapMetadataList.metadataList) {
+                if (this.getMetaName(column) === metacolumnName) {
+                    this.nameColumn = column;
+                    break;
+                }
+            }
+        }
+    }
+    // helper to normalize `name` / `_name`
+    getMetaName(meta) {
+        return meta?.name ?? meta?.name;
+    }
+}
+
+;// ./src/shader/FootprintShaderProgram.ts
+// HiPSShaderProgram.ts
+
+
+
+class FootprintShaderProgram {
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    gl_uniforms;
+    gl_attributes;
+    locations;
+    constructor() {
+        this.gl_uniforms = {
+            vertex_color: 'u_fragcolor',
+            m_perspective: 'uPMatrix',
+            m_model_view: 'uMVMatrix'
+        };
+        this.gl_attributes = {
+            vertex_pos: 'aCatPosition',
+            point_size: 'a_pointsize'
+        };
+        this.locations = {
+            pMatrix: null,
+            mvMatrix: null,
+            color: null,
+            position: -1,
+            pointSize: -1
+        };
+    }
+    get shaderProgram() {
+        if (!this._shaderProgram) {
+            const gl = src_Global.gl;
+            this._shaderProgram = gl.createProgram();
+            this.initShaders();
+        }
+        return this._shaderProgram;
+    }
+    initShaders() {
+        const gl = src_Global.gl;
+        const fragmentShaderStr = ShaderManager.footprintFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        console.log('FS log:', gl.getShaderInfoLog(this._fragmentShader) || 'ok');
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = ShaderManager.footprintVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vertexShaderStr);
+        gl.compileShader(this._vertexShader);
+        console.log('VS log:', gl.getShaderInfoLog(this._vertexShader) || 'ok');
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this.shaderProgram, this._vertexShader);
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this.shaderProgram);
+        this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.pointSize = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_size);
+        this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
+    }
+    enableShaders(pMatrix, modelMatrix, viewMatrix) {
+        const gl = src_Global.gl;
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
+        let mvMatrix = mat4_create();
+        mvMatrix = mat4_multiply(mvMatrix, viewMatrix, modelMatrix);
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
+    }
+}
+const footprintShaderProgram = new FootprintShaderProgram();
+
+;// ./src/model/footprints/FootprintSetGL.ts
+
+
+
+
+
+
+class FootprintSetGL {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    static CONVEXPOLY_ELEM_SIZE = 3;
+    ready;
+    footprintsetProps;
+    name;
+    description;
+    tapRepo;
+    footprintPolygons = [];
+    indexes;
+    totPoints;
+    totConvexPoints;
+    footprintsInPix256;
+    // attribLocations!: {
+    //   position: number | WebGLUniformLocation
+    //   selected: number
+    //   pointSize: number
+    //   color: number[] | WebGLUniformLocation
+    // }
+    gl;
+    // shaderProgram: WebGLProgram
+    vertexCataloguePositionBuffer;
+    vertexhoveredCataloguePositionBuffer;
+    indexBuffer;
+    hoveredVertexPositionBuffer;
+    hoveredIndexBuffer;
+    selectedVertexPositionBuffer;
+    selectedIndexBuffer;
+    vertexCataloguePosition;
+    nPrimitiveFlags;
+    hoveredIndexes;
+    selectedIndexes;
+    extHoveredIndexes;
+    oldMouseCoords;
+    healpixDensityMap;
+    hoveredFootprints = [];
+    hoveredIndex = [];
+    hoveredVertexPosition = [];
+    totHoveredPoints;
+    selectedFootprints = [];
+    selectedIndex = [];
+    selectedVertexPosition = [];
+    totSelectedPoints;
+    _isVisible = true;
+    constructor(tablename, tabledesc, tapRepo, tapMetadataList) {
+        this.ready = false;
+        this.TYPE = 'FOOTPRINT_SET';
+        this.name = tablename;
+        this.description = tabledesc;
+        this.tapRepo = tapRepo;
+        this.footprintsInPix256 = new Map();
+        this.initFootprintArrays();
+        if (!src_Global.gl) {
+            throw new Error('WebGL2RenderingContext is not initialized (global.gl is null)');
+        }
+        this.gl = src_Global.gl;
+        this.initGLBuffers();
+        // this.shaderProgram = this.gl.createProgram() as WebGLProgram
+        this.nPrimitiveFlags = 0;
+        this.oldMouseCoords = null;
+        const defaultColor = '#00fff2ff';
+        this.footprintsetProps = new FootprintProps(tapMetadataList, defaultColor);
+        footprintShaderProgram.shaderProgram;
+        // this.initShaders()
+    }
+    initFootprintArrays() {
+        this.footprintPolygons = [];
+        this.indexes = new Uint32Array();
+        this.vertexCataloguePosition = new Float32Array();
+        this.totPoints = 0;
+        this.totConvexPoints = 0;
+        this.extHoveredIndexes = [];
+        this.hoveredFootprints = [];
+        this.hoveredIndex = [];
+        this.hoveredVertexPosition = [];
+        this.totHoveredPoints = 0;
+        this.hoveredIndexes = [];
+        this.selectedFootprints = [];
+        this.selectedIndex = [];
+        this.selectedVertexPosition = [];
+        this.totSelectedPoints = 0;
+        this.selectedIndexes = [];
+    }
+    initGLBuffers() {
+        this.vertexCataloguePositionBuffer = this.gl.createBuffer();
+        this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
+        this.indexBuffer = this.gl.createBuffer();
+        this.hoveredVertexPositionBuffer = this.gl.createBuffer();
+        this.hoveredIndexBuffer = this.gl.createBuffer();
+        this.selectedVertexPositionBuffer = this.gl.createBuffer();
+        this.selectedIndexBuffer = this.gl.createBuffer();
+        // this.attribLocations = {
+        //   position: 0,
+        //   selected: 1,
+        //   pointSize: 2,
+        //   color: [0.0, 1.0, 0.0, 1.0]
+        // }
+    }
+    // private initShaders(): void {
+    //   const fragmentShader = this.loadShaderFromDOM('fpcat-shader-fs')
+    //   const vertexShader = this.loadShaderFromDOM('fpcat-shader-vs')
+    //   if (!fragmentShader || !vertexShader) {
+    //     throw new Error('Shader sources not found in DOM')
+    //   }
+    //   this.gl.attachShader(this.shaderProgram, vertexShader)
+    //   this.gl.attachShader(this.shaderProgram, fragmentShader)
+    //   this.gl.linkProgram(this.shaderProgram)
+    //   if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
+    //     throw new Error('Could not initialise shaders')
+    //   }
+    //   shaderUtility.useProgram(this.shaderProgram)
+    // }
+    // private loadShaderFromDOM(shaderId: string): WebGLShader | null {
+    //   const shaderScript = document.getElementById(shaderId) as HTMLScriptElement
+    //   if (!shaderScript) return null
+    //   let shaderSource = ''
+    //   let currentChild = shaderScript.firstChild
+    //   while (currentChild) {
+    //     if (currentChild.nodeType === Node.TEXT_NODE) {
+    //       shaderSource += currentChild.textContent
+    //     }
+    //     currentChild = currentChild.nextSibling
+    //   }
+    //   let shader: WebGLShader | null = null
+    //   if (shaderScript.type === 'x-shader/x-fragment') {
+    //     shader = this.gl.createShader(this.gl.FRAGMENT_SHADER)
+    //   } else if (shaderScript.type === 'x-shader/x-vertex') {
+    //     shader = this.gl.createShader(this.gl.VERTEX_SHADER)
+    //   }
+    //   if (!shader) return null
+    //   this.gl.shaderSource(shader, shaderSource)
+    //   this.gl.compileShader(shader)
+    //   if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+    //     console.error(this.gl.getShaderInfoLog(shader))
+    //     return null
+    //   }
+    //   return shader
+    // }
+    setIsVisible(visibility) {
+        this._isVisible = visibility;
+    }
+    get isVisible() {
+        return this._isVisible;
+    }
+    addFootprint(in_footprint) {
+        this.footprintPolygons.push(in_footprint);
+    }
+    addFootprints(in_data, columnsmeta) {
+        this.ready = false;
+        const geomDataIndex = this.footprintsetProps.geomColumn?.index;
+        if (geomDataIndex === undefined) {
+            throw new Error('geomColumn or its index is undefined in footprintsetProps');
+        }
+        for (let j = 0; j < in_data.length; j++) {
+            if (in_data[j][0] !== null) {
+                const footprint = new footprints_Footprint(in_data[j][geomDataIndex], in_data[j]);
+                if (footprint._valid) {
+                    this.addFootprint(footprint);
+                    this.totPoints += footprint.totPoints;
+                    this.totConvexPoints += footprint.totConvexPoints;
+                }
+            }
+        }
+        this.initBuffer();
+        this.ready = true;
+    }
+    clearFootprints() {
+        this.initFootprintArrays();
+    }
+    initBuffer() {
+        const nFootprints = this.footprintPolygons.length;
+        let npolygons = nFootprints - 1;
+        for (let j = 0; j < nFootprints; j++) {
+            npolygons += this.footprintPolygons[j].polygons.length - 1;
+        }
+        this.indexes = new Uint32Array(this.totPoints + npolygons + 1);
+        const MAX_UNSIGNED_INT = 0xffffffff;
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this.vertexCataloguePosition = new Float32Array(3 * this.totPoints);
+        let positionIndex = 0;
+        let vIdx = 0;
+        const R = 1.0;
+        this.nPrimitiveFlags = 0;
+        for (let j = 0; j < nFootprints; j++) {
+            const footprint = this.footprintPolygons[j];
+            const footprintPoly = footprint.polygons;
+            const identifier = footprint.identifier;
+            if (src_Global.healpix4footprints) {
+                if (footprint.pixels) {
+                    footprint.pixels.forEach((pix) => {
+                        if (this.footprintsInPix256.has(pix)) {
+                            const curr = this.footprintsInPix256.get(pix);
+                            if (!curr.includes(footprint)) {
+                                curr.push(footprint);
+                            }
+                        }
+                        else {
+                            this.footprintsInPix256.set(pix, [footprint]);
+                        }
+                    });
+                }
+            }
+            if (j > 0) {
+                this.indexes[vIdx++] = MAX_UNSIGNED_INT;
+                this.nPrimitiveFlags++;
+            }
+            for (const poly of footprintPoly) {
+                if (poly !== footprintPoly[0]) {
+                    this.indexes[vIdx++] = MAX_UNSIGNED_INT;
+                    this.nPrimitiveFlags++;
+                }
+                for (const point of poly) {
+                    this.vertexCataloguePosition[positionIndex++] = R * point.x;
+                    this.vertexCataloguePosition[positionIndex++] = R * point.y;
+                    this.vertexCataloguePosition[positionIndex++] = R * point.z;
+                    this.indexes[vIdx++] = Math.floor((positionIndex - 1) / 3);
+                }
+            }
+        }
+        this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
+        console.log('Buffer initialized');
+    }
+    // private enableShader(in_mMatrix: mat4): void {
+    //   this.gl.useProgram(this.shaderProgram)
+    //   const catUniformMVMatrixLoc = this.gl.getUniformLocation(
+    //     this.shaderProgram,
+    //     'uMVMatrix'
+    //   )
+    //   const catUniformProjMatrixLoc = this.gl.getUniformLocation(
+    //     this.shaderProgram,
+    //     'uPMatrix'
+    //   )
+    //   const pointsize = this.gl.getUniformLocation(this.shaderProgram, 'u_pointsize')
+    //   this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition')
+    //   this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor')!
+    //   const pMatrix = computePerspectiveMatrixSingleton.pMatrix
+    //   let mvMatrix = mat4.create()
+    //   if (!global.camera) {
+    //     throw new Error('Camera is not initialized (global.camera is null)')
+    //   }
+    //   mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix)
+    //   this.gl.uniformMatrix4fv(catUniformMVMatrixLoc, false, mvMatrix as Float32Array)
+    //   this.gl.uniformMatrix4fv(catUniformProjMatrixLoc, false, pMatrix as Float32Array)
+    //   this.gl.uniform1f(pointsize, 14.0)
+    // }
+    draw(in_mMatrix, in_mouseHelper) {
+        if (!this.isVisible)
+            return;
+        if (!this.ready)
+            return;
+        if (!src_Global.camera)
+            return;
+        footprintShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, src_Global.camera.getCameraMatrix());
+        // this.enableShader(in_mMatrix)
+        // TODO: integrate checkSelection, hovered & selected drawing logic here (similar to JS version)
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
+        this.gl.vertexAttribPointer(footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+        this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position);
+        // this.gl.vertexAttribPointer(
+        //   this.attribLocations.position as number,
+        //   FootprintSetGL.ELEM_SIZE,
+        //   this.gl.FLOAT,
+        //   false,
+        //   FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE,
+        //   0
+        // )
+        // this.gl.enableVertexAttribArray(this.attribLocations.position as number)
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.indexes, this.gl.STATIC_DRAW);
+        const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0];
+        this.gl.uniform4f(footprintShaderProgram.locations.color, ...shapeColor);
+        // this.gl.uniform4f(this.attribLocations.color as WebGLUniformLocation, ...shapeColor)
+        this.gl.drawElements(this.gl.LINE_LOOP, this.indexes.length, this.gl.UNSIGNED_INT, 0);
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
+        this.oldMouseCoords = in_mouseHelper.xyz;
+    }
+}
+/* harmony default export */ const footprints_FootprintSetGL = (FootprintSetGL);
+
 ;// ./src/services/tapRepoService.ts
 // addTAPRepo.ts
+
 
 
 
@@ -11357,7 +11984,7 @@ async function addTAPRepo(repoUrl) {
     tapRepo.adqlFunctionList = await loadCapabilities(repoUrl);
     const datasets = await loadTables(repoUrl, tapRepo);
     tapRepo.setCataloguesList(datasets.catalogueList);
-    // tapRepo.setObservationsList(datasets.obsList)
+    tapRepo.setObservationsList(datasets.obsList);
     tapRepo.setNotClassifiedList(datasets.notClassifiedList);
     return tapRepo;
 }
@@ -11429,7 +12056,7 @@ const loadTables = async (tapUrl, tapRepo) => {
                 if (dataset.footprint) {
                     ;
                     dataset.footprint.id = obsId++;
-                    // obsList.push(dataset.footprint)
+                    obsList.push(dataset.footprint);
                 }
                 if (dataset.notClassified) {
                     notClassifiedList.push(dataset.notClassified);
@@ -11520,7 +12147,7 @@ const parseTable = (tableNode, tablesUrl, tapRepo) => {
     let footprint = null;
     let notClassified = null;
     if (tapMetas.pgSphereMetaColumns.length > 0 || tapMetas.sRegionMetaColumns.length > 0) {
-        // footprint = new FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas)
+        footprint = new footprints_FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas);
     }
     else if (tapMetas.posEqRAMetaColumns.length > 0 && tapMetas.posEqDecMetaColumns.length > 0) {
         catalogue = new catalogues_CatalogueGL(tableName, tableDesc, tapRepo, tapMetas);
@@ -11532,18 +12159,9 @@ const parseTable = (tableNode, tablesUrl, tapRepo) => {
 };
 
 ;// ./src/services/queryCatalogueByFoV.ts
-// queryCatalogueByFoV.ts
 
 
 
-// export interface TapRepository {
-//   _tapBaseURL: string
-//   /**
-//    * Execute an ADQL query and return rows (each row is an array matching column order).
-//    * The second param is an optional timeout in ms.
-//    */
-//   queryAsync: (adql: string, timeoutMs?: number) => Promise<any[]>
-// }
 // Optional timeout; adjust or remove if you don’t use timeouts.
 const TAP_QUERY_TIMEOUT_MS = 60_000;
 // Small helpers to be robust with slightly different metadata shapes
@@ -11552,21 +12170,6 @@ function getColName(col) {
         return '';
     return (col.name ?? col.name ?? '').toString();
 }
-/**
- * Query a TAP table by the current Field-of-View and return a populated CatalogueGL
- * (or undefined if nothing found).
- *
- * @param tapRepo        TAP backend wrapper
- * @param tapTable       Fully qualified table name (e.g. schema.table)
- * @param tableDesc      Human description for UI
- * @param tapMetadata    Table metadata (UCDs etc.)
- */
-// export default async function queryCatalogueByFoV(
-//     tapRepo: TapRepo,
-//     tapTable: string,
-//     tableDesc: string,
-//     tapMetadata: TapMetadataList
-// ): Promise<CatalogueGL | undefined> {
 async function queryCatalogueByFoV(catalogue, polygonAdql) {
     try {
         // Resolve RA/Dec column names (CatalogueProps already picked them from metadata)
@@ -11577,10 +12180,7 @@ async function queryCatalogueByFoV(catalogue, polygonAdql) {
             console.warn('[queryCatalogueByFoV] RA/Dec columns were not resolved from metadata.');
             return;
         }
-        // const adql = `SELECT TOP 200 * FROM ${tapTable} WHERE 1 = CONTAINS(POINT('ICRS', ${raCol}, ${decCol}), POLYGON('ICRS',${polygonAdql}))`
         const adql = `SELECT * FROM ${tapTable} WHERE 1 = CONTAINS(POINT('ICRS', ${raCol}, ${decCol}), POLYGON('ICRS',${polygonAdql}))`;
-        // Keep it simple: query all columns. You can TOP/N limit here if needed.
-        // const adql = `SELECT * FROM ${tapTable} WHERE ${whereFoV}`
         // Fire the TAP query
         const rows = await queryAsync(catalogue.tapRepo, adql, TAP_QUERY_TIMEOUT_MS);
         console.log(rows);
@@ -11613,8 +12213,106 @@ async function queryCatalogueByFoV(catalogue, polygonAdql) {
     }
 }
 
+;// ./src/services/queryFootprintSetByFov.ts
+
+
+
+
+// Optional timeout; adjust or remove if you don’t use timeouts.
+const queryFootprintSetByFov_TAP_QUERY_TIMEOUT_MS = 60_000;
+// --- Function ---
+// Small helpers to be robust with slightly different metadata shapes
+function queryFootprintSetByFov_getColName(col) {
+    if (!col)
+        return '';
+    return (col.name ?? col.name ?? '').toString();
+}
+function prepareADQL(tapTable, tapRa, tapDec, polygonAdql, tapRepo, centralPoint) {
+    let adql = "";
+    if (tapRepo.adqlFunctionList.includes('POLYGON')) {
+        adql =
+            'select * from ' +
+                tapTable +
+                ' where 1=CONTAINS(POINT(\'ICRS\',' +
+                tapRa +
+                ',' +
+                tapDec +
+                '), POLYGON(\'ICRS\', ' +
+                polygonAdql +
+                '))';
+    }
+    else {
+        const radius = grid_HealpixGridSingleton.getMinFoV() / 2;
+        adql =
+            'select * from ' +
+                tapTable +
+                ' where 1=CONTAINS(POINT(\'ICRS\',' +
+                tapRa +
+                ',' +
+                tapDec +
+                '), CIRCLE(\'ICRS\', ' +
+                centralPoint.raDeg +
+                ', ' +
+                centralPoint.decDeg +
+                ', ' +
+                radius +
+                '))';
+    }
+    return adql;
+}
+/**
+ * Builds an ADQL query from current FoV and fetches footprints.
+ * Returns the enriched FootprintSet (if any rows were found), otherwise undefined.
+ */
+async function queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint) {
+    try {
+        // Resolve RA/Dec column names (CatalogueProps already picked them from metadata)
+        const raCol = queryFootprintSetByFov_getColName(footprintSet.footprintsetProps.raColumn);
+        const decCol = queryFootprintSetByFov_getColName(footprintSet.footprintsetProps.decColumn);
+        const tapTable = footprintSet.name;
+        if (!raCol || !decCol) {
+            console.warn('[queryCatalogueByFoV] RA/Dec columns were not resolved from metadata.');
+            return;
+        }
+        const adql = prepareADQL(tapTable, raCol, decCol, polygonAdql, footprintSet.tapRepo, centralPoint);
+        const rows = await queryAsync(footprintSet.tapRepo, adql, queryFootprintSetByFov_TAP_QUERY_TIMEOUT_MS);
+        console.log(rows);
+        // if (rows && rows.data.length > 0) {
+        // const metadata = rows.metadata
+        // const data = rows.data
+        if (typeof rows === 'object' &&
+            rows !== null &&
+            Array.isArray(rows.metadata) &&
+            Array.isArray(rows.data)) {
+            const { metadata, data } = rows;
+            const tapMetadataList = new tap_TapMetadataList();
+            for (const m of metadata) {
+                const tapMeta = new tap_TapMetadata(m.name, m.description ?? undefined, m.unit ?? undefined, m.datatype ?? undefined, m.ucd ?? undefined, m.utype ?? undefined);
+                tapMetadataList.addMetadata(tapMeta);
+            }
+            if (data.length > 0) {
+                footprintSet.addFootprints(data, tapMetadataList.metadataList);
+                return footprintSet;
+            }
+            else {
+                console.log('No results found');
+            }
+            // }
+        }
+        else {
+            console.log('[queryFootprintSetByFov] No results found.');
+            return;
+        }
+    }
+    catch (err) {
+        console.error('[queryFootprintSetByFov] Error:', err?.message ?? err);
+        return;
+    }
+}
+
 ;// ./src/AstroSphere.ts
 // AstroSphere.ts
+
 
 
 
@@ -11648,6 +12346,7 @@ class AstroSphere {
     // private insideSphere: boolean
     fov;
     activeCatalogues = [];
+    activeFootprintSets = [];
     constructor(canvas, webgl) {
         // Keep global GL context (as in original JS)
         src_Global.gl = webgl;
@@ -11787,6 +12486,7 @@ class AstroSphere {
     activateHiPS(hipsDescriptor) {
         this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor);
     }
+    // Catalogue section
     async showCatalogue(catalogue) {
         const fovPolyAstro = utils_FoVUtils.getFoVPolygon(this.camera, this.canvas, grid_HealpixGridSingleton);
         const polygonAdql = utils_FoVUtils.getAstroFoVPolygon(fovPolyAstro); // -> "POLYGON('ICRS', ra1, dec1, ...)"
@@ -11811,11 +12511,32 @@ class AstroSphere {
     setCatalogueShapeSize(catalogue, metadataColumnName) {
         catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
     }
+    // End Catalogue section
+    // Footprint section
+    async showFootprintSet(footprintSet) {
+        const fovPolyAstro = utils_FoVUtils.getFoVPolygon(this.camera, this.canvas, grid_HealpixGridSingleton);
+        const polygonAdql = utils_FoVUtils.getAstroFoVPolygon(fovPolyAstro); // -> "POLYGON('ICRS', ra1, dec1, ...)"
+        const centralPoint = utils_FoVUtils.getCenterJ2000(this.canvas);
+        const fset = await queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint);
+        console.log(fset);
+        if (fset)
+            this.activeFootprintSets.push(fset);
+        return fset;
+    }
+    hideFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteFootprintSet(footprintSet) {
+        this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
+    }
+    changeFootprintSetColor(footprintSet, hexColor) {
+        footprintSet.footprintsetProps.changeColor(hexColor);
+    }
+    // End Footprint section
     goTo(raDeg, decDeg) {
         this.camera.goTo(raDeg, decDeg);
     }
     getFoV() {
-        // console.log(healpixGridSingleton.refreshFoV(this.insideSphere))
         return this.fov;
     }
     getFoVPolygon() {
@@ -11919,13 +12640,14 @@ class AstroSphere {
         }
         this.activeCatalogues.forEach(cat => {
             if (this.activeHiPS) {
-                // TODO test it using the healpixSingleton
                 cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper);
-                // cat.draw(this.mouseHelper, this.activeHiPS.getModelMatrix() as Float32Array)
             }
         });
-        // this.updateLastMousePoint()
-        // this.updateCentralPoint()
+        this.activeFootprintSets.forEach(fst => {
+            if (this.activeHiPS) {
+                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper);
+            }
+        });
     }
 }
 /* harmony default export */ const src_AstroSphere = (AstroSphere);
@@ -11961,6 +12683,19 @@ class AstroCore {
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
         this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);
+    }
+    //FOOTPRINT
+    showFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideFootprintSet(footprintSet, isVisible) {
+        this.astroSphere.hideFootprintSet(footprintSet, isVisible);
+    }
+    deleteFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    changeFootprintSetColor(footprintSet, hexColor) {
+        this.astroSphere.changeFootprintSetColor(footprintSet, hexColor);
     }
     // HIPS
     activateHiPS(hipsDescriptor) {

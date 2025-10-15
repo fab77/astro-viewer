@@ -25,7 +25,7 @@ declare class FoVUtils {
      */
     static getScreenCornersIntersection(pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement): Point[];
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas: HTMLCanvasElement, pMatrix: ReadonlyMat4): Point;
+    static getCenterJ2000(canvas: HTMLCanvasElement): Point;
     /** Middle point on the unit sphere along the arc between two 3D points. */
     static computeMiddlePoint(p1: Point, p2: Point): Point[];
     /**
