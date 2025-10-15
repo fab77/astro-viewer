@@ -170,3 +170,21 @@ summary {
 .mono {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
+
+.hover-card {
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 8px;
+    margin-top: 6px;
+    background: #0f111a;
+}
+
+.hover-card h4 {
+    margin: 0 0 4px 0;
+    font-size: 13px;
+}
+
+.hover-meta {
+    font-size: 12px;
+    opacity: .85;
+}

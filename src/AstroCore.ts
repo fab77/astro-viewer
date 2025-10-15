@@ -5,8 +5,10 @@ import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { FoV } from './model/FoV.js'
 import Point from './model/Point.js'
 import CatalogueGL from './model/catalogues/CatalogueGL.js'
-import type {PointCoordinates} from './AstroSphere.js'
-import FootprintSetGL from './model/footprints/FootprintSetGL.js'
+import type { PointCoordinates } from './AstroSphere.js'
+import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
+import { bootSetup } from './Config.js'
+import Footprint from './model/footprints/Footprint.js'
 type GL2WithViewport = WebGL2RenderingContext & {
   viewportWidth: number
   viewportHeight: number
@@ -30,41 +32,50 @@ export class AstroCore {
     this.astroSphere.showCatalogue(catalogue)
   }
   hideCatalogue(catalogue: CatalogueGL, isVisible: boolean) {
-    this.astroSphere.hideCatalogue(catalogue, isVisible)
+    catalogue.setIsVisible(isVisible)
   }
   deleteCatalogue(catalogue: CatalogueGL) {
     this.astroSphere.deleteCatalogue(catalogue)
   }
 
   changeCatalogueColor(catalogue: CatalogueGL, hexColor: string) {
-    this.astroSphere.changeCatalogueColor(catalogue, hexColor)
+    catalogue.catalogueProps.changeColor(hexColor)
   }
 
   setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string) {
-    this.astroSphere.setCatalogueShapeHue(catalogue, metadataColumnName)
+    catalogue.changeCatalogueMetaShapeHue(metadataColumnName)
   }
-  
+
   setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string) {
-    this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName)
+    catalogue.changeCatalogueMetaShapeSize(metadataColumnName)
   }
 
   //FOOTPRINT
   showFootprintSet(footprintSet: FootprintSetGL) {
     this.astroSphere.showFootprintSet(footprintSet)
   }
+
   hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean) {
-    this.astroSphere.hideFootprintSet(footprintSet, isVisible)
+    footprintSet.setIsVisible(isVisible)
   }
+
   deleteFootprintSet(footprintSet: FootprintSetGL) {
     this.astroSphere.deleteFootprintSet(footprintSet)
   }
 
   changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {
-    this.astroSphere.changeFootprintSetColor(footprintSet, hexColor)
+    footprintSet.footprintsetProps.changeColor(hexColor)
   }
 
+  getHoveredFootprints(): HoveredFootprintDetail[]{
+    return this.astroSphere.getHoveredFootprints()
+  }
 
   // HIPS
+  getDefaultHiPSURL(): string {
+    return bootSetup.defaultHipsUrl
+  }
+
   activateHiPS(hipsDescriptor: HiPSDescriptor): void {
     this.astroSphere.activateHiPS(hipsDescriptor)
   }
@@ -73,14 +84,14 @@ export class AstroCore {
   goTo(raDeg: number, decDeg: number): void {
     this.astroSphere.goTo(raDeg, decDeg)
   }
-  getCenterCoordinates(): PointCoordinates | undefined{
+  getCenterCoordinates(): PointCoordinates | undefined {
     return this.astroSphere.getCentralPointCoordinates()
   }
 
-  getCoordinatesFromMouse(): PointCoordinates | undefined{
+  getCoordinatesFromMouse(): PointCoordinates | undefined {
     return this.astroSphere.getLastMousePointCoordinates()
   }
-  
+
 
   // FOV
   getFoV(): FoV {

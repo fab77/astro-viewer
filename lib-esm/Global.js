@@ -8,7 +8,7 @@ class Global {
     _healpix;
     // --- config/state flags ---
     _selectionnside;
-    _healpix4footprints;
+    // private _healpix4footprints: boolean;
     _useCORSProxy;
     _corsProxyUrl;
     _maxDecimals;
@@ -26,7 +26,7 @@ class Global {
         this._gl = null;
         this._healpix = {};
         this._selectionnside = 32;
-        this._healpix4footprints = false;
+        // this._healpix4footprints = false;
     }
     init() {
         console.log('Global.init()');
@@ -53,7 +53,6 @@ class Global {
     set insideSphere(v) { this._insideSphere = v; }
     get insideSphere() { return this._insideSphere; }
     get nsideForSelection() { return this._selectionnside; }
-    get healpix4footprints() { return this._healpix4footprints; }
 }
 const global = new Global();
 export default global;

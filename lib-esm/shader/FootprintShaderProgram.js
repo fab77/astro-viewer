@@ -13,11 +13,11 @@ export default class FootprintShaderProgram {
         this.gl_uniforms = {
             vertex_color: 'u_fragcolor',
             m_perspective: 'uPMatrix',
-            m_model_view: 'uMVMatrix'
+            m_model_view: 'uMVMatrix',
+            point_size: 'u_pointsize'
         };
         this.gl_attributes = {
-            vertex_pos: 'aCatPosition',
-            point_size: 'a_pointsize'
+            vertex_pos: 'aCatPosition'
         };
         this.locations = {
             pMatrix: null,
@@ -63,7 +63,7 @@ export default class FootprintShaderProgram {
         }
         gl.useProgram(this.shaderProgram);
         this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.pointSize = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_size);
+        this.locations.pointSize = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.point_size);
         this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
     }
     enableShaders(pMatrix, modelMatrix, viewMatrix) {

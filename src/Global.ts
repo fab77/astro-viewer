@@ -14,7 +14,7 @@ class Global {
 
   // --- config/state flags ---
   private _selectionnside: number;
-  private _healpix4footprints: boolean;
+  // private _healpix4footprints: boolean;
 
   private _useCORSProxy: boolean;
   private _corsProxyUrl: string;
@@ -37,7 +37,7 @@ class Global {
     this._healpix = {};
 
     this._selectionnside = 32;
-    this._healpix4footprints = false;
+    // this._healpix4footprints = false;
   }
 
   init(): void {
@@ -76,7 +76,7 @@ class Global {
   get insideSphere(): boolean { return this._insideSphere; }
 
   get nsideForSelection(): number { return this._selectionnside; }
-  get healpix4footprints(): boolean { return this._healpix4footprints; }
+  // get healpix4footprints(): boolean { return this._healpix4footprints; }
 
 }
 

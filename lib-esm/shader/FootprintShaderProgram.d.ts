@@ -2,17 +2,17 @@ type UniformNames = {
     vertex_color: string;
     m_perspective: string;
     m_model_view: string;
+    point_size: string;
 };
 type AttributeNames = {
     vertex_pos: string;
-    point_size: string;
 };
 type Locations = {
     pMatrix: WebGLUniformLocation | null;
     mvMatrix: WebGLUniformLocation | null;
     color: WebGLUniformLocation | null;
     position: number;
-    pointSize: number;
+    pointSize: WebGLUniformLocation | null;
 };
 export default class FootprintShaderProgram {
     private _shaderProgram;

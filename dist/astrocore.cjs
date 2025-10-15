@@ -1483,7 +1483,8 @@ const bootSetup = {
     corsProxyUrl: "http://localhost:4000/",
     useCORSProxy: false,
     maxDecimals: 15,
-    defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
+    // defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
+    defaultHipsUrl: "https://cdn.skies.esac.esa.int/DSSColor/",
     version: "Astrobrowser v1.0.0",
     debug: false,
     insideView: false,
@@ -1500,7 +1501,7 @@ class Global {
     _healpix;
     // --- config/state flags ---
     _selectionnside;
-    _healpix4footprints;
+    // private _healpix4footprints: boolean;
     _useCORSProxy;
     _corsProxyUrl;
     _maxDecimals;
@@ -1518,7 +1519,7 @@ class Global {
         this._gl = null;
         this._healpix = {};
         this._selectionnside = 32;
-        this._healpix4footprints = false;
+        // this._healpix4footprints = false;
     }
     init() {
         console.log('Global.init()');
@@ -1545,7 +1546,6 @@ class Global {
     set insideSphere(v) { this._insideSphere = v; }
     get insideSphere() { return this._insideSphere; }
     get nsideForSelection() { return this._selectionnside; }
-    get healpix4footprints() { return this._healpix4footprints; }
 }
 const global = new Global();
 /* harmony default export */ const src_Global = (global);
@@ -6820,20 +6820,6 @@ class ShaderManager {
       gl_Position = uPMatrix * uMVMatrix * aCatPosition;
       gl_PointSize = u_pointsize;   // Works in WebGL2
     }`;
-        // return `#version 300 es
-        // attribute vec4 aCatPosition;
-        // //t	attribute float a_selected;
-        // //t	varying float v_selected;
-        // //t	attribute float a_pointsize;
-        // varying lowp vec4 vColor;
-        // uniform float u_pointsize;
-        // uniform mat4 uMVMatrix;
-        // uniform mat4 uPMatrix;
-        // void main() {
-        //   gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-        //   //t		gl_PointSize = a_pointsize;
-        //   gl_PointSize = u_pointsize;
-        // }`;
     }
     static footprintFS() {
         return `#version 300 es
@@ -6845,36 +6831,6 @@ class ShaderManager {
     void main() {
       fragColor = u_fragcolor;
     }`;
-        // return `#version 300 es
-        // //t	#ifdef GL_OES_standard_derivatives
-        // //t	#extension GL_OES_standard_derivatives : enable
-        // //t	#endif
-        // // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
-        // precision mediump float;
-        // //t	varying float v_selected;
-        // uniform vec4 u_fragcolor;
-        // void main() {
-        //   gl_FragColor = u_fragcolor;
-        //   //t		float r = 0.0, delta = 0.0, alpha = 1.0;
-        //   //t		vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-        //   //t		r = dot(cxy, cxy);
-        //   //t		if (r > 1.0) {
-        //   //t			discard;
-        //   //t		}
-        //   //t	#ifdef GL_OES_standard_derivatives
-        //   //t		delta = fwidth(r);
-        //   //t		alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-        //   //t	#endif
-        //   //t		if (v_selected == 1.0){
-        //   //t			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-        //   //t		}else{
-        //   //t			if (r < 0.4) {
-        //   //t				discard;
-        //   //t			}
-        //   //t			gl_FragColor = u_fragcolor * (alpha);
-        //   //t		}
-        // }
-        // `;
     }
     static hipsVS() {
         return `#version 300 es
@@ -8795,7 +8751,7 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
     _visibleorder = 0;
-    showGrid = false;
+    showGrid = true;
     _shaderProgram;
     fragmentShader;
     vertexShader;
@@ -11410,10 +11366,10 @@ class STCSParser {
 /**
  * @author Fabrizio Giordano (Fab)
  */
+// import { Pointing, Healpix } from 'healpixjs';
+// import { degToRad } from '../../utils/Utils.js';
 
-
-
-
+// import global from '../../Global.js';
 
 // export interface ParsedSTCS {
 //   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
@@ -11445,10 +11401,7 @@ class Footprint {
             this._totConvexPoints = 0;
             this._footprintsPointsOrder = footprintsPointsOrder;
             this.computePoints();
-            this.computeSelectionObject();
-            if (src_Global.healpix4footprints) {
-                this._npix256 = this.computeNpix256();
-            }
+            this._selectionObj = this.computeSelectionObject();
             this._valid = true;
         }
         else {
@@ -11456,26 +11409,26 @@ class Footprint {
         }
     }
     computeSelectionObject() {
-        this._selectionObj = utils_GeomUtils.computeSelectionObject(this._polygons);
+        return utils_GeomUtils.computeSelectionObject(this._polygons);
     }
-    /**
-     * Return array of HEALPix pixels covering the footprint
-     * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
-     */
-    computeNpix256() {
-        const healpix256 = new Healpix(src_Global.nsideForSelection);
-        const points = [];
-        for (const poly of this._convexPolygons) {
-            for (const currPoint of poly) {
-                const phiTheta = currPoint.computeHealpixPhiTheta();
-                const phiRad = degToRad(phiTheta.phi);
-                const thetaRad = degToRad(phiTheta.theta);
-                points.push(new Pointing(null, false, thetaRad, phiRad));
-            }
-        }
-        const rangeSet = healpix256.queryPolygonInclusive(points, 32);
-        return Array.from(rangeSet.r);
-    }
+    // /**
+    //  * Return array of HEALPix pixels covering the footprint
+    //  * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
+    //  */
+    // private computeNpix256(): number[] {
+    //   const healpix256 = new Healpix(global.nsideForSelection);
+    //   const points: Pointing[] = [];
+    //   for (const poly of this._convexPolygons) {
+    //     for (const currPoint of poly) {
+    //       const phiTheta = currPoint.computeHealpixPhiTheta();
+    //       const phiRad = degToRad(phiTheta.phi);
+    //       const thetaRad = degToRad(phiTheta.theta);
+    //       points.push(new Pointing(null, false, thetaRad, phiRad));
+    //     }
+    //   }
+    //   const rangeSet = healpix256.queryPolygonInclusive(points, 32);
+    //   return Array.from(rangeSet.r);
+    // }
     computePoints() {
         const res = utils_STCSParser.parseSTCS(this._stcs);
         this._polygons = res.polygons;
@@ -11507,6 +11460,9 @@ class Footprint {
     }
     get details() {
         return this._details;
+    }
+    get selectionObj() {
+        return this._selectionObj;
     }
 }
 /* harmony default export */ const footprints_Footprint = (Footprint);
@@ -11611,11 +11567,11 @@ class FootprintShaderProgram {
         this.gl_uniforms = {
             vertex_color: 'u_fragcolor',
             m_perspective: 'uPMatrix',
-            m_model_view: 'uMVMatrix'
+            m_model_view: 'uMVMatrix',
+            point_size: 'u_pointsize'
         };
         this.gl_attributes = {
-            vertex_pos: 'aCatPosition',
-            point_size: 'a_pointsize'
+            vertex_pos: 'aCatPosition'
         };
         this.locations = {
             pMatrix: null,
@@ -11661,7 +11617,7 @@ class FootprintShaderProgram {
         }
         gl.useProgram(this.shaderProgram);
         this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.pointSize = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_size);
+        this.locations.pointSize = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.point_size);
         this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
     }
     enableShaders(pMatrix, modelMatrix, viewMatrix) {
@@ -11684,6 +11640,9 @@ const footprintShaderProgram = new FootprintShaderProgram();
 
 
 
+
+
+
 class FootprintSetGL {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -11693,41 +11652,34 @@ class FootprintSetGL {
     name;
     description;
     tapRepo;
-    footprintPolygons = [];
-    indexes;
-    totPoints;
+    extHoveredIndexes;
+    oldMouseCoords;
+    healpixDensityMap;
     totConvexPoints;
-    footprintsInPix256;
-    // attribLocations!: {
-    //   position: number | WebGLUniformLocation
-    //   selected: number
-    //   pointSize: number
-    //   color: number[] | WebGLUniformLocation
-    // }
+    // footprintsInPix256: Map<number, Footprint[]>
     gl;
     // shaderProgram: WebGLProgram
     vertexCataloguePositionBuffer;
-    vertexhoveredCataloguePositionBuffer;
     indexBuffer;
     hoveredVertexPositionBuffer;
     hoveredIndexBuffer;
     selectedVertexPositionBuffer;
     selectedIndexBuffer;
+    indexes;
+    footprintPolygons = [];
     vertexCataloguePosition;
-    nPrimitiveFlags;
+    totPoints;
+    nPrimitiveFlags = 0;
     hoveredIndexes;
-    selectedIndexes;
-    extHoveredIndexes;
-    oldMouseCoords;
-    healpixDensityMap;
-    hoveredFootprints = [];
-    hoveredIndex = [];
-    hoveredVertexPosition = [];
+    _hoveredFootprints = [];
+    hoveredVertexPosition;
     totHoveredPoints;
-    selectedFootprints = [];
-    selectedIndex = [];
-    selectedVertexPosition = [];
+    nHoveredPrimitiveFlags = 0;
+    selectedIndexes;
+    _selectedFootprints = [];
+    selectedVertexPosition;
     totSelectedPoints;
+    nSlectedPrimitiveFlags = 0;
     _isVisible = true;
     constructor(tablename, tabledesc, tapRepo, tapMetadataList) {
         this.ready = false;
@@ -11735,20 +11687,17 @@ class FootprintSetGL {
         this.name = tablename;
         this.description = tabledesc;
         this.tapRepo = tapRepo;
-        this.footprintsInPix256 = new Map();
+        // this.footprintsInPix256 = new Map()
         this.initFootprintArrays();
         if (!src_Global.gl) {
             throw new Error('WebGL2RenderingContext is not initialized (global.gl is null)');
         }
         this.gl = src_Global.gl;
         this.initGLBuffers();
-        // this.shaderProgram = this.gl.createProgram() as WebGLProgram
-        this.nPrimitiveFlags = 0;
         this.oldMouseCoords = null;
         const defaultColor = '#00fff2ff';
         this.footprintsetProps = new FootprintProps(tapMetadataList, defaultColor);
         footprintShaderProgram.shaderProgram;
-        // this.initShaders()
     }
     initFootprintArrays() {
         this.footprintPolygons = [];
@@ -11756,73 +11705,24 @@ class FootprintSetGL {
         this.vertexCataloguePosition = new Float32Array();
         this.totPoints = 0;
         this.totConvexPoints = 0;
-        this.extHoveredIndexes = [];
-        this.hoveredFootprints = [];
-        this.hoveredIndex = [];
-        this.hoveredVertexPosition = [];
+        this.extHoveredIndexes = new Uint32Array;
+        this._hoveredFootprints = [];
+        this.hoveredVertexPosition = new Float32Array();
         this.totHoveredPoints = 0;
-        this.hoveredIndexes = [];
-        this.selectedFootprints = [];
-        this.selectedIndex = [];
-        this.selectedVertexPosition = [];
+        this.hoveredIndexes = new Uint32Array;
+        this._selectedFootprints = [];
+        this.selectedVertexPosition = new Float32Array();
         this.totSelectedPoints = 0;
-        this.selectedIndexes = [];
+        this.selectedIndexes = new Uint32Array;
     }
     initGLBuffers() {
         this.vertexCataloguePositionBuffer = this.gl.createBuffer();
-        this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
         this.indexBuffer = this.gl.createBuffer();
         this.hoveredVertexPositionBuffer = this.gl.createBuffer();
         this.hoveredIndexBuffer = this.gl.createBuffer();
         this.selectedVertexPositionBuffer = this.gl.createBuffer();
         this.selectedIndexBuffer = this.gl.createBuffer();
-        // this.attribLocations = {
-        //   position: 0,
-        //   selected: 1,
-        //   pointSize: 2,
-        //   color: [0.0, 1.0, 0.0, 1.0]
-        // }
     }
-    // private initShaders(): void {
-    //   const fragmentShader = this.loadShaderFromDOM('fpcat-shader-fs')
-    //   const vertexShader = this.loadShaderFromDOM('fpcat-shader-vs')
-    //   if (!fragmentShader || !vertexShader) {
-    //     throw new Error('Shader sources not found in DOM')
-    //   }
-    //   this.gl.attachShader(this.shaderProgram, vertexShader)
-    //   this.gl.attachShader(this.shaderProgram, fragmentShader)
-    //   this.gl.linkProgram(this.shaderProgram)
-    //   if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
-    //     throw new Error('Could not initialise shaders')
-    //   }
-    //   shaderUtility.useProgram(this.shaderProgram)
-    // }
-    // private loadShaderFromDOM(shaderId: string): WebGLShader | null {
-    //   const shaderScript = document.getElementById(shaderId) as HTMLScriptElement
-    //   if (!shaderScript) return null
-    //   let shaderSource = ''
-    //   let currentChild = shaderScript.firstChild
-    //   while (currentChild) {
-    //     if (currentChild.nodeType === Node.TEXT_NODE) {
-    //       shaderSource += currentChild.textContent
-    //     }
-    //     currentChild = currentChild.nextSibling
-    //   }
-    //   let shader: WebGLShader | null = null
-    //   if (shaderScript.type === 'x-shader/x-fragment') {
-    //     shader = this.gl.createShader(this.gl.FRAGMENT_SHADER)
-    //   } else if (shaderScript.type === 'x-shader/x-vertex') {
-    //     shader = this.gl.createShader(this.gl.VERTEX_SHADER)
-    //   }
-    //   if (!shader) return null
-    //   this.gl.shaderSource(shader, shaderSource)
-    //   this.gl.compileShader(shader)
-    //   if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-    //     console.error(this.gl.getShaderInfoLog(shader))
-    //     return null
-    //   }
-    //   return shader
-    // }
     setIsVisible(visibility) {
         this._isVisible = visibility;
     }
@@ -11871,22 +11771,6 @@ class FootprintSetGL {
         for (let j = 0; j < nFootprints; j++) {
             const footprint = this.footprintPolygons[j];
             const footprintPoly = footprint.polygons;
-            const identifier = footprint.identifier;
-            if (src_Global.healpix4footprints) {
-                if (footprint.pixels) {
-                    footprint.pixels.forEach((pix) => {
-                        if (this.footprintsInPix256.has(pix)) {
-                            const curr = this.footprintsInPix256.get(pix);
-                            if (!curr.includes(footprint)) {
-                                curr.push(footprint);
-                            }
-                        }
-                        else {
-                            this.footprintsInPix256.set(pix, [footprint]);
-                        }
-                    });
-                }
-            }
             if (j > 0) {
                 this.indexes[vIdx++] = MAX_UNSIGNED_INT;
                 this.nPrimitiveFlags++;
@@ -11907,29 +11791,195 @@ class FootprintSetGL {
         this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
         console.log('Buffer initialized');
     }
-    // private enableShader(in_mMatrix: mat4): void {
-    //   this.gl.useProgram(this.shaderProgram)
-    //   const catUniformMVMatrixLoc = this.gl.getUniformLocation(
-    //     this.shaderProgram,
-    //     'uMVMatrix'
-    //   )
-    //   const catUniformProjMatrixLoc = this.gl.getUniformLocation(
-    //     this.shaderProgram,
-    //     'uPMatrix'
-    //   )
-    //   const pointsize = this.gl.getUniformLocation(this.shaderProgram, 'u_pointsize')
-    //   this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition')
-    //   this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor')!
-    //   const pMatrix = computePerspectiveMatrixSingleton.pMatrix
-    //   let mvMatrix = mat4.create()
-    //   if (!global.camera) {
-    //     throw new Error('Camera is not initialized (global.camera is null)')
-    //   }
-    //   mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix)
-    //   this.gl.uniformMatrix4fv(catUniformMVMatrixLoc, false, mvMatrix as Float32Array)
-    //   this.gl.uniformMatrix4fv(catUniformProjMatrixLoc, false, pMatrix as Float32Array)
-    //   this.gl.uniform1f(pointsize, 14.0)
-    // }
+    checkSelection(mouseHelper) {
+        if (!mouseHelper.x || !mouseHelper.y || !mouseHelper.z)
+            return;
+        let mousePix = mouseHelper.computeNpix();
+        if (!mousePix)
+            return;
+        this._hoveredFootprints = [];
+        this.totHoveredPoints = 0;
+        const mousePoint = new model_Point({ x: mouseHelper.x, y: mouseHelper.y, z: mouseHelper.z }, utils_CoordsType.CARTESIAN);
+        for (let i = 0; i < this.footprintPolygons.length; i++) {
+            const footprint = this.footprintPolygons[i];
+            if (!footprint.selectionObj)
+                continue;
+            if (utils_GeomUtils.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
+                const details = [...footprint.details];
+                const geomDataIndex = this.footprintsetProps.geomColumn?.index;
+                if (geomDataIndex === undefined)
+                    continue;
+                details.splice(geomDataIndex, 1);
+                this._hoveredFootprints.push(footprint);
+                this.totHoveredPoints += footprint.totPoints;
+            }
+        }
+        this.initHoveringBuffer();
+    }
+    get hoveredFootprints() {
+        return {
+            metadata: this.footprintsetProps.tapMetadataList,
+            footprints: this._hoveredFootprints,
+            tableName: this.name,
+            description: this.description,
+            provider: this.tapRepo.tapBaseUrl
+        };
+    }
+    get selectedFootprints() {
+        return this._selectedFootprints;
+    }
+    highlightFootprint(footprint, highlighted) {
+        if (highlighted) {
+            this._hoveredFootprints.push(footprint);
+            this.totHoveredPoints += footprint.totPoints;
+        }
+        else {
+            const indexOfFootprint = this._hoveredFootprints.indexOf(footprint);
+            this._hoveredFootprints.splice(indexOfFootprint, 1);
+            this.totHoveredPoints -= footprint.totPoints;
+        }
+        this.initHoveringBuffer();
+    }
+    /**
+     *
+     * @param {Footprint[]} footprints
+     */
+    addFootprint2Selected(footprints) {
+        let refreshBuffer = false;
+        for (let f of footprints) {
+            if (!this._selectedFootprints.includes(f)) {
+                this._selectedFootprints.push(f);
+                this.totSelectedPoints += f.totPoints;
+                refreshBuffer = true;
+            }
+        }
+        if (refreshBuffer) {
+            this.initSelectionBuffer();
+        }
+    }
+    /**
+     *
+     * @param {Footprint} footprint
+     */
+    removeFootprintFromSelection(footprint) {
+        const indexOfObject = this._selectedFootprints.indexOf(footprint);
+        if (indexOfObject >= 0) {
+            this._selectedFootprints.splice(indexOfObject, 1);
+            this.totSelectedPoints -= footprint.totPoints;
+            if (this._selectedFootprints.length > 0) {
+                this.initSelectionBuffer();
+            }
+        }
+    }
+    initHoveringBuffer() {
+        /*
+                TODO better approach. when creating the indexbuffer of footprints,
+                add 1 extra position for the selection (set to 0 == not selected),
+                and save the position "positionIndex" in an array (selectionIndexes).
+                When checking the selection, I get the index of the footprint, which
+                matches with the index in the selectionIndexes to retrieve the position
+                of the flag to be set to 1 in the vertexposition
+                This will ease checking the selection in the vertex/fragment shader and
+                set the pointsize and shape color.
+                */
+        if (this._hoveredFootprints.length == 0) {
+            return;
+        }
+        let nFootprints = this._hoveredFootprints.length;
+        let npolygons = nFootprints - 1;
+        for (let j = 0; j < nFootprints; j++) {
+            npolygons += this._hoveredFootprints[j].polygons.length - 1;
+        }
+        // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
+        // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+        this.hoveredIndexes = new Uint32Array(this.totHoveredPoints + npolygons);
+        const MAX_UNSIGNED_INT = 0xffffffff; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+        // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
+        this.hoveredVertexPosition = new Float32Array(3 * this.totHoveredPoints);
+        let positionIndex = 0;
+        let vIdx = 0;
+        let R = 1.0;
+        this.nHoveredPrimitiveFlags = 0;
+        for (let j = 0; j < nFootprints; j++) {
+            let hoveredFootprintPoly = this._hoveredFootprints[j].polygons;
+            if (j > 0) {
+                this.hoveredIndexes[vIdx] = MAX_UNSIGNED_INT;
+                this.nHoveredPrimitiveFlags += 1;
+                vIdx += 1;
+            }
+            for (let polyIdx = 0; polyIdx < hoveredFootprintPoly.length; polyIdx++) {
+                if (polyIdx > 0) {
+                    this.hoveredIndexes[vIdx] = MAX_UNSIGNED_INT;
+                    this.nHoveredPrimitiveFlags += 1;
+                    vIdx += 1;
+                }
+                const poly = hoveredFootprintPoly[polyIdx];
+                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+                    const p = poly[pointIdx];
+                    this.hoveredVertexPosition[positionIndex] = R * p.x;
+                    this.hoveredVertexPosition[positionIndex + 1] = R * p.y;
+                    this.hoveredVertexPosition[positionIndex + 2] = R * p.z;
+                    this.hoveredIndexes[vIdx] = Math.floor(positionIndex / 3);
+                    vIdx += 1;
+                    positionIndex += 3;
+                }
+            }
+        }
+    }
+    initSelectionBuffer() {
+        /*
+                TODO better approach. when creating the indexbuffer of footprints,
+                add 1 extra position for the selection (set to 0 == not selected),
+                and save the position "positionIndex" in an array (selectionIndexes).
+                When checking the selection, I get the index of the footprint, which
+                matches with the index in the selectionIndexes to retrieve the position
+                of the flag to be set to 1 in the vertexposition
+                This will ease checking the selection in the vertex/fragment shader and
+                set the pointsize and shape color.
+                */
+        let nFootprints = this._selectedFootprints.length;
+        let npolygons = nFootprints - 1;
+        for (let j = 0; j < nFootprints; j++) {
+            npolygons += this._selectedFootprints[j].polygons.length - 1;
+        }
+        // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
+        // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+        this.selectedIndexes = new Uint32Array(this.totSelectedPoints + npolygons);
+        const MAX_UNSIGNED_INT = 0xffffffff; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+        // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
+        this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints);
+        let positionIndex = 0;
+        let vIdx = 0;
+        let R = 1.0;
+        this.nSlectedPrimitiveFlags = 0;
+        for (let j = 0; j < nFootprints; j++) {
+            let footprintPoly = this._selectedFootprints[j].polygons;
+            if (j > 0) {
+                this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
+                this.nSlectedPrimitiveFlags += 1;
+                vIdx += 1;
+            }
+            for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
+                if (polyIdx > 0) {
+                    this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
+                    this.nSlectedPrimitiveFlags += 1;
+                    vIdx += 1;
+                }
+                const poly = footprintPoly[polyIdx];
+                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+                    const p = poly[pointIdx];
+                    this.selectedVertexPosition[positionIndex] = R * p.x;
+                    this.selectedVertexPosition[positionIndex + 1] = R * p.y;
+                    this.selectedVertexPosition[positionIndex + 2] = R * p.z;
+                    this.selectedIndexes[vIdx] = Math.floor(positionIndex / 3);
+                    vIdx += 1;
+                    positionIndex += 3;
+                }
+            }
+        }
+    }
     draw(in_mMatrix, in_mouseHelper) {
         if (!this.isVisible)
             return;
@@ -11938,26 +11988,48 @@ class FootprintSetGL {
         if (!src_Global.camera)
             return;
         footprintShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, src_Global.camera.getCameraMatrix());
-        // this.enableShader(in_mMatrix)
-        // TODO: integrate checkSelection, hovered & selected drawing logic here (similar to JS version)
+        if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
+            this.checkSelection(in_mouseHelper);
+        }
+        if (this._hoveredFootprints.length > 0) {
+            // TODO POINT_SIZE doesn't have any effect on line thickness!! it only applies to points
+            const rgb = colorHex2RGB('#00FF00');
+            const alpha = 1.0;
+            this.gl.uniform4f(footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
+            this.gl.uniform1f(footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.hoveredVertexPosition, this.gl.STATIC_DRAW);
+            // setting footprint position
+            this.gl.vertexAttribPointer(footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+            this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position);
+            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer);
+            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexes, this.gl.STATIC_DRAW);
+            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
+            this.gl.drawElements(this.gl.LINE_LOOP, this.hoveredVertexPosition.length / 3 + this.nHoveredPrimitiveFlags, this.gl.UNSIGNED_INT, 0);
+        }
+        if (this._selectedFootprints.length > 0) {
+            const rgb = colorHex2RGB('#ECB462');
+            const alpha = 1.0;
+            this.gl.uniform4f(footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
+            this.gl.uniform1f(footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.selectedVertexPosition, this.gl.STATIC_DRAW);
+            // setting footprint position
+            this.gl.vertexAttribPointer(footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+            this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position);
+            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer);
+            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.selectedIndexes, this.gl.STATIC_DRAW);
+            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
+            this.gl.drawElements(this.gl.LINE_LOOP, this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags, this.gl.UNSIGNED_INT, 0);
+        }
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
         this.gl.vertexAttribPointer(footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
         this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position);
-        // this.gl.vertexAttribPointer(
-        //   this.attribLocations.position as number,
-        //   FootprintSetGL.ELEM_SIZE,
-        //   this.gl.FLOAT,
-        //   false,
-        //   FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE,
-        //   0
-        // )
-        // this.gl.enableVertexAttribArray(this.attribLocations.position as number)
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.indexes, this.gl.STATIC_DRAW);
         const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0];
         this.gl.uniform4f(footprintShaderProgram.locations.color, ...shapeColor);
-        // this.gl.uniform4f(this.attribLocations.color as WebGLUniformLocation, ...shapeColor)
         this.gl.drawElements(this.gl.LINE_LOOP, this.indexes.length, this.gl.UNSIGNED_INT, 0);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
@@ -12496,20 +12568,8 @@ class AstroSphere {
             this.activeCatalogues.push(cat);
         return cat;
     }
-    hideCatalogue(catalogue, isVisible) {
-        catalogue.setIsVisible(isVisible);
-    }
     deleteCatalogue(catalogue) {
         this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
-    }
-    changeCatalogueColor(catalogue, hexColor) {
-        catalogue.catalogueProps.changeColor(hexColor);
-    }
-    setCatalogueShapeHue(catalogue, metadataColumnName) {
-        catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
-    }
-    setCatalogueShapeSize(catalogue, metadataColumnName) {
-        catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
     }
     // End Catalogue section
     // Footprint section
@@ -12523,14 +12583,16 @@ class AstroSphere {
             this.activeFootprintSets.push(fset);
         return fset;
     }
-    hideFootprintSet(footprintSet, isVisible) {
-        footprintSet.setIsVisible(isVisible);
-    }
     deleteFootprintSet(footprintSet) {
         this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
     }
-    changeFootprintSetColor(footprintSet, hexColor) {
-        footprintSet.footprintsetProps.changeColor(hexColor);
+    getHoveredFootprints() {
+        let footprintsHovered = [];
+        this.activeFootprintSets.forEach(fset => {
+            footprintsHovered.push(fset.hoveredFootprints);
+        });
+        const result = footprintsHovered;
+        return result;
     }
     // End Footprint section
     goTo(raDeg, decDeg) {
@@ -12656,6 +12718,7 @@ class AstroSphere {
 // AstroCoreEntryPoint.ts
 
 
+
 class AstroCore {
     astroSphere;
     canvas;
@@ -12670,34 +12733,41 @@ class AstroCore {
         this.astroSphere.showCatalogue(catalogue);
     }
     hideCatalogue(catalogue, isVisible) {
-        this.astroSphere.hideCatalogue(catalogue, isVisible);
+        catalogue.setIsVisible(isVisible);
     }
     deleteCatalogue(catalogue) {
         this.astroSphere.deleteCatalogue(catalogue);
     }
     changeCatalogueColor(catalogue, hexColor) {
-        this.astroSphere.changeCatalogueColor(catalogue, hexColor);
+        catalogue.catalogueProps.changeColor(hexColor);
     }
     setCatalogueShapeHue(catalogue, metadataColumnName) {
-        this.astroSphere.setCatalogueShapeHue(catalogue, metadataColumnName);
+        catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
-        this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);
+        catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
     }
     //FOOTPRINT
     showFootprintSet(footprintSet) {
         this.astroSphere.showFootprintSet(footprintSet);
     }
     hideFootprintSet(footprintSet, isVisible) {
-        this.astroSphere.hideFootprintSet(footprintSet, isVisible);
+        footprintSet.setIsVisible(isVisible);
     }
     deleteFootprintSet(footprintSet) {
         this.astroSphere.deleteFootprintSet(footprintSet);
     }
     changeFootprintSetColor(footprintSet, hexColor) {
-        this.astroSphere.changeFootprintSetColor(footprintSet, hexColor);
+        footprintSet.footprintsetProps.changeColor(hexColor);
+    }
+    getHoveredFootprints() {
+        const result = this.astroSphere.getHoveredFootprints();
+        return result;
     }
     // HIPS
+    getDefaultHiPSURL() {
+        return bootSetup.defaultHipsUrl;
+    }
     activateHiPS(hipsDescriptor) {
         this.astroSphere.activateHiPS(hipsDescriptor);
     }

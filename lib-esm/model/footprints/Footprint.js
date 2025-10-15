@@ -2,10 +2,10 @@
 /**
  * @author Fabrizio Giordano (Fab)
  */
-import { Pointing, Healpix } from 'healpixjs';
-import { degToRad } from '../../utils/Utils.js';
+// import { Pointing, Healpix } from 'healpixjs';
+// import { degToRad } from '../../utils/Utils.js';
 import GeomUtils from '../../utils/GeomUtils.js';
-import global from '../../Global.js';
+// import global from '../../Global.js';
 import STCSParser from '../../utils/STCSParser.js';
 // export interface ParsedSTCS {
 //   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
@@ -37,10 +37,7 @@ class Footprint {
             this._totConvexPoints = 0;
             this._footprintsPointsOrder = footprintsPointsOrder;
             this.computePoints();
-            this.computeSelectionObject();
-            if (global.healpix4footprints) {
-                this._npix256 = this.computeNpix256();
-            }
+            this._selectionObj = this.computeSelectionObject();
             this._valid = true;
         }
         else {
@@ -48,26 +45,26 @@ class Footprint {
         }
     }
     computeSelectionObject() {
-        this._selectionObj = GeomUtils.computeSelectionObject(this._polygons);
+        return GeomUtils.computeSelectionObject(this._polygons);
     }
-    /**
-     * Return array of HEALPix pixels covering the footprint
-     * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
-     */
-    computeNpix256() {
-        const healpix256 = new Healpix(global.nsideForSelection);
-        const points = [];
-        for (const poly of this._convexPolygons) {
-            for (const currPoint of poly) {
-                const phiTheta = currPoint.computeHealpixPhiTheta();
-                const phiRad = degToRad(phiTheta.phi);
-                const thetaRad = degToRad(phiTheta.theta);
-                points.push(new Pointing(null, false, thetaRad, phiRad));
-            }
-        }
-        const rangeSet = healpix256.queryPolygonInclusive(points, 32);
-        return Array.from(rangeSet.r);
-    }
+    // /**
+    //  * Return array of HEALPix pixels covering the footprint
+    //  * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
+    //  */
+    // private computeNpix256(): number[] {
+    //   const healpix256 = new Healpix(global.nsideForSelection);
+    //   const points: Pointing[] = [];
+    //   for (const poly of this._convexPolygons) {
+    //     for (const currPoint of poly) {
+    //       const phiTheta = currPoint.computeHealpixPhiTheta();
+    //       const phiRad = degToRad(phiTheta.phi);
+    //       const thetaRad = degToRad(phiTheta.theta);
+    //       points.push(new Pointing(null, false, thetaRad, phiRad));
+    //     }
+    //   }
+    //   const rangeSet = healpix256.queryPolygonInclusive(points, 32);
+    //   return Array.from(rangeSet.r);
+    // }
     computePoints() {
         const res = STCSParser.parseSTCS(this._stcs);
         this._polygons = res.polygons;
@@ -99,6 +96,9 @@ class Footprint {
     }
     get details() {
         return this._details;
+    }
+    get selectionObj() {
+        return this._selectionObj;
     }
 }
 export default Footprint;

@@ -183,20 +183,8 @@ class AstroSphere {
             this.activeCatalogues.push(cat);
         return cat;
     }
-    hideCatalogue(catalogue, isVisible) {
-        catalogue.setIsVisible(isVisible);
-    }
     deleteCatalogue(catalogue) {
         this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
-    }
-    changeCatalogueColor(catalogue, hexColor) {
-        catalogue.catalogueProps.changeColor(hexColor);
-    }
-    setCatalogueShapeHue(catalogue, metadataColumnName) {
-        catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
-    }
-    setCatalogueShapeSize(catalogue, metadataColumnName) {
-        catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
     }
     // End Catalogue section
     // Footprint section
@@ -210,14 +198,16 @@ class AstroSphere {
             this.activeFootprintSets.push(fset);
         return fset;
     }
-    hideFootprintSet(footprintSet, isVisible) {
-        footprintSet.setIsVisible(isVisible);
-    }
     deleteFootprintSet(footprintSet) {
         this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
     }
-    changeFootprintSetColor(footprintSet, hexColor) {
-        footprintSet.footprintsetProps.changeColor(hexColor);
+    getHoveredFootprints() {
+        let footprintsHovered = [];
+        this.activeFootprintSets.forEach(fset => {
+            footprintsHovered.push(fset.hoveredFootprints);
+        });
+        const result = footprintsHovered;
+        return result;
     }
     // End Footprint section
     goTo(raDeg, decDeg) {

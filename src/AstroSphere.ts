@@ -27,8 +27,9 @@ import Point from './model/Point.js'
 import FoVUtils from './utils/FoVUtils.js'
 import queryCatalogueByFoV from './services/queryCatalogueByFoV.js'
 import CatalogueGL from './model/catalogues/CatalogueGL.js'
-import FootprintSetGL from './model/footprints/FootprintSetGL.js'
+import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
 import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
+import Footprint from './model/footprints/Footprint.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -257,24 +258,8 @@ class AstroSphere {
     return cat
   }
 
-  hideCatalogue(catalogue: CatalogueGL, isVisible: boolean) {
-    catalogue.setIsVisible(isVisible)
-  }
-
   deleteCatalogue(catalogue: CatalogueGL) {
     this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
-  }
-
-  changeCatalogueColor(catalogue: CatalogueGL, hexColor: string) {
-    catalogue.catalogueProps.changeColor(hexColor)
-  }
-
-  setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string) {
-    catalogue.changeCatalogueMetaShapeHue(metadataColumnName)
-  }
-
-  setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string) {
-    catalogue.changeCatalogueMetaShapeSize(metadataColumnName)
   }
   // End Catalogue section
 
@@ -290,16 +275,16 @@ class AstroSphere {
     return fset
   }
 
-  hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean) {
-    footprintSet.setIsVisible(isVisible)
-  }
-
   deleteFootprintSet(footprintSet: FootprintSetGL) {
     this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
   }
 
-  changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {
-    footprintSet.footprintsetProps.changeColor(hexColor)
+  getHoveredFootprints(): HoveredFootprintDetail[]{
+    let footprintsHovered: HoveredFootprintDetail[] = []
+    this.activeFootprintSets.forEach(fset => {
+      footprintsHovered.push(fset.hoveredFootprints)
+    });
+    return footprintsHovered
   }
   // End Footprint section
 
@@ -323,7 +308,7 @@ class AstroSphere {
     this.camera.translate(distance)
     healpixGridSingleton.refreshFoV()
   }
-  
+
   changeFoV2(deg: number) {
     // throw new Error("not Implemented")
     const newCameraPos = healpixGridSingleton.getFoV().computeCameraPositionForFoV(deg)

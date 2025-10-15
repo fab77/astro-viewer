@@ -3,11 +3,12 @@
  * @author Fabrizio Giordano (Fab)
  */
 
-import { Pointing, Healpix } from 'healpixjs';
-import { degToRad } from '../../utils/Utils.js';
-import GeomUtils from '../../utils/GeomUtils.js';
-import global from '../../Global.js';
+// import { Pointing, Healpix } from 'healpixjs';
+// import { degToRad } from '../../utils/Utils.js';
+import GeomUtils, { SelectionObj } from '../../utils/GeomUtils.js';
+// import global from '../../Global.js';
 import STCSParser, { STCSParseResult } from '../../utils/STCSParser.js';
+import Point from '../Point.js';
 
 export interface FootprintDetail {
   key: string;
@@ -22,7 +23,7 @@ export interface FootprintDetail {
 // }
 
 class Footprint {
-  private _polygons: any[][] = []; // array of polygons (-> array of points)
+  private _polygons: Point[][] = []; // array of polygons (-> array of points)
   private _convexPolygons: any[][] = []; // convex polygons
   private _stcs?: string; // STC-S string
   private _valid = false;
@@ -31,7 +32,7 @@ class Footprint {
   private _totConvexPoints = 0;
   private _npix256?: number[];
   private _footprintsPointsOrder?: 1 | -1;
-  private _selectionObj?: unknown;
+  private _selectionObj: SelectionObj | undefined;
 
   private _identifier?: string;
   private _center?: unknown; // could be typed if you have a Point type
@@ -54,42 +55,39 @@ class Footprint {
       this._footprintsPointsOrder = footprintsPointsOrder;
 
       this.computePoints();
-      this.computeSelectionObject();
+      this._selectionObj = this.computeSelectionObject();
 
-      if (global.healpix4footprints) {
-        this._npix256 = this.computeNpix256();
-      }
       this._valid = true;
     } else {
       this._details = [];
     }
   }
 
-  private computeSelectionObject(): void {
-    this._selectionObj = GeomUtils.computeSelectionObject(this._polygons);
+  private computeSelectionObject(): SelectionObj {
+    return GeomUtils.computeSelectionObject(this._polygons);
   }
 
   
-  /**
-   * Return array of HEALPix pixels covering the footprint
-   * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
-   */
-  private computeNpix256(): number[] {
-    const healpix256 = new Healpix(global.nsideForSelection);
+  // /**
+  //  * Return array of HEALPix pixels covering the footprint
+  //  * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
+  //  */
+  // private computeNpix256(): number[] {
+  //   const healpix256 = new Healpix(global.nsideForSelection);
 
-    const points: Pointing[] = [];
-    for (const poly of this._convexPolygons) {
-      for (const currPoint of poly) {
-        const phiTheta = currPoint.computeHealpixPhiTheta();
-        const phiRad = degToRad(phiTheta.phi);
-        const thetaRad = degToRad(phiTheta.theta);
-        points.push(new Pointing(null, false, thetaRad, phiRad));
-      }
-    }
+  //   const points: Pointing[] = [];
+  //   for (const poly of this._convexPolygons) {
+  //     for (const currPoint of poly) {
+  //       const phiTheta = currPoint.computeHealpixPhiTheta();
+  //       const phiRad = degToRad(phiTheta.phi);
+  //       const thetaRad = degToRad(phiTheta.theta);
+  //       points.push(new Pointing(null, false, thetaRad, phiRad));
+  //     }
+  //   }
 
-    const rangeSet = healpix256.queryPolygonInclusive(points, 32);
-    return Array.from(rangeSet.r);
-  }
+  //   const rangeSet = healpix256.queryPolygonInclusive(points, 32);
+  //   return Array.from(rangeSet.r);
+  // }
 
   private computePoints(): void {
     const res: STCSParseResult = STCSParser.parseSTCS(this._stcs!);
@@ -109,11 +107,11 @@ class Footprint {
     return this._totConvexPoints;
   }
 
-  get polygons(): any[][] {
+  get polygons(): Point[][] {
     return this._polygons;
   }
 
-  get convexPolygons(): any[][] {
+  get convexPolygons(): Point[][] {
     return this._convexPolygons;
   }
 
@@ -131,6 +129,10 @@ class Footprint {
 
   get details(): FootprintDetail[] {
     return this._details;
+  }
+
+  get selectionObj(): SelectionObj | undefined{
+    return this._selectionObj
   }
 }
 

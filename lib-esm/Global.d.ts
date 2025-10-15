@@ -6,7 +6,6 @@ declare class Global {
     private _gl;
     private _healpix;
     private _selectionnside;
-    private _healpix4footprints;
     private _useCORSProxy;
     private _corsProxyUrl;
     private _maxDecimals;
@@ -30,7 +29,6 @@ declare class Global {
     set insideSphere(v: boolean);
     get insideSphere(): boolean;
     get nsideForSelection(): number;
-    get healpix4footprints(): boolean;
 }
 declare const global: Global;
 export default global;

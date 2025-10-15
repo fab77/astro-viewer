@@ -133,20 +133,6 @@ export default class ShaderManager {
       gl_Position = uPMatrix * uMVMatrix * aCatPosition;
       gl_PointSize = u_pointsize;   // Works in WebGL2
     }`;
-        // return `#version 300 es
-        // attribute vec4 aCatPosition;
-        // //t	attribute float a_selected;
-        // //t	varying float v_selected;
-        // //t	attribute float a_pointsize;
-        // varying lowp vec4 vColor;
-        // uniform float u_pointsize;
-        // uniform mat4 uMVMatrix;
-        // uniform mat4 uPMatrix;
-        // void main() {
-        //   gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-        //   //t		gl_PointSize = a_pointsize;
-        //   gl_PointSize = u_pointsize;
-        // }`;
     }
     static footprintFS() {
         return `#version 300 es
@@ -158,36 +144,6 @@ export default class ShaderManager {
     void main() {
       fragColor = u_fragcolor;
     }`;
-        // return `#version 300 es
-        // //t	#ifdef GL_OES_standard_derivatives
-        // //t	#extension GL_OES_standard_derivatives : enable
-        // //t	#endif
-        // // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
-        // precision mediump float;
-        // //t	varying float v_selected;
-        // uniform vec4 u_fragcolor;
-        // void main() {
-        //   gl_FragColor = u_fragcolor;
-        //   //t		float r = 0.0, delta = 0.0, alpha = 1.0;
-        //   //t		vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-        //   //t		r = dot(cxy, cxy);
-        //   //t		if (r > 1.0) {
-        //   //t			discard;
-        //   //t		}
-        //   //t	#ifdef GL_OES_standard_derivatives
-        //   //t		delta = fwidth(r);
-        //   //t		alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-        //   //t	#endif
-        //   //t		if (v_selected == 1.0){
-        //   //t			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-        //   //t		}else{
-        //   //t			if (r < 0.4) {
-        //   //t				discard;
-        //   //t			}
-        //   //t			gl_FragColor = u_fragcolor * (alpha);
-        //   //t		}
-        // }
-        // `;
     }
     static hipsVS() {
         return `#version 300 es

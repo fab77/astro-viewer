@@ -1,6 +1,7 @@
 // AstroCoreEntryPoint.ts
 import global from './Global.js';
 import AstroSphere from './AstroSphere.js';
+import { bootSetup } from './Config.js';
 export class AstroCore {
     astroSphere;
     canvas;
@@ -15,34 +16,41 @@ export class AstroCore {
         this.astroSphere.showCatalogue(catalogue);
     }
     hideCatalogue(catalogue, isVisible) {
-        this.astroSphere.hideCatalogue(catalogue, isVisible);
+        catalogue.setIsVisible(isVisible);
     }
     deleteCatalogue(catalogue) {
         this.astroSphere.deleteCatalogue(catalogue);
     }
     changeCatalogueColor(catalogue, hexColor) {
-        this.astroSphere.changeCatalogueColor(catalogue, hexColor);
+        catalogue.catalogueProps.changeColor(hexColor);
     }
     setCatalogueShapeHue(catalogue, metadataColumnName) {
-        this.astroSphere.setCatalogueShapeHue(catalogue, metadataColumnName);
+        catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
-        this.astroSphere.setCatalogueShapeSize(catalogue, metadataColumnName);
+        catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
     }
     //FOOTPRINT
     showFootprintSet(footprintSet) {
         this.astroSphere.showFootprintSet(footprintSet);
     }
     hideFootprintSet(footprintSet, isVisible) {
-        this.astroSphere.hideFootprintSet(footprintSet, isVisible);
+        footprintSet.setIsVisible(isVisible);
     }
     deleteFootprintSet(footprintSet) {
         this.astroSphere.deleteFootprintSet(footprintSet);
     }
     changeFootprintSetColor(footprintSet, hexColor) {
-        this.astroSphere.changeFootprintSetColor(footprintSet, hexColor);
+        footprintSet.footprintsetProps.changeColor(hexColor);
+    }
+    getHoveredFootprints() {
+        const result = this.astroSphere.getHoveredFootprints();
+        return result;
     }
     // HIPS
+    getDefaultHiPSURL() {
+        return bootSetup.defaultHipsUrl;
+    }
     activateHiPS(hipsDescriptor) {
         this.astroSphere.activateHiPS(hipsDescriptor);
     }

@@ -1,4 +1,4 @@
-// boot.js
+import { wireHoveredFootprints } from './hoveredFootprints.js';
 import { el, setStatus, minimisePanel, restorePanel } from './ui.js';
 import { state, loadPersisted, persistBasic } from './state.js';
 import { loadHiPS } from './hips.js';
@@ -28,7 +28,27 @@ async function bootstrap() {
     window.AstroAPI = state.AstroAPI = AC;
     window.TAP = state.TAP;
 
-    await loadHiPS(el('hipsUrl').value.trim());
+    // Try to get the default HiPS URL from the AstroCore API
+    // Determine the default HiPS URL (try AstroCore, else fallback)
+    let defaultHiPS = "";
+    try {
+      if (typeof AC.getDefaultHiPSURL === "function") {
+        defaultHiPS = AC.getDefaultHiPSURL() || "";
+      }
+    } catch {
+      // ignore, fallback handled below
+    }
+    // Fallback if AstroCore didn’t return a valid URL
+    if (!defaultHiPS) {
+      defaultHiPS = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
+    }
+    const hipsInput = el('hipsUrl');
+    if (hipsInput) {
+      hipsInput.value = defaultHiPS;
+    }
+    // Load HiPS using resolved URL
+    await loadHiPS(defaultHiPS.trim());
+
     AC.run();
 
     wireUI();
@@ -36,6 +56,7 @@ async function bootstrap() {
     wireCatalogueManagerControls();
     wireGoto();
     wireCoords();
+    wireHoveredFootprints();
 
     setStatus("Ready ✅ Load a TAP to begin.");
   } catch (e) {

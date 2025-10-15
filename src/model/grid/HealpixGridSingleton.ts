@@ -35,7 +35,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
 
   private _visibleorder = 0;
-  private showGrid: boolean = false
+  private showGrid: boolean = true
   private _shaderProgram!: WebGLProgram;
   private fragmentShader!: WebGLShader;
   private vertexShader!: WebGLShader;

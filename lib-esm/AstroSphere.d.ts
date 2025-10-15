@@ -3,7 +3,7 @@ import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
 import Point from './model/Point.js';
 import CatalogueGL from './model/catalogues/CatalogueGL.js';
-import FootprintSetGL from './model/footprints/FootprintSetGL.js';
+import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -42,15 +42,10 @@ declare class AstroSphere {
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     showCatalogue(catalogue: CatalogueGL): Promise<CatalogueGL | undefined>;
-    hideCatalogue(catalogue: CatalogueGL, isVisible: boolean): void;
     deleteCatalogue(catalogue: CatalogueGL): void;
-    changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): void;
-    setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): void;
-    setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): void;
     showFootprintSet(footprintSet: FootprintSetGL): Promise<FootprintSetGL | undefined>;
-    hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean): void;
     deleteFootprintSet(footprintSet: FootprintSetGL): void;
-    changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string): void;
+    getHoveredFootprints(): HoveredFootprintDetail[];
     goTo(raDeg: number, decDeg: number): void;
     getFoV(): FoV;
     getFoVPolygon(): Point[];

@@ -9,11 +9,12 @@ type UniformNames = {
   vertex_color: string,
   m_perspective: string,
   m_model_view: string,
+  point_size: string
 }
 
 type AttributeNames = {
   vertex_pos: string
-  point_size: string
+  
 }
 
 type Locations = {
@@ -21,7 +22,7 @@ type Locations = {
   mvMatrix: WebGLUniformLocation | null
   color: WebGLUniformLocation | null
   position: number
-  pointSize: number
+  pointSize: WebGLUniformLocation | null
 }
 
 export default class FootprintShaderProgram {
@@ -38,12 +39,12 @@ export default class FootprintShaderProgram {
     this.gl_uniforms = {
       vertex_color: 'u_fragcolor',
       m_perspective: 'uPMatrix',
-      m_model_view: 'uMVMatrix'
+      m_model_view: 'uMVMatrix',
+      point_size: 'u_pointsize'
     }
 
     this.gl_attributes = {
-      vertex_pos: 'aCatPosition',
-      point_size: 'a_pointsize'
+      vertex_pos: 'aCatPosition'      
     }
 
     this.locations = {
@@ -102,9 +103,9 @@ export default class FootprintShaderProgram {
       this.gl_attributes.vertex_pos
     )
     
-    this.locations.pointSize = gl.getAttribLocation(
+    this.locations.pointSize = gl.getUniformLocation(
       this.shaderProgram as WebGLProgram,
-      this.gl_attributes.point_size
+      this.gl_uniforms.point_size
     )
     
     this.locations.color = gl.getUniformLocation(
