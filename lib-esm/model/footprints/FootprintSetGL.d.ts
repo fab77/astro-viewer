@@ -1,6 +1,9 @@
 import Footprint from './Footprint.js';
 import FootprintProps from './FootprintProps.js';
 import { mat4 } from 'gl-matrix';
+import { TapRepo } from '../tap/TapRepo.js';
+import TapMetadataList from '../tap/TapMetadataList.js';
+type GL = WebGL2RenderingContext;
 declare class FootprintSetGL {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
@@ -9,21 +12,13 @@ declare class FootprintSetGL {
     footprintsetProps: FootprintProps;
     name: string;
     description: string;
-    provider: string;
-    tapRepo: any;
+    tapRepo: TapRepo;
     footprintPolygons: Footprint[];
     indexes: Uint32Array;
     totPoints: number;
     totConvexPoints: number;
     footprintsInPix256: Map<number, Footprint[]>;
-    attribLocations: {
-        position: number | WebGLUniformLocation;
-        selected: number;
-        pointSize: number;
-        color: number[] | WebGLUniformLocation;
-    };
-    gl: WebGL2RenderingContext;
-    shaderProgram: WebGLProgram;
+    gl: GL;
     vertexCataloguePositionBuffer: WebGLBuffer;
     vertexhoveredCataloguePositionBuffer: WebGLBuffer;
     indexBuffer: WebGLBuffer;
@@ -46,16 +41,15 @@ declare class FootprintSetGL {
     selectedIndex: never[];
     selectedVertexPosition: never[];
     totSelectedPoints: number;
-    constructor(tablename: string, tabledesc: string, tapRepo: any, tapMetadataList: any);
+    _isVisible: boolean;
+    constructor(tablename: string, tabledesc: string, tapRepo: TapRepo, tapMetadataList: TapMetadataList);
     private initFootprintArrays;
     private initGLBuffers;
-    private initShaders;
-    private loadShaderFromDOM;
     addFootprint(in_footprint: Footprint): void;
     addFootprints(in_data: any[]): void;
     clearFootprints(): void;
     private initBuffer;
-    private enableShader;
+    get isVisible(): boolean;
     draw(in_mMatrix: mat4, in_mouseHelper: any): void;
 }
 export default FootprintSetGL;

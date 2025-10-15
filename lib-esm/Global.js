@@ -15,10 +15,7 @@ class Global {
     _debug;
     _insideSphere;
     _version;
-    // public constant (kept as in JS)
-    HIPS_REF_ORDER;
     constructor() {
-        this.HIPS_REF_ORDER = 6;
         this._useCORSProxy = bootSetup.useCORSProxy;
         this._corsProxyUrl = bootSetup.corsProxyUrl;
         this._maxDecimals = bootSetup.maxDecimals;

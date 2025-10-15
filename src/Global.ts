@@ -23,11 +23,7 @@ class Global {
   private _insideSphere: boolean;
   private _version: string;
 
-  // public constant (kept as in JS)
-  public HIPS_REF_ORDER: number;
-
   constructor() {
-    this.HIPS_REF_ORDER = 6;
 
     this._useCORSProxy = bootSetup.useCORSProxy;
     this._corsProxyUrl = bootSetup.corsProxyUrl;

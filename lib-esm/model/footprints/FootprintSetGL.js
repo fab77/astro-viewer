@@ -1,10 +1,9 @@
-import { shaderUtility } from '../../utils/ShaderUtility.js';
 import Footprint from './Footprint.js';
 import FootprintProps from './FootprintProps.js';
-import { mat4 } from 'gl-matrix';
 import global from '../../Global.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js';
 class FootprintSetGL {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -13,16 +12,20 @@ class FootprintSetGL {
     footprintsetProps;
     name;
     description;
-    provider;
     tapRepo;
     footprintPolygons = [];
     indexes;
     totPoints;
     totConvexPoints;
     footprintsInPix256;
-    attribLocations;
+    // attribLocations!: {
+    //   position: number | WebGLUniformLocation
+    //   selected: number
+    //   pointSize: number
+    //   color: number[] | WebGLUniformLocation
+    // }
     gl;
-    shaderProgram;
+    // shaderProgram: WebGLProgram
     vertexCataloguePositionBuffer;
     vertexhoveredCataloguePositionBuffer;
     indexBuffer;
@@ -45,11 +48,12 @@ class FootprintSetGL {
     selectedIndex = [];
     selectedVertexPosition = [];
     totSelectedPoints;
+    _isVisible = true;
     constructor(tablename, tabledesc, tapRepo, tapMetadataList) {
         this.ready = false;
+        this.TYPE = 'FOOTPRINT_SET';
         this.name = tablename;
         this.description = tabledesc;
-        this.provider = tapRepo._tapBaseURL;
         this.tapRepo = tapRepo;
         this.footprintsInPix256 = new Map();
         this.initFootprintArrays();
@@ -58,12 +62,13 @@ class FootprintSetGL {
         }
         this.gl = global.gl;
         this.initGLBuffers();
-        this.shaderProgram = this.gl.createProgram();
+        // this.shaderProgram = this.gl.createProgram() as WebGLProgram
         this.nPrimitiveFlags = 0;
         this.oldMouseCoords = null;
-        const defaultColor = '#8F00FF';
+        const defaultColor = '#00fff2ff';
         this.footprintsetProps = new FootprintProps(tapMetadataList, defaultColor);
-        this.initShaders();
+        footprintShaderProgram.shaderProgram;
+        // this.initShaders()
     }
     initFootprintArrays() {
         this.footprintPolygons = [];
@@ -91,56 +96,53 @@ class FootprintSetGL {
         this.hoveredIndexBuffer = this.gl.createBuffer();
         this.selectedVertexPositionBuffer = this.gl.createBuffer();
         this.selectedIndexBuffer = this.gl.createBuffer();
-        this.attribLocations = {
-            position: 0,
-            selected: 1,
-            pointSize: 2,
-            color: [0.0, 1.0, 0.0, 1.0]
-        };
+        // this.attribLocations = {
+        //   position: 0,
+        //   selected: 1,
+        //   pointSize: 2,
+        //   color: [0.0, 1.0, 0.0, 1.0]
+        // }
     }
-    initShaders() {
-        const fragmentShader = this.loadShaderFromDOM('fpcat-shader-fs');
-        const vertexShader = this.loadShaderFromDOM('fpcat-shader-vs');
-        if (!fragmentShader || !vertexShader) {
-            throw new Error('Shader sources not found in DOM');
-        }
-        this.gl.attachShader(this.shaderProgram, vertexShader);
-        this.gl.attachShader(this.shaderProgram, fragmentShader);
-        this.gl.linkProgram(this.shaderProgram);
-        if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
-            throw new Error('Could not initialise shaders');
-        }
-        shaderUtility.useProgram(this.shaderProgram);
-    }
-    loadShaderFromDOM(shaderId) {
-        const shaderScript = document.getElementById(shaderId);
-        if (!shaderScript)
-            return null;
-        let shaderSource = '';
-        let currentChild = shaderScript.firstChild;
-        while (currentChild) {
-            if (currentChild.nodeType === Node.TEXT_NODE) {
-                shaderSource += currentChild.textContent;
-            }
-            currentChild = currentChild.nextSibling;
-        }
-        let shader = null;
-        if (shaderScript.type === 'x-shader/x-fragment') {
-            shader = this.gl.createShader(this.gl.FRAGMENT_SHADER);
-        }
-        else if (shaderScript.type === 'x-shader/x-vertex') {
-            shader = this.gl.createShader(this.gl.VERTEX_SHADER);
-        }
-        if (!shader)
-            return null;
-        this.gl.shaderSource(shader, shaderSource);
-        this.gl.compileShader(shader);
-        if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-            console.error(this.gl.getShaderInfoLog(shader));
-            return null;
-        }
-        return shader;
-    }
+    // private initShaders(): void {
+    //   const fragmentShader = this.loadShaderFromDOM('fpcat-shader-fs')
+    //   const vertexShader = this.loadShaderFromDOM('fpcat-shader-vs')
+    //   if (!fragmentShader || !vertexShader) {
+    //     throw new Error('Shader sources not found in DOM')
+    //   }
+    //   this.gl.attachShader(this.shaderProgram, vertexShader)
+    //   this.gl.attachShader(this.shaderProgram, fragmentShader)
+    //   this.gl.linkProgram(this.shaderProgram)
+    //   if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
+    //     throw new Error('Could not initialise shaders')
+    //   }
+    //   shaderUtility.useProgram(this.shaderProgram)
+    // }
+    // private loadShaderFromDOM(shaderId: string): WebGLShader | null {
+    //   const shaderScript = document.getElementById(shaderId) as HTMLScriptElement
+    //   if (!shaderScript) return null
+    //   let shaderSource = ''
+    //   let currentChild = shaderScript.firstChild
+    //   while (currentChild) {
+    //     if (currentChild.nodeType === Node.TEXT_NODE) {
+    //       shaderSource += currentChild.textContent
+    //     }
+    //     currentChild = currentChild.nextSibling
+    //   }
+    //   let shader: WebGLShader | null = null
+    //   if (shaderScript.type === 'x-shader/x-fragment') {
+    //     shader = this.gl.createShader(this.gl.FRAGMENT_SHADER)
+    //   } else if (shaderScript.type === 'x-shader/x-vertex') {
+    //     shader = this.gl.createShader(this.gl.VERTEX_SHADER)
+    //   }
+    //   if (!shader) return null
+    //   this.gl.shaderSource(shader, shaderSource)
+    //   this.gl.compileShader(shader)
+    //   if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+    //     console.error(this.gl.getShaderInfoLog(shader))
+    //     return null
+    //   }
+    //   return shader
+    // }
     addFootprint(in_footprint) {
         this.footprintPolygons.push(in_footprint);
     }
@@ -219,37 +221,60 @@ class FootprintSetGL {
         this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
         console.log('Buffer initialized');
     }
-    enableShader(in_mMatrix) {
-        this.gl.useProgram(this.shaderProgram);
-        const catUniformMVMatrixLoc = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
-        const catUniformProjMatrixLoc = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
-        const pointsize = this.gl.getUniformLocation(this.shaderProgram, 'u_pointsize');
-        this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition');
-        this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor');
-        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-        let mvMatrix = mat4.create();
-        if (!global.camera) {
-            throw new Error('Camera is not initialized (global.camera is null)');
-        }
-        mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix);
-        this.gl.uniformMatrix4fv(catUniformMVMatrixLoc, false, mvMatrix);
-        this.gl.uniformMatrix4fv(catUniformProjMatrixLoc, false, pMatrix);
-        this.gl.uniform1f(pointsize, 14.0);
+    // private enableShader(in_mMatrix: mat4): void {
+    //   this.gl.useProgram(this.shaderProgram)
+    //   const catUniformMVMatrixLoc = this.gl.getUniformLocation(
+    //     this.shaderProgram,
+    //     'uMVMatrix'
+    //   )
+    //   const catUniformProjMatrixLoc = this.gl.getUniformLocation(
+    //     this.shaderProgram,
+    //     'uPMatrix'
+    //   )
+    //   const pointsize = this.gl.getUniformLocation(this.shaderProgram, 'u_pointsize')
+    //   this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition')
+    //   this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor')!
+    //   const pMatrix = computePerspectiveMatrixSingleton.pMatrix
+    //   let mvMatrix = mat4.create()
+    //   if (!global.camera) {
+    //     throw new Error('Camera is not initialized (global.camera is null)')
+    //   }
+    //   mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix)
+    //   this.gl.uniformMatrix4fv(catUniformMVMatrixLoc, false, mvMatrix as Float32Array)
+    //   this.gl.uniformMatrix4fv(catUniformProjMatrixLoc, false, pMatrix as Float32Array)
+    //   this.gl.uniform1f(pointsize, 14.0)
+    // }
+    get isVisible() {
+        return this._isVisible;
     }
     draw(in_mMatrix, in_mouseHelper) {
+        if (!this.isVisible)
+            return;
         if (!this.ready)
             return;
-        this.enableShader(in_mMatrix);
+        if (!global.camera)
+            return;
+        footprintShaderProgram.enableShaders(computePerspectiveMatrixSingleton.pMatrix, in_mMatrix, global.camera.getCameraMatrix());
+        // this.enableShader(in_mMatrix)
         // TODO: integrate checkSelection, hovered & selected drawing logic here (similar to JS version)
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
-        this.gl.vertexAttribPointer(this.attribLocations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-        this.gl.enableVertexAttribArray(this.attribLocations.position);
+        this.gl.vertexAttribPointer(footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+        this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position);
+        // this.gl.vertexAttribPointer(
+        //   this.attribLocations.position as number,
+        //   FootprintSetGL.ELEM_SIZE,
+        //   this.gl.FLOAT,
+        //   false,
+        //   FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE,
+        //   0
+        // )
+        // this.gl.enableVertexAttribArray(this.attribLocations.position as number)
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
         this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.indexes, this.gl.STATIC_DRAW);
         const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0];
-        this.gl.uniform4f(this.attribLocations.color, ...shapeColor);
-        // this.gl.uniform1f(this.shaderProgram['pointsize'], 4.0)
+        this.gl.uniform4f(footprintShaderProgram.locations.color, ...shapeColor);
+        // this.gl.uniform4f(this.attribLocations.color as WebGLUniformLocation, ...shapeColor)
         this.gl.drawElements(this.gl.LINE_LOOP, this.indexes.length, this.gl.UNSIGNED_INT, 0);
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
         this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);

@@ -43,7 +43,7 @@ export default class ShaderManager {
 
     uniform vec4 u_fragcolor;
 
-    out vec4 fragColor;      // <-- add this
+    out vec4 fragColor;
 
     // varying float v_selected;
     // varying float v_brightness;
@@ -124,59 +124,81 @@ export default class ShaderManager {
     }`;
   }
 
-  static fottprintVS(): GLSLSource {
+  static footprintVS(): GLSLSource {
     return `#version 300 es
-    attribute vec4 aCatPosition;
-    //t	attribute float a_selected;
-    //t	varying float v_selected;
-    //t	attribute float a_pointsize;
-    varying lowp vec4 vColor;
+    precision highp float;
+
+    layout(location = 0) in vec4 aCatPosition;
+
     uniform float u_pointsize;
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
 
     void main() {
       gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-      //t		gl_PointSize = a_pointsize;
-      gl_PointSize = u_pointsize;
+      gl_PointSize = u_pointsize;   // Works in WebGL2
     }`;
+    // return `#version 300 es
+    // attribute vec4 aCatPosition;
+    // //t	attribute float a_selected;
+    // //t	varying float v_selected;
+    // //t	attribute float a_pointsize;
+    // varying lowp vec4 vColor;
+    // uniform float u_pointsize;
+    // uniform mat4 uMVMatrix;
+    // uniform mat4 uPMatrix;
+
+    // void main() {
+    //   gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+    //   //t		gl_PointSize = a_pointsize;
+    //   gl_PointSize = u_pointsize;
+    // }`;
   }
 
-  static fottprintFS(): GLSLSource {
+  static footprintFS(): GLSLSource {
     return `#version 300 es
-    //t	#ifdef GL_OES_standard_derivatives
-    //t	#extension GL_OES_standard_derivatives : enable
-    //t	#endif
-    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
     precision mediump float;
-    //t	varying float v_selected;
+
     uniform vec4 u_fragcolor;
+    out vec4 fragColor;
 
     void main() {
+      fragColor = u_fragcolor;
+    }`;
+    // return `#version 300 es
+    // //t	#ifdef GL_OES_standard_derivatives
+    // //t	#extension GL_OES_standard_derivatives : enable
+    // //t	#endif
+    // // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+    // precision mediump float;
+    // //t	varying float v_selected;
+    // uniform vec4 u_fragcolor;
 
-      gl_FragColor = u_fragcolor;
-      //t		float r = 0.0, delta = 0.0, alpha = 1.0;
-      //t		vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-      //t		r = dot(cxy, cxy);
-      //t		if (r > 1.0) {
-      //t			discard;
-      //t		}
+    // void main() {
 
-      //t	#ifdef GL_OES_standard_derivatives
-      //t		delta = fwidth(r);
-      //t		alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-      //t	#endif
+    //   gl_FragColor = u_fragcolor;
+    //   //t		float r = 0.0, delta = 0.0, alpha = 1.0;
+    //   //t		vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+    //   //t		r = dot(cxy, cxy);
+    //   //t		if (r > 1.0) {
+    //   //t			discard;
+    //   //t		}
 
-      //t		if (v_selected == 1.0){
-      //t			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-      //t		}else{
-      //t			if (r < 0.4) {
-      //t				discard;
-      //t			}
-      //t			gl_FragColor = u_fragcolor * (alpha);
-      //t		}
-    }
-    `;
+    //   //t	#ifdef GL_OES_standard_derivatives
+    //   //t		delta = fwidth(r);
+    //   //t		alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+    //   //t	#endif
+
+    //   //t		if (v_selected == 1.0){
+    //   //t			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+    //   //t		}else{
+    //   //t			if (r < 0.4) {
+    //   //t				discard;
+    //   //t			}
+    //   //t			gl_FragColor = u_fragcolor * (alpha);
+    //   //t		}
+    // }
+    // `;
   }
 
   static hipsVS(): GLSLSource {

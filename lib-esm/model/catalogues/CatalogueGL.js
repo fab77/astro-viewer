@@ -4,7 +4,6 @@ import Source from '../Source.js';
 import Point from '../Point.js';
 import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import CoordsType from '../..//utils/CoordsType.js';
-import { mat4 } from 'gl-matrix';
 import { colorHex2RGB } from '../../utils/Utils.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
@@ -23,7 +22,7 @@ class CatalogueGL {
     // Data
     sources;
     gl;
-    shaderProgram;
+    // shaderProgram: WebGLProgram;
     // Buffers & arrays
     vertexCataloguePositionBuffer;
     vertexhoveredCataloguePositionBuffer;
@@ -53,7 +52,7 @@ class CatalogueGL {
         this.sources = [];
         // GL init
         this.gl = global.gl;
-        this.shaderProgram = this.gl.createProgram();
+        // this.shaderProgram = this.gl.createProgram() as WebGLProgram;
         this.vertexCataloguePositionBuffer = this.gl.createBuffer();
         this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
         this.vertexCataloguePosition = new Float32Array(0);
@@ -323,20 +322,20 @@ class CatalogueGL {
         // session.updateHoveredSources(this, sourcesHovered);
         return hoveredIndexes;
     }
-    enableShader(in_mMatrix) {
-        this.gl.useProgram(this.shaderProgram);
-        const mvLoc = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
-        const projLoc = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
-        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-        let mvMatrix = mat4.create();
-        if (global.camera == null) {
-            console.warn('CatalogueGL.enableShader: missing global.camera');
-            return;
-        }
-        mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix);
-        this.gl.uniformMatrix4fv(mvLoc, false, mvMatrix);
-        this.gl.uniformMatrix4fv(projLoc, false, pMatrix);
-    }
+    // private enableShader(in_mMatrix: mat4) {
+    //     this.gl.useProgram(this.shaderProgram);
+    //     const mvLoc = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
+    //     const projLoc = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
+    //     const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
+    //     let mvMatrix = mat4.create();
+    //     if (global.camera == null) {
+    //         console.warn('CatalogueGL.enableShader: missing global.camera');
+    //         return;
+    //     }
+    //     mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix);
+    //     this.gl.uniformMatrix4fv(mvLoc, false, mvMatrix as Float32Array);
+    //     this.gl.uniformMatrix4fv(projLoc, false, pMatrix as Float32Array);
+    // }
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */

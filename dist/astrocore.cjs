@@ -1507,10 +1507,7 @@ class Global {
     _debug;
     _insideSphere;
     _version;
-    // public constant (kept as in JS)
-    HIPS_REF_ORDER;
     constructor() {
-        this.HIPS_REF_ORDER = 6;
         this._useCORSProxy = bootSetup.useCORSProxy;
         this._corsProxyUrl = bootSetup.corsProxyUrl;
         this._maxDecimals = bootSetup.maxDecimals;
@@ -6729,7 +6726,7 @@ class ShaderManager {
 
     uniform vec4 u_fragcolor;
 
-    out vec4 fragColor;      // <-- add this
+    out vec4 fragColor;
 
     // varying float v_selected;
     // varying float v_brightness;
@@ -6809,58 +6806,75 @@ class ShaderManager {
       }
     }`;
     }
-    static fottprintVS() {
+    static footprintVS() {
         return `#version 300 es
-    attribute vec4 aCatPosition;
-    //t	attribute float a_selected;
-    //t	varying float v_selected;
-    //t	attribute float a_pointsize;
-    varying lowp vec4 vColor;
+    precision highp float;
+
+    layout(location = 0) in vec4 aCatPosition;
+
     uniform float u_pointsize;
     uniform mat4 uMVMatrix;
     uniform mat4 uPMatrix;
 
     void main() {
       gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-      //t		gl_PointSize = a_pointsize;
-      gl_PointSize = u_pointsize;
+      gl_PointSize = u_pointsize;   // Works in WebGL2
     }`;
+        // return `#version 300 es
+        // attribute vec4 aCatPosition;
+        // //t	attribute float a_selected;
+        // //t	varying float v_selected;
+        // //t	attribute float a_pointsize;
+        // varying lowp vec4 vColor;
+        // uniform float u_pointsize;
+        // uniform mat4 uMVMatrix;
+        // uniform mat4 uPMatrix;
+        // void main() {
+        //   gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+        //   //t		gl_PointSize = a_pointsize;
+        //   gl_PointSize = u_pointsize;
+        // }`;
     }
-    static fottprintFS() {
+    static footprintFS() {
         return `#version 300 es
-    //t	#ifdef GL_OES_standard_derivatives
-    //t	#extension GL_OES_standard_derivatives : enable
-    //t	#endif
-    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
     precision mediump float;
-    //t	varying float v_selected;
+
     uniform vec4 u_fragcolor;
+    out vec4 fragColor;
 
     void main() {
-
-      gl_FragColor = u_fragcolor;
-      //t		float r = 0.0, delta = 0.0, alpha = 1.0;
-      //t		vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-      //t		r = dot(cxy, cxy);
-      //t		if (r > 1.0) {
-      //t			discard;
-      //t		}
-
-      //t	#ifdef GL_OES_standard_derivatives
-      //t		delta = fwidth(r);
-      //t		alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-      //t	#endif
-
-      //t		if (v_selected == 1.0){
-      //t			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-      //t		}else{
-      //t			if (r < 0.4) {
-      //t				discard;
-      //t			}
-      //t			gl_FragColor = u_fragcolor * (alpha);
-      //t		}
-    }
-    `;
+      fragColor = u_fragcolor;
+    }`;
+        // return `#version 300 es
+        // //t	#ifdef GL_OES_standard_derivatives
+        // //t	#extension GL_OES_standard_derivatives : enable
+        // //t	#endif
+        // // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+        // precision mediump float;
+        // //t	varying float v_selected;
+        // uniform vec4 u_fragcolor;
+        // void main() {
+        //   gl_FragColor = u_fragcolor;
+        //   //t		float r = 0.0, delta = 0.0, alpha = 1.0;
+        //   //t		vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+        //   //t		r = dot(cxy, cxy);
+        //   //t		if (r > 1.0) {
+        //   //t			discard;
+        //   //t		}
+        //   //t	#ifdef GL_OES_standard_derivatives
+        //   //t		delta = fwidth(r);
+        //   //t		alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+        //   //t	#endif
+        //   //t		if (v_selected == 1.0){
+        //   //t			gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+        //   //t		}else{
+        //   //t			if (r < 0.4) {
+        //   //t				discard;
+        //   //t			}
+        //   //t			gl_FragColor = u_fragcolor * (alpha);
+        //   //t		}
+        // }
+        // `;
     }
     static hipsVS() {
         return `#version 300 es
@@ -10912,7 +10926,6 @@ const catalogueShaderProgram = new CatalogueShaderProgram();
 
 
 
-
 // `Source` is assumed to expose at least these:
 class CatalogueGL {
     static ELEM_SIZE;
@@ -10928,7 +10941,7 @@ class CatalogueGL {
     // Data
     sources;
     gl;
-    shaderProgram;
+    // shaderProgram: WebGLProgram;
     // Buffers & arrays
     vertexCataloguePositionBuffer;
     vertexhoveredCataloguePositionBuffer;
@@ -10958,7 +10971,7 @@ class CatalogueGL {
         this.sources = [];
         // GL init
         this.gl = src_Global.gl;
-        this.shaderProgram = this.gl.createProgram();
+        // this.shaderProgram = this.gl.createProgram() as WebGLProgram;
         this.vertexCataloguePositionBuffer = this.gl.createBuffer();
         this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
         this.vertexCataloguePosition = new Float32Array(0);
@@ -11228,20 +11241,20 @@ class CatalogueGL {
         // session.updateHoveredSources(this, sourcesHovered);
         return hoveredIndexes;
     }
-    enableShader(in_mMatrix) {
-        this.gl.useProgram(this.shaderProgram);
-        const mvLoc = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
-        const projLoc = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        let mvMatrix = mat4_create();
-        if (src_Global.camera == null) {
-            console.warn('CatalogueGL.enableShader: missing global.camera');
-            return;
-        }
-        mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), in_mMatrix);
-        this.gl.uniformMatrix4fv(mvLoc, false, mvMatrix);
-        this.gl.uniformMatrix4fv(projLoc, false, pMatrix);
-    }
+    // private enableShader(in_mMatrix: mat4) {
+    //     this.gl.useProgram(this.shaderProgram);
+    //     const mvLoc = this.gl.getUniformLocation(this.shaderProgram, 'uMVMatrix');
+    //     const projLoc = this.gl.getUniformLocation(this.shaderProgram, 'uPMatrix');
+    //     const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
+    //     let mvMatrix = mat4.create();
+    //     if (global.camera == null) {
+    //         console.warn('CatalogueGL.enableShader: missing global.camera');
+    //         return;
+    //     }
+    //     mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix);
+    //     this.gl.uniformMatrix4fv(mvLoc, false, mvMatrix as Float32Array);
+    //     this.gl.uniformMatrix4fv(projLoc, false, pMatrix as Float32Array);
+    // }
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */

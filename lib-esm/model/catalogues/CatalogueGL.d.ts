@@ -17,7 +17,6 @@ declare class CatalogueGL {
     tapRepo: TapRepo;
     sources: Source[];
     gl: GL;
-    shaderProgram: WebGLProgram;
     vertexCataloguePositionBuffer: WebGLBuffer | null;
     vertexhoveredCataloguePositionBuffer: WebGLBuffer | null;
     vertexCataloguePosition: Float32Array;
@@ -52,7 +51,6 @@ declare class CatalogueGL {
     private initBuffer;
     private getSelectionRadius;
     private checkSelection;
-    private enableShader;
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */

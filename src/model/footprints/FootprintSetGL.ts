@@ -5,6 +5,11 @@ import { mat4 } from 'gl-matrix'
 import global from '../../Global.js'
 import { colorHex2RGB } from '../../utils/Utils.js'
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
+import { TapRepo } from '../tap/TapRepo.js'
+import TapMetadataList from '../tap/TapMetadataList.js'
+import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
+
+type GL = WebGL2RenderingContext;
 
 class FootprintSetGL {
   static ELEM_SIZE = 3
@@ -15,8 +20,8 @@ class FootprintSetGL {
   footprintsetProps: FootprintProps
   name: string
   description: string
-  provider: string
-  tapRepo: any
+  tapRepo: TapRepo
+
   footprintPolygons: Footprint[] = []
   indexes!: Uint32Array
   totPoints!: number
@@ -24,14 +29,15 @@ class FootprintSetGL {
 
   footprintsInPix256: Map<number, Footprint[]>
 
-  attribLocations!: {
-    position: number | WebGLUniformLocation
-    selected: number
-    pointSize: number
-    color: number[] | WebGLUniformLocation
-  }
-  gl: WebGL2RenderingContext
-  shaderProgram: WebGLProgram
+  // attribLocations!: {
+  //   position: number | WebGLUniformLocation
+  //   selected: number
+  //   pointSize: number
+  //   color: number[] | WebGLUniformLocation
+  // }
+  gl: GL;
+
+  // shaderProgram: WebGLProgram
   vertexCataloguePositionBuffer!: WebGLBuffer
   vertexhoveredCataloguePositionBuffer!: WebGLBuffer
   indexBuffer!: WebGLBuffer
@@ -57,11 +63,19 @@ class FootprintSetGL {
   selectedVertexPosition: never[] = []
   totSelectedPoints!: number
 
-  constructor(tablename: string, tabledesc: string, tapRepo: any, tapMetadataList: any) {
-    this.ready = false
+  _isVisible: boolean = true
+
+  constructor(
+    tablename: string,
+    tabledesc: string,
+    tapRepo: TapRepo,
+    tapMetadataList: TapMetadataList) {
+
+    this.ready = false;
+    (this as any).TYPE = 'FOOTPRINT_SET';
+
     this.name = tablename
     this.description = tabledesc
-    this.provider = tapRepo._tapBaseURL
     this.tapRepo = tapRepo
 
     this.footprintsInPix256 = new Map()
@@ -70,18 +84,21 @@ class FootprintSetGL {
     if (!global.gl) {
       throw new Error('WebGL2RenderingContext is not initialized (global.gl is null)')
     }
-    this.gl = global.gl as WebGL2RenderingContext
+
+    this.gl = global.gl as GL
     this.initGLBuffers()
 
-    this.shaderProgram = this.gl.createProgram() as WebGLProgram
+    // this.shaderProgram = this.gl.createProgram() as WebGLProgram
     this.nPrimitiveFlags = 0
     this.oldMouseCoords = null
 
-    const defaultColor = '#8F00FF'
+    const defaultColor = '#00fff2ff'
     this.footprintsetProps = new FootprintProps(tapMetadataList, defaultColor)
 
-    this.initShaders()
+    footprintShaderProgram.shaderProgram
+    // this.initShaders()
   }
+
   private initFootprintArrays(): void {
     this.footprintPolygons = []
     this.indexes = new Uint32Array()
@@ -104,72 +121,74 @@ class FootprintSetGL {
   }
 
   private initGLBuffers(): void {
-    this.vertexCataloguePositionBuffer = this.gl.createBuffer() as WebGLBuffer
-    this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer() as WebGLBuffer
-    this.indexBuffer = this.gl.createBuffer() as WebGLBuffer
+    this.vertexCataloguePositionBuffer = this.gl.createBuffer()
+    this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer()
+    this.indexBuffer = this.gl.createBuffer()
 
-    this.hoveredVertexPositionBuffer = this.gl.createBuffer() as WebGLBuffer
-    this.hoveredIndexBuffer = this.gl.createBuffer() as WebGLBuffer
+    this.hoveredVertexPositionBuffer = this.gl.createBuffer()
+    this.hoveredIndexBuffer = this.gl.createBuffer()
 
-    this.selectedVertexPositionBuffer = this.gl.createBuffer() as WebGLBuffer
-    this.selectedIndexBuffer = this.gl.createBuffer() as WebGLBuffer
+    this.selectedVertexPositionBuffer = this.gl.createBuffer()
+    this.selectedIndexBuffer = this.gl.createBuffer()
 
-    this.attribLocations = {
-      position: 0,
-      selected: 1,
-      pointSize: 2,
-      color: [0.0, 1.0, 0.0, 1.0]
-    }
+    // this.attribLocations = {
+    //   position: 0,
+    //   selected: 1,
+    //   pointSize: 2,
+    //   color: [0.0, 1.0, 0.0, 1.0]
+    // }
   }
 
-  private initShaders(): void {
-    const fragmentShader = this.loadShaderFromDOM('fpcat-shader-fs')
-    const vertexShader = this.loadShaderFromDOM('fpcat-shader-vs')
+  // private initShaders(): void {
+  //   const fragmentShader = this.loadShaderFromDOM('fpcat-shader-fs')
+  //   const vertexShader = this.loadShaderFromDOM('fpcat-shader-vs')
 
-    if (!fragmentShader || !vertexShader) {
-      throw new Error('Shader sources not found in DOM')
-    }
+  //   if (!fragmentShader || !vertexShader) {
+  //     throw new Error('Shader sources not found in DOM')
+  //   }
 
-    this.gl.attachShader(this.shaderProgram, vertexShader)
-    this.gl.attachShader(this.shaderProgram, fragmentShader)
-    this.gl.linkProgram(this.shaderProgram)
+  //   this.gl.attachShader(this.shaderProgram, vertexShader)
+  //   this.gl.attachShader(this.shaderProgram, fragmentShader)
+  //   this.gl.linkProgram(this.shaderProgram)
 
-    if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
-      throw new Error('Could not initialise shaders')
-    }
+  //   if (!this.gl.getProgramParameter(this.shaderProgram, this.gl.LINK_STATUS)) {
+  //     throw new Error('Could not initialise shaders')
+  //   }
 
-    shaderUtility.useProgram(this.shaderProgram)
-  }
-  private loadShaderFromDOM(shaderId: string): WebGLShader | null {
-    const shaderScript = document.getElementById(shaderId) as HTMLScriptElement
-    if (!shaderScript) return null
+  //   shaderUtility.useProgram(this.shaderProgram)
+  // }
 
-    let shaderSource = ''
-    let currentChild = shaderScript.firstChild
-    while (currentChild) {
-      if (currentChild.nodeType === Node.TEXT_NODE) {
-        shaderSource += currentChild.textContent
-      }
-      currentChild = currentChild.nextSibling
-    }
 
-    let shader: WebGLShader | null = null
-    if (shaderScript.type === 'x-shader/x-fragment') {
-      shader = this.gl.createShader(this.gl.FRAGMENT_SHADER)
-    } else if (shaderScript.type === 'x-shader/x-vertex') {
-      shader = this.gl.createShader(this.gl.VERTEX_SHADER)
-    }
-    if (!shader) return null
+  // private loadShaderFromDOM(shaderId: string): WebGLShader | null {
+  //   const shaderScript = document.getElementById(shaderId) as HTMLScriptElement
+  //   if (!shaderScript) return null
 
-    this.gl.shaderSource(shader, shaderSource)
-    this.gl.compileShader(shader)
+  //   let shaderSource = ''
+  //   let currentChild = shaderScript.firstChild
+  //   while (currentChild) {
+  //     if (currentChild.nodeType === Node.TEXT_NODE) {
+  //       shaderSource += currentChild.textContent
+  //     }
+  //     currentChild = currentChild.nextSibling
+  //   }
 
-    if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
-      console.error(this.gl.getShaderInfoLog(shader))
-      return null
-    }
-    return shader
-  }
+  //   let shader: WebGLShader | null = null
+  //   if (shaderScript.type === 'x-shader/x-fragment') {
+  //     shader = this.gl.createShader(this.gl.FRAGMENT_SHADER)
+  //   } else if (shaderScript.type === 'x-shader/x-vertex') {
+  //     shader = this.gl.createShader(this.gl.VERTEX_SHADER)
+  //   }
+  //   if (!shader) return null
+
+  //   this.gl.shaderSource(shader, shaderSource)
+  //   this.gl.compileShader(shader)
+
+  //   if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
+  //     console.error(this.gl.getShaderInfoLog(shader))
+  //     return null
+  //   }
+  //   return shader
+  // }
 
   addFootprint(in_footprint: Footprint): void {
     this.footprintPolygons.push(in_footprint)
@@ -200,6 +219,8 @@ class FootprintSetGL {
   clearFootprints(): void {
     this.initFootprintArrays()
   }
+
+
   private initBuffer(): void {
     const nFootprints = this.footprintPolygons.length
     let npolygons = nFootprints - 1
@@ -263,38 +284,48 @@ class FootprintSetGL {
     console.log('Buffer initialized')
   }
 
-  private enableShader(in_mMatrix: mat4): void {
-    this.gl.useProgram(this.shaderProgram)
+  // private enableShader(in_mMatrix: mat4): void {
+  //   this.gl.useProgram(this.shaderProgram)
 
-    const catUniformMVMatrixLoc = this.gl.getUniformLocation(
-      this.shaderProgram,
-      'uMVMatrix'
-    )
-    const catUniformProjMatrixLoc = this.gl.getUniformLocation(
-      this.shaderProgram,
-      'uPMatrix'
-    )
-    const pointsize = this.gl.getUniformLocation(this.shaderProgram, 'u_pointsize')
+  //   const catUniformMVMatrixLoc = this.gl.getUniformLocation(
+  //     this.shaderProgram,
+  //     'uMVMatrix'
+  //   )
+  //   const catUniformProjMatrixLoc = this.gl.getUniformLocation(
+  //     this.shaderProgram,
+  //     'uPMatrix'
+  //   )
+  //   const pointsize = this.gl.getUniformLocation(this.shaderProgram, 'u_pointsize')
 
-    this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition')
-    this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor')!
+  //   this.attribLocations.position = this.gl.getAttribLocation(this.shaderProgram, 'aCatPosition')
+  //   this.attribLocations.color = this.gl.getUniformLocation(this.shaderProgram, 'u_fragcolor')!
 
-    const pMatrix = computePerspectiveMatrixSingleton.pMatrix
-    let mvMatrix = mat4.create()
-    if (!global.camera) {
-      throw new Error('Camera is not initialized (global.camera is null)')
-    }
-    mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix)
+  //   const pMatrix = computePerspectiveMatrixSingleton.pMatrix
+  //   let mvMatrix = mat4.create()
+  //   if (!global.camera) {
+  //     throw new Error('Camera is not initialized (global.camera is null)')
+  //   }
+  //   mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix)
 
-    this.gl.uniformMatrix4fv(catUniformMVMatrixLoc, false, mvMatrix as Float32Array)
-    this.gl.uniformMatrix4fv(catUniformProjMatrixLoc, false, pMatrix as Float32Array)
-    this.gl.uniform1f(pointsize, 14.0)
+  //   this.gl.uniformMatrix4fv(catUniformMVMatrixLoc, false, mvMatrix as Float32Array)
+  //   this.gl.uniformMatrix4fv(catUniformProjMatrixLoc, false, pMatrix as Float32Array)
+  //   this.gl.uniform1f(pointsize, 14.0)
+  // }
+  get isVisible() {
+    return this._isVisible
   }
 
   draw(in_mMatrix: mat4, in_mouseHelper: any): void {
+    if (!this.isVisible) return
     if (!this.ready) return
+    if (!global.camera) return
 
-    this.enableShader(in_mMatrix)
+    footprintShaderProgram.enableShaders(
+      computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+      in_mMatrix as Float32Array,
+      global.camera.getCameraMatrix() as Float32Array
+    )
+    // this.enableShader(in_mMatrix)
 
     // TODO: integrate checkSelection, hovered & selected drawing logic here (similar to JS version)
 
@@ -302,22 +333,31 @@ class FootprintSetGL {
     this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW)
 
     this.gl.vertexAttribPointer(
-      this.attribLocations.position as number,
+      footprintShaderProgram.locations.position as number,
       FootprintSetGL.ELEM_SIZE,
       this.gl.FLOAT,
       false,
       FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE,
       0
     )
-    this.gl.enableVertexAttribArray(this.attribLocations.position as number)
+    this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position as number)
+    // this.gl.vertexAttribPointer(
+    //   this.attribLocations.position as number,
+    //   FootprintSetGL.ELEM_SIZE,
+    //   this.gl.FLOAT,
+    //   false,
+    //   FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE,
+    //   0
+    // )
+    // this.gl.enableVertexAttribArray(this.attribLocations.position as number)
 
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
     this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.indexes, this.gl.STATIC_DRAW)
 
     const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
-    this.gl.uniform4f(this.attribLocations.color as WebGLUniformLocation, ...shapeColor)
+    this.gl.uniform4f(footprintShaderProgram.locations.color as WebGLUniformLocation, ...shapeColor)
+    // this.gl.uniform4f(this.attribLocations.color as WebGLUniformLocation, ...shapeColor)
 
-    // this.gl.uniform1f(this.shaderProgram['pointsize'], 4.0)
     this.gl.drawElements(this.gl.LINE_LOOP, this.indexes.length, this.gl.UNSIGNED_INT, 0)
 
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)

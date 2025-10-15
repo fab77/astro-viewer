@@ -13,7 +13,6 @@ declare class Global {
     private _debug;
     private _insideSphere;
     private _version;
-    HIPS_REF_ORDER: number;
     constructor();
     init(): void;
     get version(): string;
