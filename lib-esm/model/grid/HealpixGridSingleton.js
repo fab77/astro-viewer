@@ -16,7 +16,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
     _visibleorder = 0;
-    showGrid = true;
+    showGrid = false;
     _shaderProgram;
     fragmentShader;
     vertexShader;
@@ -39,7 +39,6 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     static INITIAL_ThetaRad = 0;
     constructor() {
         super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid');
-        // this.initGL(global.gl as GL);
     }
     init() {
         console.log('HealpixGridSingleton.init()');
@@ -56,6 +55,15 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     }
     get RADIUS() {
         return HealpixGridSingleton.RADIUS;
+    }
+    get INITIAL_POSITION() {
+        return HealpixGridSingleton.INITIAL_POSITION;
+    }
+    get INITIAL_PhiRad() {
+        return HealpixGridSingleton.INITIAL_PhiRad;
+    }
+    get INITIAL_ThetaRad() {
+        return HealpixGridSingleton.INITIAL_ThetaRad;
     }
     refreshFoV() {
         return this.fovObj.getFoV(global.insideSphere);

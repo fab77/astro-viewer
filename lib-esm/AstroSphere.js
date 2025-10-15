@@ -12,6 +12,7 @@ import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.
 import FoVUtils from './utils/FoVUtils.js';
 import queryCatalogueByFoV from './services/queryCatalogueByFoV.js';
 import queryFootprintSetByFov from './services/queryFootprintSetByFov.js';
+import equatorialGridSingleton from './model/grid/EquatorialGrid.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -82,6 +83,7 @@ class AstroSphere {
         healpixGridSingleton.init();
         computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
         visibleTilesManager.init(bootSetup.insideSphere);
+        equatorialGridSingleton.init(healpixGridSingleton.getMinFoV());
         this.updateCentralPoint();
         this.startup = true;
         this.addEventListeners(canvas);
@@ -206,8 +208,7 @@ class AstroSphere {
         this.activeFootprintSets.forEach(fset => {
             footprintsHovered.push(fset.hoveredFootprints);
         });
-        const result = footprintsHovered;
-        return result;
+        return footprintsHovered;
     }
     // End Footprint section
     goTo(raDeg, decDeg) {
@@ -300,6 +301,7 @@ class AstroSphere {
         // DRAW HiPS
         this.activeHiPS.draw();
         healpixGridSingleton.draw();
+        equatorialGridSingleton.draw();
         global.gl.enable(global.gl.DEPTH_TEST);
         global.gl.disable(global.gl.CULL_FACE);
         if (this.startup) {

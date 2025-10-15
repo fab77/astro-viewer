@@ -30,6 +30,8 @@ import CatalogueGL from './model/catalogues/CatalogueGL.js'
 import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
 import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
 import Footprint from './model/footprints/Footprint.js'
+import EquatorialGrid from './model/grid/EquatorialGrid.js'
+import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -125,7 +127,7 @@ class AstroSphere {
     healpixGridSingleton.init()
     computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere)
     visibleTilesManager.init(bootSetup.insideSphere)
-
+    equatorialGridSingleton.init(healpixGridSingleton.getMinFoV())
     this.updateCentralPoint()
 
     this.startup = true
@@ -399,6 +401,7 @@ class AstroSphere {
 
     this.activeHiPS.draw()
     healpixGridSingleton.draw()
+    equatorialGridSingleton.draw()
 
     global.gl.enable(global.gl.DEPTH_TEST)
     global.gl.disable(global.gl.CULL_FACE)

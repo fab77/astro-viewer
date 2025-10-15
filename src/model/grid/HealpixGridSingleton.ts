@@ -8,7 +8,7 @@ import { Healpix } from 'healpixjs';
 
 import { fovHelper } from '../hips/FoVHelper.js';
 import FoVUtils from '../../utils/FoVUtils.js';
-import {FoV} from '../FoV.js';
+import { FoV } from '../FoV.js';
 
 import CoordsType from '../../utils/CoordsType.js';
 import Point from '../Point.js';
@@ -18,7 +18,7 @@ import GeomUtils from '../../utils/GeomUtils.js';
 import { gridTextHelper } from './GridTextHelper.js';
 import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
-import { bootSetup } from '../../Config.js';
+import { colorHex2RGB } from '../../utils/Utils.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -30,21 +30,23 @@ interface BoundVec {
 
 
 class HealpixGridSingleton extends AbstractSkyEntity {
-  
+
   static ELEM_SIZE = 3;
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
 
   private _visibleorder = 0;
-  private showGrid: boolean = true
+  private showGrid: boolean = false
   private _shaderProgram!: WebGLProgram;
   private fragmentShader!: WebGLShader;
   private vertexShader!: WebGLShader;
 
-  private _attribLocations: { position: number; selected: number; pointSize: number; color: [number, number, number, number] } = {
+  private defaultColor = '#ec0acaff'
+
+  private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
     position: 0,
     selected: 1,
     pointSize: 2,
-    color: [0, 1, 0, 1],
+    color: 3,
   };
 
   private _nPrimitiveFlags = 0;
@@ -67,7 +69,6 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
   constructor() {
     super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid');
-    // this.initGL(global.gl as GL);
   }
 
   init(): void {
@@ -92,6 +93,18 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
   get RADIUS(): number {
     return HealpixGridSingleton.RADIUS
+  }
+
+  get INITIAL_POSITION(): [number, number, number] {
+    return HealpixGridSingleton.INITIAL_POSITION
+  }
+
+  get INITIAL_PhiRad(): number {
+    return HealpixGridSingleton.INITIAL_PhiRad
+  }
+
+  get INITIAL_ThetaRad(): number {
+    return HealpixGridSingleton.INITIAL_ThetaRad
   }
 
   refreshFoV() {
@@ -247,7 +260,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   //   return (this as any)._tileBuffer.updateTiles(pixels, order);
   // }
 
-  
+
   private refresh(): void {
 
     this.refreshFoV();
@@ -263,9 +276,14 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     const gl = global.gl as GL;
 
     gl.useProgram(this._shaderProgram);
+    // TODO move locations retrieval elsewhere
 
+    // Uniform locations
     const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
     const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+    const uColor = (global.gl as GL).getUniformLocation(this._shaderProgram, 'u_fragcolor');
+
+    // Attribute locations
     this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
 
     let mvMatrix = mat4.create();
@@ -273,9 +291,16 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
     if (uMV) gl.uniformMatrix4fv(uMV, false, mvMatrix as Float32Array);
     if (uP) gl.uniformMatrix4fv(uP, false, pMatrix as Float32Array);
+    if (uColor) {
+      const rgb = colorHex2RGB(this.defaultColor);
+      gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+    }
   }
 
-  
+  isVisible(): boolean {
+    return this.showGrid
+  }
+
   toggleShowGrid() {
     this.showGrid = !this.showGrid
   }

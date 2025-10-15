@@ -23,6 +23,9 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     constructor();
     init(): void;
     get RADIUS(): number;
+    get INITIAL_POSITION(): [number, number, number];
+    get INITIAL_PhiRad(): number;
+    get INITIAL_ThetaRad(): number;
     refreshFoV(): FoV;
     getFoV(): FoV;
     getMinFoV(): number;

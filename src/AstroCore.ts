@@ -9,6 +9,8 @@ import type { PointCoordinates } from './AstroSphere.js'
 import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
 import { bootSetup } from './Config.js'
 import Footprint from './model/footprints/Footprint.js'
+import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
+import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext & {
   viewportWidth: number
   viewportHeight: number
@@ -92,6 +94,22 @@ export class AstroCore {
     return this.astroSphere.getLastMousePointCoordinates()
   }
 
+  // GRIDs
+  toggleHealpixGrid() {
+    healpixGridSingleton.toggleShowGrid()
+  }
+
+  isHealpixGridVisible(): boolean{
+    return healpixGridSingleton.isVisible()
+  }
+
+  toggleEquatorialGrid() {
+    equatorialGridSingleton.toggleShowGrid()
+  }
+
+  isEquatorialGridVisible(): boolean {
+      return equatorialGridSingleton.isVisible()
+  }
 
   // FOV
   getFoV(): FoV {

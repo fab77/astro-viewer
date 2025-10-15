@@ -17,10 +17,13 @@ class GridShaderManager {
   static healpixGridFS(): string {
     return `#version 300 es
         precision mediump float;
+
+        uniform vec4 u_fragcolor;
         out vec4 fragColor;
 
         void main() {
-            fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            fragColor = u_fragcolor;
         }`
   }
 }

@@ -44,8 +44,7 @@ export class AstroCore {
         footprintSet.footprintsetProps.changeColor(hexColor);
     }
     getHoveredFootprints() {
-        const result = this.astroSphere.getHoveredFootprints();
-        return result;
+        return this.astroSphere.getHoveredFootprints();
     }
     // HIPS
     getDefaultHiPSURL() {
