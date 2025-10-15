@@ -1,7 +1,7 @@
 {
   "name": "astro-core",
   "description": "Astrobrowser 3d engine.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "keywords": [
     "HiPS",
     "HiPS cutout",
