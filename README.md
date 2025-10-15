@@ -1,13 +1,13 @@
 HiPS 3D visualisation tool.
 
 To start using it, just copy the bundle in dist/astrocore.js into your project and link it in your HTML page:
-'''
+```
 <script src="./javascripts/astrocore.js"></script>
-'''
+```
 
 Below an example of index.html that loads the HiPS https://alasky.cds.unistra.fr/DSS/DSSColor/, enable the TAP https://sky.esa.int/esasky-tap/tap and show the source catalogue catalogues.integral_ibis:
 
-'''
+```
 <!DOCTYPE html>
 <html>
 <head>
@@ -34,5 +34,5 @@ Below an example of index.html that loads the HiPS https://alasky.cds.unistra.fr
     <canvas id="astrocanvas"></canvas>
 </body>
 </html>
-'''
+```
 
