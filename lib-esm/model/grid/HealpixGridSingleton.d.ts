@@ -28,7 +28,6 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     getMinFoV(): number;
     private initShaders;
     initBuffers(pixels: number[], order: number): void;
-    updateTiles(pixels: number[], order: number): any;
     private refresh;
     private enableShader;
     toggleShowGrid(): void;

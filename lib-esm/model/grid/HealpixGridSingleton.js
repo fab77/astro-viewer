@@ -170,16 +170,17 @@ class HealpixGridSingleton extends AbstractSkyEntity {
             vIdx += 1;
         }
     }
-    updateTiles(pixels, order) {
-        return this._tileBuffer.updateTiles(pixels, order);
-    }
+    // updateTiles(pixels: number[], order: number) {
+    //   return (this as any)._tileBuffer.updateTiles(pixels, order);
+    // }
     refresh() {
         this.refreshFoV();
         const fov = this.getMinFoV();
         // expose to global (legacy)
-        global.hipsFoV = fov;
-        global.order = fovHelper.getHiPSNorder(fov);
-        this._visibleorder = global.order;
+        // (global as any).hipsFoV = fov;
+        // global.order = fovHelper.getHiPSNorder(fov);
+        // this._visibleorder = global.order;
+        this._visibleorder = fovHelper.getHiPSNorder(fov);
     }
     enableShader(in_mMatrix, pMatrix) {
         const gl = global.gl;
@@ -229,7 +230,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         const center = FoVUtils.getCenterJ2000(gl.canvas, pMatrix);
         const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
         for (let p = 0; p < pixels.length; p++) {
-            const pixCenter = global.getHealpix(global.order).pix2vec(pixels[p]);
+            const pixCenter = global.getHealpix(this._visibleorder).pix2vec(pixels[p]);
+            // const pixCenter = (global.getHealpix(global.order).pix2vec(pixels[p]) as BoundVec);
             const point = new Point({ x: pixCenter.x, y: pixCenter.y, z: pixCenter.z }, CoordsType.CARTESIAN);
             const distance = GeomUtils.orthodromicDistance(center, point);
             if (distance < fovMin) {
