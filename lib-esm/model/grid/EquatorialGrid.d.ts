@@ -7,6 +7,7 @@ declare class EquatorialGrid extends AbstractSkyEntity {
     private _shaderProgram;
     private _vertexShader;
     private _fragmentShader;
+    private defaultColor;
     private _attribLocations;
     private _phiVertexPositionBuffer;
     private _thetaVertexPositionBuffer;
@@ -33,6 +34,7 @@ declare class EquatorialGrid extends AbstractSkyEntity {
     refresh(): void;
     private vectorDistance;
     private enableShader;
+    isVisible(): boolean;
     toggleShowGrid(): void;
     /**
      * @param mMatrix model matrix associated with current HiPS (or scene) transform

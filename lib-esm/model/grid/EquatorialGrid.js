@@ -21,11 +21,12 @@ class EquatorialGrid extends AbstractSkyEntity {
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
+    defaultColor = '#41d421';
     _attribLocations = {
         position: 0,
         selected: 1,
         pointSize: 2,
-        color: [0.0, 1.0, 0.0, 1.0],
+        color: 3,
     };
     // private _uMVMatrixLoc: WebGLUniformLocation | null = null;
     // private _uPMatrixLoc: WebGLUniformLocation | null = null;
@@ -168,24 +169,29 @@ class EquatorialGrid extends AbstractSkyEntity {
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
     enableShader(mMatrix, pMatrix) {
-        global.gl.useProgram(this._shaderProgram);
+        const gl = global.gl;
+        gl.useProgram(this._shaderProgram);
         // uMVMatrix = camera * model
         const mvMatrix = mat4.create();
         mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), mMatrix);
+        // TODO move locations retrieval elsewhere
         // Uniform locations
-        const uMVMatrixLoc = global.gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
-        const uPMatrixLoc = global.gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-        const uColor = global.gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uPMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
         // Attribute locations
-        this._attribLocations.position = global.gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
         if (uMVMatrixLoc)
-            global.gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
+            gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
         if (uPMatrixLoc)
-            global.gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
+            gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
         if (uColor) {
-            const rgb = colorHex2RGB('#41d421');
-            global.gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+            const rgb = colorHex2RGB(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
         }
+    }
+    isVisible() {
+        return this.showGrid;
     }
     toggleShowGrid() {
         this.showGrid = !this.showGrid;

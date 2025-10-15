@@ -26,6 +26,10 @@ export declare class AstroCore {
     goTo(raDeg: number, decDeg: number): void;
     getCenterCoordinates(): PointCoordinates | undefined;
     getCoordinatesFromMouse(): PointCoordinates | undefined;
+    toggleHealpixGrid(): void;
+    isHealpixGridVisible(): boolean;
+    toggleEquatorialGrid(): void;
+    isEquatorialGridVisible(): boolean;
     getFoV(): FoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;

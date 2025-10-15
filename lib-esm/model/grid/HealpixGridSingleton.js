@@ -12,6 +12,7 @@ import GeomUtils from '../../utils/GeomUtils.js';
 import { gridTextHelper } from './GridTextHelper.js';
 import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+import { colorHex2RGB } from '../../utils/Utils.js';
 class HealpixGridSingleton extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -20,11 +21,12 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     _shaderProgram;
     fragmentShader;
     vertexShader;
+    defaultColor = '#ec0acaff';
     _attribLocations = {
         position: 0,
         selected: 1,
         pointSize: 2,
-        color: [0, 1, 0, 1],
+        color: 3,
     };
     _nPrimitiveFlags = 0;
     _vertexCataloguePositionBuffer;
@@ -193,8 +195,12 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     enableShader(in_mMatrix, pMatrix) {
         const gl = global.gl;
         gl.useProgram(this._shaderProgram);
+        // TODO move locations retrieval elsewhere
+        // Uniform locations
         const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
         const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = global.gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        // Attribute locations
         this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
         let mvMatrix = mat4.create();
         mvMatrix = mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), in_mMatrix);
@@ -202,6 +208,13 @@ class HealpixGridSingleton extends AbstractSkyEntity {
             gl.uniformMatrix4fv(uMV, false, mvMatrix);
         if (uP)
             gl.uniformMatrix4fv(uP, false, pMatrix);
+        if (uColor) {
+            const rgb = colorHex2RGB(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    isVisible() {
+        return this.showGrid;
     }
     toggleShowGrid() {
         this.showGrid = !this.showGrid;

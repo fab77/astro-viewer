@@ -8,6 +8,7 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     private _shaderProgram;
     private fragmentShader;
     private vertexShader;
+    private defaultColor;
     private _attribLocations;
     private _nPrimitiveFlags;
     private _vertexCataloguePositionBuffer;
@@ -33,6 +34,7 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     initBuffers(pixels: number[], order: number): void;
     private refresh;
     private enableShader;
+    isVisible(): boolean;
     toggleShowGrid(): void;
     draw(): void;
     get visibleorder(): number;

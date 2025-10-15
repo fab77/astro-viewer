@@ -8750,6 +8750,7 @@ const visibleTilesManager = new VisibleTilesManager();
 
 
 
+
 class HealpixGridSingleton extends model_AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -8758,11 +8759,12 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     _shaderProgram;
     fragmentShader;
     vertexShader;
+    defaultColor = '#ec0acaff';
     _attribLocations = {
         position: 0,
         selected: 1,
         pointSize: 2,
-        color: [0, 1, 0, 1],
+        color: 3,
     };
     _nPrimitiveFlags = 0;
     _vertexCataloguePositionBuffer;
@@ -8931,8 +8933,12 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     enableShader(in_mMatrix, pMatrix) {
         const gl = src_Global.gl;
         gl.useProgram(this._shaderProgram);
+        // TODO move locations retrieval elsewhere
+        // Uniform locations
         const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
         const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = src_Global.gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        // Attribute locations
         this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
         let mvMatrix = mat4_create();
         mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), in_mMatrix);
@@ -8940,6 +8946,13 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
             gl.uniformMatrix4fv(uMV, false, mvMatrix);
         if (uP)
             gl.uniformMatrix4fv(uP, false, pMatrix);
+        if (uColor) {
+            const rgb = colorHex2RGB(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    isVisible() {
+        return this.showGrid;
     }
     toggleShowGrid() {
         this.showGrid = !this.showGrid;
@@ -12417,11 +12430,12 @@ class EquatorialGrid extends model_AbstractSkyEntity {
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
+    defaultColor = '#41d421';
     _attribLocations = {
         position: 0,
         selected: 1,
         pointSize: 2,
-        color: [0.0, 1.0, 0.0, 1.0],
+        color: 3,
     };
     // private _uMVMatrixLoc: WebGLUniformLocation | null = null;
     // private _uPMatrixLoc: WebGLUniformLocation | null = null;
@@ -12564,24 +12578,29 @@ class EquatorialGrid extends model_AbstractSkyEntity {
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
     enableShader(mMatrix, pMatrix) {
-        src_Global.gl.useProgram(this._shaderProgram);
+        const gl = src_Global.gl;
+        gl.useProgram(this._shaderProgram);
         // uMVMatrix = camera * model
         const mvMatrix = mat4_create();
         mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), mMatrix);
+        // TODO move locations retrieval elsewhere
         // Uniform locations
-        const uMVMatrixLoc = src_Global.gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
-        const uPMatrixLoc = src_Global.gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-        const uColor = src_Global.gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uPMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
         // Attribute locations
-        this._attribLocations.position = src_Global.gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
         if (uMVMatrixLoc)
-            src_Global.gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
+            gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
         if (uPMatrixLoc)
-            src_Global.gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
+            gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
         if (uColor) {
-            const rgb = colorHex2RGB('#41d421');
-            src_Global.gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+            const rgb = colorHex2RGB(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
         }
+    }
+    isVisible() {
+        return this.showGrid;
     }
     toggleShowGrid() {
         this.showGrid = !this.showGrid;
@@ -13014,6 +13033,8 @@ class AstroSphere {
 
 
 
+
+
 class AstroCore {
     astroSphere;
     canvas;
@@ -13074,6 +13095,19 @@ class AstroCore {
     }
     getCoordinatesFromMouse() {
         return this.astroSphere.getLastMousePointCoordinates();
+    }
+    // GRIDs
+    toggleHealpixGrid() {
+        grid_HealpixGridSingleton.toggleShowGrid();
+    }
+    isHealpixGridVisible() {
+        return grid_HealpixGridSingleton.isVisible();
+    }
+    toggleEquatorialGrid() {
+        grid_EquatorialGrid.toggleShowGrid();
+    }
+    isEquatorialGridVisible() {
+        return grid_EquatorialGrid.isVisible();
     }
     // FOV
     getFoV() {

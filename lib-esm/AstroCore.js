@@ -2,6 +2,8 @@
 import global from './Global.js';
 import AstroSphere from './AstroSphere.js';
 import { bootSetup } from './Config.js';
+import healpixGridSingleton from './model/grid/HealpixGridSingleton.js';
+import equatorialGridSingleton from './model/grid/EquatorialGrid.js';
 export class AstroCore {
     astroSphere;
     canvas;
@@ -62,6 +64,19 @@ export class AstroCore {
     }
     getCoordinatesFromMouse() {
         return this.astroSphere.getLastMousePointCoordinates();
+    }
+    // GRIDs
+    toggleHealpixGrid() {
+        healpixGridSingleton.toggleShowGrid();
+    }
+    isHealpixGridVisible() {
+        return healpixGridSingleton.isVisible();
+    }
+    toggleEquatorialGrid() {
+        equatorialGridSingleton.toggleShowGrid();
+    }
+    isEquatorialGridVisible() {
+        return equatorialGridSingleton.isVisible();
     }
     // FOV
     getFoV() {

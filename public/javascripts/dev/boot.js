@@ -28,6 +28,18 @@ async function bootstrap() {
     window.AstroAPI = state.AstroAPI = AC;
     window.TAP = state.TAP;
 
+    // Initialize grid toggle checkboxes from API
+    try {
+      const healpixChk = el('healpixGridChk');
+      const equatChk = el('equatorialGridChk');
+      if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
+        healpixChk.checked = !!AC.isHealpixGridVisible();
+      }
+      if (equatChk && typeof AC.isEquatorialGridVisible === "function") {
+        equatChk.checked = !!AC.isEquatorialGridVisible();
+      }
+    } catch { }
+
     // Try to get the default HiPS URL from the AstroCore API
     // Determine the default HiPS URL (try AstroCore, else fallback)
     let defaultHiPS = "";
@@ -162,6 +174,29 @@ function wireUI() {
     } finally {
       // store preference regardless of API success
       persistBasic();
+    }
+  });
+
+  // grid toggles
+  el('healpixGridChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.toggleHealpixGrid?.();
+      // (optional) if your API exposes getters that reflect current state immediately,
+      // you could re-sync the checkbox, e.g.:
+      // ev.target.checked = !!state.AstroAPI?.isHealpixGridVisible?.();
+    } catch (e) {
+      // revert UI on error
+      ev.target.checked = !ev.target.checked;
+    }
+  });
+
+  el('equatorialGridChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.toggleEquatorialGrid?.();
+      // (optional) re-sync from getter if needed:
+      // ev.target.checked = !!state.AstroAPI?.isEquatorialGridVisible?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
     }
   });
 }
