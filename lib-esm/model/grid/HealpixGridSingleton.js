@@ -9,7 +9,7 @@ import CoordsType from '../../utils/CoordsType.js';
 import Point from '../Point.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import GeomUtils from '../../utils/GeomUtils.js';
-import { gridTextHelper } from './GridTextHelper.js';
+import GridTextHelper from './GridTextHelper.js';
 import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
@@ -22,6 +22,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     fragmentShader;
     vertexShader;
     defaultColor = '#ec0acaff';
+    gridText = new GridTextHelper();
     _attribLocations = {
         position: 0,
         selected: 1,
@@ -223,8 +224,11 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         const gl = global.gl;
         const mMatrix = this.getModelMatrix();
         this.refresh();
-        if (!this.showGrid)
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
             return;
+        }
         const visibleTiles = visibleTilesManager.visibleTilesByOrder;
         const pixels = visibleTiles.pixels;
         const order = visibleTiles.order;
@@ -265,10 +269,13 @@ class HealpixGridSingleton extends AbstractSkyEntity {
                 // clip → pixels
                 const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
                 const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
-                gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+                this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+                // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
             }
         }
-        gridTextHelper.resetDivSets();
+        // gridTextHelper.resetDivSets();
+        this.gridText.resetDivSets();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     }
     get visibleorder() {
         return this._visibleorder;

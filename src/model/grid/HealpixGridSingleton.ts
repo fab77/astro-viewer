@@ -15,7 +15,7 @@ import Point from '../Point.js';
 
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import GeomUtils from '../../utils/GeomUtils.js';
-import { gridTextHelper } from './GridTextHelper.js';
+import GridTextHelper from './GridTextHelper.js';
 import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
@@ -41,6 +41,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   private vertexShader!: WebGLShader;
 
   private defaultColor = '#ec0acaff'
+  private gridText: GridTextHelper = new GridTextHelper()
 
   private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
     position: 0,
@@ -311,7 +312,12 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     const mMatrix = this.getModelMatrix();
     this.refresh();
 
-    if (!this.showGrid) return;
+    if (!this.showGrid) {
+
+      // gridTextHelper.resetDivSets();
+      this.gridText.resetDivSets();
+      return;
+    }
 
     const visibleTiles = visibleTilesManager.visibleTilesByOrder
     const pixels = visibleTiles.pixels;
@@ -385,11 +391,15 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
         const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
 
-        gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+        this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+        // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
       }
     }
 
-    gridTextHelper.resetDivSets();
+    // gridTextHelper.resetDivSets();
+    this.gridText.resetDivSets();
+
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
   }
 
   get visibleorder(): number {

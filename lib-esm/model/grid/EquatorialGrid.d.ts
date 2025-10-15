@@ -8,6 +8,7 @@ declare class EquatorialGrid extends AbstractSkyEntity {
     private _vertexShader;
     private _fragmentShader;
     private defaultColor;
+    private gridText;
     private _attribLocations;
     private _phiVertexPositionBuffer;
     private _thetaVertexPositionBuffer;

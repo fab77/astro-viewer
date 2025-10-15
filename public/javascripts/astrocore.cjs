@@ -6685,7 +6685,7 @@ class GridTextHelper {
     }
 }
 const gridTextHelper = new GridTextHelper();
-/* harmony default export */ const grid_GridTextHelper = ((/* unused pure expression or super */ null && (GridTextHelper)));
+/* harmony default export */ const grid_GridTextHelper = (GridTextHelper);
 
 ;// ./src/shader/ShaderManager.ts
 // ShaderManager.ts
@@ -8760,6 +8760,7 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
     fragmentShader;
     vertexShader;
     defaultColor = '#ec0acaff';
+    gridText = new grid_GridTextHelper();
     _attribLocations = {
         position: 0,
         selected: 1,
@@ -8961,8 +8962,11 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
         const gl = src_Global.gl;
         const mMatrix = this.getModelMatrix();
         this.refresh();
-        if (!this.showGrid)
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
             return;
+        }
         const visibleTiles = visibleTilesManager.visibleTilesByOrder;
         const pixels = visibleTiles.pixels;
         const order = visibleTiles.order;
@@ -9003,10 +9007,13 @@ class HealpixGridSingleton extends model_AbstractSkyEntity {
                 // clip → pixels
                 const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
                 const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
-                gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+                this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+                // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
             }
         }
-        gridTextHelper.resetDivSets();
+        // gridTextHelper.resetDivSets();
+        this.gridText.resetDivSets();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     }
     get visibleorder() {
         return this._visibleorder;
@@ -12431,17 +12438,13 @@ class EquatorialGrid extends model_AbstractSkyEntity {
     _vertexShader;
     _fragmentShader;
     defaultColor = '#41d421';
+    gridText = new grid_GridTextHelper();
     _attribLocations = {
         position: 0,
         selected: 1,
         pointSize: 2,
         color: 3,
     };
-    // private _uMVMatrixLoc: WebGLUniformLocation | null = null;
-    // private _uPMatrixLoc: WebGLUniformLocation | null = null;
-    // private _viewmatrix: mat4 | undefined;
-    // private _nPrimitiveFlags = 0;
-    // private _totPoints = 0;
     _phiVertexPositionBuffer;
     _thetaVertexPositionBuffer;
     _fov;
@@ -12616,8 +12619,11 @@ class EquatorialGrid extends model_AbstractSkyEntity {
         if (this._thetaArray.length === 0)
             return;
         this.refresh();
-        if (!this.showGrid)
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
             return;
+        }
         const pMatrix = ComputePerspectiveMatrix.pMatrix;
         this.enableShader(mMatrix, pMatrix);
         // Draw Dec rings
@@ -12660,7 +12666,8 @@ class EquatorialGrid extends model_AbstractSkyEntity {
                         // clip->pixel
                         const pixelX = (clipspace[0] * 0.5 + 0.5) * src_Global.gl.canvas.width;
                         const pixelY = (clipspace[1] * -0.5 + 0.5) * src_Global.gl.canvas.height;
-                        gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
+                        this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
+                        // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                     }
                 }
             }
@@ -12681,14 +12688,16 @@ class EquatorialGrid extends model_AbstractSkyEntity {
                         clipspace[1] /= clipspace[3];
                         const pixelX = (clipspace[0] * 0.5 + 0.5) * src_Global.gl.canvas.width;
                         const pixelY = (clipspace[1] * -0.5 + 0.5) * src_Global.gl.canvas.height;
-                        gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
+                        // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
+                        this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                     }
                 }
             }
         }
-        gridTextHelper.resetDivSets();
+        this.gridText.resetDivSets();
+        // gridTextHelper.resetDivSets();
         // Cleanup
-        src_Global.gl.bindBuffer(src_Global.gl.ELEMENT_ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     }
 }
 const equatorialGridSingleton = new EquatorialGrid();

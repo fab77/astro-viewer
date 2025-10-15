@@ -188,3 +188,13 @@ summary {
     font-size: 12px;
     opacity: .85;
 }
+
+.floating-div-ra {
+	position: absolute;
+	color: blue;
+}
+
+.floating-div-dec {
+	position: absolute;
+	color: green;
+}

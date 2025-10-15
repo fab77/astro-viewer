@@ -7,7 +7,7 @@ import GridShaderManager from '../../shader/GridShaderManager.js';
 import Point from '../Point.js';
 import CoordsType from '../../utils/CoordsType.js';
 import FoVUtils from '../../utils/FoVUtils.js';
-import { gridTextHelper } from './GridTextHelper.js';
+import GridTextHelper from './GridTextHelper.js';
 import HealpixGridSingleton from './HealpixGridSingleton.js';
 import AbstractSkyEntity from '../AbstractSkyEntity.js';
 import healpixGridSingleton from './HealpixGridSingleton.js';
@@ -22,17 +22,13 @@ class EquatorialGrid extends AbstractSkyEntity {
     _vertexShader;
     _fragmentShader;
     defaultColor = '#41d421';
+    gridText = new GridTextHelper();
     _attribLocations = {
         position: 0,
         selected: 1,
         pointSize: 2,
         color: 3,
     };
-    // private _uMVMatrixLoc: WebGLUniformLocation | null = null;
-    // private _uPMatrixLoc: WebGLUniformLocation | null = null;
-    // private _viewmatrix: mat4 | undefined;
-    // private _nPrimitiveFlags = 0;
-    // private _totPoints = 0;
     _phiVertexPositionBuffer;
     _thetaVertexPositionBuffer;
     _fov;
@@ -207,8 +203,11 @@ class EquatorialGrid extends AbstractSkyEntity {
         if (this._thetaArray.length === 0)
             return;
         this.refresh();
-        if (!this.showGrid)
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
             return;
+        }
         const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
         this.enableShader(mMatrix, pMatrix);
         // Draw Dec rings
@@ -251,7 +250,8 @@ class EquatorialGrid extends AbstractSkyEntity {
                         // clip->pixel
                         const pixelX = (clipspace[0] * 0.5 + 0.5) * global.gl.canvas.width;
                         const pixelY = (clipspace[1] * -0.5 + 0.5) * global.gl.canvas.height;
-                        gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
+                        this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
+                        // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                     }
                 }
             }
@@ -272,14 +272,16 @@ class EquatorialGrid extends AbstractSkyEntity {
                         clipspace[1] /= clipspace[3];
                         const pixelX = (clipspace[0] * 0.5 + 0.5) * global.gl.canvas.width;
                         const pixelY = (clipspace[1] * -0.5 + 0.5) * global.gl.canvas.height;
-                        gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
+                        // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
+                        this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                     }
                 }
             }
         }
-        gridTextHelper.resetDivSets();
+        this.gridText.resetDivSets();
+        // gridTextHelper.resetDivSets();
         // Cleanup
-        global.gl.bindBuffer(global.gl.ELEMENT_ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     }
 }
 const equatorialGridSingleton = new EquatorialGrid();

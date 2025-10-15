@@ -9,6 +9,7 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     private fragmentShader;
     private vertexShader;
     private defaultColor;
+    private gridText;
     private _attribLocations;
     private _nPrimitiveFlags;
     private _vertexCataloguePositionBuffer;
