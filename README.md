@@ -1,23 +1,23 @@
-# 🌌 AstroCore
+# 🌌 AstroViewer
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![TypeScript](https://img.shields.io/badge/language-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![WebGL](https://img.shields.io/badge/3D-WebGL-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API)
 
-**AstroCore** is a lightweight 3D engine for **HiPS (Hierarchical Progressive Surveys)** visualisation and exploration, written in **TypeScript** and **WebGL**.  
+**AstroViewer** is a lightweight 3D engine for **HiPS (Hierarchical Progressive Surveys)** visualisation and exploration, written in **TypeScript** and **WebGL**.  
 It powers the next generation of **Astrobrowser** and provides a simple API for embedding 3D HiPS viewers, catalogue overlays, and TAP service interactions in any web project.
 
 ---
 
 ## 📦 Bundles
 
-AstroCore builds the following bundles in the `dist/` directory:
+AstroViewer builds the following bundles in the `dist/` directory:
 
 | File | Description |
 |------|--------------|
-| `astrocore.js` | UMD bundle for browser environments |
-| `astrocore.min.js` | Minified UMD bundle |
-| `astrocore.cjs` | CommonJS build for Node.js |
+| `astroviewer.js` | UMD bundle for browser environments |
+| `astroviewer.min.js` | Minified UMD bundle |
+| `astroviewer.cjs` | CommonJS build for Node.js |
 | `*.map` | Source maps for debugging |
 
 ---
@@ -27,10 +27,10 @@ AstroCore builds the following bundles in the `dist/` directory:
 Copy the bundle into your project and link it in your HTML page:
 
 ```html
-<script src="./javascripts/astrocore.js"></script>
+<script src="./javascripts/astroviewer.js"></script>
 ```
 
-Then you can use the global `astrocore` object directly.  
+Then you can use the global `astroviewer` object directly.  
 Here is a minimal example that loads the HiPS survey, activates a TAP service, and displays a source catalogue.
 
 ```html
@@ -38,8 +38,8 @@ Here is a minimal example that loads the HiPS survey, activates a TAP service, a
 <html>
 <head>
   <meta charset="utf-8">
-  <title>AstroCore Demo</title>
-  <script src="./javascripts/astrocore.js"></script>
+  <title>AstroViewer Demo</title>
+  <script src="./javascripts/astroviewer.js"></script>
 </head>
 <body onload="run();">
   <canvas id="astrocanvas"></canvas>
@@ -47,20 +47,20 @@ Here is a minimal example that loads the HiPS survey, activates a TAP service, a
     let window.AstroAPI = undefined;
 
     async function run() {
-      const AC = new astrocore.AstroCore();
+      const AC = new astroviewer.AstroViewer();
       window.AstroAPI = AC;
 
       const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
       const resp = await fetch(hipsUrl + "properties");
       const propsText = await resp.text();
 
-      const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl));
+      const desc = new astroviewer.HiPSDescriptor(propsText, new URL(hipsUrl));
       const insideSphere = false;
 
       window.AstroAPI.activateHiPS(desc, insideSphere);
       window.AstroAPI.run();
 
-      const tapRepo = await astrocore.addTAPRepo("https://sky.esa.int/esasky-tap/tap");
+      const tapRepo = await astroviewer.addTAPRepo("https://sky.esa.int/esasky-tap/tap");
       const catalogue = tapRepo.cataloguesList.find(cat => cat.name === "catalogues.integral_ibis");
 
       window.AstroAPI.showCatalogue(catalogue);
@@ -74,7 +74,7 @@ Here is a minimal example that loads the HiPS survey, activates a TAP service, a
 
 ## 🧩 Node.js / TypeScript Usage
 
-You can also use AstroCore as a Node module:
+You can also use AstroViewer as a Node module:
 
 ```bash
 npm install ./path/to/astro-core
@@ -84,17 +84,17 @@ Then import from your code:
 
 ```ts
 // ESM
-import { AstroCore, HiPSDescriptor, addTAPRepo } from 'astro-core';
+import { AstroViewer, HiPSDescriptor, addTAPRepo } from 'astro-core';
 
 // or CommonJS
-const { AstroCore, HiPSDescriptor, addTAPRepo } = require('astro-core');
+const { AstroViewer, HiPSDescriptor, addTAPRepo } = require('astro-core');
 ```
 
 ---
 
 ## 🧪 Development Web Interface
 
-AstroCore includes a development web UI to explore features such as HiPS loading, FoV control, catalogue management, and footprints.  
+AstroViewer includes a development web UI to explore features such as HiPS loading, FoV control, catalogue management, and footprints.  
 You need **Node.js ≥ 22** installed.
 
 Clone this repository and run:
@@ -149,7 +149,7 @@ Then open one of the links in your browser (e.g. [http://127.0.0.1:8080](http://
 
 Main exported classes and utilities:
 
-- `AstroCore` — main application controller  
+- `AstroViewer` — main application controller  
 - `HiPSDescriptor` — handles HiPS metadata and configuration  
 - `FootprintSetGL` — renders observation footprints  
 - `CatalogueGL` — renders astronomical catalogues  
@@ -163,17 +163,17 @@ Main exported classes and utilities:
 
 ## 🔧 API Reference & Usage
 
-Below is a practical overview of the **most commonly exposed methods** via the UMD global `astrocore` (browser) or the module exports (Node/ESM).  
+Below is a practical overview of the **most commonly exposed methods** via the UMD global `astroviewer` (browser) or the module exports (Node/ESM).  
 > **Note:** The bundles only include what is exported from `src/index.ts`. If your build exposes additional methods, follow the same patterns shown here.
 
 ### Core Lifecycle
 
-#### `new AstroCore(options?)`
+#### `new AstroViewer(options?)`
 Create the viewer controller.
 
 ```js
 // Browser (UMD)
-const AC = new astrocore.AstroCore({
+const AC = new astroviewer.AstroViewer({
   canvas: document.getElementById('astrocanvas'), // optional; defaults to #astrocanvas
   antialias: true                                  // optional
 });
@@ -181,8 +181,8 @@ const AC = new astrocore.AstroCore({
 
 ```ts
 // Node/ESM
-import { AstroCore } from 'astro-core';
-const AC = new AstroCore();
+import { AstroViewer } from 'astro-core';
+const AC = new AstroViewer();
 ```
 
 #### `run()`
@@ -209,7 +209,7 @@ Activate a HiPS dataset for rendering.
 ```js
 const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
 const props = await (await fetch(hipsUrl + "properties")).text();
-const desc = new astrocore.HiPSDescriptor(props, new URL(hipsUrl));
+const desc = new astroviewer.HiPSDescriptor(props, new URL(hipsUrl));
 
 AC.activateHiPS(desc, /* insideSphere */ false);
 ```
@@ -255,7 +255,7 @@ AC.toggleHealpixGrid();
 Discover capabilities and available datasets (catalogues, footprints, etc.).
 
 ```js
-const tapRepo = await astrocore.addTAPRepo("https://sky.esa.int/esasky-tap/tap");
+const tapRepo = await astroviewer.addTAPRepo("https://sky.esa.int/esasky-tap/tap");
 
 // Explore the lists (names depend on the service)
 console.log(tapRepo.cataloguesList.map(c => c.name));
@@ -352,8 +352,8 @@ AC.setBackgroundColor?.("#000000");
 > To inspect what’s available in the UMD build, open your page and run:
 >
 > ```js
-> console.log(Object.keys(astrocore));
-> console.log(Object.getOwnPropertyNames(astrocore.AstroCore.prototype));
+> console.log(Object.keys(astroviewer));
+> console.log(Object.getOwnPropertyNames(astroviewer.AstroViewer.prototype));
 > ```
 
 

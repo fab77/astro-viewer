@@ -39,7 +39,7 @@ __webpack_require__.r(__webpack_exports__);
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  AstroCore: () => (/* reexport */ AstroCore),
+  AstroViewer: () => (/* reexport */ AstroViewer),
   FoV: () => (/* reexport */ FoV),
   HiPSDescriptor: () => (/* reexport */ HiPSDescriptor),
   TapRepo: () => (/* reexport */ TapRepo),
@@ -13028,14 +13028,13 @@ class AstroSphere {
 }
 /* harmony default export */ const src_AstroSphere = (AstroSphere);
 
-;// ./src/AstroCore.ts
-// AstroCoreEntryPoint.ts
+;// ./src/AstroViewer.ts
 
 
 
 
 
-class AstroCore {
+class AstroViewer {
     astroSphere;
     canvas;
     webgl;
@@ -13327,9 +13326,9 @@ class HiPSDescriptor {
 
 
 
-console.log('astrocore UMD loaded');
+console.log('astroviewer UMD loaded');
 
 module.exports = __webpack_exports__;
 /******/ })()
 ;
-//# sourceMappingURL=astrocore.cjs.map
+//# sourceMappingURL=astroviewer.cjs.map

@@ -1,4 +1,3 @@
-// AstroCoreEntryPoint.ts
 import global from './Global.js'
 import AstroSphere from './AstroSphere.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
@@ -8,7 +7,6 @@ import CatalogueGL from './model/catalogues/CatalogueGL.js'
 import type { PointCoordinates } from './AstroSphere.js'
 import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
 import { bootSetup } from './Config.js'
-import Footprint from './model/footprints/Footprint.js'
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext & {
@@ -16,7 +14,7 @@ type GL2WithViewport = WebGL2RenderingContext & {
   viewportHeight: number
 }
 
-export class AstroCore {
+export class AstroViewer {
   private astroSphere!: AstroSphere
   private canvas!: HTMLCanvasElement
   private webgl!: GL2WithViewport

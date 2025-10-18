@@ -11,8 +11,8 @@ import { wireCoords } from './coords.js';
   const FIXED_PROXY_BASE = ""; // set if needed
   try {
     if (FIXED_PROXY_BASE) {
-      if (astrocore?.Global) astrocore.Global.corsProxyUrl = FIXED_PROXY_BASE;
-      if (astrocore?.global) astrocore.global.corsProxyUrl = FIXED_PROXY_BASE;
+      if (astroviewer?.Global) astroviewer.Global.corsProxyUrl = FIXED_PROXY_BASE;
+      if (astroviewer?.global) astroviewer.global.corsProxyUrl = FIXED_PROXY_BASE;
       window.corsProxyUrl = FIXED_PROXY_BASE;
     }
   } catch { }
@@ -24,7 +24,7 @@ async function bootstrap() {
   try {
     loadPersisted();
 
-    const AC = new astrocore.AstroCore();
+    const AC = new astroviewer.AstroViewer();
     window.AstroAPI = state.AstroAPI = AC;
     window.TAP = state.TAP;
 
@@ -40,8 +40,8 @@ async function bootstrap() {
       }
     } catch { }
 
-    // Try to get the default HiPS URL from the AstroCore API
-    // Determine the default HiPS URL (try AstroCore, else fallback)
+    // Try to get the default HiPS URL from the AstroViewer API
+    // Determine the default HiPS URL (try AstroViewer, else fallback)
     let defaultHiPS = "";
     try {
       if (typeof AC.getDefaultHiPSURL === "function") {
@@ -50,7 +50,7 @@ async function bootstrap() {
     } catch {
       // ignore, fallback handled below
     }
-    // Fallback if AstroCore didn’t return a valid URL
+    // Fallback if AstroViewer didn’t return a valid URL
     if (!defaultHiPS) {
       defaultHiPS = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
     }

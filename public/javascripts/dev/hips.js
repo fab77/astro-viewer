@@ -7,7 +7,7 @@ export async function loadHiPS(baseUrl) {
   const resp = await fetch(hipsUrl + 'properties');
   if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching properties`);
   const propsText = await resp.text();
-  const desc = new astrocore.HiPSDescriptor(propsText, new URL(hipsUrl));
+  const desc = new astroviewer.HiPSDescriptor(propsText, new URL(hipsUrl));
   state.AstroAPI.activateHiPS(desc, false);
   // if user prefers inside view, toggle now
   const inside = el('insideSphereChk')?.checked;

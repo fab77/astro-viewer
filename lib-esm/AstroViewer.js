@@ -1,10 +1,9 @@
-// AstroCoreEntryPoint.ts
 import global from './Global.js';
 import AstroSphere from './AstroSphere.js';
 import { bootSetup } from './Config.js';
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js';
 import equatorialGridSingleton from './model/grid/EquatorialGrid.js';
-export class AstroCore {
+export class AstroViewer {
     astroSphere;
     canvas;
     webgl;
@@ -173,4 +172,4 @@ export class AstroCore {
         this.astroSphere.draw(this.canvas);
     }
 }
-//# sourceMappingURL=AstroCore.js.map
+//# sourceMappingURL=AstroViewer.js.map

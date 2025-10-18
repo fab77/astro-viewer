@@ -4,7 +4,7 @@ import Point from './model/Point.js';
 import CatalogueGL from './model/catalogues/CatalogueGL.js';
 import type { PointCoordinates } from './AstroSphere.js';
 import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
-export declare class AstroCore {
+export declare class AstroViewer {
     private astroSphere;
     private canvas;
     private webgl;
@@ -43,4 +43,4 @@ export declare class AstroCore {
     private tick;
     private drawScene;
 }
-//# sourceMappingURL=AstroCore.d.ts.map
+//# sourceMappingURL=AstroViewer.d.ts.map

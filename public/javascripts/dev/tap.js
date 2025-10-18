@@ -7,7 +7,7 @@ import { footprintKey } from './footprintManager.js';
 
 export async function loadTapRepo(url) {
   setStatus("Loading TAP…");
-  state.TAP = await astrocore.addTAPRepo(url);
+  state.TAP = await astroviewer.addTAPRepo(url);
 
   state.CAT_LIST = state.TAP.catalogueList || state.TAP.cataloguesList || [];
   state.FP_LIST = state.TAP.observationList || state.TAP.observationsList || [];
