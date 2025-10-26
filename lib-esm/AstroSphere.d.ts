@@ -10,6 +10,14 @@ export type PointCoordinates = {
     decDMS: DMS;
     sphericalDeg: SphericalCoords;
 };
+export type CameraChangedDetail = {
+    fovDeg: number;
+    position: [number, number, number];
+    vMatrix: Float32Array;
+    pMatrix: Float32Array;
+    timestamp: number;
+    centre: Point;
+};
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -54,6 +62,7 @@ declare class AstroSphere {
     changeFoV3(deg: number): void;
     getInsideSphere(): boolean;
     toggleInsideSphere(): void;
+    private prevFov;
     draw(canvas: HTMLCanvasElement): void;
 }
 export default AstroSphere;

@@ -12949,6 +12949,7 @@ class AstroSphere {
         this.camera.toggleInsideSphere();
         // visibleTilesManager.toggleInsideSphere()
     }
+    prevFov = 0;
     draw(canvas) {
         if (!src_Global.gl)
             return;
@@ -12973,6 +12974,18 @@ class AstroSphere {
                 this.camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
                 this.fov = grid_HealpixGridSingleton.refreshFoV();
+                if (this.prevFov != this.fov.minFoV) {
+                    const detail = {
+                        fovDeg: this.fov.minFoV,
+                        position: this.camera.getCameraPosition(),
+                        vMatrix: this.camera.getCameraMatrix(),
+                        pMatrix: ComputePerspectiveMatrix.pMatrix,
+                        timestamp: performance.now(),
+                        centre: utils_FoVUtils.getCenterJ2000(this.canvas)
+                    };
+                    this.canvas.dispatchEvent(new CustomEvent('cameraChanged', { detail, bubbles: false, composed: false }));
+                    this.prevFov = this.fov.minFoV;
+                }
             }
         }
         // Rotation inertia
@@ -13007,6 +13020,7 @@ class AstroSphere {
             const raDecDeg = sphericalToAstroDeg(phiTheta.phi, phiTheta.theta);
             const raHMS = raDegToHMS(raDecDeg.ra);
             const decDMS = decDegToDMS(raDecDeg.dec);
+            this.prevFov = grid_HealpixGridSingleton.getMinFoV();
             console.log('(startup coords)', {
                 raDeg: raDecDeg.ra,
                 decDeg: raDecDeg.dec,

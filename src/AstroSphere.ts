@@ -39,6 +39,16 @@ export type PointCoordinates = {
   sphericalDeg: SphericalCoords
 }
 
+export type CameraChangedDetail = {
+  fovDeg: number;
+  position: [number, number, number];
+  vMatrix: Float32Array;
+  pMatrix: Float32Array;
+  timestamp: number;
+  centre: Point
+};
+
+
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -272,7 +282,7 @@ class AstroSphere {
     this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
   }
 
-  getHoveredFootprints(): HoveredFootprintDetail[]{
+  getHoveredFootprints(): HoveredFootprintDetail[] {
     let footprintsHovered: HoveredFootprintDetail[] = []
     this.activeFootprintSets.forEach(fset => {
       footprintsHovered.push(fset.hoveredFootprints)
@@ -335,6 +345,9 @@ class AstroSphere {
     // visibleTilesManager.toggleInsideSphere()
   }
 
+
+  private prevFov: number = 0
+
   draw(canvas: HTMLCanvasElement) {
 
     if (!global.gl) return
@@ -360,7 +373,25 @@ class AstroSphere {
       if (Math.abs(this.zoomInertia) > 0.0001) {
         this.camera.zoom(this.zoomInertia)
         this.zoomInertia *= 0.95
+        
         this.fov = healpixGridSingleton.refreshFoV()
+        if (this.prevFov != this.fov.minFoV) {
+
+          const detail: CameraChangedDetail = {
+            fovDeg: this.fov.minFoV,
+            position: this.camera.getCameraPosition(),
+            vMatrix: this.camera.getCameraMatrix() as Float32Array,
+            pMatrix: computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+            timestamp: performance.now(),
+            centre: FoVUtils.getCenterJ2000(this.canvas)
+          };
+
+          this.canvas.dispatchEvent(new CustomEvent<CameraChangedDetail>(
+            'cameraChanged',
+            { detail, bubbles: false, composed: false }
+          ));
+          this.prevFov = this.fov.minFoV
+        }
       }
     }
 
@@ -406,6 +437,7 @@ class AstroSphere {
       const raDecDeg = sphericalToAstroDeg(phiTheta.phi, phiTheta.theta)
       const raHMS = raDegToHMS(raDecDeg.ra)
       const decDMS = decDegToDMS(raDecDeg.dec)
+      this.prevFov = healpixGridSingleton.getMinFoV()
       console.log('(startup coords)', {
         raDeg: raDecDeg.ra,
         decDeg: raDecDeg.dec,
@@ -429,7 +461,8 @@ class AstroSphere {
 
   }
 }
-
-
-
 export default AstroSphere
+
+
+
+
