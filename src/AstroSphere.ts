@@ -29,8 +29,7 @@ import queryCatalogueByFoV from './services/queryCatalogueByFoV.js'
 import CatalogueGL from './model/catalogues/CatalogueGL.js'
 import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
 import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
-import Footprint from './model/footprints/Footprint.js'
-import EquatorialGrid from './model/grid/EquatorialGrid.js'
+
 import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 
 export type PointCoordinates = {

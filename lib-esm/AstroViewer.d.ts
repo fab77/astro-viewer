@@ -23,6 +23,7 @@ export declare class AstroViewer {
     getHoveredFootprints(): HoveredFootprintDetail[];
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
+    loadHiPS(baseUrl: string): Promise<void>;
     goTo(raDeg: number, decDeg: number): void;
     getCenterCoordinates(): PointCoordinates | undefined;
     getCoordinatesFromMouse(): PointCoordinates | undefined;
@@ -37,7 +38,7 @@ export declare class AstroViewer {
     changeFoV3(deg: number): void;
     getInsideSphere(): boolean;
     toggleInsideSphere(): void;
-    constructor();
+    constructor(canvasDomId: string);
     private init;
     private initListeners;
     private tick;

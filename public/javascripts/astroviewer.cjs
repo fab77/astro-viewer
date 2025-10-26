@@ -12432,7 +12432,7 @@ async function queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint) {
 class EquatorialGrid extends model_AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    showGrid = true;
+    showGrid = false;
     // private _gl: GL;
     _shaderProgram;
     _vertexShader;
@@ -13028,182 +13028,6 @@ class AstroSphere {
 }
 /* harmony default export */ const src_AstroSphere = (AstroSphere);
 
-;// ./src/AstroViewer.ts
-
-
-
-
-
-class AstroViewer {
-    astroSphere;
-    canvas;
-    webgl;
-    rafId = null;
-    // API
-    run() {
-        return this.tick();
-    }
-    // CATALOGUES
-    showCatalogue(catalogue) {
-        this.astroSphere.showCatalogue(catalogue);
-    }
-    hideCatalogue(catalogue, isVisible) {
-        catalogue.setIsVisible(isVisible);
-    }
-    deleteCatalogue(catalogue) {
-        this.astroSphere.deleteCatalogue(catalogue);
-    }
-    changeCatalogueColor(catalogue, hexColor) {
-        catalogue.catalogueProps.changeColor(hexColor);
-    }
-    setCatalogueShapeHue(catalogue, metadataColumnName) {
-        catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
-    }
-    setCatalogueShapeSize(catalogue, metadataColumnName) {
-        catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
-    }
-    //FOOTPRINT
-    showFootprintSet(footprintSet) {
-        this.astroSphere.showFootprintSet(footprintSet);
-    }
-    hideFootprintSet(footprintSet, isVisible) {
-        footprintSet.setIsVisible(isVisible);
-    }
-    deleteFootprintSet(footprintSet) {
-        this.astroSphere.deleteFootprintSet(footprintSet);
-    }
-    changeFootprintSetColor(footprintSet, hexColor) {
-        footprintSet.footprintsetProps.changeColor(hexColor);
-    }
-    getHoveredFootprints() {
-        return this.astroSphere.getHoveredFootprints();
-    }
-    // HIPS
-    getDefaultHiPSURL() {
-        return bootSetup.defaultHipsUrl;
-    }
-    activateHiPS(hipsDescriptor) {
-        this.astroSphere.activateHiPS(hipsDescriptor);
-    }
-    // GOTOs and COORDS
-    goTo(raDeg, decDeg) {
-        this.astroSphere.goTo(raDeg, decDeg);
-    }
-    getCenterCoordinates() {
-        return this.astroSphere.getCentralPointCoordinates();
-    }
-    getCoordinatesFromMouse() {
-        return this.astroSphere.getLastMousePointCoordinates();
-    }
-    // GRIDs
-    toggleHealpixGrid() {
-        grid_HealpixGridSingleton.toggleShowGrid();
-    }
-    isHealpixGridVisible() {
-        return grid_HealpixGridSingleton.isVisible();
-    }
-    toggleEquatorialGrid() {
-        grid_EquatorialGrid.toggleShowGrid();
-    }
-    isEquatorialGridVisible() {
-        return grid_EquatorialGrid.isVisible();
-    }
-    // FOV
-    getFoV() {
-        return this.astroSphere.getFoV();
-    }
-    getFoVPolygon() {
-        return this.astroSphere.getFoVPolygon();
-    }
-    changeFoV(deg) {
-        this, this.astroSphere.changeFoV(deg);
-    }
-    changeFoV2(deg) {
-        this, this.astroSphere.changeFoV2(deg);
-    }
-    changeFoV3(deg) {
-        this, this.astroSphere.changeFoV3(deg);
-    }
-    getInsideSphere() {
-        return this.astroSphere.getInsideSphere();
-    }
-    toggleInsideSphere() {
-        this.astroSphere.toggleInsideSphere();
-    }
-    // Internal
-    constructor() {
-        this.init();
-    }
-    init() {
-        console.log('init webgl');
-        const c = document.getElementById('astrocanvas');
-        if (!(c instanceof HTMLCanvasElement)) {
-            throw new Error("Element with id 'canvas-ab' is not a canvas.");
-        }
-        this.canvas = c;
-        const gl = this.canvas.getContext('webgl2', { alpha: false });
-        if (!gl) {
-            alert('Could not initialise WebGL, sorry :-(');
-            throw new Error('WebGL2 not available');
-        }
-        // Extend with custom fields used elsewhere
-        this.webgl = gl;
-        this.webgl.viewportWidth = this.canvas.width;
-        this.webgl.viewportHeight = this.canvas.height;
-        try {
-            // 1/255 = 0.00392156862
-            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
-        }
-        catch (e) {
-            console.log('Error instantiating WebGL context');
-        }
-        this.initListeners();
-        src_Global.gl = this.webgl;
-        this.astroSphere = new src_AstroSphere(this.canvas, this.webgl);
-    }
-    initListeners() {
-        console.log('inside initListeners');
-        const resizeCanvas = () => {
-            console.log('[resizeCanvas]');
-            const newWidth = window.innerWidth - 3;
-            const newHeight = window.innerHeight - 3;
-            this.canvas.width = newWidth;
-            this.canvas.height = newHeight;
-            this.webgl.viewportWidth = this.canvas.width;
-            this.webgl.viewportHeight = this.canvas.height;
-            this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
-        };
-        const handleContextLost = (event) => {
-            console.log('[handleContextLost]');
-            event.preventDefault();
-            if (this.rafId !== null) {
-                cancelAnimationFrame(this.rafId);
-                this.rafId = null;
-            }
-        };
-        const handleContextRestored = (_event) => {
-            console.log('[handleContextRestored]');
-            this.webgl.viewportWidth = this.canvas.width;
-            this.webgl.viewportHeight = this.canvas.height;
-            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
-            this.webgl.enable(this.webgl.DEPTH_TEST);
-            this.rafId = requestAnimationFrame(() => this.tick());
-        };
-        window.addEventListener('resize', resizeCanvas);
-        this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
-        this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
-        resizeCanvas();
-    }
-    tick() {
-        this.drawScene();
-        this.rafId = requestAnimationFrame(() => this.tick());
-        return this.rafId;
-    }
-    drawScene() {
-        this.astroSphere.draw(this.canvas);
-    }
-}
-
 ;// ./src/model/hips/HiPSDescriptor.ts
 // HiPSDescriptor.ts
 
@@ -13317,6 +13141,192 @@ class HiPSDescriptor {
     }
     get dataRange() {
         return this._datarange;
+    }
+}
+
+;// ./src/AstroViewer.ts
+
+
+
+
+
+
+class AstroViewer {
+    astroSphere;
+    canvas;
+    webgl;
+    rafId = null;
+    // API
+    run() {
+        return this.tick();
+    }
+    // CATALOGUES
+    showCatalogue(catalogue) {
+        this.astroSphere.showCatalogue(catalogue);
+    }
+    hideCatalogue(catalogue, isVisible) {
+        catalogue.setIsVisible(isVisible);
+    }
+    deleteCatalogue(catalogue) {
+        this.astroSphere.deleteCatalogue(catalogue);
+    }
+    changeCatalogueColor(catalogue, hexColor) {
+        catalogue.catalogueProps.changeColor(hexColor);
+    }
+    setCatalogueShapeHue(catalogue, metadataColumnName) {
+        catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
+    }
+    setCatalogueShapeSize(catalogue, metadataColumnName) {
+        catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
+    }
+    //FOOTPRINT
+    showFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    changeFootprintSetColor(footprintSet, hexColor) {
+        footprintSet.footprintsetProps.changeColor(hexColor);
+    }
+    getHoveredFootprints() {
+        return this.astroSphere.getHoveredFootprints();
+    }
+    // HIPS
+    getDefaultHiPSURL() {
+        return bootSetup.defaultHipsUrl;
+    }
+    activateHiPS(hipsDescriptor) {
+        this.astroSphere.activateHiPS(hipsDescriptor);
+    }
+    async loadHiPS(baseUrl) {
+        const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+        const resp = await fetch(hipsUrl + 'properties');
+        if (!resp.ok)
+            throw new Error(`HTTP ${resp.status} fetching properties`);
+        const propsText = await resp.text();
+        const desc = new HiPSDescriptor(propsText, hipsUrl);
+        this.activateHiPS(desc);
+    }
+    // GOTOs and COORDS
+    goTo(raDeg, decDeg) {
+        this.astroSphere.goTo(raDeg, decDeg);
+    }
+    getCenterCoordinates() {
+        return this.astroSphere.getCentralPointCoordinates();
+    }
+    getCoordinatesFromMouse() {
+        return this.astroSphere.getLastMousePointCoordinates();
+    }
+    // GRIDs
+    toggleHealpixGrid() {
+        grid_HealpixGridSingleton.toggleShowGrid();
+    }
+    isHealpixGridVisible() {
+        return grid_HealpixGridSingleton.isVisible();
+    }
+    toggleEquatorialGrid() {
+        grid_EquatorialGrid.toggleShowGrid();
+    }
+    isEquatorialGridVisible() {
+        return grid_EquatorialGrid.isVisible();
+    }
+    // FOV
+    getFoV() {
+        return this.astroSphere.getFoV();
+    }
+    getFoVPolygon() {
+        return this.astroSphere.getFoVPolygon();
+    }
+    changeFoV(deg) {
+        this, this.astroSphere.changeFoV(deg);
+    }
+    changeFoV2(deg) {
+        this, this.astroSphere.changeFoV2(deg);
+    }
+    changeFoV3(deg) {
+        this, this.astroSphere.changeFoV3(deg);
+    }
+    getInsideSphere() {
+        return this.astroSphere.getInsideSphere();
+    }
+    toggleInsideSphere() {
+        this.astroSphere.toggleInsideSphere();
+    }
+    // Internal
+    constructor(canvasDomId) {
+        this.init(canvasDomId);
+    }
+    init(canvasDomId) {
+        console.log('init webgl');
+        const c = document.getElementById(canvasDomId);
+        if (!(c instanceof HTMLCanvasElement)) {
+            throw new Error("Element with id 'canvas-ab' is not a canvas.");
+        }
+        this.canvas = c;
+        const gl = this.canvas.getContext('webgl2', { alpha: false });
+        if (!gl) {
+            alert('Could not initialise WebGL, sorry :-(');
+            throw new Error('WebGL2 not available');
+        }
+        // Extend with custom fields used elsewhere
+        this.webgl = gl;
+        this.webgl.viewportWidth = this.canvas.width;
+        this.webgl.viewportHeight = this.canvas.height;
+        try {
+            // 1/255 = 0.00392156862
+            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
+        }
+        catch (e) {
+            console.log('Error instantiating WebGL context');
+        }
+        this.initListeners();
+        src_Global.gl = this.webgl;
+        this.astroSphere = new src_AstroSphere(this.canvas, this.webgl);
+    }
+    initListeners() {
+        console.log('inside initListeners');
+        const resizeCanvas = () => {
+            console.log('[resizeCanvas]');
+            const newWidth = window.innerWidth - 3;
+            const newHeight = window.innerHeight - 3;
+            this.canvas.width = newWidth;
+            this.canvas.height = newHeight;
+            this.webgl.viewportWidth = this.canvas.width;
+            this.webgl.viewportHeight = this.canvas.height;
+            this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
+        };
+        const handleContextLost = (event) => {
+            console.log('[handleContextLost]');
+            event.preventDefault();
+            if (this.rafId !== null) {
+                cancelAnimationFrame(this.rafId);
+                this.rafId = null;
+            }
+        };
+        const handleContextRestored = (_event) => {
+            console.log('[handleContextRestored]');
+            this.webgl.viewportWidth = this.canvas.width;
+            this.webgl.viewportHeight = this.canvas.height;
+            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
+            this.webgl.enable(this.webgl.DEPTH_TEST);
+            this.rafId = requestAnimationFrame(() => this.tick());
+        };
+        window.addEventListener('resize', resizeCanvas);
+        this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
+        this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+        resizeCanvas();
+    }
+    tick() {
+        this.drawScene();
+        this.rafId = requestAnimationFrame(() => this.tick());
+        return this.rafId;
+    }
+    drawScene() {
+        this.astroSphere.draw(this.canvas);
     }
 }
 

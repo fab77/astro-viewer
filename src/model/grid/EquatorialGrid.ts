@@ -22,7 +22,7 @@ class EquatorialGrid extends AbstractSkyEntity {
 	static ELEM_SIZE = 3;
 	static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
 
-	private showGrid: boolean = true
+	private showGrid: boolean = false
 
 	// private _gl: GL;
 	private _shaderProgram!: WebGLProgram;

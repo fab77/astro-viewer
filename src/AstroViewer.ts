@@ -67,7 +67,7 @@ export class AstroViewer {
     footprintSet.footprintsetProps.changeColor(hexColor)
   }
 
-  getHoveredFootprints(): HoveredFootprintDetail[]{
+  getHoveredFootprints(): HoveredFootprintDetail[] {
     return this.astroSphere.getHoveredFootprints()
   }
 
@@ -78,6 +78,15 @@ export class AstroViewer {
 
   activateHiPS(hipsDescriptor: HiPSDescriptor): void {
     this.astroSphere.activateHiPS(hipsDescriptor)
+  }
+
+  async loadHiPS(baseUrl: string): Promise<void> {
+    const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+    const resp = await fetch(hipsUrl + 'properties');
+    if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching properties`);
+    const propsText = await resp.text();
+    const desc = new HiPSDescriptor(propsText, hipsUrl);
+    this.activateHiPS(desc);
   }
 
   // GOTOs and COORDS
@@ -97,7 +106,7 @@ export class AstroViewer {
     healpixGridSingleton.toggleShowGrid()
   }
 
-  isHealpixGridVisible(): boolean{
+  isHealpixGridVisible(): boolean {
     return healpixGridSingleton.isVisible()
   }
 
@@ -106,7 +115,7 @@ export class AstroViewer {
   }
 
   isEquatorialGridVisible(): boolean {
-      return equatorialGridSingleton.isVisible()
+    return equatorialGridSingleton.isVisible()
   }
 
   // FOV
@@ -138,14 +147,14 @@ export class AstroViewer {
   }
 
   // Internal
-  constructor() {
-    this.init()
+  constructor(canvasDomId: string) {
+    this.init(canvasDomId)
   }
 
-  private init(): void {
+  private init(canvasDomId: string): void {
     console.log('init webgl')
 
-    const c = document.getElementById('astrocanvas')
+    const c = document.getElementById(canvasDomId)
     if (!(c instanceof HTMLCanvasElement)) {
       throw new Error("Element with id 'canvas-ab' is not a canvas.")
     }

@@ -1,5 +1,6 @@
 import global from './Global.js';
 import AstroSphere from './AstroSphere.js';
+import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { bootSetup } from './Config.js';
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js';
 import equatorialGridSingleton from './model/grid/EquatorialGrid.js';
@@ -54,6 +55,15 @@ export class AstroViewer {
     activateHiPS(hipsDescriptor) {
         this.astroSphere.activateHiPS(hipsDescriptor);
     }
+    async loadHiPS(baseUrl) {
+        const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+        const resp = await fetch(hipsUrl + 'properties');
+        if (!resp.ok)
+            throw new Error(`HTTP ${resp.status} fetching properties`);
+        const propsText = await resp.text();
+        const desc = new HiPSDescriptor(propsText, hipsUrl);
+        this.activateHiPS(desc);
+    }
     // GOTOs and COORDS
     goTo(raDeg, decDeg) {
         this.astroSphere.goTo(raDeg, decDeg);
@@ -100,12 +110,12 @@ export class AstroViewer {
         this.astroSphere.toggleInsideSphere();
     }
     // Internal
-    constructor() {
-        this.init();
+    constructor(canvasDomId) {
+        this.init(canvasDomId);
     }
-    init() {
+    init(canvasDomId) {
         console.log('init webgl');
-        const c = document.getElementById('astrocanvas');
+        const c = document.getElementById(canvasDomId);
         if (!(c instanceof HTMLCanvasElement)) {
             throw new Error("Element with id 'canvas-ab' is not a canvas.");
         }

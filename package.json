@@ -1,5 +1,5 @@
 {
-  "name": "astro-core",
+  "name": "astro-viewer",
   "description": "Astrobrowser 3d engine.",
   "version": "1.1.0",
   "keywords": [
@@ -15,13 +15,13 @@
   ],
   "author": "Fabrizio Giordano (fab77)",
   "license": "GPL-3.0-only",
-  "homepage": "https://github.com/fab77/astro-core#readme",
+  "homepage": "https://github.com/fab77/astro-viewer#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fab77/astro-core.git"
+    "url": "git+https://github.com/fab77/astro-viewer.git"
   },
   "bugs": {
-    "url": "https://github.com/fab77/astro-core/issues",
+    "url": "https://github.com/fab77/astro-viewer/issues",
     "email": "fabriziogiordano77@gmail.com"
   },
   "type": "module",
@@ -29,14 +29,14 @@
     ".": {
       "types": "./lib-esm/index.d.ts",
       "import": "./lib-esm/index.js",
-      "require": "./dist/astro-core.cjs"
+      "require": "./dist/astroviewer.cjs"
     }
   },
   "module": "./lib-esm/index.js",
-  "main": "./dist/astro-core.cjs",
+  "main": "./dist/astroviewer.cjs",
   "types": "./lib-esm/index.d.ts",
-  "unpkg": "dist/astro-core.min.js",
-  "jsdelivr": "dist/astro-core.min.js",
+  "unpkg": "dist/astroviewer.min.js",
+  "jsdelivr": "dist/astroviewer.min.js",
   "files": [
     "lib-esm/",
     "dist"

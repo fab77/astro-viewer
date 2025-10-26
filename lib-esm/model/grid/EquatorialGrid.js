@@ -16,7 +16,7 @@ import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMat
 class EquatorialGrid extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    showGrid = true;
+    showGrid = false;
     // private _gl: GL;
     _shaderProgram;
     _vertexShader;

@@ -5,7 +5,7 @@ export declare class FoV {
     private _minFoV;
     constructor();
     /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere: boolean): this;
+    getFoV(insideSphere: boolean): FoV;
     private computeRatio;
     changeMinFov(deg: number): void;
     get minFoV(): number;

@@ -32,7 +32,7 @@ export class FoV {
   constructor() { }
 
   /** Recomputes FoV for current camera + projection */
-  public getFoV(insideSphere: boolean) {
+  public getFoV(insideSphere: boolean): FoV {
     const gl = global.gl
 
     if (!gl || !gl.canvas) {
@@ -88,7 +88,7 @@ export class FoV {
   }
 
 
-  get minFoV() {
+  get minFoV(): number {
     this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg
     return this._minFoV
   }
