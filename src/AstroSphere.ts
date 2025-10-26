@@ -45,7 +45,8 @@ export type CameraChangedDetail = {
   vMatrix: Float32Array;
   pMatrix: Float32Array;
   timestamp: number;
-  centre: Point
+  centralPoint: Point,
+  mouseHoverPoint: PointCoordinates | undefined,
 };
 
 
@@ -90,9 +91,11 @@ class AstroSphere {
     this.fov = healpixGridSingleton.refreshFoV()
   }
 
+
+
+  // This is a lickely a duplication of FoVUtils.getCenterJ2000(this.canvas)
   private updateCentralPoint(): PointCoordinates {
 
-    // const sphericalCoords = cartesianToSpherical(this.camera.getCameraPosition())
     const sphericalCoords = this.getPhiThetaDeg(this.canvas)
     const astroCoords = sphericalToAstroDeg(sphericalCoords.phi, sphericalCoords.theta)
     const raHMS = raDegToHMS(astroCoords.ra)
@@ -122,6 +125,7 @@ class AstroSphere {
     return this.mousePointCoords
   }
 
+  // This should call FoVUtils.getJ200Centre(this.canvas)
   getCentralPointCoordinates(): PointCoordinates | undefined {
     return this.centralPoinCoords
   }
@@ -186,6 +190,8 @@ class AstroSphere {
 
       if (!healpixGridSingleton) return
 
+      let hit = false
+
       if (this.mouseDown) {
         document.body.style.cursor = 'grab'
 
@@ -194,18 +200,41 @@ class AstroSphere {
 
         this.inertiaX += 0.1 * deltaX
         this.inertiaY += 0.1 * deltaY
+
+        this.updateCentralPoint()
+        hit = true
       } else {
-        const mousePoint = RayPickingUtils.getIntersectionPointWithSingleModel(
-          newX,
-          newY
-        )
+        const mousePoint = RayPickingUtils.getIntersectionPointWithSingleModel(newX, newY)
 
         if (mousePoint && mousePoint.length > 0) {
           this.mouseHelper.update(mousePoint)
+
           this.updateLastMousePoint()
+          hit = true
         }
       }
-      this.updateCentralPoint()
+
+      if (!this.centralPoinCoords) {
+        this.updateCentralPoint()
+        hit = true
+      }
+
+      if (hit) {
+        const detail: CameraChangedDetail = {
+          fovDeg: this.fov.minFoV,
+          position: this.camera.getCameraPosition(),
+          vMatrix: this.camera.getCameraMatrix() as Float32Array,
+          pMatrix: computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+          timestamp: performance.now(),
+          centralPoint: FoVUtils.getCenterJ2000(this.canvas),
+          mouseHoverPoint: this.mousePointCoords
+        };
+
+        this.canvas.dispatchEvent(new CustomEvent<CameraChangedDetail>(
+          'cameraChanged',
+          { detail, bubbles: false, composed: false }
+        ));
+      }
 
       this.lastMouseX = newX
       this.lastMouseY = newY
@@ -228,7 +257,7 @@ class AstroSphere {
     canvas.addEventListener('wheel', handleMouseWheel, { passive: false })
   }
 
-  // REVIEW THIS METHOD AND MOVE IT
+  // REVIEW THIS METHOD AND MOVE IT 
   getPhiThetaDeg(canvas: HTMLCanvasElement) {
     const maxX = canvas.width
     const maxY = canvas.height
@@ -373,7 +402,7 @@ class AstroSphere {
       if (Math.abs(this.zoomInertia) > 0.0001) {
         this.camera.zoom(this.zoomInertia)
         this.zoomInertia *= 0.95
-        
+
         this.fov = healpixGridSingleton.refreshFoV()
         if (this.prevFov != this.fov.minFoV) {
 
@@ -383,7 +412,8 @@ class AstroSphere {
             vMatrix: this.camera.getCameraMatrix() as Float32Array,
             pMatrix: computePerspectiveMatrixSingleton.pMatrix as Float32Array,
             timestamp: performance.now(),
-            centre: FoVUtils.getCenterJ2000(this.canvas)
+            centralPoint: FoVUtils.getCenterJ2000(this.canvas),
+            mouseHoverPoint: this.mousePointCoords
           };
 
           this.canvas.dispatchEvent(new CustomEvent<CameraChangedDetail>(

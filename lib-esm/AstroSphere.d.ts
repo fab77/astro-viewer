@@ -16,7 +16,8 @@ export type CameraChangedDetail = {
     vMatrix: Float32Array;
     pMatrix: Float32Array;
     timestamp: number;
-    centre: Point;
+    centralPoint: Point;
+    mouseHoverPoint: PointCoordinates | undefined;
 };
 /**
  * AstroSphere — main WebGL scene controller (TS port)
