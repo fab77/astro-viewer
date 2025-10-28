@@ -1,6 +1,6 @@
 import { TapRepo } from '../model/tap/TapRepo.js';
-import CatalogueGL from '../model/catalogues/CatalogueGL.js';
-import FootprintSetGL from '../model/footprints/FootprintSetGL.js';
+import { CatalogueGL } from '../model/catalogues/CatalogueGL.js';
+import { FootprintSetGL } from '../model/footprints/FootprintSetGL.js';
 export interface TapDatasets {
     obsList: FootprintSetGL[];
     catalogueList: CatalogueGL[];

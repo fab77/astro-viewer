@@ -1,4 +1,4 @@
-import FootprintSetGL from '../model/footprints/FootprintSetGL.js';
+import { FootprintSetGL } from '../model/footprints/FootprintSetGL.js';
 import Point from '../model/Point.js';
 /**
  * Builds an ADQL query from current FoV and fetches footprints.

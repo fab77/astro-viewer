@@ -3,9 +3,9 @@ import AstroSphere from './AstroSphere.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { FoV } from './model/FoV.js'
 import Point from './model/Point.js'
-import CatalogueGL from './model/catalogues/CatalogueGL.js'
+import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
 import type { PointCoordinates } from './AstroSphere.js'
-import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
+import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
 import { bootSetup } from './Config.js'
 import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
@@ -156,7 +156,7 @@ export class AstroViewer {
 
     const c = document.getElementById(canvasDomId)
     if (!(c instanceof HTMLCanvasElement)) {
-      throw new Error("Element with id 'canvas-ab' is not a canvas.")
+      throw new Error(`Element with id ${canvasDomId} is not a canvas.`)
     }
     this.canvas = c
 

@@ -1,5 +1,5 @@
-import TapMetadata from "../tap/TapMetadata.js";
-import TapMetadataList from "../tap/TapMetadataList.js";
+import { TapMetadata } from "../tap/TapMetadata.js";
+import { TapMetadataList } from "../tap/TapMetadataList.js";
 export default class CatalogueProps {
     static STANDARD_SIZE: string;
     raColumn: TapMetadata;

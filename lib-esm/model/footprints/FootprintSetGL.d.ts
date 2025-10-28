@@ -2,8 +2,8 @@ import Footprint from './Footprint.js';
 import FootprintProps from './FootprintProps.js';
 import { mat4 } from 'gl-matrix';
 import { TapRepo } from '../tap/TapRepo.js';
-import TapMetadataList from '../tap/TapMetadataList.js';
-import TapMetadata from '../tap/TapMetadata.js';
+import { TapMetadataList } from '../tap/TapMetadataList.js';
+import { TapMetadata } from '../tap/TapMetadata.js';
 import MouseHelper from '../../utils/MouseHelper.js';
 type GL = WebGL2RenderingContext;
 export interface HoveredFootprintDetail {
@@ -13,7 +13,7 @@ export interface HoveredFootprintDetail {
     description: string;
     provider: string;
 }
-declare class FootprintSetGL {
+export declare class FootprintSetGL {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     static CONVEXPOLY_ELEM_SIZE: number;
@@ -76,5 +76,5 @@ declare class FootprintSetGL {
     initSelectionBuffer(): void;
     draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper): void;
 }
-export default FootprintSetGL;
+export {};
 //# sourceMappingURL=FootprintSetGL.d.ts.map

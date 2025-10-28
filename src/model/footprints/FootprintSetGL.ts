@@ -6,9 +6,9 @@ import global from '../../Global.js'
 import { colorHex2RGB } from '../../utils/Utils.js'
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 import { TapRepo } from '../tap/TapRepo.js'
-import TapMetadataList from '../tap/TapMetadataList.js'
+import {TapMetadataList} from '../tap/TapMetadataList.js'
 import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
-import TapMetadata from '../tap/TapMetadata.js'
+import {TapMetadata} from '../tap/TapMetadata.js'
 import MouseHelper from '../../utils/MouseHelper.js'
 import Point from '../Point.js'
 import GeomUtils from '../../utils/GeomUtils.js'
@@ -26,7 +26,7 @@ export interface HoveredFootprintDetail {
 
 
 
-class FootprintSetGL {
+export class FootprintSetGL {
   static ELEM_SIZE = 3
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT
   static CONVEXPOLY_ELEM_SIZE = 3
@@ -571,4 +571,4 @@ class FootprintSetGL {
   }
 }
 
-export default FootprintSetGL
+// export default FootprintSetGL

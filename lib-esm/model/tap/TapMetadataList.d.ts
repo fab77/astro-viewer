@@ -1,8 +1,8 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import TapMetadata from './TapMetadata.js';
-declare class TapMetadataList {
+import { TapMetadata } from './TapMetadata.js';
+export declare class TapMetadataList {
     private _posEqRAMetaColumns;
     private _posEqDecMetaColumns;
     private _sRegionMetaColumns;
@@ -20,5 +20,4 @@ declare class TapMetadataList {
     get posEqRAMetaColumns(): TapMetadata[];
     get posEqDecMetaColumns(): TapMetadata[];
 }
-export default TapMetadataList;
 //# sourceMappingURL=TapMetadataList.d.ts.map

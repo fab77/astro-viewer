@@ -9,16 +9,16 @@ import { colorHex2RGB } from '../../utils/Utils.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import MouseHelper from '../../utils/MouseHelper.js';
 import { TapRepo } from '../tap/TapRepo.js';
-import TapMetadataList from '../tap/TapMetadataList.js';
+import {TapMetadataList} from '../tap/TapMetadataList.js';
 import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
-import TapMetadata from '../tap/TapMetadata.js';
+import {TapMetadata} from '../tap/TapMetadata.js';
 
 // ---- Minimal typings for external classes you already have ----
 type GL = WebGL2RenderingContext;
 
 // `Source` is assumed to expose at least these:
 
-class CatalogueGL {
+export class CatalogueGL {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     static STANDARD_SHAPE_SIZE: number = 8.0
@@ -504,4 +504,4 @@ class CatalogueGL {
 
 }
 
-export default CatalogueGL;
+// export default CatalogueGL;

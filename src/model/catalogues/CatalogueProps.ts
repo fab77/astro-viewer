@@ -1,8 +1,8 @@
 // CatalogueProps.ts
 type UCD = string | undefined;
 
-import TapMetadata from "../tap/TapMetadata.js";
-import TapMetadataList from "../tap/TapMetadataList.js";
+import {TapMetadata} from "../tap/TapMetadata.js";
+import {TapMetadataList} from "../tap/TapMetadataList.js";
 
 function colName(col?: TapMetadata): string | undefined {
   return col?.name ?? col?.name;

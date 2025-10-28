@@ -1,5 +1,5 @@
 'use strict';
-class TapMetadataList {
+export class TapMetadataList {
     _posEqRAMetaColumns; // ucd.includes('pos.eq.ra')
     _posEqDecMetaColumns; // ucd.includes('pos.eq.dec')
     _sRegionMetaColumns; // STC-S / s_region candidates
@@ -55,5 +55,4 @@ class TapMetadataList {
         return this._posEqDecMetaColumns;
     }
 }
-export default TapMetadataList;
 //# sourceMappingURL=TapMetadataList.js.map

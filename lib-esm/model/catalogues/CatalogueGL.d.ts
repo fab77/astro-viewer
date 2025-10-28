@@ -3,10 +3,10 @@ import Source from '../Source.js';
 import { mat4 } from 'gl-matrix';
 import MouseHelper from '../../utils/MouseHelper.js';
 import { TapRepo } from '../tap/TapRepo.js';
-import TapMetadataList from '../tap/TapMetadataList.js';
-import TapMetadata from '../tap/TapMetadata.js';
+import { TapMetadataList } from '../tap/TapMetadataList.js';
+import { TapMetadata } from '../tap/TapMetadata.js';
 type GL = WebGL2RenderingContext;
-declare class CatalogueGL {
+export declare class CatalogueGL {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     static STANDARD_SHAPE_SIZE: number;
@@ -57,5 +57,5 @@ declare class CatalogueGL {
      */
     draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper): void;
 }
-export default CatalogueGL;
+export {};
 //# sourceMappingURL=CatalogueGL.d.ts.map

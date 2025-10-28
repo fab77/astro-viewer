@@ -1,8 +1,8 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import FootprintSetGL from '../footprints/FootprintSetGL.js';
-import CatalogueGL from '../catalogues/CatalogueGL.js';
+import { FootprintSetGL } from '../footprints/FootprintSetGL.js';
+import { CatalogueGL } from '../catalogues/CatalogueGL.js';
 export type ADQLFunction = string | {
     name: string;
     signature?: string;

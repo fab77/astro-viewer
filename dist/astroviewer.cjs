@@ -40,8 +40,12 @@ __webpack_require__.r(__webpack_exports__);
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
   AstroViewer: () => (/* reexport */ AstroViewer),
+  CatalogueGL: () => (/* reexport */ CatalogueGL),
   FoV: () => (/* reexport */ FoV),
+  FootprintSetGL: () => (/* reexport */ FootprintSetGL),
   HiPSDescriptor: () => (/* reexport */ HiPSDescriptor),
+  TapMetadata: () => (/* reexport */ TapMetadata),
+  TapMetadataList: () => (/* reexport */ TapMetadataList),
   TapRepo: () => (/* reexport */ TapRepo),
   addTAPRepo: () => (/* reexport */ addTAPRepo)
 });
@@ -10474,7 +10478,6 @@ class TapMetadata {
         this._index = idx;
     }
 }
-/* harmony default export */ const tap_TapMetadata = (TapMetadata);
 
 ;// ./src/model/tap/TapMetadataList.ts
 
@@ -10534,7 +10537,6 @@ class TapMetadataList {
         return this._posEqDecMetaColumns;
     }
 }
-/* harmony default export */ const tap_TapMetadataList = (TapMetadataList);
 
 ;// ./src/model/tap/TapRepo.ts
 class TapRepo {
@@ -11293,7 +11295,7 @@ class CatalogueGL {
         this.oldMouseCoords = in_mouseHelper.xyz;
     }
 }
-/* harmony default export */ const catalogues_CatalogueGL = (CatalogueGL);
+// export default CatalogueGL;
 
 ;// ./src/utils/STCSParser.ts
 /**
@@ -12067,7 +12069,7 @@ class FootprintSetGL {
         this.oldMouseCoords = in_mouseHelper.xyz;
     }
 }
-/* harmony default export */ const footprints_FootprintSetGL = (FootprintSetGL);
+// export default FootprintSetGL
 
 ;// ./src/services/tapRepoService.ts
 // addTAPRepo.ts
@@ -12235,7 +12237,7 @@ const parseTable = (tableNode, tablesUrl, tapRepo) => {
     const tableName = nameNode.textContent;
     const tableDesc = tableNode.getElementsByTagName('description')[0]?.textContent ?? null;
     const metaColumns = tableNode.getElementsByTagName('column');
-    const tapMetas = new tap_TapMetadataList();
+    const tapMetas = new TapMetadataList();
     for (const col of Array.from(metaColumns)) {
         const name = col.getElementsByTagName('name')[0]?.textContent ?? '';
         const description = col.getElementsByTagName('description')[0]?.textContent ?? undefined;
@@ -12243,17 +12245,17 @@ const parseTable = (tableNode, tablesUrl, tapRepo) => {
         const dataType = col.getElementsByTagName('dataType')[0]?.textContent ?? undefined;
         const ucd = col.getElementsByTagName('ucd')[0]?.textContent ?? undefined;
         const utype = col.getElementsByTagName('utype')[0]?.textContent ?? undefined;
-        const tapMeta = new tap_TapMetadata(name, description, unit, dataType, ucd, utype);
+        const tapMeta = new TapMetadata(name, description, unit, dataType, ucd, utype);
         tapMetas.addMetadata(tapMeta);
     }
     let catalogue = null;
     let footprint = null;
     let notClassified = null;
     if (tapMetas.pgSphereMetaColumns.length > 0 || tapMetas.sRegionMetaColumns.length > 0) {
-        footprint = new footprints_FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas);
+        footprint = new FootprintSetGL(tableName, tableDesc, tapRepo, tapMetas);
     }
     else if (tapMetas.posEqRAMetaColumns.length > 0 && tapMetas.posEqDecMetaColumns.length > 0) {
-        catalogue = new catalogues_CatalogueGL(tableName, tableDesc, tapRepo, tapMetas);
+        catalogue = new CatalogueGL(tableName, tableDesc, tapRepo, tapMetas);
     }
     else {
         notClassified = `TODO: create NC entity for ${tablesUrl}#${tableName}`;
@@ -12291,7 +12293,7 @@ async function queryCatalogueByFoV(catalogue, polygonAdql) {
             const metadata = rows.metadata;
             const data = rows.data;
             console.log(data.length);
-            let tapMetadataList = new tap_TapMetadataList();
+            let tapMetadataList = new TapMetadataList();
             for (const element of metadata) {
                 const name = element.name;
                 const description = element.description !== undefined ? element.description : undefined;
@@ -12299,7 +12301,7 @@ async function queryCatalogueByFoV(catalogue, polygonAdql) {
                 const datatype = element.datatype !== undefined ? element.datatype : undefined;
                 const ucd = element.ucd !== undefined ? element.ucd : undefined;
                 const utype = element.utype !== undefined ? element.utype : undefined;
-                const tapMeta = new tap_TapMetadata(name, description, unit, datatype, ucd, utype);
+                const tapMeta = new TapMetadata(name, description, unit, datatype, ucd, utype);
                 tapMetadataList.addMetadata(tapMeta);
             }
             catalogue.addSources(data, tapMetadataList.metadataList);
@@ -12388,9 +12390,9 @@ async function queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint) {
             Array.isArray(rows.metadata) &&
             Array.isArray(rows.data)) {
             const { metadata, data } = rows;
-            const tapMetadataList = new tap_TapMetadataList();
+            const tapMetadataList = new TapMetadataList();
             for (const m of metadata) {
-                const tapMeta = new tap_TapMetadata(m.name, m.description ?? undefined, m.unit ?? undefined, m.datatype ?? undefined, m.ucd ?? undefined, m.utype ?? undefined);
+                const tapMeta = new TapMetadata(m.name, m.description ?? undefined, m.unit ?? undefined, m.datatype ?? undefined, m.ucd ?? undefined, m.utype ?? undefined);
                 tapMetadataList.addMetadata(tapMeta);
             }
             if (data.length > 0) {
@@ -13299,7 +13301,7 @@ class AstroViewer {
         console.log('init webgl');
         const c = document.getElementById(canvasDomId);
         if (!(c instanceof HTMLCanvasElement)) {
-            throw new Error("Element with id 'canvas-ab' is not a canvas.");
+            throw new Error(`Element with id ${canvasDomId} is not a canvas.`);
         }
         this.canvas = c;
         const gl = this.canvas.getContext('webgl2', { alpha: false });
@@ -13366,6 +13368,10 @@ class AstroViewer {
 }
 
 ;// ./src/index.ts
+
+
+
+
 
 
 

@@ -117,7 +117,7 @@ export class AstroViewer {
         console.log('init webgl');
         const c = document.getElementById(canvasDomId);
         if (!(c instanceof HTMLCanvasElement)) {
-            throw new Error("Element with id 'canvas-ab' is not a canvas.");
+            throw new Error(`Element with id ${canvasDomId} is not a canvas.`);
         }
         this.canvas = c;
         const gl = this.canvas.getContext('webgl2', { alpha: false });

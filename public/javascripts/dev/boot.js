@@ -24,7 +24,7 @@ async function bootstrap() {
   try {
     loadPersisted();
 
-    const AC = new astroviewer.AstroViewer();
+    const AC = new astroviewer.AstroViewer("astrocanvas");
     window.AstroAPI = state.AstroAPI = AC;
     window.TAP = state.TAP;
 

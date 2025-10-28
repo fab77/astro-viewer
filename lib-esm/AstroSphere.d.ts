@@ -2,8 +2,8 @@ import { AstroCoords, HMS, SphericalCoords, DMS } from './utils/Utils.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
 import Point from './model/Point.js';
-import CatalogueGL from './model/catalogues/CatalogueGL.js';
-import FootprintSetGL, { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
+import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
+import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;

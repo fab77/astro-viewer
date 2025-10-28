@@ -1,5 +1,5 @@
-import TapMetadata from '../model/tap/TapMetadata.js';
-import TapMetadataList from '../model/tap/TapMetadataList.js';
+import { TapMetadata } from '../model/tap/TapMetadata.js';
+import { TapMetadataList } from '../model/tap/TapMetadataList.js';
 import { queryAsync } from './tapRepoService.js';
 // Optional timeout; adjust or remove if you don’t use timeouts.
 const TAP_QUERY_TIMEOUT_MS = 60_000;

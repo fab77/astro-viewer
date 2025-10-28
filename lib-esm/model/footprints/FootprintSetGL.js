@@ -7,7 +7,7 @@ import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js';
 import Point from '../Point.js';
 import GeomUtils from '../../utils/GeomUtils.js';
 import CoordsType from '../../utils/CoordsType.js';
-class FootprintSetGL {
+export class FootprintSetGL {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
     static CONVEXPOLY_ELEM_SIZE = 3;
@@ -400,5 +400,5 @@ class FootprintSetGL {
         this.oldMouseCoords = in_mouseHelper.xyz;
     }
 }
-export default FootprintSetGL;
+// export default FootprintSetGL
 //# sourceMappingURL=FootprintSetGL.js.map

@@ -1,10 +1,9 @@
-import FootprintSetGL from '../model/footprints/FootprintSetGL.js'
+import {FootprintSetGL} from '../model/footprints/FootprintSetGL.js'
 import healpixGridSingleton from '../model/grid/HealpixGridSingleton.js';
 import Point from '../model/Point.js';
-import TapMetadata from '../model/tap/TapMetadata.js'
-import TapMetadataList from '../model/tap/TapMetadataList.js'
+import {TapMetadata} from '../model/tap/TapMetadata.js'
+import {TapMetadataList} from '../model/tap/TapMetadataList.js'
 import { TapRepo } from '../model/tap/TapRepo.js';
-import FoVUtils from '../utils/FoVUtils.js';
 import { queryAsync } from './tapRepoService.js'
 
 

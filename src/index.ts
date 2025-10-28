@@ -4,5 +4,9 @@ export { FoV } from './model/FoV.js'
 export { TapRepo } from './model/tap/TapRepo.js'
 export { addTAPRepo } from './services/tapRepoService.js'
 export type {PointCoordinates, CameraChangedDetail} from './AstroSphere.js';
-export {HoveredFootprintDetail} from './model/footprints/FootprintSetGL.js'
+export {HoveredFootprintDetail, FootprintSetGL} from './model/footprints/FootprintSetGL.js'
+export {CatalogueGL} from './model/catalogues/CatalogueGL.js'
+export {TapMetadata} from './model/tap/TapMetadata.js'
+export {TapMetadataList} from './model/tap/TapMetadataList.js'
+
 console.log('astroviewer UMD loaded')

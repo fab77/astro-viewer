@@ -8,7 +8,7 @@ import { colorHex2RGB } from '../../utils/Utils.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 // `Source` is assumed to expose at least these:
-class CatalogueGL {
+export class CatalogueGL {
     static ELEM_SIZE;
     static BYTES_X_ELEM;
     static STANDARD_SHAPE_SIZE = 8.0;
@@ -387,5 +387,5 @@ class CatalogueGL {
         this.oldMouseCoords = in_mouseHelper.xyz;
     }
 }
-export default CatalogueGL;
+// export default CatalogueGL;
 //# sourceMappingURL=CatalogueGL.js.map

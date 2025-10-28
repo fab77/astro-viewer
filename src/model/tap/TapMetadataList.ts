@@ -3,9 +3,9 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import TapMetadata from './TapMetadata.js'
+import {TapMetadata} from './TapMetadata.js'
 
-class TapMetadataList {
+export class TapMetadataList {
   private _posEqRAMetaColumns: TapMetadata[] // ucd.includes('pos.eq.ra')
   private _posEqDecMetaColumns: TapMetadata[] // ucd.includes('pos.eq.dec')
   private _sRegionMetaColumns: TapMetadata[]  // STC-S / s_region candidates
@@ -73,4 +73,4 @@ class TapMetadataList {
   }
 }
 
-export default TapMetadataList
+// export default TapMetadataList

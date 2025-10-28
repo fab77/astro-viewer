@@ -1,10 +1,10 @@
 // addTAPRepo.ts
 import { TapRepo } from '../model/tap/TapRepo.js';
-import TapMetadata from '../model/tap/TapMetadata.js';
-import TapMetadataList from '../model/tap/TapMetadataList.js';
+import { TapMetadata } from '../model/tap/TapMetadata.js';
+import { TapMetadataList } from '../model/tap/TapMetadataList.js';
 import global from '../Global.js';
-import CatalogueGL from '../model/catalogues/CatalogueGL.js';
-import FootprintSetGL from '../model/footprints/FootprintSetGL.js';
+import { CatalogueGL } from '../model/catalogues/CatalogueGL.js';
+import { FootprintSetGL } from '../model/footprints/FootprintSetGL.js';
 let catId = 1;
 let obsId = 1;
 /**
