@@ -13207,6 +13207,12 @@ class AstroViewer {
     deleteCatalogue(catalogue) {
         this.astroSphere.deleteCatalogue(catalogue);
     }
+    changeCatalogueRA(catalogue, raColumnName) {
+        catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName);
+    }
+    changeCatalogueDec(catalogue, decColumnName) {
+        catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName);
+    }
     changeCatalogueColor(catalogue, hexColor) {
         catalogue.catalogueProps.changeColor(hexColor);
     }

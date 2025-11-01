@@ -38,6 +38,14 @@ export class AstroViewer {
     this.astroSphere.deleteCatalogue(catalogue)
   }
 
+  changeCatalogueRA(catalogue: CatalogueGL, raColumnName: string) {
+    catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
+  }
+
+  changeCatalogueDec(catalogue: CatalogueGL, decColumnName: string) {
+    catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
+  }
+
   changeCatalogueColor(catalogue: CatalogueGL, hexColor: string) {
     catalogue.catalogueProps.changeColor(hexColor)
   }
