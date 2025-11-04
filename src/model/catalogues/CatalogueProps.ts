@@ -18,6 +18,7 @@ function sameName(a?: TapMetadata, name?: string): boolean {
 export default class CatalogueProps {
 
   static STANDARD_SIZE: string = "STANDARD_SIZE"
+  static STANDARD_HUE: string = "STANDARD_HUE"
 
   raColumn!: TapMetadata;
   decColumn!: TapMetadata;

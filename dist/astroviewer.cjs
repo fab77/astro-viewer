@@ -10601,6 +10601,7 @@ function sameName(a, name) {
 }
 class CatalogueProps {
     static STANDARD_SIZE = "STANDARD_SIZE";
+    static STANDARD_HUE = "STANDARD_HUE";
     raColumn;
     decColumn;
     nameColumn;
@@ -11040,7 +11041,7 @@ class CatalogueGL {
         this.initBuffer();
     }
     changeCatalogueMetaShapeHue(metacolumnName) {
-        if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
+        if (metacolumnName == CatalogueProps.STANDARD_HUE) {
             this.catalogueProps.resetCatalogueMetaShapeHue();
             for (const source of this.sources) {
                 const hue = CatalogueGL.STANDARD_SHAPE_HUE;
@@ -11094,6 +11095,12 @@ class CatalogueGL {
             source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             source.brightnessFactor = 3;
             this.addSource(source);
+            if (this.catalogueProps.shapeHueColumn?.name) {
+                this.changeCatalogueMetaShapeHue(this.catalogueProps.shapeHueColumn.name);
+            }
+            if (this.catalogueProps.shapeSizeColumn?.name) {
+                this.changeCatalogueMetaShapeSize(this.changeCatalogueMetaShapeSize.name);
+            }
         }
         this.initBuffer();
         this.ready = true;
@@ -13209,18 +13216,23 @@ class AstroViewer {
     }
     changeCatalogueRA(catalogue, raColumnName) {
         catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName);
+        return catalogue;
     }
     changeCatalogueDec(catalogue, decColumnName) {
         catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName);
+        return catalogue;
     }
     changeCatalogueColor(catalogue, hexColor) {
         catalogue.catalogueProps.changeColor(hexColor);
+        return catalogue;
     }
     setCatalogueShapeHue(catalogue, metadataColumnName) {
         catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
+        return catalogue;
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
         catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
+        return catalogue;
     }
     //FOOTPRINT
     showFootprintSet(footprintSet) {

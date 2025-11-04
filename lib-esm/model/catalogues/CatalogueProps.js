@@ -8,6 +8,7 @@ function sameName(a, name) {
 }
 export default class CatalogueProps {
     static STANDARD_SIZE = "STANDARD_SIZE";
+    static STANDARD_HUE = "STANDARD_HUE";
     raColumn;
     decColumn;
     nameColumn;

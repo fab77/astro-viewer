@@ -25,18 +25,23 @@ export class AstroViewer {
     }
     changeCatalogueRA(catalogue, raColumnName) {
         catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName);
+        return catalogue;
     }
     changeCatalogueDec(catalogue, decColumnName) {
         catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName);
+        return catalogue;
     }
     changeCatalogueColor(catalogue, hexColor) {
         catalogue.catalogueProps.changeColor(hexColor);
+        return catalogue;
     }
     setCatalogueShapeHue(catalogue, metadataColumnName) {
         catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
+        return catalogue;
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
         catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
+        return catalogue;
     }
     //FOOTPRINT
     showFootprintSet(footprintSet) {

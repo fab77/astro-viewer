@@ -13,11 +13,11 @@ export declare class AstroViewer {
     showCatalogue(catalogue: CatalogueGL): void;
     hideCatalogue(catalogue: CatalogueGL, isVisible: boolean): void;
     deleteCatalogue(catalogue: CatalogueGL): void;
-    changeCatalogueRA(catalogue: CatalogueGL, raColumnName: string): void;
-    changeCatalogueDec(catalogue: CatalogueGL, decColumnName: string): void;
-    changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): void;
-    setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): void;
-    setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): void;
+    changeCatalogueRA(catalogue: CatalogueGL, raColumnName: string): CatalogueGL;
+    changeCatalogueDec(catalogue: CatalogueGL, decColumnName: string): CatalogueGL;
+    changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): CatalogueGL;
+    setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): CatalogueGL;
+    setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): CatalogueGL;
     showFootprintSet(footprintSet: FootprintSetGL): void;
     hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean): void;
     deleteFootprintSet(footprintSet: FootprintSetGL): void;

@@ -2,6 +2,7 @@ import { TapMetadata } from "../tap/TapMetadata.js";
 import { TapMetadataList } from "../tap/TapMetadataList.js";
 export default class CatalogueProps {
     static STANDARD_SIZE: string;
+    static STANDARD_HUE: string;
     raColumn: TapMetadata;
     decColumn: TapMetadata;
     nameColumn?: TapMetadata;

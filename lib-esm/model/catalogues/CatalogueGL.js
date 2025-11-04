@@ -132,7 +132,7 @@ export class CatalogueGL {
         this.initBuffer();
     }
     changeCatalogueMetaShapeHue(metacolumnName) {
-        if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
+        if (metacolumnName == CatalogueProps.STANDARD_HUE) {
             this.catalogueProps.resetCatalogueMetaShapeHue();
             for (const source of this.sources) {
                 const hue = CatalogueGL.STANDARD_SHAPE_HUE;
@@ -186,6 +186,12 @@ export class CatalogueGL {
             source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             source.brightnessFactor = 3;
             this.addSource(source);
+            if (this.catalogueProps.shapeHueColumn?.name) {
+                this.changeCatalogueMetaShapeHue(this.catalogueProps.shapeHueColumn.name);
+            }
+            if (this.catalogueProps.shapeSizeColumn?.name) {
+                this.changeCatalogueMetaShapeSize(this.changeCatalogueMetaShapeSize.name);
+            }
         }
         this.initBuffer();
         this.ready = true;

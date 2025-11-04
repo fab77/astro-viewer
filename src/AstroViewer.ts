@@ -38,24 +38,29 @@ export class AstroViewer {
     this.astroSphere.deleteCatalogue(catalogue)
   }
 
-  changeCatalogueRA(catalogue: CatalogueGL, raColumnName: string) {
+  changeCatalogueRA(catalogue: CatalogueGL, raColumnName: string): CatalogueGL {
     catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
+    return catalogue
   }
 
-  changeCatalogueDec(catalogue: CatalogueGL, decColumnName: string) {
+  changeCatalogueDec(catalogue: CatalogueGL, decColumnName: string): CatalogueGL {
     catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
+    return catalogue
   }
 
-  changeCatalogueColor(catalogue: CatalogueGL, hexColor: string) {
+  changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): CatalogueGL {
     catalogue.catalogueProps.changeColor(hexColor)
+    return catalogue
   }
 
-  setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string) {
+  setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): CatalogueGL {
     catalogue.changeCatalogueMetaShapeHue(metadataColumnName)
+    return catalogue
   }
 
-  setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string) {
+  setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): CatalogueGL {
     catalogue.changeCatalogueMetaShapeSize(metadataColumnName)
+    return catalogue
   }
 
   //FOOTPRINT
