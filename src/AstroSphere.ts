@@ -23,12 +23,12 @@ import HiPS from './model/hips/HiPS.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import computePerspectiveMatrixSingleton from './utils/ComputePerspectiveMatrix.js'
 import { FoV } from './model/FoV.js'
-import Point from './model/Point.js'
-import FoVUtils from './utils/FoVUtils.js'
-import queryCatalogueByFoV from './services/queryCatalogueByFoV.js'
-import {CatalogueGL} from './model/catalogues/CatalogueGL.js'
-import {FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
-import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
+import { Point } from './model/Point.js'
+import { FoVUtils } from './utils/FoVUtils.js'
+// import queryCatalogueByFoV from './services/queryCatalogueByFoV.js'
+import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
+import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
+// import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
 
 import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 
@@ -281,10 +281,10 @@ class AstroSphere {
   }
 
   // Catalogue section
-  async showCatalogue(catalogue: CatalogueGL) {
-    const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
-    const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
-    const cat = await queryCatalogueByFoV(catalogue, polygonAdql)
+  async showCatalogue(cat: CatalogueGL) {
+    // const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
+    // const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
+    // const cat = await queryCatalogueByFoV(catalogue, polygonAdql)
     console.log(cat)
     if (cat) this.activeCatalogues.push(cat)
     return cat
@@ -296,12 +296,12 @@ class AstroSphere {
   // End Catalogue section
 
   // Footprint section
-  async showFootprintSet(footprintSet: FootprintSetGL) {
-    const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
-    const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
-    const centralPoint = FoVUtils.getCenterJ2000(this.canvas)
+  async showFootprintSet(fset: FootprintSetGL) {
+    // const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
+    // const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
+    // const centralPoint = FoVUtils.getCenterJ2000(this.canvas)
 
-    const fset = await queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint)
+    // const fset = await queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint)
     console.log(fset)
     if (fset) this.activeFootprintSets.push(fset)
     return fset

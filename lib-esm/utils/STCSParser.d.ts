@@ -1,7 +1,7 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import Point from "../model/Point.js";
+import { Point } from "../model/Point.js";
 export interface STCSParseResult {
     totpoints: number;
     polygons: Point[][];

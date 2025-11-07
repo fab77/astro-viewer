@@ -4,9 +4,9 @@
 'use strict';
 import { vec3 } from 'gl-matrix';
 import { cartesianToSpherical, sphericalToCartesian, sphericalToAstroDeg, astroDegToSpherical, } from '../utils/Utils.js';
-import CoordsType from '../utils/CoordsType.js';
+import { CoordsType } from '../utils/CoordsType.js';
 import global from '../Global.js';
-class Point {
+export class Point {
     _x;
     _y;
     _z;
@@ -130,5 +130,4 @@ class Point {
         return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
     }
 }
-export default Point;
 //# sourceMappingURL=Point.js.map

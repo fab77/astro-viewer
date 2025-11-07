@@ -2,7 +2,7 @@ import global from './Global.js'
 import AstroSphere from './AstroSphere.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { FoV } from './model/FoV.js'
-import Point from './model/Point.js'
+import {Point} from './model/Point.js'
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
 import type { PointCoordinates } from './AstroSphere.js'
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
@@ -31,35 +31,40 @@ export class AstroViewer {
   showCatalogue(catalogue: CatalogueGL) {
     this.astroSphere.showCatalogue(catalogue)
   }
+
   hideCatalogue(catalogue: CatalogueGL, isVisible: boolean) {
     catalogue.setIsVisible(isVisible)
   }
+  
   deleteCatalogue(catalogue: CatalogueGL) {
     this.astroSphere.deleteCatalogue(catalogue)
   }
 
   changeCatalogueRA(catalogue: CatalogueGL, raColumnName: string): CatalogueGL {
-    catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
+    catalogue.changeMetaRA(raColumnName)
+    // catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
     return catalogue
   }
 
   changeCatalogueDec(catalogue: CatalogueGL, decColumnName: string): CatalogueGL {
-    catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
+    catalogue.changeMetaDec(decColumnName)
+    // catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
     return catalogue
   }
 
   changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): CatalogueGL {
-    catalogue.catalogueProps.changeColor(hexColor)
+    catalogue.changeColor(hexColor)
+    // catalogue.catalogueProps.changeColor(hexColor)
     return catalogue
   }
 
   setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): CatalogueGL {
-    catalogue.changeCatalogueMetaShapeHue(metadataColumnName)
+    catalogue.changeMetaShapeHue(metadataColumnName)
     return catalogue
   }
 
   setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): CatalogueGL {
-    catalogue.changeCatalogueMetaShapeSize(metadataColumnName)
+    catalogue.changeMetaShapeSize(metadataColumnName)
     return catalogue
   }
 
@@ -77,7 +82,8 @@ export class AstroViewer {
   }
 
   changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {
-    footprintSet.footprintsetProps.changeColor(hexColor)
+    // footprintSet.footprintsetProps.changeColor(hexColor)
+    footprintSet.changeColor(hexColor)
   }
 
   getHoveredFootprints(): HoveredFootprintDetail[] {
@@ -139,7 +145,7 @@ export class AstroViewer {
   getFoVPolygon(): Point[] {
     return this.astroSphere.getFoVPolygon()
   }
-
+  
   changeFoV(deg: number) {
     this, this.astroSphere.changeFoV(deg)
   }

@@ -8,7 +8,7 @@
 import GeomUtils, { SelectionObj } from '../../utils/GeomUtils.js';
 // import global from '../../Global.js';
 import STCSParser, { STCSParseResult } from '../../utils/STCSParser.js';
-import Point from '../Point.js';
+import {Point} from '../Point.js';
 
 export interface FootprintDetail {
   key: string;

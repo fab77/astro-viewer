@@ -1,11 +1,11 @@
 /**
  * @author Fabrizio Giordano (Fab)
  */
-import Point from '../model/Point.js';
+import { Point } from '../model/Point.js';
 import { ReadonlyMat4 } from 'gl-matrix';
 import Camera from '../Camera.js';
 import AbstractSkyEntity from '../model/AbstractSkyEntity.js';
-declare class FoVUtils {
+export declare class FoVUtils {
     /**
      * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
      * (Kept here for parity; this class doesn’t maintain those fields.)
@@ -42,5 +42,4 @@ declare class FoVUtils {
     /** Build ADQL string from an array of Points (ra,dec pairs). */
     static getAstroFoVPolygon(points: Point[]): string;
 }
-export default FoVUtils;
 //# sourceMappingURL=FoVUtils.d.ts.map

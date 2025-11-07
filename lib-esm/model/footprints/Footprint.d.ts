@@ -2,7 +2,7 @@
  * @author Fabrizio Giordano (Fab)
  */
 import { SelectionObj } from '../../utils/GeomUtils.js';
-import Point from '../Point.js';
+import { Point } from '../Point.js';
 export interface FootprintDetail {
     key: string;
     value: string | number;

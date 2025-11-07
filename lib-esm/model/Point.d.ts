@@ -1,5 +1,5 @@
 import { type SphericalCoords } from '../utils/Utils.js';
-import CoordsType from '../utils/CoordsType.js';
+import { CoordsType } from '../utils/CoordsType.js';
 type CartesianOpts = {
     x: number;
     y: number;
@@ -14,7 +14,7 @@ type SphericalOpts = {
     thetaDeg: number;
 };
 type PointInitOpts = CartesianOpts | AstroOpts | SphericalOpts;
-declare class Point {
+export declare class Point {
     private _x;
     private _y;
     private _z;
@@ -50,5 +50,5 @@ declare class Point {
     toADQL(): string;
     toString(): string;
 }
-export default Point;
+export {};
 //# sourceMappingURL=Point.d.ts.map

@@ -1,23 +1,25 @@
-import { shaderUtility } from '../../utils/ShaderUtility.js'
 import Footprint from './Footprint.js'
-import FootprintProps from './FootprintProps.js'
+// import FootprintProps from './FootprintProps.js'
 import { mat4 } from 'gl-matrix'
 import global from '../../Global.js'
 import { colorHex2RGB } from '../../utils/Utils.js'
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
-import { TapRepo } from '../tap/TapRepo.js'
-import {TapMetadataList} from '../tap/TapMetadataList.js'
+// import { TapRepo } from '../tap/TapRepo.js'
+// import {TapMetadataList} from '../tap/TapMetadataList.js'
 import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
-import {TapMetadata} from '../tap/TapMetadata.js'
+// import {TapMetadata} from '../tap/TapMetadata.js'
 import MouseHelper from '../../utils/MouseHelper.js'
-import Point from '../Point.js'
+import { Point } from '../Point.js'
 import GeomUtils from '../../utils/GeomUtils.js'
-import CoordsType from '../../utils/CoordsType.js'
+import {CoordsType} from '../../utils/CoordsType.js'
+import { MetadataManager } from '../MetadataManager.js'
+import { MetadataColumn } from '../MetadataColumn.js'
 
 type GL = WebGL2RenderingContext;
 
 export interface HoveredFootprintDetail {
-  metadata: TapMetadataList
+  // metadata: TapMetadataList
+  metadata: MetadataManager
   footprints: Footprint[]
   tableName: string
   description: string
@@ -31,17 +33,19 @@ export class FootprintSetGL {
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT
   static CONVEXPOLY_ELEM_SIZE = 3
 
-  ready: boolean
-  footprintsetProps: FootprintProps
-  name: string
-  description: string
-  tapRepo: TapRepo
+  _kind: string = "FootprintSetGL"
+  _ready: boolean
+  // footprintsetProps: FootprintProps
+  _name: string
+  _description: string
+  // tapRepo: TapRepo
 
   extHoveredIndexes!: Uint32Array
 
   oldMouseCoords: any
   healpixDensityMap: any
 
+  _providerUrl: string;
 
 
   totConvexPoints!: number
@@ -79,24 +83,26 @@ export class FootprintSetGL {
   selectedVertexPosition!: Float32Array
   totSelectedPoints!: number
   nSlectedPrimitiveFlags: number = 0
-
+  _shapeColor = '#00fff2ff'
 
   _isVisible: boolean = true
+  private _metadataManager: MetadataManager
 
   constructor(
-    tablename: string,
-    tabledesc: string,
-    tapRepo: TapRepo,
-    tapMetadataList: TapMetadataList) {
+    fsetName: string,
+    fsetDescription: string,
+    providerUrl: string,
+    metadataManager: MetadataManager) {
 
-    this.ready = false;
+    this._ready = false;
     (this as any).TYPE = 'FOOTPRINT_SET';
 
-    this.name = tablename
-    this.description = tabledesc
-    this.tapRepo = tapRepo
+    this._name = fsetName
+    this._description = fsetDescription
+    this._providerUrl = providerUrl
 
     // this.footprintsInPix256 = new Map()
+    this._metadataManager = metadataManager
 
     this.initFootprintArrays()
     if (!global.gl) {
@@ -108,8 +114,8 @@ export class FootprintSetGL {
 
     this.oldMouseCoords = null
 
-    const defaultColor = '#00fff2ff'
-    this.footprintsetProps = new FootprintProps(tapMetadataList, defaultColor)
+
+    // this.footprintsetProps = new FootprintProps(tapMetadataList, defaultColor)
 
     footprintShaderProgram.shaderProgram
 
@@ -155,14 +161,36 @@ export class FootprintSetGL {
     return this._isVisible
   }
 
+  get shapeColor() {
+    return this._shapeColor
+  }
+
+  get providerUrl() {
+    return this._providerUrl
+  }
+
+  get name() {
+    return this._name
+  }
+
+  get metadataManager() {
+    return this._metadataManager
+  }
+
   addFootprint(in_footprint: Footprint): void {
     this.footprintPolygons.push(in_footprint)
   }
 
-  addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void {
-    this.ready = false
-    const geomDataIndex = this.footprintsetProps.geomColumn?.index
-    if (geomDataIndex === undefined) {
+  // addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void {
+  addFootprints(in_data: any[], columnsmeta: MetadataColumn[]): void {
+    this._ready = false
+
+    this._metadataManager = new MetadataManager(columnsmeta)
+
+    // const geomDataIndex = this.footprintsetProps.geomColumn?.index
+    const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1
+
+    if (geomDataIndex < 0) {
       throw new Error('geomColumn or its index is undefined in footprintsetProps')
     }
 
@@ -178,7 +206,7 @@ export class FootprintSetGL {
     }
 
     this.initBuffer()
-    this.ready = true
+    this._ready = true
   }
 
   clearFootprints(): void {
@@ -254,9 +282,10 @@ export class FootprintSetGL {
 
       if (GeomUtils.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
         const details = [...footprint.details]
-        const geomDataIndex = this.footprintsetProps.geomColumn?.index
+        // const geomDataIndex = this.footprintsetProps.geomColumn?.index
+        const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1
 
-        if (geomDataIndex === undefined) continue;
+        if (geomDataIndex < 0) continue;
 
         details.splice(geomDataIndex, 1)
         this._hoveredFootprints.push(footprint)
@@ -268,11 +297,13 @@ export class FootprintSetGL {
 
   get hoveredFootprints(): HoveredFootprintDetail {
     return {
-      metadata: this.footprintsetProps.tapMetadataList,
+      // metadata: this.footprintsetProps.tapMetadataList,
+      metadata: this._metadataManager,
       footprints: this._hoveredFootprints,
-      tableName: this.name,
-      description: this.description,
-      provider: this.tapRepo.tapBaseUrl
+      tableName: this._name,
+      description: this._description,
+      // provider: this.tapRepo.tapBaseUrl
+      provider: this._providerUrl
     }
   }
 
@@ -460,10 +491,13 @@ export class FootprintSetGL {
     }
   }
 
+  changeColor(color: string): void {
+    this._shapeColor = color;
+  }
 
   draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper): void {
     if (!this.isVisible) return
-    if (!this.ready) return
+    if (!this._ready) return
     if (!global.camera) return
 
 
@@ -560,7 +594,8 @@ export class FootprintSetGL {
     this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
     this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.indexes, this.gl.STATIC_DRAW)
 
-    const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
+    // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
+    const shapeColor = [...colorHex2RGB(this._shapeColor), 1.0] as [number, number, number, number]
     this.gl.uniform4f(footprintShaderProgram.locations.color as WebGLUniformLocation, ...shapeColor)
 
     this.gl.drawElements(this.gl.LINE_LOOP, this.indexes.length, this.gl.UNSIGNED_INT, 0)

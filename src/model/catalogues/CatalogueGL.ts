@@ -1,17 +1,17 @@
 import global from '../../Global.js';
-import CatalogueProps from './CatalogueProps.js';
+// import CatalogueProps from './CatalogueProps.js';
 import Source from '../Source.js';
-import Point from '../Point.js';
+import {Point} from '../Point.js';
 import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
-import CoordsType from '../..//utils/CoordsType.js';
+import {CoordsType} from '../..//utils/CoordsType.js';
 import { mat4 } from 'gl-matrix';
 import { colorHex2RGB } from '../../utils/Utils.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import MouseHelper from '../../utils/MouseHelper.js';
-import { TapRepo } from '../tap/TapRepo.js';
-import {TapMetadataList} from '../tap/TapMetadataList.js';
 import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
-import {TapMetadata} from '../tap/TapMetadata.js';
+// import { TapMetadata } from '../tap/TapMetadata.js';
+import { MetadataManager } from '../MetadataManager.js';
+import { MetadataColumn } from '../MetadataColumn.js';
 
 // ---- Minimal typings for external classes you already have ----
 type GL = WebGL2RenderingContext;
@@ -19,23 +19,21 @@ type GL = WebGL2RenderingContext;
 // `Source` is assumed to expose at least these:
 
 export class CatalogueGL {
-    static ELEM_SIZE: number;
-    static BYTES_X_ELEM: number;
+
+    _kind:string = "CatalogueGL"
+    static ELEM_SIZE: number = 6
+    static BYTES_X_ELEM: number = new Float32Array().BYTES_PER_ELEMENT;
     static STANDARD_SHAPE_SIZE: number = 8.0
     static STANDARD_SHAPE_HUE: number = 3.0
 
-    // Core state
-    ready: boolean;
-    catalogueProps: CatalogueProps;
-    name: string;
-    description: string;
-    tapRepo: TapRepo;
+    _ready: boolean;
+    _name: string;
+    _description: string;
 
     // Data
     sources: Source[];
 
     gl: GL;
-    // shaderProgram: WebGLProgram;
 
     // Buffers & arrays
     vertexCataloguePositionBuffer: WebGLBuffer | null;
@@ -47,35 +45,28 @@ export class CatalogueGL {
     selectedIndexes: number[];
     extHoveredIndexes: number[];
 
-    oldMouseCoords: [number, number, number] | null;
+    _oldMouseCoords: [number, number, number] | null;
 
+    private _metadataManager: MetadataManager
     _isVisible: boolean = true
 
-    // Healpix pixel => indices map
-    healpixDensityMap: Map<number, number[]>;
+    _shapeColor = '#8F00FF';
+    _healpixDensityMap: Map<number, number[]>;
+    _providerUrl: string;
 
-    /**
-     * @param tablename - String
-     * @param tabledesc - String
-     * @param tapRepo   - Object with `_tapBaseURL`
-     * @param tapMetadataList - TapMetadataList (as used by CatalogueProps)
-     */
     constructor(
-        tablename: string,
-        tabledesc: string,
-        provider: TapRepo,
-        tapMetadataList: TapMetadataList
+        catalogueName: string,
+        catalogueDescription: string,
+        providerUrl: string,
+        metadataManager: MetadataManager
     ) {
-        this.ready = false;
+        this._ready = false;
         (this as any).TYPE = 'SOURCE_CATALOGUE';
 
-        CatalogueGL.ELEM_SIZE = 6; // x,y,z, hoveredFlag, size, brightness
-        CatalogueGL.BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-
-        this.name = tablename;
-        this.description = tabledesc;
-        this.tapRepo = provider;
-
+        this._name = catalogueName;
+        this._description = catalogueDescription;
+        this._providerUrl = providerUrl;
+        this._metadataManager = metadataManager
 
         this.sources = [];
 
@@ -89,13 +80,11 @@ export class CatalogueGL {
         this.selectedIndexes = [];
         this.extHoveredIndexes = [];
 
-        this.oldMouseCoords = null;
+        this._oldMouseCoords = null;
 
+        this._healpixDensityMap = new Map<number, number[]>();
 
-        this.healpixDensityMap = new Map<number, number[]>();
-        const defaultColor = '#8F00FF';
-
-        this.catalogueProps = new CatalogueProps(tapMetadataList, defaultColor);
+        // this.catalogueProps = new CatalogueProps(metadataManager, defaultColor);
 
         // call catalogueShaderProgram to init shaders if they are not yet initialised 
         catalogueShaderProgram.shaderProgram
@@ -104,8 +93,20 @@ export class CatalogueGL {
 
     }
 
-    public setIsVisible(visibility: boolean) {
+    setIsVisible(visibility: boolean) {
         this._isVisible = visibility
+    }
+
+    get shapeColor() {
+        return this._shapeColor
+    }
+
+    get providerUrl() {
+        return this._providerUrl
+    }
+
+    get name(){
+        return this._name
     }
 
     get isVisible() {
@@ -117,8 +118,8 @@ export class CatalogueGL {
         let min = this.sources[0].details[columnindex]
 
         if (isNaN(Number(min))) {
-            // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
-            console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`)
+            // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`)
+            console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain only number values`)
             return { min: 0, max: 0 };
         }
         let max = min;
@@ -126,7 +127,8 @@ export class CatalogueGL {
         for (const source of this.sources) {
             const v = source.details[columnindex]
             if (isNaN(Number(v))) {
-                console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
+                // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
+                console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain number only values`)
                 return { min: 0, max: 0 };
             }
             if (v < min) min = v;
@@ -138,10 +140,27 @@ export class CatalogueGL {
         };
     }
 
+    get metadataManager() {
+        return this._metadataManager
+    }
 
-    changeCatalogueMetaShapeSize(metacolumnName: string) {
-        if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
-            this.catalogueProps.resetCatalogueMetaShapeSize()
+    changeMetaRA(raColumnName: string){
+        this._metadataManager.selectedRaColumn = raColumnName
+    }
+    
+    changeMetaDec(decColumnName: string){
+        this._metadataManager.selectedDecColumn = decColumnName
+    }
+
+    changeColor(color: string): void {
+        this._shapeColor = color;
+    }
+
+    changeMetaShapeSize(metacolumnName: string) {
+        // if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
+        if (metacolumnName == MetadataManager.STANDARD_SIZE) {
+
+            this._metadataManager.resetShapeColumn()
             for (const source of this.sources) {
                 const size = CatalogueGL.STANDARD_SHAPE_SIZE;
                 source.shapeSize = size;
@@ -149,11 +168,15 @@ export class CatalogueGL {
             this.initBuffer();
             return
         }
-        const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
-        this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
-        const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
-        if (idx == null) {
-            if (oldShapeSizeName) this.catalogueProps.changeCatalogueMetaShapeSize(oldShapeSizeName);
+        // const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
+        // this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
+        // const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
+        const oldShapeSizeName = this._metadataManager.selectedShapeColumn?.name
+        this._metadataManager.selectedShapeColumn = metacolumnName;
+        const idx = this._metadataManager.selectedShapeColumn?.index ?? -1
+        if (idx < 0) {
+            // if (oldShapeSizeName) this.catalogueProps.changeCatalogueMetaShapeSize(oldShapeSizeName);
+            if (oldShapeSizeName) this._metadataManager.selectedShapeColumn = oldShapeSizeName
             return;
         }
         const minmax = this.minMax(idx);
@@ -173,9 +196,11 @@ export class CatalogueGL {
         this.initBuffer();
     }
 
-    changeCatalogueMetaShapeHue(metacolumnName: string) {
-        if (metacolumnName == CatalogueProps.STANDARD_HUE) {
-            this.catalogueProps.resetCatalogueMetaShapeHue()
+    changeMetaShapeHue(metacolumnName: string) {
+        // if (metacolumnName == CatalogueProps.STANDARD_HUE) {
+        if (metacolumnName == MetadataManager.STANDARD_HUE) {
+            // this.catalogueProps.resetCatalogueMetaShapeHue()
+            this._metadataManager.resetHueColumn()
             for (const source of this.sources) {
                 const hue = CatalogueGL.STANDARD_SHAPE_HUE;
                 source.brightnessFactor = hue;
@@ -184,11 +209,16 @@ export class CatalogueGL {
             return
         }
 
-        const oldHueSizeName = this.catalogueProps.shapeHueColumn?.name
-        this.catalogueProps.changeCatalogueMetaShapeHue(metacolumnName);
-        const idx = this.catalogueProps.shapeHueColumn?.index ?? this.catalogueProps.shapeHueColumn?.index;
-        if (idx == null) {
-            if (oldHueSizeName) this.catalogueProps.changeCatalogueMetaShapeHue(oldHueSizeName);
+        // const oldHueSizeName = this.catalogueProps.shapeHueColumn?.name
+        // this.catalogueProps.changeCatalogueMetaShapeHue(metacolumnName);
+        // const idx = this.catalogueProps.shapeHueColumn?.index ?? this.catalogueProps.shapeHueColumn?.index;
+        const oldHueSizeName = this._metadataManager.selectedShapeColumn?.name
+        this._metadataManager.selectedHueColumn = metacolumnName;
+        const idx = this._metadataManager.selectedHueColumn?.index ?? -1
+        if (idx < 0) {
+
+            // if (oldHueSizeName) this.catalogueProps.changeCatalogueMetaShapeHue(oldHueSizeName);
+            if (oldHueSizeName) this._metadataManager.selectedHueColumn = oldHueSizeName
             return;
         }
         const minmax = this.minMax(idx);
@@ -216,12 +246,17 @@ export class CatalogueGL {
      * @param in_data Rows of TAP results
      * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
      */
-    addSources(in_data: any[][], columnsmeta: TapMetadata[]) {
-        this.ready = false;
+    addSources(in_data: any[][], columnsmeta: MetadataColumn[]) {
+        this._ready = false;
         this.sources = []
 
-        const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
-        const decDataIndex = (this.catalogueProps.decColumn as any).index ?? (this.catalogueProps.decColumn as any)._index;
+        this._metadataManager = new MetadataManager(columnsmeta)
+        // const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
+        // const decDataIndex = (this.catalogueProps.decColumn as any).index ?? (this.catalogueProps.decColumn as any)._index;
+        const raDataIndex = this._metadataManager.selectedRaColumn?.index ?? -1
+        const decDataIndex = this._metadataManager.selectedDecColumn?.index ?? -1
+
+        if (raDataIndex < 0 || decDataIndex < 0) throw new Error(`(ra, dec) idx not defined (${raDataIndex}, ${decDataIndex}) `)
 
         for (let j = 0; j < in_data.length; j++) {
             const point = new Point(
@@ -233,29 +268,33 @@ export class CatalogueGL {
             );
 
             const source = new Source(point, in_data[j]);
-            
+
             // Ensure optional fields exist
             source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             source.brightnessFactor = 3;
 
             this.addSource(source);
-            if (this.catalogueProps.shapeHueColumn?.name) {
-                this.changeCatalogueMetaShapeHue(this.catalogueProps.shapeHueColumn.name)
+            // if (this.catalogueProps.shapeHueColumn?.name) {
+            if (this._metadataManager.selectedHueColumn?.name) {
+                // this.changeCatalogueMetaShapeHue(this.catalogueProps.shapeHueColumn.name)
+                this.changeMetaShapeHue(this._metadataManager.selectedHueColumn.name)
             }
-            if (this.catalogueProps.shapeSizeColumn?.name) {
-                this.changeCatalogueMetaShapeSize(this.changeCatalogueMetaShapeSize.name)
+            // if (this.catalogueProps.shapeSizeColumn?.name) {
+            if (this._metadataManager.selectedShapeColumn?.name) {
+                // this.changeCatalogueMetaShapeSize(this.shapeSizeColumn.name)
+                this.changeMetaShapeSize(this._metadataManager.selectedShapeColumn.name)
             }
-            
+
         }
 
         this.initBuffer();
-        this.ready = true;
+        this._ready = true;
     }
 
     clearSources() {
         this.sources = [];
         this.hoveredIndexes = [];
-        this.healpixDensityMap.clear();
+        this._healpixDensityMap.clear();
         this.vertexCataloguePosition = new Float32Array(0);
     }
 
@@ -310,11 +349,11 @@ export class CatalogueGL {
             const currPix = currSource.healpixPixel;
 
             // density map
-            const bucket = this.healpixDensityMap.get(currPix);
+            const bucket = this._healpixDensityMap.get(currPix);
             if (bucket) {
                 if (!bucket.includes(j)) bucket.push(j);
             } else {
-                this.healpixDensityMap.set(currPix, [j]);
+                this._healpixDensityMap.set(currPix, [j]);
             }
 
             // position
@@ -374,8 +413,8 @@ export class CatalogueGL {
         const sourcesHovered: Source[] = [];
         const mousePix = in_mouseHelper.computeNpix();
 
-        if (mousePix != null && this.healpixDensityMap.has(mousePix)) {
-            const candidates = this.healpixDensityMap.get(mousePix)!;
+        if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
+            const candidates = this._healpixDensityMap.get(mousePix)!;
             const selR = this.getSelectionRadius();
 
             for (let i = 0; i < candidates.length; i++) {
@@ -399,13 +438,13 @@ export class CatalogueGL {
         return hoveredIndexes;
     }
 
-   
+
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
     draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper) {
         if (!this.isVisible) return
-        if (!this.ready) return
+        if (!this._ready) return
         if (!global.camera) return
 
         catalogueShaderProgram.enableShaders(computePerspectiveMatrixSingleton.pMatrix as Float32Array,
@@ -460,13 +499,14 @@ export class CatalogueGL {
         this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.brightness);
 
         // color
-        const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
+        // const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
+        const rgb = colorHex2RGB(this._shapeColor);
         if (catalogueShaderProgram.locations.color) {
             this.gl.uniform4f(catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
         }
 
         // Hover logic on mouse move
-        if (in_mouseHelper != null && in_mouseHelper.xyz !== this.oldMouseCoords) {
+        if (in_mouseHelper != null && in_mouseHelper.xyz !== this._oldMouseCoords) {
             // clear old hovered
             for (let k = 0; k < this.hoveredIndexes.length; k++) {
                 const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
@@ -508,7 +548,7 @@ export class CatalogueGL {
         const numItems = this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
         this.gl.drawArrays(this.gl.POINTS, 0, numItems);
 
-        this.oldMouseCoords = in_mouseHelper.xyz;
+        this._oldMouseCoords = in_mouseHelper.xyz;
     }
 
 }

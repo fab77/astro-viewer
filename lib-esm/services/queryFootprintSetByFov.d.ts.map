@@ -1,1 +1,1 @@
-{"version":3,"file":"queryFootprintSetByFov.d.ts","sourceRoot":"","sources":["../../src/services/queryFootprintSetByFov.ts"],"names":[],"mappings":"AAAA,OAAO,EAAC,cAAc,EAAC,MAAM,uCAAuC,CAAA;AAEpE,OAAO,KAAK,MAAM,mBAAmB,CAAC;AAgEtC;;;GAGG;AACH,wBAA8B,sBAAsB,CAClD,YAAY,EAAE,cAAc,EAC5B,WAAW,EAAE,MAAM,EACnB,YAAY,EAAE,KAAK,GAAG,OAAO,CAAC,cAAc,GAAG,SAAS,CAAC,CAmE1D"}
+{"version":3,"file":"queryFootprintSetByFov.d.ts","sourceRoot":"","sources":["../../src/services/queryFootprintSetByFov.ts"],"names":[],"mappings":""}

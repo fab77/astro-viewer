@@ -24,23 +24,26 @@ export class AstroViewer {
         this.astroSphere.deleteCatalogue(catalogue);
     }
     changeCatalogueRA(catalogue, raColumnName) {
-        catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName);
+        catalogue.changeMetaRA(raColumnName);
+        // catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
         return catalogue;
     }
     changeCatalogueDec(catalogue, decColumnName) {
-        catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName);
+        catalogue.changeMetaDec(decColumnName);
+        // catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
         return catalogue;
     }
     changeCatalogueColor(catalogue, hexColor) {
-        catalogue.catalogueProps.changeColor(hexColor);
+        catalogue.changeColor(hexColor);
+        // catalogue.catalogueProps.changeColor(hexColor)
         return catalogue;
     }
     setCatalogueShapeHue(catalogue, metadataColumnName) {
-        catalogue.changeCatalogueMetaShapeHue(metadataColumnName);
+        catalogue.changeMetaShapeHue(metadataColumnName);
         return catalogue;
     }
     setCatalogueShapeSize(catalogue, metadataColumnName) {
-        catalogue.changeCatalogueMetaShapeSize(metadataColumnName);
+        catalogue.changeMetaShapeSize(metadataColumnName);
         return catalogue;
     }
     //FOOTPRINT
@@ -54,7 +57,8 @@ export class AstroViewer {
         this.astroSphere.deleteFootprintSet(footprintSet);
     }
     changeFootprintSetColor(footprintSet, hexColor) {
-        footprintSet.footprintsetProps.changeColor(hexColor);
+        // footprintSet.footprintsetProps.changeColor(hexColor)
+        footprintSet.changeColor(hexColor);
     }
     getHoveredFootprints() {
         return this.astroSphere.getHoveredFootprints();

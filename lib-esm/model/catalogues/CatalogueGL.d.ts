@@ -1,21 +1,18 @@
-import CatalogueProps from './CatalogueProps.js';
 import Source from '../Source.js';
 import { mat4 } from 'gl-matrix';
 import MouseHelper from '../../utils/MouseHelper.js';
-import { TapRepo } from '../tap/TapRepo.js';
-import { TapMetadataList } from '../tap/TapMetadataList.js';
-import { TapMetadata } from '../tap/TapMetadata.js';
+import { MetadataManager } from '../MetadataManager.js';
+import { MetadataColumn } from '../MetadataColumn.js';
 type GL = WebGL2RenderingContext;
 export declare class CatalogueGL {
+    _kind: string;
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     static STANDARD_SHAPE_SIZE: number;
     static STANDARD_SHAPE_HUE: number;
-    ready: boolean;
-    catalogueProps: CatalogueProps;
-    name: string;
-    description: string;
-    tapRepo: TapRepo;
+    _ready: boolean;
+    _name: string;
+    _description: string;
     sources: Source[];
     gl: GL;
     vertexCataloguePositionBuffer: WebGLBuffer | null;
@@ -24,27 +21,31 @@ export declare class CatalogueGL {
     hoveredIndexes: number[];
     selectedIndexes: number[];
     extHoveredIndexes: number[];
-    oldMouseCoords: [number, number, number] | null;
+    _oldMouseCoords: [number, number, number] | null;
+    private _metadataManager;
     _isVisible: boolean;
-    healpixDensityMap: Map<number, number[]>;
-    /**
-     * @param tablename - String
-     * @param tabledesc - String
-     * @param tapRepo   - Object with `_tapBaseURL`
-     * @param tapMetadataList - TapMetadataList (as used by CatalogueProps)
-     */
-    constructor(tablename: string, tabledesc: string, provider: TapRepo, tapMetadataList: TapMetadataList);
+    _shapeColor: string;
+    _healpixDensityMap: Map<number, number[]>;
+    _providerUrl: string;
+    constructor(catalogueName: string, catalogueDescription: string, providerUrl: string, metadataManager: MetadataManager);
     setIsVisible(visibility: boolean): void;
+    get shapeColor(): string;
+    get providerUrl(): string;
+    get name(): string;
     get isVisible(): boolean;
     private minMax;
-    changeCatalogueMetaShapeSize(metacolumnName: string): void;
-    changeCatalogueMetaShapeHue(metacolumnName: string): void;
+    get metadataManager(): MetadataManager;
+    changeMetaRA(raColumnName: string): void;
+    changeMetaDec(decColumnName: string): void;
+    changeColor(color: string): void;
+    changeMetaShapeSize(metacolumnName: string): void;
+    changeMetaShapeHue(metacolumnName: string): void;
     addSource(source: Source): void;
     /**
      * @param in_data Rows of TAP results
      * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
      */
-    addSources(in_data: any[][], columnsmeta: TapMetadata[]): void;
+    addSources(in_data: any[][], columnsmeta: MetadataColumn[]): void;
     clearSources(): void;
     extHighlightSource(source: Source, highlighted: boolean): void;
     extAddSources2Selected(sources: Source[]): void;

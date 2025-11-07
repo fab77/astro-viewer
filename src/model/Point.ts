@@ -11,7 +11,7 @@ import {
   astroDegToSpherical,
   type SphericalCoords,
 } from '../utils/Utils.js';
-import CoordsType from '../utils/CoordsType.js';
+import {CoordsType} from '../utils/CoordsType.js';
 import global from '../Global.js';
 
 type CartesianOpts = { x: number; y: number; z: number };
@@ -19,7 +19,7 @@ type AstroOpts = { raDeg: number; decDeg: number };
 type SphericalOpts = { phiDeg: number; thetaDeg: number };
 type PointInitOpts = CartesianOpts | AstroOpts | SphericalOpts;
 
-class Point {
+export class Point {
   private _x!: number;
   private _y!: number;
   private _z!: number;
@@ -166,4 +166,3 @@ class Point {
   }
 }
 
-export default Point;

@@ -7,11 +7,11 @@ import { mat4, vec4, ReadonlyMat4 } from 'gl-matrix';
 import { Healpix } from 'healpixjs';
 
 import { fovHelper } from '../hips/FoVHelper.js';
-import FoVUtils from '../../utils/FoVUtils.js';
+import {FoVUtils} from '../../utils/FoVUtils.js';
 import { FoV } from '../FoV.js';
 
-import CoordsType from '../../utils/CoordsType.js';
-import Point from '../Point.js';
+import {CoordsType} from '../../utils/CoordsType.js';
+import {Point} from '../Point.js';
 
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import GeomUtils from '../../utils/GeomUtils.js';

@@ -1,13 +1,11 @@
 import Footprint from './Footprint.js';
-import FootprintProps from './FootprintProps.js';
 import { mat4 } from 'gl-matrix';
-import { TapRepo } from '../tap/TapRepo.js';
-import { TapMetadataList } from '../tap/TapMetadataList.js';
-import { TapMetadata } from '../tap/TapMetadata.js';
 import MouseHelper from '../../utils/MouseHelper.js';
+import { MetadataManager } from '../MetadataManager.js';
+import { MetadataColumn } from '../MetadataColumn.js';
 type GL = WebGL2RenderingContext;
 export interface HoveredFootprintDetail {
-    metadata: TapMetadataList;
+    metadata: MetadataManager;
     footprints: Footprint[];
     tableName: string;
     description: string;
@@ -17,14 +15,14 @@ export declare class FootprintSetGL {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     static CONVEXPOLY_ELEM_SIZE: number;
-    ready: boolean;
-    footprintsetProps: FootprintProps;
-    name: string;
-    description: string;
-    tapRepo: TapRepo;
+    _kind: string;
+    _ready: boolean;
+    _name: string;
+    _description: string;
     extHoveredIndexes: Uint32Array;
     oldMouseCoords: any;
     healpixDensityMap: any;
+    _providerUrl: string;
     totConvexPoints: number;
     gl: GL;
     vertexCataloguePositionBuffer: WebGLBuffer;
@@ -48,14 +46,20 @@ export declare class FootprintSetGL {
     selectedVertexPosition: Float32Array;
     totSelectedPoints: number;
     nSlectedPrimitiveFlags: number;
+    _shapeColor: string;
     _isVisible: boolean;
-    constructor(tablename: string, tabledesc: string, tapRepo: TapRepo, tapMetadataList: TapMetadataList);
+    private _metadataManager;
+    constructor(fsetName: string, fsetDescription: string, providerUrl: string, metadataManager: MetadataManager);
     private initFootprintArrays;
     private initGLBuffers;
     setIsVisible(visibility: boolean): void;
     get isVisible(): boolean;
+    get shapeColor(): string;
+    get providerUrl(): string;
+    get name(): string;
+    get metadataManager(): MetadataManager;
     addFootprint(in_footprint: Footprint): void;
-    addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void;
+    addFootprints(in_data: any[], columnsmeta: MetadataColumn[]): void;
     clearFootprints(): void;
     private initBuffer;
     checkSelection(mouseHelper: MouseHelper): void;
@@ -74,6 +78,7 @@ export declare class FootprintSetGL {
     removeFootprintFromSelection(footprint: Footprint): void;
     initHoveringBuffer(): void;
     initSelectionBuffer(): void;
+    changeColor(color: string): void;
     draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper): void;
 }
 export {};

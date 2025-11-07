@@ -3,16 +3,16 @@
  * @author Fabrizio Giordano (Fab)
  */
 
-import Point from '../model/Point.js';
+import {Point} from '../model/Point.js';
 import RayPickingUtils from './RayPickingUtils.js';
-import CoordsType from './CoordsType.js';
+import {CoordsType} from './CoordsType.js';
 import { mat4, ReadonlyMat4 } from 'gl-matrix';
 import computePerspectiveMatrixSingleton from './ComputePerspectiveMatrix.js';
 import Camera from '../Camera.js';
 import HiPS from '../model/hips/HiPS.js';
 import AbstractSkyEntity from '../model/AbstractSkyEntity.js';
 
-class FoVUtils {
+export class FoVUtils {
   /**
    * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
    * (Kept here for parity; this class doesn’t maintain those fields.)
@@ -368,5 +368,3 @@ class FoVUtils {
     return points.map(p => p.toADQL()).join(',');
   }
 }
-
-export default FoVUtils;

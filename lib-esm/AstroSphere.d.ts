@@ -1,7 +1,7 @@
 import { AstroCoords, HMS, SphericalCoords, DMS } from './utils/Utils.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
-import Point from './model/Point.js';
+import { Point } from './model/Point.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
 export type PointCoordinates = {
@@ -50,9 +50,9 @@ declare class AstroSphere {
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
-    showCatalogue(catalogue: CatalogueGL): Promise<CatalogueGL | undefined>;
+    showCatalogue(cat: CatalogueGL): Promise<CatalogueGL>;
     deleteCatalogue(catalogue: CatalogueGL): void;
-    showFootprintSet(footprintSet: FootprintSetGL): Promise<FootprintSetGL | undefined>;
+    showFootprintSet(fset: FootprintSetGL): Promise<FootprintSetGL>;
     deleteFootprintSet(footprintSet: FootprintSetGL): void;
     getHoveredFootprints(): HoveredFootprintDetail[];
     goTo(raDeg: number, decDeg: number): void;

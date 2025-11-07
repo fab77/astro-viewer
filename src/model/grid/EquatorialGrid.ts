@@ -5,9 +5,9 @@ import global from '../../Global.js';
 import { fovHelper } from '../hips/FoVHelper.js';
 import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
-import Point from '../Point.js';
-import CoordsType from '../../utils/CoordsType.js';
-import FoVUtils from '../../utils/FoVUtils.js';
+import {Point} from '../Point.js';
+import {CoordsType} from '../../utils/CoordsType.js';
+import {FoVUtils} from '../../utils/FoVUtils.js';
 
 import GridTextHelper from './GridTextHelper.js';
 import HealpixGridSingleton from './HealpixGridSingleton.js';
