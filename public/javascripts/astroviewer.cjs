@@ -1503,7 +1503,7 @@ const bootSetup = {
 class Global {
     // --- cached / runtime state ---
     _camera;
-    _gl;
+    // private _gl: GL | null;
     _healpix;
     // --- config/state flags ---
     _selectionnside;
@@ -1522,7 +1522,7 @@ class Global {
         this._insideSphere = bootSetup.insideView;
         this._version = bootSetup.version;
         this._camera = null;
-        this._gl = null;
+        // this._gl = null;
         this._healpix = {};
         this._selectionnside = 32;
         // this._healpix4footprints = false;
@@ -1547,8 +1547,8 @@ class Global {
     get MAX_DECIMALS() { return this._maxDecimals; }
     get camera() { return this._camera; }
     set camera(in_camera) { this._camera = in_camera; }
-    get gl() { return this._gl; }
-    set gl(in_gl) { this._gl = in_gl; }
+    // get gl(): GL | null { return this._gl; }
+    // set gl(in_gl: GL | null) { this._gl = in_gl; }
     set insideSphere(v) { this._insideSphere = v; }
     get insideSphere() { return this._insideSphere; }
     get nsideForSelection() { return this._selectionnside; }
@@ -4742,1054 +4742,7 @@ class ComputePerspectiveMatrixSingleton {
 const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton();
 /* harmony default export */ const ComputePerspectiveMatrix = (computePerspectiveMatrixSingleton);
 
-;// ./src/model/AbstractSkyEntity.ts
-/**
- * @author Fabrizio Giordano (Fab)
- */
-
-
-class AbstractSkyEntity {
-    // Public-ish properties used elsewhere in the app
-    refreshMe = false;
-    fovX_deg = 180;
-    fovY_deg = 180;
-    xRad;
-    yRad;
-    prevFoV = this.fovX_deg;
-    name;
-    // public insideSphere: boolean = bootSetup.insideSphere
-    // Picking/sphere
-    center;
-    radius;
-    isGalacticHips;
-    // GL resources
-    vertexTextureCoordBuffer = null;
-    vertexPositionBuffer = null;
-    vertexIndexBuffer = null;
-    shaderProgram = null;
-    // Matrices
-    T = mat4_create();
-    R = mat4_create();
-    modelMatrix = mat4_create();
-    inverseModelMatrix = mat4_create();
-    // Precomputed transform from galactic to equatorial (already inverted)
-    galacticMatrixInverted = mat4_create();
-    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, isGalacticHips) {
-        this.xRad = in_xRad;
-        this.yRad = in_yRad;
-        this.name = in_name;
-        this.center = clone(in_position);
-        this.radius = in_radius;
-        // this.insideSphere = global.insideSphere
-        this.isGalacticHips = !!isGalacticHips;
-        // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
-        mat4_set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
-    }
-    /** GL setup and initial model transform */
-    initGL(gl) {
-        // GL resources
-        this.vertexTextureCoordBuffer = gl.createBuffer();
-        this.vertexPositionBuffer = gl.createBuffer();
-        this.vertexIndexBuffer = gl.createBuffer();
-        this.shaderProgram = gl.createProgram();
-        // Reset object transforms
-        this.T = mat4_create();
-        this.R = mat4_create();
-        this.modelMatrix = mat4_create();
-        this.inverseModelMatrix = mat4_create();
-        // Initial pose
-        this.translate(this.center);
-        this.rotate(this.xRad, this.yRad);
-    }
-    translate(translation) {
-        translate(this.T, this.T, translation);
-        this.refreshModelMatrix();
-    }
-    rotate(rad1, rad2) {
-        rotate(this.R, this.R, rad2, [0, 0, 1]);
-        rotate(this.R, this.R, rad1, [1, 0, 0]);
-        this.refreshModelMatrix();
-    }
-    rotateFromZero(rad1, rad2) {
-        identity(this.R);
-        rotate(this.R, this.R, rad1, [1, 0, 0]);
-        rotate(this.R, this.R, rad2, [0, 0, 1]);
-        this.refreshModelMatrix();
-    }
-    refreshModelMatrix() {
-        const R_inverse = mat4_create();
-        invert(R_inverse, this.R);
-        mat4_multiply(this.modelMatrix, this.T, R_inverse);
-        // Flip Y if we're outside the sphere
-        if (!src_Global.insideSphere) {
-            this.modelMatrix[1] = -this.modelMatrix[1];
-            this.modelMatrix[5] = -this.modelMatrix[5];
-            this.modelMatrix[9] = -this.modelMatrix[9];
-            this.modelMatrix[13] = -this.modelMatrix[13];
-        }
-        // Apply galactic frame transform if needed
-        if (this.isGalacticHips) {
-            mat4_multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
-        }
-    }
-    getModelMatrixInverse() {
-        identity(this.inverseModelMatrix);
-        invert(this.inverseModelMatrix, this.modelMatrix);
-        return this.inverseModelMatrix;
-    }
-    getModelMatrix() {
-        return this.modelMatrix;
-    }
-    /** Children with hierarchical geometry (e.g., HiPS) can override this. */
-    setGeometryNeedsToBeRefreshed() {
-        this.refreshGeometryOnFoVChanged = false;
-    }
-    // Helpers operating on raw mat4 buffers (kept from your JS)
-    rotateX(m, angle) {
-        const c = Math.cos(angle);
-        const s = Math.sin(angle);
-        const mv1 = m[1], mv5 = m[5], mv9 = m[9];
-        m[1] = m[1] * c - m[2] * s;
-        m[5] = m[5] * c - m[6] * s;
-        m[9] = m[9] * c - m[10] * s;
-        m[2] = m[2] * c + mv1 * s;
-        m[6] = m[6] * c + mv5 * s;
-        m[10] = m[10] * c + mv9 * s;
-        return m;
-    }
-    rotateY(m, angle) {
-        const c = Math.cos(angle);
-        const s = Math.sin(angle);
-        const mv0 = m[0], mv4 = m[4], mv8 = m[8];
-        m[0] = c * m[0] + s * m[2];
-        m[4] = c * m[4] + s * m[6];
-        m[8] = c * m[8] + s * m[10];
-        m[2] = c * m[2] - s * mv0;
-        m[6] = c * m[6] - s * mv4;
-        m[10] = c * m[10] - s * mv8;
-        return m;
-    }
-}
-/* harmony default export */ const model_AbstractSkyEntity = (AbstractSkyEntity);
-
-;// ./node_modules/gl-matrix/esm/vec4.js
-
-
-/**
- * 4 Dimensional Vector
- * @module vec4
- */
-
-/**
- * Creates a new, empty vec4
- *
- * @returns {vec4} a new 4D vector
- */
-function vec4_create() {
-  var out = new ARRAY_TYPE(4);
-  if (ARRAY_TYPE != Float32Array) {
-    out[0] = 0;
-    out[1] = 0;
-    out[2] = 0;
-    out[3] = 0;
-  }
-  return out;
-}
-
-/**
- * Creates a new vec4 initialized with values from an existing vector
- *
- * @param {ReadonlyVec4} a vector to clone
- * @returns {vec4} a new 4D vector
- */
-function vec4_clone(a) {
-  var out = new glMatrix.ARRAY_TYPE(4);
-  out[0] = a[0];
-  out[1] = a[1];
-  out[2] = a[2];
-  out[3] = a[3];
-  return out;
-}
-
-/**
- * Creates a new vec4 initialized with the given values
- *
- * @param {Number} x X component
- * @param {Number} y Y component
- * @param {Number} z Z component
- * @param {Number} w W component
- * @returns {vec4} a new 4D vector
- */
-function vec4_fromValues(x, y, z, w) {
-  var out = new glMatrix.ARRAY_TYPE(4);
-  out[0] = x;
-  out[1] = y;
-  out[2] = z;
-  out[3] = w;
-  return out;
-}
-
-/**
- * Copy the values from one vec4 to another
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the source vector
- * @returns {vec4} out
- */
-function vec4_copy(out, a) {
-  out[0] = a[0];
-  out[1] = a[1];
-  out[2] = a[2];
-  out[3] = a[3];
-  return out;
-}
-
-/**
- * Set the components of a vec4 to the given values
- *
- * @param {vec4} out the receiving vector
- * @param {Number} x X component
- * @param {Number} y Y component
- * @param {Number} z Z component
- * @param {Number} w W component
- * @returns {vec4} out
- */
-function vec4_set(out, x, y, z, w) {
-  out[0] = x;
-  out[1] = y;
-  out[2] = z;
-  out[3] = w;
-  return out;
-}
-
-/**
- * Adds two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function vec4_add(out, a, b) {
-  out[0] = a[0] + b[0];
-  out[1] = a[1] + b[1];
-  out[2] = a[2] + b[2];
-  out[3] = a[3] + b[3];
-  return out;
-}
-
-/**
- * Subtracts vector b from vector a
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function vec4_subtract(out, a, b) {
-  out[0] = a[0] - b[0];
-  out[1] = a[1] - b[1];
-  out[2] = a[2] - b[2];
-  out[3] = a[3] - b[3];
-  return out;
-}
-
-/**
- * Multiplies two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function vec4_multiply(out, a, b) {
-  out[0] = a[0] * b[0];
-  out[1] = a[1] * b[1];
-  out[2] = a[2] * b[2];
-  out[3] = a[3] * b[3];
-  return out;
-}
-
-/**
- * Divides two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function vec4_divide(out, a, b) {
-  out[0] = a[0] / b[0];
-  out[1] = a[1] / b[1];
-  out[2] = a[2] / b[2];
-  out[3] = a[3] / b[3];
-  return out;
-}
-
-/**
- * Math.ceil the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to ceil
- * @returns {vec4} out
- */
-function vec4_ceil(out, a) {
-  out[0] = Math.ceil(a[0]);
-  out[1] = Math.ceil(a[1]);
-  out[2] = Math.ceil(a[2]);
-  out[3] = Math.ceil(a[3]);
-  return out;
-}
-
-/**
- * Math.floor the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to floor
- * @returns {vec4} out
- */
-function vec4_floor(out, a) {
-  out[0] = Math.floor(a[0]);
-  out[1] = Math.floor(a[1]);
-  out[2] = Math.floor(a[2]);
-  out[3] = Math.floor(a[3]);
-  return out;
-}
-
-/**
- * Returns the minimum of two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function vec4_min(out, a, b) {
-  out[0] = Math.min(a[0], b[0]);
-  out[1] = Math.min(a[1], b[1]);
-  out[2] = Math.min(a[2], b[2]);
-  out[3] = Math.min(a[3], b[3]);
-  return out;
-}
-
-/**
- * Returns the maximum of two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function vec4_max(out, a, b) {
-  out[0] = Math.max(a[0], b[0]);
-  out[1] = Math.max(a[1], b[1]);
-  out[2] = Math.max(a[2], b[2]);
-  out[3] = Math.max(a[3], b[3]);
-  return out;
-}
-
-/**
- * symmetric round the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to round
- * @returns {vec4} out
- */
-function vec4_round(out, a) {
-  out[0] = glMatrix.round(a[0]);
-  out[1] = glMatrix.round(a[1]);
-  out[2] = glMatrix.round(a[2]);
-  out[3] = glMatrix.round(a[3]);
-  return out;
-}
-
-/**
- * Scales a vec4 by a scalar number
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the vector to scale
- * @param {Number} b amount to scale the vector by
- * @returns {vec4} out
- */
-function vec4_scale(out, a, b) {
-  out[0] = a[0] * b;
-  out[1] = a[1] * b;
-  out[2] = a[2] * b;
-  out[3] = a[3] * b;
-  return out;
-}
-
-/**
- * Adds two vec4's after scaling the second operand by a scalar value
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @param {Number} scale the amount to scale b by before adding
- * @returns {vec4} out
- */
-function vec4_scaleAndAdd(out, a, b, scale) {
-  out[0] = a[0] + b[0] * scale;
-  out[1] = a[1] + b[1] * scale;
-  out[2] = a[2] + b[2] * scale;
-  out[3] = a[3] + b[3] * scale;
-  return out;
-}
-
-/**
- * Calculates the euclidian distance between two vec4's
- *
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {Number} distance between a and b
- */
-function vec4_distance(a, b) {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  var w = b[3] - a[3];
-  return Math.sqrt(x * x + y * y + z * z + w * w);
-}
-
-/**
- * Calculates the squared euclidian distance between two vec4's
- *
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {Number} squared distance between a and b
- */
-function vec4_squaredDistance(a, b) {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  var w = b[3] - a[3];
-  return x * x + y * y + z * z + w * w;
-}
-
-/**
- * Calculates the length of a vec4
- *
- * @param {ReadonlyVec4} a vector to calculate length of
- * @returns {Number} length of a
- */
-function vec4_length(a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
-  return Math.sqrt(x * x + y * y + z * z + w * w);
-}
-
-/**
- * Calculates the squared length of a vec4
- *
- * @param {ReadonlyVec4} a vector to calculate squared length of
- * @returns {Number} squared length of a
- */
-function vec4_squaredLength(a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
-  return x * x + y * y + z * z + w * w;
-}
-
-/**
- * Negates the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to negate
- * @returns {vec4} out
- */
-function vec4_negate(out, a) {
-  out[0] = -a[0];
-  out[1] = -a[1];
-  out[2] = -a[2];
-  out[3] = -a[3];
-  return out;
-}
-
-/**
- * Returns the inverse of the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to invert
- * @returns {vec4} out
- */
-function vec4_inverse(out, a) {
-  out[0] = 1.0 / a[0];
-  out[1] = 1.0 / a[1];
-  out[2] = 1.0 / a[2];
-  out[3] = 1.0 / a[3];
-  return out;
-}
-
-/**
- * Normalize a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to normalize
- * @returns {vec4} out
- */
-function vec4_normalize(out, a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
-  var len = x * x + y * y + z * z + w * w;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
-  }
-  out[0] = x * len;
-  out[1] = y * len;
-  out[2] = z * len;
-  out[3] = w * len;
-  return out;
-}
-
-/**
- * Calculates the dot product of two vec4's
- *
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {Number} dot product of a and b
- */
-function dot(a, b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-}
-
-/**
- * Returns the cross-product of three vectors in a 4-dimensional space
- *
- * @param {ReadonlyVec4} out the receiving vector
- * @param {ReadonlyVec4} u the first vector
- * @param {ReadonlyVec4} v the second vector
- * @param {ReadonlyVec4} w the third vector
- * @returns {vec4} result
- */
-function vec4_cross(out, u, v, w) {
-  var A = v[0] * w[1] - v[1] * w[0],
-    B = v[0] * w[2] - v[2] * w[0],
-    C = v[0] * w[3] - v[3] * w[0],
-    D = v[1] * w[2] - v[2] * w[1],
-    E = v[1] * w[3] - v[3] * w[1],
-    F = v[2] * w[3] - v[3] * w[2];
-  var G = u[0];
-  var H = u[1];
-  var I = u[2];
-  var J = u[3];
-  out[0] = H * F - I * E + J * D;
-  out[1] = -(G * F) + I * C - J * B;
-  out[2] = G * E - H * C + J * A;
-  out[3] = -(G * D) + H * B - I * A;
-  return out;
-}
-
-/**
- * Performs a linear interpolation between two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec4} out
- */
-function vec4_lerp(out, a, b, t) {
-  var ax = a[0];
-  var ay = a[1];
-  var az = a[2];
-  var aw = a[3];
-  out[0] = ax + t * (b[0] - ax);
-  out[1] = ay + t * (b[1] - ay);
-  out[2] = az + t * (b[2] - az);
-  out[3] = aw + t * (b[3] - aw);
-  return out;
-}
-
-/**
- * Generates a random vector with the given scale
- *
- * @param {vec4} out the receiving vector
- * @param {Number} [scale] Length of the resulting vector. If omitted, a unit vector will be returned
- * @returns {vec4} out
- */
-function vec4_random(out, scale) {
-  scale = scale === undefined ? 1.0 : scale;
-
-  // Marsaglia, George. Choosing a Point from the Surface of a
-  // Sphere. Ann. Math. Statist. 43 (1972), no. 2, 645--646.
-  // http://projecteuclid.org/euclid.aoms/1177692644;
-  var v1, v2, v3, v4;
-  var s1, s2;
-  var rand;
-  rand = glMatrix.RANDOM();
-  v1 = rand * 2 - 1;
-  v2 = (4 * glMatrix.RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
-  s1 = v1 * v1 + v2 * v2;
-  rand = glMatrix.RANDOM();
-  v3 = rand * 2 - 1;
-  v4 = (4 * glMatrix.RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
-  s2 = v3 * v3 + v4 * v4;
-  var d = Math.sqrt((1 - s1) / s2);
-  out[0] = scale * v1;
-  out[1] = scale * v2;
-  out[2] = scale * v3 * d;
-  out[3] = scale * v4 * d;
-  return out;
-}
-
-/**
- * Transforms the vec4 with a mat4.
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the vector to transform
- * @param {ReadonlyMat4} m matrix to transform with
- * @returns {vec4} out
- */
-function vec4_transformMat4(out, a, m) {
-  var x = a[0],
-    y = a[1],
-    z = a[2],
-    w = a[3];
-  out[0] = m[0] * x + m[4] * y + m[8] * z + m[12] * w;
-  out[1] = m[1] * x + m[5] * y + m[9] * z + m[13] * w;
-  out[2] = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
-  out[3] = m[3] * x + m[7] * y + m[11] * z + m[15] * w;
-  return out;
-}
-
-/**
- * Transforms the vec4 with a quat
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the vector to transform
- * @param {ReadonlyQuat} q normalized quaternion to transform with
- * @returns {vec4} out
- */
-function vec4_transformQuat(out, a, q) {
-  // Fast Vector Rotation using Quaternions by Robert Eisele
-  // https://raw.org/proof/vector-rotation-using-quaternions/
-
-  var qx = q[0],
-    qy = q[1],
-    qz = q[2],
-    qw = q[3];
-  var vx = a[0],
-    vy = a[1],
-    vz = a[2];
-
-  // t = q x v
-  var tx = qy * vz - qz * vy;
-  var ty = qz * vx - qx * vz;
-  var tz = qx * vy - qy * vx;
-
-  // t = 2t
-  tx = tx + tx;
-  ty = ty + ty;
-  tz = tz + tz;
-
-  // v + w t + q x t
-  out[0] = vx + qw * tx + qy * tz - qz * ty;
-  out[1] = vy + qw * ty + qz * tx - qx * tz;
-  out[2] = vz + qw * tz + qx * ty - qy * tx;
-  out[3] = a[3];
-  return out;
-}
-
-/**
- * Set the components of a vec4 to zero
- *
- * @param {vec4} out the receiving vector
- * @returns {vec4} out
- */
-function vec4_zero(out) {
-  out[0] = 0.0;
-  out[1] = 0.0;
-  out[2] = 0.0;
-  out[3] = 0.0;
-  return out;
-}
-
-/**
- * Returns a string representation of a vector
- *
- * @param {ReadonlyVec4} a vector to represent as a string
- * @returns {String} string representation of the vector
- */
-function vec4_str(a) {
-  return "vec4(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ")";
-}
-
-/**
- * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
- *
- * @param {ReadonlyVec4} a The first vector.
- * @param {ReadonlyVec4} b The second vector.
- * @returns {Boolean} True if the vectors are equal, false otherwise.
- */
-function vec4_exactEquals(a, b) {
-  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
-}
-
-/**
- * Returns whether or not the vectors have approximately the same elements in the same position.
- *
- * @param {ReadonlyVec4} a The first vector.
- * @param {ReadonlyVec4} b The second vector.
- * @returns {Boolean} True if the vectors are equal, false otherwise.
- */
-function vec4_equals(a, b) {
-  var a0 = a[0],
-    a1 = a[1],
-    a2 = a[2],
-    a3 = a[3];
-  var b0 = b[0],
-    b1 = b[1],
-    b2 = b[2],
-    b3 = b[3];
-  return Math.abs(a0 - b0) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3));
-}
-
-/**
- * Alias for {@link vec4.subtract}
- * @function
- */
-var vec4_sub = (/* unused pure expression or super */ null && (vec4_subtract));
-
-/**
- * Alias for {@link vec4.multiply}
- * @function
- */
-var vec4_mul = (/* unused pure expression or super */ null && (vec4_multiply));
-
-/**
- * Alias for {@link vec4.divide}
- * @function
- */
-var vec4_div = (/* unused pure expression or super */ null && (vec4_divide));
-
-/**
- * Alias for {@link vec4.distance}
- * @function
- */
-var vec4_dist = (/* unused pure expression or super */ null && (vec4_distance));
-
-/**
- * Alias for {@link vec4.squaredDistance}
- * @function
- */
-var vec4_sqrDist = (/* unused pure expression or super */ null && (vec4_squaredDistance));
-
-/**
- * Alias for {@link vec4.length}
- * @function
- */
-var vec4_len = (/* unused pure expression or super */ null && (vec4_length));
-
-/**
- * Alias for {@link vec4.squaredLength}
- * @function
- */
-var vec4_sqrLen = (/* unused pure expression or super */ null && (vec4_squaredLength));
-
-/**
- * Perform some operation over an array of vec4s.
- *
- * @param {Array} a the array of vectors to iterate over
- * @param {Number} stride Number of elements between the start of each vec4. If 0 assumes tightly packed
- * @param {Number} offset Number of elements to skip at the beginning of the array
- * @param {Number} count Number of vec4s to iterate over. If 0 iterates over entire array
- * @param {Function} fn Function to call for each vector in the array
- * @param {Object} [arg] additional argument to pass to fn
- * @returns {Array} a
- * @function
- */
-var vec4_forEach = function () {
-  var vec = vec4_create();
-  return function (a, stride, offset, count, fn, arg) {
-    var i, l;
-    if (!stride) {
-      stride = 4;
-    }
-    if (!offset) {
-      offset = 0;
-    }
-    if (count) {
-      l = Math.min(count * stride + offset, a.length);
-    } else {
-      l = a.length;
-    }
-    for (i = offset; i < l; i += stride) {
-      vec[0] = a[i];
-      vec[1] = a[i + 1];
-      vec[2] = a[i + 2];
-      vec[3] = a[i + 3];
-      fn(vec, vec, arg);
-      a[i] = vec[0];
-      a[i + 1] = vec[1];
-      a[i + 2] = vec[2];
-      a[i + 3] = vec[3];
-    }
-    return a;
-  };
-}();
-;// ./src/model/hips/FoVHelper.ts
-// FoVHelper.ts
-
-class FoVHelper {
-    getHiPSNorder(fov) {
-        if (fov >= 179)
-            return 0;
-        if (fov >= 90)
-            return 1;
-        if (fov >= 30)
-            return 2;
-        if (fov >= 20)
-            return 3;
-        if (fov >= 6)
-            return 4;
-        if (fov >= 3.2)
-            return 5;
-        if (fov >= 1.6)
-            return 6;
-        if (fov >= 0.85)
-            return 7;
-        if (fov >= 0.42)
-            return 8;
-        if (fov >= 0.21)
-            return 9;
-        if (fov >= 0.12)
-            return 10;
-        if (fov >= 0.06)
-            return 11;
-        if (fov < 0.015)
-            return 12;
-        return 13;
-    }
-    getRADegSteps(fov) {
-        let raStep;
-        let decStep;
-        if (fov >= 179) {
-            raStep = 10;
-            decStep = 10;
-        }
-        else if (fov >= 25) {
-            raStep = 9;
-            decStep = 9;
-        }
-        else if (fov >= 12.5) {
-            raStep = 8;
-            decStep = 8;
-        }
-        else if (fov >= 6) {
-            raStep = 6;
-            decStep = 6;
-        }
-        else if (fov >= 3.2) {
-            raStep = 5;
-            decStep = 5;
-        }
-        else if (fov >= 1.6) {
-            raStep = 4;
-            decStep = 4;
-        }
-        else if (fov >= 0.85) {
-            raStep = 3;
-            decStep = 3;
-        }
-        else if (fov >= 0.42) {
-            raStep = 2;
-            decStep = 2;
-        }
-        else if (fov >= 0.21) {
-            raStep = 1;
-            decStep = 1;
-        }
-        else if (fov >= 0.12) {
-            raStep = 0.5;
-            decStep = 0.5;
-        }
-        else if (fov >= 0.06) {
-            raStep = 0.25;
-            decStep = 0.25;
-        }
-        else {
-            raStep = 10;
-            decStep = 10;
-        }
-        return { raStep, decStep };
-    }
-    getRefOrder(order) {
-        switch (order) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-                return order + 6;
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-                return order + 5;
-            case 8:
-                return order + 4;
-            default:
-                return order + 3;
-        }
-    }
-}
-const fovHelper = new FoVHelper();
-/* harmony default export */ const hips_FoVHelper = ((/* unused pure expression or super */ null && (FoVHelper)));
-
-;// ./src/utils/CoordsType.ts
-/**
- * Enum for coordinate types.
- * @author Fabrizio Giordano (Fab77)
- */
-var CoordsType;
-(function (CoordsType) {
-    CoordsType["CARTESIAN"] = "cartesian";
-    CoordsType["SPHERICAL"] = "spherical";
-    CoordsType["ASTRO"] = "astro";
-})(CoordsType || (CoordsType = {}));
-// export default CoordsType;
-
-;// ./src/model/Point.ts
-/**
- * @author Fabrizio Giordano (Fab77)
- */
-
-
-
-
-
-class Point {
-    _x;
-    _y;
-    _z;
-    _xyz;
-    _raDeg;
-    _decDeg;
-    _raRad;
-    _decRad;
-    _raDecDeg;
-    constructor(in_options, in_type) {
-        this._xyz = [0, 0, 0];
-        this._raDecDeg = [0, 0];
-        // Prefer config value if present, fallback to 12
-        const MAX_DECIMALS = src_Global.MAX_DECIMALS ?? src_Global.maxDecimals ?? 12;
-        if (in_type === CoordsType.CARTESIAN) {
-            const { x, y, z } = in_options;
-            this._x = Number(x.toFixed(MAX_DECIMALS));
-            this._y = Number(y.toFixed(MAX_DECIMALS));
-            this._z = Number(z.toFixed(MAX_DECIMALS));
-            this._xyz = [this._x, this._y, this._z];
-            const [ra, dec] = this.computeAstroCoords();
-            this._raDeg = Number(ra);
-            this._decDeg = Number(dec);
-            this._raRad = (this._raDeg * Math.PI) / 180;
-            this._decRad = (this._decDeg * Math.PI) / 180;
-            this._raDecDeg = [this._raDeg, this._decDeg];
-        }
-        else if (in_type === CoordsType.ASTRO) {
-            const { raDeg, decDeg } = in_options;
-            this._raDeg = Number(raDeg);
-            this._decDeg = Number(decDeg);
-            this._raDecDeg = [this._raDeg, this._decDeg];
-            this._raRad = (this._raDeg * Math.PI) / 180;
-            this._decRad = (this._decDeg * Math.PI) / 180;
-            const [x, y, z] = this.computeCartesianCoords();
-            this._x = Number(x.toFixed(MAX_DECIMALS));
-            this._y = Number(y.toFixed(MAX_DECIMALS));
-            this._z = Number(z.toFixed(MAX_DECIMALS));
-            this._xyz = [this._x, this._y, this._z];
-        }
-        else if (in_type === CoordsType.SPHERICAL) {
-            // Not implemented in original; keep behavior
-            console.log(`${CoordsType.SPHERICAL} not implemented yet`);
-            this._x = 0;
-            this._y = 0;
-            this._z = 0;
-            this._raDeg = 0;
-            this._decDeg = 0;
-            this._raRad = 0;
-            this._decRad = 0;
-        }
-        else {
-            console.error('CoordsType ' + String(in_type) + ' not recognised.');
-            // Initialize to zeroed state to keep object consistent
-            this._x = 0;
-            this._y = 0;
-            this._z = 0;
-            this._raDeg = 0;
-            this._decDeg = 0;
-            this._raRad = 0;
-            this._decRad = 0;
-        }
-    }
-    computeAstroCoords() {
-        const phiThetaDeg = cartesianToSpherical(fromValues(this._xyz[0], this._xyz[1], this._xyz[2]));
-        const rad = sphericalToAstroDeg(phiThetaDeg.phi, phiThetaDeg.theta);
-        return [rad.ra, rad.dec];
-    }
-    computeCartesianCoords() {
-        const phiThetaDeg = astroDegToSpherical(this._raDeg, this._decDeg);
-        const [x, y, z] = sphericalToCartesian(phiThetaDeg.phi, phiThetaDeg.theta, 1);
-        return [x, y, z];
-    }
-    /**
-     * @return {phi, theta} (degrees)
-     */
-    computeHealpixPhiTheta() {
-        return astroDegToSpherical(this._raDeg, this._decDeg);
-    }
-    /** Scale the vector by a given factor */
-    scale(n) {
-        return new Point({ x: this.x * n, y: this.y * n, z: this.z * n }, CoordsType.CARTESIAN);
-    }
-    dot(v) {
-        return this.x * v.x + this.y * v.y + this.z * v.z;
-    }
-    cross(v) {
-        return new Point({
-            x: this.y * v.z - v.y * this.z,
-            y: this.z * v.x - v.z * this.x,
-            z: this.x * v.y - v.x * this.y,
-        }, CoordsType.CARTESIAN);
-    }
-    norm() {
-        const d = 1 / this.length();
-        return new Point({ x: this.x * d, y: this.y * d, z: this.z * d }, CoordsType.CARTESIAN);
-    }
-    length() {
-        return Math.sqrt(this.lengthSquared());
-    }
-    lengthSquared() {
-        return this.x * this.x + this.y * this.y + this.z * this.z;
-    }
-    subtract(v) {
-        return new Point({ x: this.x - v.x, y: this.y - v.y, z: this.z - v.z }, CoordsType.CARTESIAN);
-    }
-    add(v) {
-        return new Point({ x: this.x + v.x, y: this.y + v.y, z: this.z + v.z }, CoordsType.CARTESIAN);
-    }
-    get x() { return this._x; }
-    get y() { return this._y; }
-    get z() { return this._z; }
-    get xyz() { return this._xyz; }
-    get raDeg() { return this._raDeg; }
-    get decDeg() { return this._decDeg; }
-    get raDecDeg() { return this._raDecDeg; }
-    toADQL() {
-        return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
-    }
-    toString() {
-        return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
-    }
-}
-
-;// ./src/utils/FoVUtils.ts
-
+;// ./src/utils/RayPickingUtils.ts
 /**
  * @author Fabrizio Giordano (Fab)
  */
@@ -5797,899 +4750,223 @@ class Point {
 
 
 
-
-class FoVUtils {
-    /**
-     * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
-     * (Kept here for parity; this class doesn’t maintain those fields.)
-     */
-    getMinFoV() {
-        return this._fovY_deg <= this._fovX_deg ? this._fovY_deg : this._fovX_deg;
+class RayPickingUtils {
+    static lastNearestVisibleObjectIdx = -1;
+    /** Get index of the last object found under the mouse (if any). */
+    static getNearestVisibleObjectIdx() {
+        return this.lastNearestVisibleObjectIdx;
     }
     /**
-     * Compute the FoV polygon as a list of Points (clockwise).
-     * Uses ray picking + frustum planes against a unit sphere.
+     * Builds a world-space ray from mouse coords.
+     * @param mouseX ClientX (page pixels)
+     * @param mouseY ClientY (page pixels)
+     * @param pMatrix Projection matrix
+     * @returns World-space direction (normalized) as a vec3
      */
-    static getFoVPolygon(
-    // _pMatrix: ReadonlyMat4 | null,
-    camera, canvas, model) {
-        // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
-        //   _pMatrix) as ReadonlyMat4;
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        const vMatrix = camera.getCameraMatrix();
-        const mMatrix = model.getModelMatrix();
-        const canvasWidth = canvas.clientWidth;
-        const canvasHeight = canvas.clientHeight;
-        let points = [];
-        // First check: does the sphere cover the whole screen?
-        const intersectionWithModel = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0);
-        if (intersectionWithModel.length > 0) {
-            // Fully covered → grab corners + midpoints (CASE C)
-            const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas);
-            points = cornersPoints;
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl) {
+        if (!src_Global.camera) {
+            throw new Error("Camera is not initialized.");
         }
-        else {
-            // Partial coverage: build frustum planes
-            let M = mat4_create();
-            M = mat4_multiply(M, vMatrix, mMatrix);
-            M = mat4_multiply(M, pMatrix, M);
-            const topPlane = [M[3] - M[1], M[7] - M[5], M[11] - M[9], M[15] - M[13]]; // m41-m21, ...
-            const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
-            const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
-            const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
-            const intersectionTopMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0);
-            const intersectionRightMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2);
-            // CASE A: zoomed out, hemisphere fully visible
-            if (intersectionTopMiddle.length === 0 &&
-                intersectionRightMiddle.length === 0) {
-                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
-                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
-                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
-                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
-                points.push(topPoints[0], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], middleLeftTop);
+        const vMatrix = src_Global.camera.getCameraMatrix();
+        // const gl = global.gl as GL;
+        const gl = webgl;
+        const rect = gl.canvas.getBoundingClientRect();
+        // const canvasMX = mouseX - rect.left;
+        // const canvasMY = mouseY - rect.top;
+        const canvasMX = mouseX;
+        const canvasMY = mouseY;
+        // viewport → NDC
+        // const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).clientWidth - 1.0;
+        // const y = 1.0 - (2.0 * canvasMY) / (gl.canvas as HTMLCanvasElement).clientHeight;
+        const x = (2.0 * canvasMX) / gl.canvas.width - 1.0;
+        const y = 1.0 - (2.0 * canvasMY) / gl.canvas.height;
+        const z = -1.0;
+        // NDC → clip
+        const rayClip = [x, y, z, 1.0];
+        // clip → eye
+        const pInv = mat4_create();
+        invert(pInv, pMatrix);
+        const rayEye4 = [0, 0, 0, 0];
+        RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+        // direction in eye space (z = -1, w = 0)
+        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+        // eye → world
+        const vInv = mat4_create();
+        invert(vInv, vMatrix);
+        const rayWorld4 = [0, 0, 0, 0];
+        RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+        const rayWorld = fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+        normalize(rayWorld, rayWorld);
+        return rayWorld;
+    }
+    /** a*b (4x4 * vec4) → vec4 (in `out`) */
+    static mat4MultiplyVec4(a, b, out) {
+        const d = b[0], e = b[1], g = b[2], w = b[3];
+        out[0] = a[0] * d + a[4] * e + a[8] * g + a[12] * w;
+        out[1] = a[1] * d + a[5] * e + a[9] * g + a[13] * w;
+        out[2] = a[2] * d + a[6] * e + a[10] * g + a[14] * w;
+        out[3] = a[3] * d + a[7] * e + a[11] * g + a[15] * w;
+        return out;
+    }
+    /**
+     * Ray–sphere intersection (world space).
+     * @returns distance `t` along the ray to the first hit, or `-1` if no hit.
+     */
+    static raySphere(rayOrigWorld, rayDirectionWorld, healpixGridSingleton) {
+        let intersectionDistance = -1;
+        const L = create();
+        subtract(L, rayOrigWorld, healpixGridSingleton.center);
+        const b = vec3_dot(rayDirectionWorld, L);
+        const c = vec3_dot(L, L) - healpixGridSingleton.radius * healpixGridSingleton.radius;
+        const disc = b * b - c;
+        if (disc > 0.0) {
+            const s = Math.sqrt(disc);
+            const ta = -b + s;
+            const tb = -b - s;
+            if (ta < 0.0 && tb < 0.0) {
+                // behind camera
             }
-            // CASE E: no intersection on top/bottom planes
-            else if (intersectionTopMiddle.length === 0) {
-                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
-                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
-                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
-                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[1], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[1], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
-                points.push(topPoints[0], middleTopRight, rightPoints[0], rightPoints[1], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], leftPoints[1], middleLeftTop);
+            else if (tb < 0.0) {
+                intersectionDistance = ta;
             }
-            // CASE D: no intersection on right/left planes
-            else if (intersectionRightMiddle.length === 0) {
-                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
-                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
-                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
-                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[1], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[1], leftPoints[0])[0];
-                points.push(topPoints[0], topPoints[1], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], bottomPoints[1], middleBottomLeft, leftPoints[0], middleLeftTop);
-            }
-            // CASE B: all frustum planes intersect
             else {
-                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
-                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
-                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
-                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
-                points.push(topPoints[0], topPoints[1], rightPoints[0], rightPoints[1], bottomPoints[0], bottomPoints[1], leftPoints[0], leftPoints[1]);
+                intersectionDistance = Math.min(ta, tb);
             }
         }
-        return points;
-    }
-    /**
-     * Ray pick against 8 key screen positions (corners + midpoints).
-     * Returns Points in clockwise order starting from top-left.
-     */
-    static getScreenCornersIntersection(pMatrix, camera, canvas) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const topLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0);
-        const middleTop = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0);
-        const topRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, 0);
-        const middleRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2);
-        const bottomRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h);
-        const middleBottom = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h);
-        const bottomLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h);
-        const middleLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2);
-        const out = [];
-        const pushIf = (ip) => {
-            if (ip.length > 0) {
-                out.push(new Point({ x: ip[0], y: ip[1], z: ip[2] }, CoordsType.CARTESIAN));
+        else if (disc === 0.0) {
+            const t = -b; // tangent
+            if (t >= 0.0) {
+                intersectionDistance = t;
             }
-        };
-        pushIf(topLeft);
-        pushIf(middleTop);
-        pushIf(topRight);
-        pushIf(middleRight);
-        pushIf(bottomRight);
-        pushIf(middleBottom);
-        pushIf(bottomLeft);
-        pushIf(middleLeft);
-        return out;
-    }
-    /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const center = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2);
-        return new Point({ x: center[0], y: center[1], z: center[2] }, CoordsType.CARTESIAN);
-    }
-    /** Middle point on the unit sphere along the arc between two 3D points. */
-    static computeMiddlePoint(p1, p2) {
-        // midpoint of segment
-        const xm = (p1.x + p2.x) / 2;
-        const ym = (p1.y + p2.y) / 2;
-        const zm = (p1.z + p2.z) / 2;
-        // project the midpoint back to unit sphere
-        const len = Math.hypot(xm, ym, zm) || 1;
-        const x = xm / len;
-        const y = ym / len;
-        const z = zm / len;
-        return [new Point({ x, y, z }, CoordsType.CARTESIAN)];
+        }
+        return intersectionDistance;
     }
     /**
-     * Nearest intersection point between a frustum plane and the unit sphere,
-     * using the plane normal.
+     * Compute intersection with a single model (defaults to the Healpix grid).
+     * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
      */
-    static getNearestSpherePoint(plane) {
-        const [A, B, C, D] = plane;
-        const R = 1;
-        const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
-        const t1 = R * invLen;
-        const t2 = -R * invLen;
-        const P1 = [A * t1, B * t1, C * t1];
-        const P2 = [A * t2, B * t2, C * t2];
-        const den = Math.sqrt(A * A + B * B + C * C) || 1;
-        const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
-        const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
-        const P = dist1 <= dist2 ? P1 : P2;
-        return [new Point({ x: P[0], y: P[1], z: P[2] }, CoordsType.CARTESIAN)];
-    }
-    /**
-     * Intersections between a frustum plane and the unit sphere,
-     * computed via two perpendicular planes.
-     * Returns two points (first from `plane4Circle_1`, second from `plane4Circle_2`).
-     */
-    static getFrustumIntersectionWithSphere(_M, plane4Sphere, plane4Circle_1, plane4Circle_2) {
-        const [A0, B0, C0, D0] = plane4Sphere;
-        // center of the circle (projection of sphere center onto plane)
-        const denom0 = (A0 * A0 + B0 * B0 + C0 * C0) || 1;
-        const x_c = -(A0 * D0) / denom0;
-        const y_c = -(B0 * D0) / denom0;
-        const z_c = -(C0 * D0) / denom0;
-        const d = Math.abs(D0) / Math.sqrt(denom0); // distance from sphere center (0,0,0)
-        const R = 1;
-        const out = [];
-        if (R > d) {
-            const r = Math.sqrt(R * R - d * d);
-            const pick = (plane) => {
-                const [A, B, C, D] = plane;
-                const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
-                const t1 = r * invLen;
-                const t2 = -r * invLen;
-                const P1 = [x_c + A * t1, y_c + B * t1, z_c + C * t1];
-                const P2 = [x_c + A * t2, y_c + B * t2, z_c + C * t2];
-                const den = Math.sqrt(A * A + B * B + C * C) || 1;
-                const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
-                const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
-                return dist1 <= dist2 ? P1 : P2;
-            };
-            const P_intersection_1 = pick(plane4Circle_1);
-            const P_intersection_2 = pick(plane4Circle_2);
-            out.push(new Point({ x: P_intersection_1[0], y: P_intersection_1[1], z: P_intersection_1[2] }, CoordsType.CARTESIAN), new Point({ x: P_intersection_2[0], y: P_intersection_2[1], z: P_intersection_2[2] }, CoordsType.CARTESIAN));
+    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl) {
+        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+        const camera = src_Global.camera;
+        const canvas = webgl.canvas;
+        console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`);
+        if (!camera) {
+            throw new Error("Camera is not initialized.");
         }
-        else if (R === d) {
-            // Tangent: both intersections collapse to the circle center on the plane
-            out.push(new Point({ x: x_c, y: y_c, z: z_c }, CoordsType.CARTESIAN), new Point({ x: x_c, y: y_c, z: z_c }, CoordsType.CARTESIAN));
+        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
+        let intersectionModelPoint = [];
+        if (t >= 0) {
+            // world intersection
+            const worldHit = create();
+            scale(worldHit, rayWorld, t);
+            add(worldHit, camera.getCameraPosition(), worldHit);
+            // world → model
+            const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
+            const modelHit4 = [0, 0, 0, 0];
+            // RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
+            RayPickingUtils.mat4MultiplyVec4(healpixGrid.getModelMatrixInverse(), worldHit4, modelHit4);
+            intersectionModelPoint = [modelHit4[0], modelHit4[1], modelHit4[2]];
         }
-        else {
-            // No intersection; return empty to avoid pushing undefined values
-            // console.log('Frustum plane not intersecting the sphere');
-        }
-        return out;
-    }
-    /** Build ADQL string from an array of Points (ra,dec pairs). */
-    static getAstroFoVPolygon(points) {
-        return points.map(p => p.toADQL()).join(',');
+        return intersectionModelPoint;
     }
 }
+/* harmony default export */ const utils_RayPickingUtils = (RayPickingUtils);
 
-;// ./src/model/FoV.ts
-
+;// ./src/utils/MouseHelper.ts
 /**
- * FoV singleton (TypeScript)
- * - Uses computePerspectiveMatrixSingleton.pMatrix
- * - Guards acos domain (numeric safety)
- * - Uses vec3.transformMat4 instead of custom mat4*vec3
- * - Keeps original “insideSphere ? 360 - angle : angle” behavior
+ * @author Fabrizio Giordano (Fab)
  */
 
 
 
 
-
-
-class FoV {
-    fovXDeg = 180;
-    fovYDeg = 180;
-    ratio = +0;
-    _minFoV = 180;
-    constructor() { }
-    /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere) {
-        const gl = src_Global.gl;
-        if (!gl || !gl.canvas) {
-            // Handle the error or assign default values
-            this.fovXDeg = 180;
-            this.fovYDeg = 180;
-            this._minFoV = this.minFoV;
-            return this;
-        }
-        // horizontal FoV: ray through (centerY)
-        // const x = this.computeAngle(0, gl.canvas.height / 2, insideSphere)
-        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere);
-        this.fovXDeg = xFoVComputed.angleDeg;
-        // this.xDistance = xFoVComputed.distance
-        // this.xAngleRatio = this.fovXDeg / this.xDistance
-        // vertical FoV: ray through (centerX)
-        // this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere)
-        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere);
-        this.fovYDeg = yFoVComputed.angleDeg;
-        // this.yDistance = yFoVComputed.distance
-        // this.yAngleRatio = this.fovYDeg / this.yDistance
-        this._minFoV = this.minFoV;
-        this.ratio = this.computeRatio();
-        return this;
-    }
-    computeRatio() {
-        const camera = src_Global.camera;
-        if (!camera)
-            throw Error("Camera not defined");
-        const pos = camera.getCameraPosition();
-        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
-        const ratio = distanceFromCenter / this.fovYDeg;
-        return ratio;
-    }
-    changeMinFov(deg) {
-        console.log("inside changeMinFov");
-        if (this.fovYDeg <= this.fovXDeg) {
-            this.fovYDeg = deg;
-        }
-        else {
-            this.fovXDeg = deg;
-        }
-        console.log("changeMinFov: ping");
-        this.minFoV;
-        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
-    }
-    get minFoV() {
-        this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
-        return this._minFoV;
-    }
-    computeDistanceFromAngle(angleDeg) {
-        const desiredFoV = angleDeg;
-        const distance = desiredFoV * this.ratio;
-        // return Math.abs(distance)
-        return distance;
-    }
-    /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-    computeAngle(canvasX, canvasY, insideSphere) {
-        const camera = src_Global.camera;
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        if (!pMatrix) {
-            // Handle the error or assign a default value
-            console.warn('FoV: projection matrix is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        if (!camera) {
-            // Handle the error or assign a default value
-            console.warn('FoV: camera is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const rayWorld = utils_RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix);
-        const intersectionDistance = utils_RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld);
-        let angleDeg;
-        if (intersectionDistance > 0) {
-            // world-space intersection point on the sphere
-            const hit = create();
-            scale(hit, rayWorld, intersectionDistance);
-            add(hit, camera.getCameraPosition(), hit);
-            const center = grid_HealpixGridSingleton.center;
-            // vectors from sphere center
-            const vHit = create();
-            subtract(vHit, hit, center);
-            // reference vector: rotate world +Z into current camera orientation, then from center
-            const refWorldZ = fromValues(center[0], center[1], center[2] + grid_HealpixGridSingleton.radius);
-            const vInv = mat4_create();
-            invert(vInv, camera.getCameraMatrix());
-            const refCamZ = create();
-            transformMat4(refCamZ, refWorldZ, vInv);
-            const vRef = create();
-            subtract(vRef, refCamZ, center);
-            // angle between vHit and vRef, doubled
-            const dot = vec3_dot(vHit, vRef);
-            const n1 = vec3_length(vHit);
-            const n2 = vec3_length(vRef);
-            // numeric safety for acos
-            const c = Math.min(1, Math.max(-1, dot / (n1 * n2)));
-            const angleRad = Math.acos(c);
-            angleDeg = 2 * radToDeg(angleRad);
-        }
-        else {
-            angleDeg = 180;
-        }
-        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
-        // return insideSphere ? 360 - angleDeg : angleDeg
-        return { angleDeg: finalAngle, distance: intersectionDistance };
-    }
-    /**
-   * Computes the camera position (x,y,z) along the current view direction that would
-   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
-   * This method does NOT mutate the camera; it only returns the suggested position.
-   *
-   * Geometry: for a sphere of radius R observed from distance d (from center),
-   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
-   * along the tighter axis; we solve for d and place the camera on the current
-   * center→camera direction with that distance.
-   *
-   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
-   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
-   */
-    computeCameraPositionForMinFoV(targetMinFoVDeg) {
-        const camera = src_Global.camera;
-        const center = grid_HealpixGridSingleton.center;
-        const R = grid_HealpixGridSingleton.radius;
-        if (!camera) {
-            console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.');
-            return [center[0], center[1], center[2] + 2 * R];
-        }
-        // Clamp and validate input
-        const eps = 1e-6;
-        const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg));
-        const halfRad = (clamped * Math.PI / 180) * 0.5;
-        // Distance from center needed to achieve the angular diameter
-        // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
-        const sinHalf = Math.sin(halfRad);
-        if (sinHalf <= 0) {
-            console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.');
-            return [center[0], center[1], center[2] + 2 * R];
-        }
-        let d = R / sinHalf;
-        // Ensure we remain strictly outside the sphere
-        d = Math.max(d, R + 1e-4);
-        // Use the current center→camera direction to keep orientation
-        const camPos = camera.getCameraPosition();
-        let dirX = camPos[0] - center[0];
-        let dirY = camPos[1] - center[1];
-        let dirZ = camPos[2] - center[2];
-        const len = Math.hypot(dirX, dirY, dirZ);
-        if (len < eps) {
-            // If somehow at the center, use +Z as a default direction
-            dirX = 0;
-            dirY = 0;
-            dirZ = 1;
-        }
-        else {
-            dirX /= len;
-            dirY /= len;
-            dirZ /= len;
-        }
-        const newX = center[0] + dirX * d;
-        const newY = center[1] + dirY * d;
-        const newZ = center[2] + dirZ * d;
-        return [newX, newY, newZ];
-    }
-    /**
-       * Computes the camera world-space position required to achieve a target FoV (deg),
-       * keeping the same viewing direction. Acts as the inverse of computeAngle().
-       *
-       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
-       * @param canvasWidth  canvas width in pixels
-       * @param canvasHeight canvas height in pixels
-       * @returns [x, y, z] coordinates for the new camera position
-       */
-    computeCameraPositionForFoV(targetFoVDeg) {
-        const camera = src_Global.camera;
-        const center = grid_HealpixGridSingleton.center;
-        const R = grid_HealpixGridSingleton.radius;
-        if (!camera) {
-            console.warn("FoV.computeCameraPositionForFoV: camera missing.");
-            return [center[0], center[1], center[2] + 2 * R];
-        }
-        const eps = 1e-6;
-        const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
-        const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
-        // Distance from center that yields this FoV
-        const sinHalf = Math.sin(halfRad);
-        if (sinHalf <= 0) {
-            console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
-            return [center[0], center[1], center[2] + 2 * R];
-        }
-        let d = R / sinHalf;
-        // Slightly outside sphere to avoid clipping
-        d = Math.max(d, R + 1e-4);
-        // Get current viewing direction
-        const camPos = camera.getCameraPosition();
-        let dirX = camPos[0] - center[0];
-        let dirY = camPos[1] - center[1];
-        let dirZ = camPos[2] - center[2];
-        const len = Math.hypot(dirX, dirY, dirZ);
-        if (len < eps) {
-            dirX = 0;
-            dirY = 0;
-            dirZ = 1;
-        }
-        else {
-            dirX /= len;
-            dirY /= len;
-            dirZ /= len;
-        }
-        const newX = center[0] + dirX * d;
-        const newY = center[1] + dirY * d;
-        const newZ = center[2] + dirZ * d;
-        return [newX, newY, newZ];
-    }
-    /**
-   * Return a camera position such that the sphere's apparent angular diameter
-   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
-   * Keeps current view direction; does not mutate the camera.
-   *
-   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
-   * @returns [x,y,z] world position
-   */
-    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
-        const camera = src_Global.camera;
-        const center = grid_HealpixGridSingleton.center;
-        const R = grid_HealpixGridSingleton.radius;
-        if (!camera) {
-            console.warn('computeCameraPositionForAngularDiameter: camera missing.');
-            return [center[0], center[1], center[2] + 2 * R];
-        }
-        const eps = 1e-6;
-        const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
-        const half = (α * Math.PI) / 360.0;
-        const sinHalf = Math.sin(half);
-        // d = R / sin(α/2)
-        let d = R / sinHalf;
-        d = Math.max(d, R + 1e-4); // stay outside
-        // project along current center→camera direction
-        const [cx, cy, cz] = center;
-        const [px, py, pz] = camera.getCameraPosition();
-        let dx = px - cx, dy = py - cy, dz = pz - cz;
-        const L = Math.hypot(dx, dy, dz);
-        if (L < eps) {
-            dx = 0;
-            dy = 0;
-            dz = 1;
-        }
-        else {
-            dx /= L;
-            dy /= L;
-            dz /= L;
-        }
-        return [cx + dx * d, cy + dy * d, cz + dz * d];
-    }
+function toVec3(p) {
+    return Array.isArray(p) ? fromValues(p[0], p[1], p[2]) : p;
 }
-
-;// ./src/shader/GridShaderManager.ts
-// GridShaderManager.ts
-
-class GridShaderManager {
-    static healpixGridVS() {
-        return `#version 300 es
-        in vec4 aCatPosition;
-        uniform mat4 uMVMatrix;
-        uniform mat4 uPMatrix;
-
-        void main() {
-            gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-            gl_PointSize = 7.0;
-        }`;
+class MouseHelper {
+    _xyz = null;
+    _raDecDeg = null;
+    _phiThetaDeg = null;
+    raHMS;
+    decDMS;
+    /**
+     * @param in_xyz [x, y, z]
+     * @param in_raDecDeg { ra, dec } in degrees (ICRS/J2000)
+     * @param in_phiThetaDeg { phi, theta } in degrees (spherical)
+     */
+    constructor(in_xyz, in_raDecDeg, in_phiThetaDeg) {
+        if (in_xyz != null)
+            this._xyz = in_xyz;
+        if (in_raDecDeg != null)
+            this._raDecDeg = in_raDecDeg;
+        if (in_phiThetaDeg != null)
+            this._phiThetaDeg = in_phiThetaDeg;
+        if (this._raDecDeg) {
+            this.raHMS = raDegToHMS(this._raDecDeg.ra);
+            this.decDMS = decDegToDMS(this._raDecDeg.dec);
+        }
     }
-    static healpixGridFS() {
-        return `#version 300 es
-        precision mediump float;
-
-        uniform vec4 u_fragcolor;
-        out vec4 fragColor;
-
-        void main() {
-            // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-            fragColor = u_fragcolor;
-        }`;
+    /** (Formerly `computeNpix256`) Uses global.nsideForSelection. */
+    computeNpix() {
+        if (!this._xyz)
+            return null;
+        const hp = src_Global.getHealpix(src_Global.nsideForSelection);
+        const v = new Vec3(this._xyz[0], this._xyz[1], this._xyz[2]);
+        const ptg = new Pointing(v, false);
+        return hp.ang2pix(ptg, false);
     }
-}
-/* harmony default export */ const shader_GridShaderManager = (GridShaderManager);
-
-;// ./src/model/Point2D.ts
-class Point2D {
-    _x;
-    _y;
-    constructor(x, y) {
-        this._x = x;
-        this._y = y;
+    /** Update helper state from a world-space 3D point on the unit sphere. */
+    update(mousePoint) {
+        const mp = toVec3(mousePoint);
+        const sph = cartesianToSpherical(mp);
+        const radec = sphericalToAstroDeg(sph.phi, sph.theta);
+        this._xyz = [mp[0], mp[1], mp[2]];
+        this._phiThetaDeg = sph;
+        this._raDecDeg = radec;
+        this.raHMS = raDegToHMS(radec.ra);
+        this.decDMS = decDegToDMS(radec.dec);
+    }
+    clear() {
+        this._xyz = null;
+        this._raDecDeg = null;
+        this._phiThetaDeg = null;
+        this.raHMS = undefined;
+        this.decDMS = undefined;
+    }
+    // --- getters ---
+    get xyz() {
+        return this._xyz;
     }
     get x() {
-        return this._x;
+        return this._xyz ? this._xyz[0] : null;
     }
     get y() {
-        return this._y;
+        return this._xyz ? this._xyz[1] : null;
+    }
+    get z() {
+        return this._xyz ? this._xyz[2] : null;
+    }
+    get ra() {
+        return this._raDecDeg ? this._raDecDeg.ra : null;
+    }
+    get dec() {
+        return this._raDecDeg ? this._raDecDeg.dec : null;
+    }
+    get phi() {
+        return this._phiThetaDeg ? this._phiThetaDeg.phi : null;
+    }
+    get theta() {
+        return this._phiThetaDeg ? this._phiThetaDeg.theta : null;
+    }
+    get raDecDeg() {
+        return this._raDecDeg;
+    }
+    get phiThetaDeg() {
+        return this._phiThetaDeg;
     }
 }
-/* harmony default export */ const model_Point2D = (Point2D);
-
-;// ./src/utils/GeomUtils.ts
-
-
-
-class GeomUtils {
-    // Orthodromic (great-circle) distance in radians
-    static orthodromicDistance(p1, p2) {
-        return Math.acos(Math.sin(p1.decDeg * Math.PI / 180) * Math.sin(p2.decDeg * Math.PI / 180) +
-            Math.cos(p1.decDeg * Math.PI / 180) * Math.cos(p2.decDeg * Math.PI / 180) *
-                Math.cos((p2.raDeg - p1.raDeg) * Math.PI / 180));
-    }
-    /**
-     * Decide the 2D projection strategy and pre-project polygons for point-in-polygon tests.
-     * Returns the projected polygons + bbox + a flag describing the projection used:
-     * 0 → all points in same hemisphere with |Dec| > 10 → stereographic-like projection using x,y from 3D
-     * 1 → all points in equatorial belt (|Dec| < 10) → use RA/Dec directly
-     * 2 → equatorial belt and polygon crosses RA=0 → shift RA>180 by -360
-     */
-    static computeSelectionObject(polygons) {
-        let poly4selection = [];
-        let flag = 0;
-        let maxx;
-        let maxy;
-        let minx;
-        let miny;
-        const DEC_THRESHOLD = 10;
-        //  1 → northern hemisphere (Dec > +10), -1 → southern (Dec < -10), 0 → equatorial belt
-        let hemisphere = 0;
-        if (polygons[0][0].decDeg >= DEC_THRESHOLD) {
-            hemisphere = 1;
-        }
-        else if (polygons[0][0].decDeg <= -DEC_THRESHOLD) {
-            hemisphere = -1;
-        }
-        else {
-            flag = 1;
-        }
-        // Case flag = 0 → stereographic-like projection using x,y,z from 3D point
-        if (flag === 0) {
-            const first = GeomUtils.projectIn2D(polygons[0][0]);
-            maxx = minx = first.x;
-            maxy = miny = first.y;
-            for (const currpoly of polygons) {
-                const selpoly = [];
-                for (const point of currpoly) {
-                    // If a point violates the hemisphere constraint, fall back to belt logic
-                    if ((point.decDeg > hemisphere * DEC_THRESHOLD && hemisphere === -1) ||
-                        (point.decDeg < hemisphere * DEC_THRESHOLD && hemisphere === 1)) {
-                        flag = 1;
-                        poly4selection = [];
-                        break;
-                    }
-                    const p = GeomUtils.projectIn2D(point);
-                    selpoly.push(p);
-                    if (p.x > maxx)
-                        maxx = p.x;
-                    if (p.y > maxy)
-                        maxy = p.y;
-                    if (p.x < minx)
-                        minx = p.x;
-                    if (p.y < miny)
-                        miny = p.y;
-                }
-                poly4selection.push(selpoly);
-            }
-        }
-        if (flag === 0) {
-            return {
-                poly4selection,
-                flag,
-                maxx: maxx,
-                maxy: maxy,
-                minx: minx,
-                miny: miny,
-            };
-        }
-        // Case flag = 1 or 2 → work directly in (RA,Dec)
-        const RA_THRESHOLD = 180;
-        let belowThreshold = polygons[0][0].raDeg < RA_THRESHOLD;
-        maxx = minx = polygons[0][0].raDeg;
-        maxy = miny = polygons[0][0].decDeg;
-        for (const currpoly of polygons) {
-            const selpoly = [];
-            for (const point of currpoly) {
-                const p = new model_Point2D(point.raDeg, point.decDeg);
-                selpoly.push(p);
-                if (point.raDeg > maxx)
-                    maxx = point.raDeg;
-                if (point.decDeg > maxy)
-                    maxy = point.decDeg;
-                if (point.raDeg < minx)
-                    minx = point.raDeg;
-                if (point.decDeg < miny)
-                    miny = point.decDeg;
-                // Detect crossing of RA=0 meridian
-                if ((point.raDeg >= RA_THRESHOLD && belowThreshold) ||
-                    (point.raDeg <= RA_THRESHOLD && !belowThreshold)) {
-                    flag = 2;
-                    poly4selection = [];
-                    break;
-                }
-            }
-            poly4selection.push(selpoly);
-        }
-        if (flag === 1) {
-            return {
-                poly4selection,
-                flag,
-                maxx,
-                maxy,
-                minx,
-                miny,
-            };
-        }
-        // Case flag = 2 → shift RA>180 by -360 to unwrap around RA=0
-        let startRA = polygons[0][0].raDeg;
-        maxx = startRA >= RA_THRESHOLD ? startRA - 360 : startRA;
-        maxy = polygons[0][0].decDeg;
-        minx = maxx;
-        miny = maxy;
-        for (const currpoly of polygons) {
-            const selpoly = [];
-            for (const point of currpoly) {
-                const curra = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
-                if (curra > maxx)
-                    maxx = curra;
-                if (point.decDeg > maxy)
-                    maxy = point.decDeg;
-                if (curra < minx)
-                    minx = curra;
-                if (point.decDeg < miny)
-                    miny = point.decDeg;
-                selpoly.push(new model_Point2D(curra, point.decDeg));
-            }
-            poly4selection.push(selpoly);
-        }
-        return {
-            poly4selection,
-            flag,
-            maxx,
-            maxy,
-            minx,
-            miny,
-        };
-    }
-    /** Stereographic projection from 3D point on unit sphere onto plane */
-    static stereographic(point) {
-        const x = Number(point.xyz[0]);
-        const y = Number(point.xyz[1]);
-        const z = Number(point.xyz[2]);
-        return {
-            x: (2 * x) / (1 - z),
-            y: (2 * y) / (1 - z),
-        };
-    }
-    static projectIn2D(point) {
-        const p = GeomUtils.stereographic(point);
-        return new model_Point2D(p.x, p.y);
-    }
-    /**
-     * Robust point-in-polygon (ray casting) using the precomputed selection object.
-     * Works with any of the three flags (0,1,2).
-     */
-    static checkPointInsidePolygon5(selectionObj, point) {
-        let p0;
-        if (selectionObj.flag === 0) {
-            p0 = GeomUtils.projectIn2D(point);
-        }
-        else if (selectionObj.flag === 1) {
-            p0 = new model_Point2D(point.raDeg, point.decDeg);
-        }
-        else {
-            const RA_THRESHOLD = 180;
-            const raShifted = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
-            p0 = new model_Point2D(raShifted, point.decDeg);
-        }
-        const p1 = new model_Point2D(p0.x, p0.y + 2 * Math.abs(selectionObj.maxy - selectionObj.miny));
-        // quick reject by bbox
-        if (p0.x > selectionObj.maxx ||
-            p0.x < selectionObj.minx ||
-            p0.y > selectionObj.maxy ||
-            p0.y < selectionObj.miny) {
-            return false;
-        }
-        // Ray casting against each sub-polygon
-        for (const currpoly of selectionObj.poly4selection) {
-            let intersections = 0;
-            for (let i = 0; i < currpoly.length - 1; i++) {
-                const p2 = currpoly[i];
-                const p3 = currpoly[i + 1];
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            // close the polygon: last with first
-            {
-                const p2 = currpoly[currpoly.length - 1];
-                const p3 = currpoly[0];
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            if (intersections % 2 === 1) {
-                return true; // inside this subpolygon
-            }
-        }
-        return false;
-    }
-    // Legacy version kept for reference; now typed and using getters
-    static checkPointInsidePolygon4(polygons, point) {
-        const p0 = GeomUtils.projectIn2D(point);
-        let maxdist = point.raDeg + 15;
-        if (maxdist > 360)
-            maxdist = point.raDeg - 15;
-        const p1point = new Point({ raDeg: maxdist, decDeg: point.decDeg }, CoordsType.ASTRO);
-        const p1 = GeomUtils.projectIn2D(p1point);
-        for (const currpoly of polygons) {
-            let intersections = 0;
-            for (let i = 0; i < currpoly.length - 1; i++) {
-                const p2 = GeomUtils.projectIn2D(currpoly[i]);
-                const p3 = GeomUtils.projectIn2D(currpoly[i + 1]);
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            {
-                const p2 = GeomUtils.projectIn2D(currpoly[currpoly.length - 1]);
-                const p3 = GeomUtils.projectIn2D(currpoly[0]);
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            if (intersections % 2 === 1)
-                return true;
-        }
-        return false;
-    }
-}
-/* harmony default export */ const utils_GeomUtils = (GeomUtils);
-
-;// ./src/model/grid/GridTextHelper.ts
-/**
- * @author Fabrizio Giordano (Fab)
- * @param in_radius - number
- * @param in_gl - GL context
- * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
- */
-class GridTextHelper {
-    _divEqContainerElement;
-    _divHPXContainerElement;
-    _divSets;
-    _divSetNdx;
-    constructor() {
-        this._divEqContainerElement = document.querySelector('#gridcoords');
-        this._divHPXContainerElement = document.querySelector('#gridhpx');
-        this._divSetNdx = 0;
-        this._divSets = [];
-    }
-    initHtml() {
-        // Kept for API parity; nothing required here with current logic.
-    }
-    resetDivSets() {
-        // Hide remaining divs and reset index
-        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
-            this._divSets[this._divSetNdx].style.display = 'none';
-        }
-        this._divSetNdx = 0;
-    }
-    /**
-     * Add / reuse a floating label for HPX coordinates
-     */
-    addHPXDivSet(msg, x, y) {
-        let divSet = this._divSets[this._divSetNdx++];
-        // Create on demand
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = 'floating-div-ra'; // style like RA tags
-            div.appendChild(textNode);
-            if (!this._divHPXContainerElement) {
-                this._divHPXContainerElement = document.querySelector('#gridhpx');
-            }
-            if (!this._divHPXContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divHPXContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
-        }
-        // Show & position
-        divSet.style.display = 'block';
-        divSet.style.left = `${Math.floor(x + 25)}px`;
-        divSet.style.top = `${Math.floor(y)}px`;
-        divSet.textNode.nodeValue = msg;
-    }
-    /**
-     * Add / reuse a floating label for Equatorial coords
-     * @param type 'ra' or 'dec'
-     */
-    addEqDivSet(msg, x, y, type) {
-        let divSet = this._divSets[this._divSetNdx++];
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
-            div.appendChild(textNode);
-            if (!this._divEqContainerElement) {
-                this._divEqContainerElement = document.querySelector('#gridcoords');
-            }
-            if (!this._divEqContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divEqContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
-        }
-        divSet.style.display = 'block';
-        if (type === 'ra') {
-            divSet.style.left = `${Math.floor(x + 25)}px`;
-            divSet.style.top = `${Math.floor(y)}px`;
-        }
-        else {
-            divSet.style.left = `${Math.floor(x)}px`;
-            divSet.style.top = `${Math.floor(y + 25)}px`;
-        }
-        divSet.textNode.nodeValue = msg;
-    }
-}
-// export const gridTextHelper = new GridTextHelper();
-/* harmony default export */ const grid_GridTextHelper = (GridTextHelper);
+/* harmony default export */ const utils_MouseHelper = (MouseHelper);
 
 ;// ./src/shader/ShaderManager.ts
 // ShaderManager.ts
@@ -7993,10 +6270,9 @@ class ColorMap {
 const colorMap = new ColorMap();
 
 ;// ./src/shader/HiPSShaderProgram.ts
-// HiPSShaderProgram.ts
 
 
-
+// export default class HiPSShaderProgram {
 class HiPSShaderProgram {
     _shaderProgram;
     _vertexShader;
@@ -8010,7 +6286,9 @@ class HiPSShaderProgram {
     gl_uniforms;
     gl_attributes;
     locations;
-    constructor() {
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
         this.gl_uniforms = {
             sampler: 'uSampler0',
             factor: 'uFactor0',
@@ -8038,17 +6316,19 @@ class HiPSShaderProgram {
         };
     }
     get shaderProgram() {
+        const gl = this._webgl;
         if (!this._shaderProgram) {
-            const gl = src_Global.gl;
+            // const gl = global.gl as GL
             this._shaderProgram = gl.createProgram();
             this.initShaders();
         }
         ;
-        src_Global.gl.useProgram(this._shaderProgram);
+        gl.useProgram(this._shaderProgram);
         return this._shaderProgram;
     }
     initShaders() {
-        const gl = src_Global.gl;
+        // const gl = global.gl as GL
+        const gl = this._webgl;
         const fragmentShaderStr = ShaderManager.hipsNativeFS();
         this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this._fragmentShader, fragmentShaderStr);
@@ -8073,32 +6353,35 @@ class HiPSShaderProgram {
         }
     }
     enableProgram() {
-        ;
-        src_Global.gl.useProgram(this._shaderProgram);
+        // (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
+        this._webgl.useProgram(this.shaderProgram);
     }
     setGrayscaleShader() {
-        const gl = src_Global.gl;
-        gl.detachShader(this._shaderProgram, this._fragmentShader);
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
         const fragmentShaderStr = ShaderManager.hipsGrayscaleFS();
         this.changeFSShader(fragmentShaderStr);
     }
     setNativeShader() {
-        const gl = src_Global.gl;
-        gl.detachShader(this._shaderProgram, this._fragmentShader);
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
         const fragmentShaderStr = ShaderManager.hipsNativeFS();
         this.changeFSShader(fragmentShaderStr);
     }
     setColorMapShader() {
-        const gl = src_Global.gl;
-        gl.detachShader(this._shaderProgram, this._fragmentShader);
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
         const fragmentShaderStr = ShaderManager.hipsColorMapFS();
         this.changeFSShader(fragmentShaderStr);
         // UBO discovery
-        const blockIndex = gl.getUniformBlockIndex(this._shaderProgram, 'colormap');
-        const blockSize = gl.getActiveUniformBlockParameter(this._shaderProgram, blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE);
+        const blockIndex = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
+        const blockSize = gl.getActiveUniformBlockParameter(this.shaderProgram, blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE);
         const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'];
-        const uboVariableIndices = gl.getUniformIndices(this._shaderProgram, uboVariableNames);
-        const uboVariableOffsets = gl.getActiveUniforms(this._shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
+        const uboVariableIndices = gl.getUniformIndices(this.shaderProgram, uboVariableNames);
+        const uboVariableOffsets = gl.getActiveUniforms(this.shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
         this._UBO_colorMapBuffer = gl.createBuffer();
         gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
         // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
@@ -8114,7 +6397,8 @@ class HiPSShaderProgram {
         });
     }
     changeFSShader(fragmentShaderStr) {
-        const gl = src_Global.gl;
+        // const gl = global.gl as GL
+        const gl = this._webgl;
         this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this._fragmentShader, fragmentShaderStr);
         gl.compileShader(this._fragmentShader);
@@ -8122,27 +6406,28 @@ class HiPSShaderProgram {
             alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
             return;
         }
-        gl.attachShader(this._shaderProgram, this._fragmentShader);
-        gl.linkProgram(this._shaderProgram);
-        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
             alert('Could not initialise shaders');
         }
-        gl.useProgram(this._shaderProgram);
+        gl.useProgram(this.shaderProgram);
     }
     enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        const gl = src_Global.gl;
-        gl.useProgram(this._shaderProgram);
-        this.locations.pMatrix = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.m_perspective);
-        this.locations.mMatrix = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.m_model);
-        this.locations.vMatrix = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.m_view);
-        this.locations.sampler = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.sampler);
-        this.locations.textureAlpha = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.factor);
-        this.locations.clorMapIdx = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.colormapIdx);
-        this.locations.vertexPositionAttribute = gl.getAttribLocation(this._shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.textureCoordAttribute = gl.getAttribLocation(this._shaderProgram, this.gl_attributes.text_coords);
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model);
+        this.locations.vMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_view);
+        this.locations.sampler = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.sampler);
+        this.locations.textureAlpha = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.factor);
+        this.locations.clorMapIdx = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.colormapIdx);
+        this.locations.vertexPositionAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.textureCoordAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.text_coords);
         if (colorMapIdx >= 2) {
-            const index = gl.getUniformBlockIndex(this._shaderProgram, 'colormap');
-            gl.uniformBlockBinding(this._shaderProgram, index, 0);
+            const index = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
+            gl.uniformBlockBinding(this.shaderProgram, index, 0);
             gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
             let currentColorMap;
             if (colorMapIdx === 2)
@@ -8168,1082 +6453,263 @@ class HiPSShaderProgram {
         gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
     }
 }
-const hipsShaderProgram = new HiPSShaderProgram();
+// export const hipsShaderProgram = new HiPSShaderProgram()
 
-;// ./src/model/hips/Tile.ts
-// Tile.ts
+;// ./src/model/AbstractSkyEntity.ts
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
 
 
 
-
-
-// ------------------------------------------------------------------------
-class Tile {
-    _hips;
-    _tileno;
-    _baseurl;
-    _order;
-    _format;
-    _maxorder;
-    _isGalacticHips;
-    _ready = false;
-    _abort = false;
-    _image;
-    _textureLoaded = false;
-    _texture;
-    _texurl = '';
-    _hipsShaderIndex = 0;
-    _cacheTime0;
-    _inView = true;
-    _amIStillInFoV_requsetID;
-    // geometry buffers
-    vertexPosition = [];
-    vertexPositionBuffer = [];
-    vertexIndices = new Uint16Array();
-    vertexIndexBuffer;
-    opacity = 1.0;
-    constructor(tileno, order, hips) {
-        this._hips = hips;
-        this._tileno = tileno;
-        this._format = hips.format;
-        this._baseurl = hips.baseURL;
-        this._maxorder = hips.maxOrder;
-        this._isGalacticHips = hips.isGalacticHips;
-        this._order = order;
-        this._amIStillInFoV_requsetID = window.setInterval(() => {
-            this.amIStillInFoV();
-        }, 5000);
-        this.initImage();
+class AbstractSkyEntity {
+    // Public-ish properties used elsewhere in the app
+    refreshMe = false;
+    fovX_deg = 180;
+    fovY_deg = 180;
+    xRad;
+    yRad;
+    prevFoV = this.fovX_deg;
+    name;
+    // public insideSphere: boolean = bootSetup.insideSphere
+    // Picking/sphere
+    center;
+    radius;
+    isGalacticHips;
+    // GL resources
+    vertexTextureCoordBuffer = null;
+    vertexPositionBuffer = null;
+    vertexIndexBuffer = null;
+    shaderProgram = null;
+    // Matrices
+    T = mat4_create();
+    R = mat4_create();
+    modelMatrix = mat4_create();
+    inverseModelMatrix = mat4_create();
+    // Precomputed transform from galactic to equatorial (already inverted)
+    galacticMatrixInverted = mat4_create();
+    _webgl;
+    _hipsShaderProgram;
+    // protected _visibleTilesManager: VisibleTilesManager
+    // protected _tileBuffer: TileBuffer
+    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, webgl, isGalacticHips) {
+        this._webgl = webgl;
+        this.xRad = in_xRad;
+        this.yRad = in_yRad;
+        this.name = in_name;
+        this.center = clone(in_position);
+        this.radius = in_radius;
+        // this.insideSphere = global.insideSphere
+        this.isGalacticHips = !!isGalacticHips;
+        // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
+        mat4_set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
+        // this._tileBuffer = new TileBuffer(1, this._webgl)
+        // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
+        // this._visibleTilesManager = new VisibleTilesManager()
+        this._hipsShaderProgram = new HiPSShaderProgram(this._webgl);
     }
-    destroyIntervals() {
-        window.clearInterval(this._amIStillInFoV_requsetID);
+    get hipsShaderProgram() {
+        return this._hipsShaderProgram;
     }
-    getReadyState() {
-        return this._ready;
+    // get tileBuffer() {
+    //   return this._tileBuffer
+    // }
+    get webgl() {
+        return this._webgl;
     }
-    get cacheTime0() {
-        return this._cacheTime0;
-    }
-    resetCacheTime0() {
-        this._cacheTime0 = undefined;
-    }
-    setCacheTime0() {
-        this._cacheTime0 = new Date().getTime();
-    }
-    initImage() {
-        this._image = new Image();
-        const dirnumber = Math.floor(this._tileno / 10000) * 10000;
-        this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
-        this._image.onload = () => this.imageLoaded();
-        this._image.onerror = () => {
-            console.error('File not found?', this._texurl);
-            this._ready = false;
-            this._abort = true;
-            this.destroyIntervals();
-        };
-        this._image.crossOrigin = 'anonymous';
-        this._image.src = this._texurl;
-    }
-    imageLoaded() {
-        this.textureLoaded();
-        this.initModelBuffer();
-        const gl = src_Global.gl;
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
-        this._textureLoaded = true;
-        if (this._textureLoaded)
-            this._ready = true;
-    }
-    textureLoaded() {
-        const gl = src_Global.gl;
-        hipsShaderProgram.enableProgram();
-        this._texture = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        // FIX: use the sampler location we fetched in enableShaders()
-        gl.uniform1i(hipsShaderProgram.locations.sampler, this._hipsShaderIndex);
-        if (!gl.isTexture(this._texture)) {
-            console.warn('Texture creation failed');
-        }
-    }
-    initModelBuffer() {
-        const gl = src_Global.gl;
-        this.vertexPosition = [];
-        this.vertexPositionBuffer = [];
-        this.vertexIndices = new Uint16Array();
-        const reforder = fovHelper.getRefOrder(this._order);
-        const orighealpix = src_Global.getHealpix(this._order);
-        const origxyf = orighealpix.nest2xyf(this._tileno);
-        const orderjump = reforder - this._order;
-        const dxmin = origxyf.ix << orderjump;
-        const dxmax = (origxyf.ix << orderjump) + (1 << orderjump);
-        const dymin = origxyf.iy << orderjump;
-        const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
-        const healpix = src_Global.getHealpix(reforder);
-        this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, 0, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, 1, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, 2, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin + (dymax - dymin) / 2, dymax, 3, healpix, orderjump, origxyf);
-        const pixelsXQuadrant = this.vertexPosition[0].length / 20;
-        const idx = this.computeVertexIndices(pixelsXQuadrant);
-        // If large, upgrade to Uint32 indices
-        if (idx.length > 65535) {
-            // Optional: require OES_element_index_uint if you’re still on WebGL1
-            this.vertexIndices = new Uint32Array(idx);
-        }
-        else {
-            this.vertexIndices = new Uint16Array(idx);
-        }
+    /** GL setup and initial model transform */
+    initGL(gl) {
+        // GL resources
+        this.vertexTextureCoordBuffer = gl.createBuffer();
+        this.vertexPositionBuffer = gl.createBuffer();
         this.vertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndices, gl.STATIC_DRAW);
+        this.shaderProgram = gl.createProgram();
+        // Reset object transforms
+        this.T = mat4_create();
+        this.R = mat4_create();
+        this.modelMatrix = mat4_create();
+        this.inverseModelMatrix = mat4_create();
+        // Initial pose
+        this.translate(this.center);
+        this.rotate(this.xRad, this.yRad);
     }
-    computeVertexIndices(pixelsXQuadrant) {
-        const vertexIndices = new Uint32Array(6 * pixelsXQuadrant);
-        let baseFaceIndex = 0;
-        for (let j = 0; j < pixelsXQuadrant; j++) {
-            const b = baseFaceIndex;
-            vertexIndices[6 * j] = b;
-            vertexIndices[6 * j + 1] = b + 1;
-            vertexIndices[6 * j + 2] = b + 2;
-            vertexIndices[6 * j + 3] = b + 2;
-            vertexIndices[6 * j + 4] = b + 3;
-            vertexIndices[6 * j + 5] = b;
-            baseFaceIndex += 4;
+    translate(translation) {
+        translate(this.T, this.T, translation);
+        this.refreshModelMatrix();
+    }
+    rotate(rad1, rad2) {
+        rotate(this.R, this.R, rad2, [0, 0, 1]);
+        rotate(this.R, this.R, rad1, [1, 0, 0]);
+        this.refreshModelMatrix();
+    }
+    rotateFromZero(rad1, rad2) {
+        identity(this.R);
+        rotate(this.R, this.R, rad1, [1, 0, 0]);
+        rotate(this.R, this.R, rad2, [0, 0, 1]);
+        this.refreshModelMatrix();
+    }
+    refreshModelMatrix() {
+        const R_inverse = mat4_create();
+        invert(R_inverse, this.R);
+        mat4_multiply(this.modelMatrix, this.T, R_inverse);
+        // Flip Y if we're outside the sphere
+        if (!src_Global.insideSphere) {
+            this.modelMatrix[1] = -this.modelMatrix[1];
+            this.modelMatrix[5] = -this.modelMatrix[5];
+            this.modelMatrix[9] = -this.modelMatrix[9];
+            this.modelMatrix[13] = -this.modelMatrix[13];
         }
-        return vertexIndices;
-    }
-    setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        const gl = src_Global.gl;
-        this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
-        const step = 1 / (1 << orderjump);
-        let p = 0;
-        const s_pixel_size = 0;
-        const t_pixel_size = 0;
-        for (let dx = dxmin; dx < dxmax; dx++) {
-            for (let dy = dymin; dy < dymax; dy++) {
-                const facesVec3Array = healpix.getPointsForXyfNoStep(dx, dy, origxyf.face);
-                const uindex = dy - (origxyf.iy << orderjump);
-                const vindex = dx - (origxyf.ix << orderjump);
-                // v0
-                this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x;
-                this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y;
-                this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z;
-                this.vertexPosition[qidx][20 * p + 3] = step + step * uindex + s_pixel_size;
-                this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex) - t_pixel_size;
-                // v1
-                this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x;
-                this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y;
-                this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z;
-                this.vertexPosition[qidx][20 * p + 8] = step + step * uindex + s_pixel_size;
-                this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex + t_pixel_size;
-                // v2
-                this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x;
-                this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y;
-                this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z;
-                this.vertexPosition[qidx][20 * p + 13] = step * uindex - s_pixel_size;
-                this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex + t_pixel_size;
-                // v3
-                this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x;
-                this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y;
-                this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z;
-                this.vertexPosition[qidx][20 * p + 18] = step * uindex - s_pixel_size;
-                this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex) - t_pixel_size;
-                p++;
-            }
+        // Apply galactic frame transform if needed
+        if (this.isGalacticHips) {
+            mat4_multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
         }
-        this.vertexPositionBuffer[qidx] = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition[qidx], gl.STATIC_DRAW);
     }
-    get inView() {
-        return this._inView;
+    getModelMatrixInverse() {
+        identity(this.inverseModelMatrix);
+        invert(this.inverseModelMatrix, this.modelMatrix);
+        return this.inverseModelMatrix;
     }
-    moveToCache() {
-        newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips);
-        this._inView = false;
-        this.destroyIntervals();
+    getModelMatrix() {
+        return this.modelMatrix;
     }
-    amIStillInFoV() {
-        if (this._textureLoaded)
-            this._ready = true;
-        if (this._isGalacticHips) {
-            if (visibleTilesManager.galAncestorsMap.has(this._order)) {
-                if (!visibleTilesManager.galAncestorsMap.get(this._order).includes(this._tileno)) {
-                    this.moveToCache();
-                }
-                else {
-                    this._inView = true;
-                }
-            }
-            if (this._order == visibleTilesManager.visibleOrder) {
-                if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
-                    this.moveToCache();
-                }
-                else {
-                    this._inView = true;
-                }
-            }
+    /** Children with hierarchical geometry (e.g., HiPS) can override this. */
+    setGeometryNeedsToBeRefreshed() {
+        this.refreshGeometryOnFoVChanged = false;
+    }
+    // Helpers operating on raw mat4 buffers (kept from your JS)
+    rotateX(m, angle) {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const mv1 = m[1], mv5 = m[5], mv9 = m[9];
+        m[1] = m[1] * c - m[2] * s;
+        m[5] = m[5] * c - m[6] * s;
+        m[9] = m[9] * c - m[10] * s;
+        m[2] = m[2] * c + mv1 * s;
+        m[6] = m[6] * c + mv5 * s;
+        m[10] = m[10] * c + mv9 * s;
+        return m;
+    }
+    rotateY(m, angle) {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const mv0 = m[0], mv4 = m[4], mv8 = m[8];
+        m[0] = c * m[0] + s * m[2];
+        m[4] = c * m[4] + s * m[6];
+        m[8] = c * m[8] + s * m[10];
+        m[2] = c * m[2] - s * mv0;
+        m[6] = c * m[6] - s * mv4;
+        m[10] = c * m[10] - s * mv8;
+        return m;
+    }
+}
+
+;// ./src/model/hips/FoVHelper.ts
+// FoVHelper.ts
+
+class FoVHelper {
+    getHiPSNorder(fov) {
+        if (fov >= 179)
+            return 0;
+        if (fov >= 90)
+            return 1;
+        if (fov >= 30)
+            return 2;
+        if (fov >= 20)
+            return 3;
+        if (fov >= 6)
+            return 4;
+        if (fov >= 3.2)
+            return 5;
+        if (fov >= 1.6)
+            return 6;
+        if (fov >= 0.85)
+            return 7;
+        if (fov >= 0.42)
+            return 8;
+        if (fov >= 0.21)
+            return 9;
+        if (fov >= 0.12)
+            return 10;
+        if (fov >= 0.06)
+            return 11;
+        if (fov < 0.015)
+            return 12;
+        return 13;
+    }
+    getRADegSteps(fov) {
+        let raStep;
+        let decStep;
+        if (fov >= 179) {
+            raStep = 10;
+            decStep = 10;
+        }
+        else if (fov >= 25) {
+            raStep = 9;
+            decStep = 9;
+        }
+        else if (fov >= 12.5) {
+            raStep = 8;
+            decStep = 8;
+        }
+        else if (fov >= 6) {
+            raStep = 6;
+            decStep = 6;
+        }
+        else if (fov >= 3.2) {
+            raStep = 5;
+            decStep = 5;
+        }
+        else if (fov >= 1.6) {
+            raStep = 4;
+            decStep = 4;
+        }
+        else if (fov >= 0.85) {
+            raStep = 3;
+            decStep = 3;
+        }
+        else if (fov >= 0.42) {
+            raStep = 2;
+            decStep = 2;
+        }
+        else if (fov >= 0.21) {
+            raStep = 1;
+            decStep = 1;
+        }
+        else if (fov >= 0.12) {
+            raStep = 0.5;
+            decStep = 0.5;
+        }
+        else if (fov >= 0.06) {
+            raStep = 0.25;
+            decStep = 0.25;
         }
         else {
-            if (visibleTilesManager.ancestorsMap.has(this._order)) {
-                if (!visibleTilesManager.ancestorsMap.get(this._order).includes(this._tileno)) {
-                    this.moveToCache();
-                }
-                else {
-                    this._inView = true;
-                }
-            }
-            if (this._order == visibleTilesManager.visibleOrder) {
-                if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
-                    this.moveToCache();
-                }
-                else {
-                    this._inView = true;
-                }
-            }
+            raStep = 10;
+            decStep = 10;
         }
+        return { raStep, decStep };
     }
-    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        if (!this._ready || this._abort)
-            return;
-        let quadrantsToDraw = new Set([0, 1, 2, 3]);
-        if (visibleOrder > this._order && this._order < this._maxorder) {
-            const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
-            if (kids)
-                quadrantsToDraw = kids;
+    getRefOrder(order) {
+        switch (order) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+                return order + 6;
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+                return order + 5;
+            case 8:
+                return order + 4;
+            default:
+                return order + 3;
         }
-        const gl = src_Global.gl;
-        hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        // Enable attributes (these locations are retrieved in enableShaders)
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        const elemno = this.vertexIndices.length;
-        const indexType = this.vertexIndices instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
-        quadrantsToDraw.forEach((qidx) => {
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-            gl.vertexAttribPointer(hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-            gl.vertexAttribPointer(hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
-            gl.drawElements(gl.TRIANGLES, elemno, indexType, 0);
-        });
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
-    }
-    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        const quadrantsToDraw = new Set([0, 1, 2, 3]);
-        const childrenOrder = this._order + 1;
-        if (!visibleTilesMap.has(childrenOrder))
-            return;
-        for (let c = 0; c < 4; c++) {
-            const childTileNo = (this._tileno << 2) + c;
-            const list = visibleTilesMap.get(childrenOrder);
-            if (list.includes(childTileNo)) {
-                const childTile = this._isGalacticHips
-                    ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-                    : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips);
-                childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
-                if (childTile._ready) {
-                    quadrantsToDraw.delete(childTileNo - (this._tileno << 2));
-                }
-            }
-        }
-        return quadrantsToDraw;
     }
 }
-
-;// ./src/model/hips/TileBuffer.ts
-// TileBuffer.ts
- // adjust if your file is named differently
-class TileBuffer {
-    // Equatorial
-    _tiles;
-    _cachedTiles;
-    _activeHiPS;
-    // Galactic
-    _galTiles;
-    _galCachedTiles;
-    _galActiveHiPS;
-    _cacheAliveMilliSeconds;
-    _cleanerId;
-    constructor(minutesToLiveInCache = 1) {
-        this._tiles = new Map();
-        this._cachedTiles = new Map();
-        this._activeHiPS = new Map();
-        this._galTiles = new Map();
-        this._galCachedTiles = new Map();
-        this._galActiveHiPS = new Map();
-        this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
-        this._cleanerId = window.setInterval(() => {
-            this.cacheCleaner();
-        }, 10_000);
-    }
-    /** Register an equatorial HiPS into the buffer. */
-    addHiPS(hips) {
-        if (this._activeHiPS.has(hips)) {
-            console.error('HiPS already present in TileBuffer');
-            return;
-        }
-        this._activeHiPS.set(hips, new Map());
-    }
-    /** Register a galactic HiPS into the buffer. */
-    addGalHiPS(hips) {
-        if (this._galActiveHiPS.has(hips)) {
-            console.error('HiPS already present in TileBuffer');
-            return;
-        }
-        this._galActiveHiPS.set(hips, new Map());
-    }
-    /** Preload/add tile for every registered equatorial HiPS. */
-    addTile(order, tileno) {
-        for (const hips of this._activeHiPS.keys()) {
-            this.getTile(tileno, order, hips);
-        }
-    }
-    /** Preload/add tile for every registered galactic HiPS. */
-    addGalTile(order, tileno) {
-        for (const hips of this._galActiveHiPS.keys()) {
-            this.getGalTile(tileno, order, hips);
-        }
-    }
-    /** Fetch (or create) an equatorial tile, reviving from cache if present. */
-    getTile(tileno, order, hips) {
-        const tileKey = this.key(order, tileno, hips.baseURL);
-        if (!this._tiles.has(tileKey)) {
-            if (this._cachedTiles.has(tileKey)) {
-                const tile = this._cachedTiles.get(tileKey);
-                this._tiles.set(tileKey, tile);
-                this._cachedTiles.delete(tileKey);
-                tile.resetCacheTime0();
-            }
-            else {
-                const tile = new Tile(tileno, order, hips);
-                this._tiles.set(tileKey, tile);
-            }
-        }
-        return this._tiles.get(tileKey);
-    }
-    /** Fetch (or create) a galactic tile, reviving from cache if present. */
-    getGalTile(tileno, order, hips) {
-        const tileKey = this.key(order, tileno, hips.baseURL);
-        if (!this._galTiles.has(tileKey)) {
-            if (this._galCachedTiles.has(tileKey)) {
-                const tile = this._galCachedTiles.get(tileKey);
-                this._galTiles.set(tileKey, tile);
-                this._galCachedTiles.delete(tileKey);
-                tile.resetCacheTime0();
-            }
-            else {
-                const tile = new Tile(tileno, order, hips);
-                this._galTiles.set(tileKey, tile);
-            }
-        }
-        return this._galTiles.get(tileKey);
-    }
-    /** Move a tile (equatorial or galactic) into cache. */
-    moveTileToCache(tileno, order, hips) {
-        const tileKey = this.key(order, tileno, hips.baseURL);
-        if (this._tiles.has(tileKey)) {
-            const tile = this._tiles.get(tileKey);
-            tile.setCacheTime0();
-            this._cachedTiles.set(tileKey, tile);
-            this._tiles.delete(tileKey);
-        }
-        if (this._galTiles.has(tileKey)) {
-            const tile = this._galTiles.get(tileKey);
-            tile.setCacheTime0();
-            this._galCachedTiles.set(tileKey, tile);
-            this._galTiles.delete(tileKey);
-        }
-    }
-    /** Periodically purge stale cached tiles. */
-    cacheCleaner() {
-        const now = Date.now();
-        for (const [tileKey, tile] of this._cachedTiles) {
-            const t0 = tile.cacheTime0;
-            if (!tile.inView && t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds) {
-                tile.destroyIntervals();
-                this._cachedTiles.delete(tileKey);
-            }
-        }
-        for (const [tileKey, tile] of this._galCachedTiles) {
-            const t0 = tile.cacheTime0;
-            if (!tile.inView && t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds) {
-                tile.destroyIntervals();
-                this._galCachedTiles.delete(tileKey);
-            }
-        }
-    }
-    /** Compose a stable key for maps. */
-    key(order, tileno, baseURL) {
-        return `${order}#${tileno}#${baseURL}`;
-    }
-    /** Optional: call to stop internal timers if you dispose this buffer. */
-    dispose() {
-        window.clearInterval(this._cleanerId);
-    }
-}
-// Singleton (kept for compatibility with your original export)
-const newTileBuffer = new TileBuffer();
-
-;// ./src/model/hips/VisibleTilesManager.ts
-
-
-
-
-
-
-
-class VisibleTilesManager {
-    _visibleTilesByOrder;
-    _ancestorsMap;
-    initialised;
-    _galVisibleTilesByOrder;
-    _galAncestorsMap;
-    _galacticMatrixInverted;
-    _galacticMatrix;
-    insideSphere = bootSetup.insideSphere;
-    constructor() {
-        this._visibleTilesByOrder = { pixels: [], order: 0 };
-        this._ancestorsMap = new Map();
-        this.initialised = false;
-        this._galVisibleTilesByOrder = { pixels: [], order: 0 };
-        this._galAncestorsMap = new Map();
-        // Matrices for galactic <-> equatorial
-        this._galacticMatrixInverted = mat4_create();
-        this._galacticMatrix = mat4_create();
-        // From https://observablehq.com/@fil/galactic-rotations (single-precision friendly)
-        // This matrix is (galactic -> equatorial); we store its inverse too.
-        mat4_set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
-        invert(this._galacticMatrix, this._galacticMatrixInverted);
-    }
-    init(insideSphere) {
-        this.initialised = true;
-        this.insideSphere = insideSphere;
-        this.computeVisiblePixels();
-        // Consider debouncing/throttling in real-time UIs
-        setInterval(() => this.computeVisiblePixels(), 500);
-    }
-    getVisibleOrder() {
-        return grid_HealpixGridSingleton.visibleorder;
-    }
-    // toggleInsideSphere(){
-    //   this.insideSphere = !this.insideSphere
-    //   this.computeVisiblePixels();
-    // }
-    computeVisiblePixels() {
-        if (!this.initialised)
-            return;
-        let order = grid_HealpixGridSingleton.visibleorder;
-        if (src_Global.insideSphere && order < 3) {
-            order = 3;
-        }
-        this._ancestorsMap.set(order, []);
-        this._galAncestorsMap.set(order, []);
-        let pixels = [];
-        let galTiles = [];
-        if (order === 0) {
-            const geomhealpix = src_Global.getHealpix(0);
-            const npix = geomhealpix.getNPix();
-            for (let i = 0; i < npix; i++) {
-                pixels.push(i);
-                this._ancestorsMap.get(order).push(i);
-                galTiles.push(i);
-                this._galAncestorsMap.get(order).push(i);
-            }
-        }
-        else {
-            const geomhealpix = src_Global.getHealpix(order);
-            const maxX = src_Global.gl.canvas.width;
-            const maxY = src_Global.gl.canvas.height;
-            // Sample a grid of screen points, project to the sphere, then to galactic
-            for (let i = 0; i <= maxX; i += maxX / 30) {
-                for (let j = 0; j <= maxY; j += maxY / 30) {
-                    const hit = utils_RayPickingUtils.getIntersectionPointWithSingleModel(i, j);
-                    if (hit.length > 0) {
-                        // Equatorial -> Galactic (use _galacticMatrix)
-                        const galVec = vec4_create();
-                        vec4_transformMat4(galVec, [hit[0], hit[1], hit[2], 1], this._galacticMatrix);
-                        // Index in galactic HEALPix
-                        const galPoint = new Pointing(new Vec3(galVec[0], galVec[1], galVec[2]));
-                        const galTileNo = geomhealpix.ang2pix(galPoint);
-                        // Index in equatorial HEALPix
-                        const curPoint = new Pointing(new Vec3(hit[0], hit[1], hit[2]));
-                        const currPixNo = geomhealpix.ang2pix(curPoint);
-                        if (!pixels.includes(currPixNo)) {
-                            pixels.push(currPixNo);
-                            this._ancestorsMap.get(order).push(currPixNo);
-                            newTileBuffer.addTile(order, currPixNo);
-                        }
-                        if (!galTiles.includes(galTileNo)) {
-                            galTiles.push(galTileNo);
-                            this._galAncestorsMap.get(order).push(galTileNo);
-                            newTileBuffer.addGalTile(order, galTileNo);
-                        }
-                    }
-                }
-            }
-        }
-        this._visibleTilesByOrder = { pixels: pixels, order: order };
-        this._galVisibleTilesByOrder = { pixels: galTiles, order: order };
-        // Build ancestor pyramids down to order 0
-        for (let o = 1; o < order; o++) {
-            const tgtOrder = order - o;
-            const list = this._ancestorsMap.get(tgtOrder) ?? [];
-            this._ancestorsMap.set(tgtOrder, list);
-            for (let p = 0; p < pixels.length; p++) {
-                const parent = pixels[p] >> (2 * o);
-                if (!list.includes(parent)) {
-                    list.push(parent);
-                    newTileBuffer.addTile(tgtOrder, parent);
-                }
-            }
-        }
-        for (let o = 1; o < order; o++) {
-            const tgtOrder = order - o;
-            const list = this._galAncestorsMap.get(tgtOrder) ?? [];
-            this._galAncestorsMap.set(tgtOrder, list);
-            for (let p = 0; p < galTiles.length; p++) {
-                const parent = galTiles[p] >> (2 * o);
-                if (!list.includes(parent)) {
-                    list.push(parent);
-                    newTileBuffer.addGalTile(tgtOrder, parent);
-                }
-            }
-        }
-    }
-    get visibleTilesByOrder() {
-        return this._visibleTilesByOrder;
-    }
-    get ancestorsMap() {
-        return this._ancestorsMap;
-    }
-    get galVisibleTilesByOrder() {
-        return this._galVisibleTilesByOrder;
-    }
-    get galAncestorsMap() {
-        return this._galAncestorsMap;
-    }
-    get visibleOrder() {
-        return this._visibleTilesByOrder.order;
-    }
-}
-const visibleTilesManager = new VisibleTilesManager();
-
-;// ./src/model/grid/HealpixGridSingleton.ts
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class HealpixGridSingleton extends model_AbstractSkyEntity {
-    static ELEM_SIZE = 3;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    _visibleorder = 0;
-    showGrid = false;
-    _shaderProgram;
-    fragmentShader;
-    vertexShader;
-    defaultColor = '#ec0acaff';
-    gridText = new grid_GridTextHelper();
-    _attribLocations = {
-        position: 0,
-        selected: 1,
-        pointSize: 2,
-        color: 3,
-    };
-    _nPrimitiveFlags = 0;
-    _vertexCataloguePositionBuffer;
-    _indexBuffer;
-    _vertexCataloguePosition = new Float32Array(0);
-    _indexes = new Uint32Array(0);
-    fovObj;
-    static INITIAL_FOV = 180;
-    static RADIUS = 1;
-    static INITIAL_POSITION = [0.0, 0.0, 0.0];
-    static INITIAL_PhiRad = 0;
-    static INITIAL_ThetaRad = 0;
-    constructor() {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid');
-    }
-    init() {
-        console.log('HealpixGridSingleton.init()');
-        this.initGL(src_Global.gl);
-        this._shaderProgram = src_Global.gl.createProgram();
-        this.initShaders();
-        const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
-        this._visibleorder = order;
-        this._nPrimitiveFlags = 0;
-        this._vertexCataloguePositionBuffer = src_Global.gl.createBuffer();
-        this._indexBuffer = src_Global.gl.createBuffer();
-        this._vertexCataloguePosition = new Float32Array(0);
-        this.fovObj = new FoV();
-    }
-    get RADIUS() {
-        return HealpixGridSingleton.RADIUS;
-    }
-    get INITIAL_POSITION() {
-        return HealpixGridSingleton.INITIAL_POSITION;
-    }
-    get INITIAL_PhiRad() {
-        return HealpixGridSingleton.INITIAL_PhiRad;
-    }
-    get INITIAL_ThetaRad() {
-        return HealpixGridSingleton.INITIAL_ThetaRad;
-    }
-    refreshFoV() {
-        return this.fovObj.getFoV(src_Global.insideSphere);
-    }
-    getFoV() {
-        return this.fovObj;
-    }
-    getMinFoV() {
-        return this.fovObj.minFoV;
-    }
-    initShaders() {
-        const gl = src_Global.gl;
-        const fragmentShaderStr = shader_GridShaderManager.healpixGridFS();
-        this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this.fragmentShader, fragmentShaderStr);
-        gl.compileShader(this.fragmentShader);
-        if (!gl.getShaderParameter(this.fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this.fragmentShader) || 'Fragment shader compile error');
-            return;
-        }
-        const vertexShaderStr = shader_GridShaderManager.healpixGridVS();
-        this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(this.vertexShader, vertexShaderStr);
-        gl.compileShader(this.vertexShader);
-        if (!gl.getShaderParameter(this.vertexShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this.vertexShader) || 'Vertex shader compile error');
-            return;
-        }
-        gl.attachShader(this._shaderProgram, this.vertexShader);
-        gl.attachShader(this._shaderProgram, this.fragmentShader);
-        gl.linkProgram(this._shaderProgram);
-        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        gl.useProgram(this._shaderProgram);
-    }
-    initBuffers(pixels, order) {
-        this._nPrimitiveFlags = 0;
-        const healpix = src_Global.getHealpix(order);
-        const subhpx = src_Global.getHealpix(order + 1);
-        const subsubhpx = src_Global.getHealpix(order + 2);
-        let positionIndex = 0;
-        let vIdx = 0;
-        const R = 1.0;
-        const MAX_UINT = 0xffffffff;
-        this._indexes = new Uint32Array(17 * pixels.length);
-        this._vertexCataloguePosition = new Float32Array(3 * 16 * pixels.length);
-        for (let p = 0; p < pixels.length; p++) {
-            const vecs = healpix.getBoundaries(pixels[p]);
-            const cpix0 = pixels[p] << 2;
-            const cpix1 = cpix0 + 1;
-            const cpix2 = cpix0 + 2;
-            const cpix3 = cpix0 + 3;
-            const cp0vecs = subhpx.getBoundaries(cpix0);
-            const cp3vecs = subhpx.getBoundaries(cpix3);
-            // helper to push a vertex
-            const pushV = (v) => {
-                this._vertexCataloguePosition[positionIndex] = R * v.x;
-                this._vertexCataloguePosition[positionIndex + 1] = R * v.y;
-                this._vertexCataloguePosition[positionIndex + 2] = R * v.z;
-                this._indexes[vIdx] = Math.floor(positionIndex / 3);
-                vIdx += 1;
-                positionIndex += 3;
-            };
-            // v0(3/0)
-            pushV(vecs[0]);
-            // v1(15/2)
-            let subcpix3 = cpix3 << 2;
-            let subcpix3_3 = subcpix3 + 3;
-            let tmp = subsubhpx.getBoundaries(subcpix3_3);
-            pushV(tmp[1]);
-            // v1(3/1)
-            pushV(cp3vecs[1]);
-            // v0(2/2)
-            let subcpix2 = cpix2 << 2;
-            let subcpix2_2 = subcpix2 + 2;
-            tmp = subsubhpx.getBoundaries(subcpix2_2);
-            pushV(tmp[0]);
-            // v1(0/0)
-            pushV(vecs[1]);
-            // v2(2/2)
-            pushV(tmp[2]);
-            // v1(0/1)
-            pushV(cp0vecs[1]);
-            // v1(0/2)
-            let subcpix0 = cpix0 << 2;
-            let subcpix0_2 = subcpix0;
-            tmp = subsubhpx.getBoundaries(subcpix0_2);
-            pushV(tmp[1]);
-            // v2(0/0)
-            pushV(vecs[2]);
-            // v3(0/2)
-            pushV(tmp[3]);
-            // v3(0/1)
-            pushV(cp0vecs[3]);
-            // v2(5/2)
-            let subcpix1 = cpix1 << 2;
-            let subcpix1_1 = subcpix1 + 1;
-            tmp = subsubhpx.getBoundaries(subcpix1_1);
-            pushV(tmp[2]);
-            // v3(0/0)
-            pushV(vecs[3]);
-            // v0(5/2)
-            pushV(tmp[0]);
-            // v3(3/1)
-            pushV(cp3vecs[3]);
-            tmp = subsubhpx.getBoundaries(subcpix3_3);
-            pushV(tmp[3]);
-            // primitive restart
-            this._indexes[vIdx] = MAX_UINT;
-            this._nPrimitiveFlags += 1;
-            vIdx += 1;
-        }
-    }
-    // updateTiles(pixels: number[], order: number) {
-    //   return (this as any)._tileBuffer.updateTiles(pixels, order);
-    // }
-    refresh() {
-        this.refreshFoV();
-        const fov = this.getMinFoV();
-        // expose to global (legacy)
-        // (global as any).hipsFoV = fov;
-        // global.order = fovHelper.getHiPSNorder(fov);
-        // this._visibleorder = global.order;
-        this._visibleorder = fovHelper.getHiPSNorder(fov);
-    }
-    enableShader(in_mMatrix, pMatrix) {
-        const gl = src_Global.gl;
-        gl.useProgram(this._shaderProgram);
-        // TODO move locations retrieval elsewhere
-        // Uniform locations
-        const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
-        const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-        const uColor = src_Global.gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
-        // Attribute locations
-        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
-        let mvMatrix = mat4_create();
-        mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), in_mMatrix);
-        if (uMV)
-            gl.uniformMatrix4fv(uMV, false, mvMatrix);
-        if (uP)
-            gl.uniformMatrix4fv(uP, false, pMatrix);
-        if (uColor) {
-            const rgb = colorHex2RGB(this.defaultColor);
-            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
-        }
-    }
-    isVisible() {
-        return this.showGrid;
-    }
-    toggleShowGrid() {
-        this.showGrid = !this.showGrid;
-    }
-    draw() {
-        const gl = src_Global.gl;
-        const mMatrix = this.getModelMatrix();
-        this.refresh();
-        if (!this.showGrid) {
-            // gridTextHelper.resetDivSets();
-            this.gridText.resetDivSets();
-            return;
-        }
-        const visibleTiles = visibleTilesManager.visibleTilesByOrder;
-        const pixels = visibleTiles.pixels;
-        const order = visibleTiles.order;
-        this.initBuffers(pixels, order);
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        this.enableShader(mMatrix, pMatrix);
-        // Upload positions
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
-        gl.vertexAttribPointer(this._attribLocations.position, HealpixGridSingleton.ELEM_SIZE, gl.FLOAT, false, HealpixGridSingleton.BYTES_X_ELEM * HealpixGridSingleton.ELEM_SIZE, 0);
-        gl.enableVertexAttribArray(this._attribLocations.position);
-        // Index buffer
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexes, gl.STATIC_DRAW);
-        gl.drawElements(gl.LINE_LOOP, this._vertexCataloguePosition.length / 3 + this._nPrimitiveFlags, gl.UNSIGNED_INT, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-        // Project and label pixel centers that are inside current FoV
-        let mvMatrix = mat4_create();
-        mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), mMatrix);
-        let mvpMatrix = mat4_create();
-        mvpMatrix = mat4_multiply(mvpMatrix, pMatrix, mvMatrix);
-        // FIX: pass model & pMatrix to match FoVUtils TS signature
-        const center = FoVUtils.getCenterJ2000(gl.canvas);
-        const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
-        for (let p = 0; p < pixels.length; p++) {
-            const pixCenter = src_Global.getHealpix(this._visibleorder).pix2vec(pixels[p]);
-            // const pixCenter = (global.getHealpix(global.order).pix2vec(pixels[p]) as BoundVec);
-            const point = new Point({ x: pixCenter.x, y: pixCenter.y, z: pixCenter.z }, CoordsType.CARTESIAN);
-            const distance = utils_GeomUtils.orthodromicDistance(center, point);
-            if (distance < fovMin) {
-                const vertex = [pixCenter.x, pixCenter.y, pixCenter.z, 1];
-                const clipspace = vec4_create();
-                vec4_transformMat4(clipspace, vertex, mvpMatrix);
-                // NDC divide
-                clipspace[0] /= clipspace[3];
-                clipspace[1] /= clipspace[3];
-                // clip → pixels
-                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
-                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
-                this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
-                // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
-            }
-        }
-        // gridTextHelper.resetDivSets();
-        this.gridText.resetDivSets();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    }
-    get visibleorder() {
-        return this._visibleorder;
-    }
-}
-const healpixGridSingleton = new HealpixGridSingleton();
-/* harmony default export */ const grid_HealpixGridSingleton = (healpixGridSingleton);
-
-;// ./src/utils/RayPickingUtils.ts
-/**
- * @author Fabrizio Giordano (Fab)
- */
-
-
-
-
-
-class RayPickingUtils {
-    static lastNearestVisibleObjectIdx = -1;
-    /** Get index of the last object found under the mouse (if any). */
-    static getNearestVisibleObjectIdx() {
-        return this.lastNearestVisibleObjectIdx;
-    }
-    /**
-     * Builds a world-space ray from mouse coords.
-     * @param mouseX ClientX (page pixels)
-     * @param mouseY ClientY (page pixels)
-     * @param pMatrix Projection matrix
-     * @returns World-space direction (normalized) as a vec3
-     */
-    static getRayFromMouse(mouseX, mouseY, pMatrix) {
-        if (!src_Global.camera) {
-            throw new Error("Camera is not initialized.");
-        }
-        const vMatrix = src_Global.camera.getCameraMatrix();
-        const gl = src_Global.gl;
-        const rect = gl.canvas.getBoundingClientRect();
-        const canvasMX = mouseX - rect.left;
-        const canvasMY = mouseY - rect.top;
-        // viewport → NDC
-        const x = (2.0 * canvasMX) / gl.canvas.clientWidth - 1.0;
-        const y = 1.0 - (2.0 * canvasMY) / gl.canvas.clientHeight;
-        const z = -1.0;
-        // NDC → clip
-        const rayClip = [x, y, z, 1.0];
-        // clip → eye
-        const pInv = mat4_create();
-        invert(pInv, pMatrix);
-        const rayEye4 = [0, 0, 0, 0];
-        RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
-        // direction in eye space (z = -1, w = 0)
-        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
-        // eye → world
-        const vInv = mat4_create();
-        invert(vInv, vMatrix);
-        const rayWorld4 = [0, 0, 0, 0];
-        RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
-        const rayWorld = fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
-        normalize(rayWorld, rayWorld);
-        return rayWorld;
-    }
-    /** a*b (4x4 * vec4) → vec4 (in `out`) */
-    static mat4MultiplyVec4(a, b, out) {
-        const d = b[0], e = b[1], g = b[2], w = b[3];
-        out[0] = a[0] * d + a[4] * e + a[8] * g + a[12] * w;
-        out[1] = a[1] * d + a[5] * e + a[9] * g + a[13] * w;
-        out[2] = a[2] * d + a[6] * e + a[10] * g + a[14] * w;
-        out[3] = a[3] * d + a[7] * e + a[11] * g + a[15] * w;
-        return out;
-    }
-    /**
-     * Ray–sphere intersection (world space).
-     * @returns distance `t` along the ray to the first hit, or `-1` if no hit.
-     */
-    static raySphere(rayOrigWorld, rayDirectionWorld) {
-        let intersectionDistance = -1;
-        const L = create();
-        subtract(L, rayOrigWorld, grid_HealpixGridSingleton.center);
-        const b = vec3_dot(rayDirectionWorld, L);
-        const c = vec3_dot(L, L) - grid_HealpixGridSingleton.radius * grid_HealpixGridSingleton.radius;
-        const disc = b * b - c;
-        if (disc > 0.0) {
-            const s = Math.sqrt(disc);
-            const ta = -b + s;
-            const tb = -b - s;
-            if (ta < 0.0 && tb < 0.0) {
-                // behind camera
-            }
-            else if (tb < 0.0) {
-                intersectionDistance = ta;
-            }
-            else {
-                intersectionDistance = Math.min(ta, tb);
-            }
-        }
-        else if (disc === 0.0) {
-            const t = -b; // tangent
-            if (t >= 0.0) {
-                intersectionDistance = t;
-            }
-        }
-        return intersectionDistance;
-    }
-    /**
-     * Compute intersection with a single model (defaults to the Healpix grid).
-     * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
-     */
-    static getIntersectionPointWithSingleModel(mouseX, mouseY) {
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        const camera = src_Global.camera;
-        if (!camera) {
-            throw new Error("Camera is not initialized.");
-        }
-        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix);
-        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld);
-        let intersectionModelPoint = [];
-        if (t >= 0) {
-            // world intersection
-            const worldHit = create();
-            scale(worldHit, rayWorld, t);
-            add(worldHit, camera.getCameraPosition(), worldHit);
-            // world → model
-            const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
-            const modelHit4 = [0, 0, 0, 0];
-            RayPickingUtils.mat4MultiplyVec4(grid_HealpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
-            intersectionModelPoint = [modelHit4[0], modelHit4[1], modelHit4[2]];
-        }
-        return intersectionModelPoint;
-    }
-}
-/* harmony default export */ const utils_RayPickingUtils = (RayPickingUtils);
-
-;// ./src/utils/MouseHelper.ts
-/**
- * @author Fabrizio Giordano (Fab)
- */
-
-
-
-
-function toVec3(p) {
-    return Array.isArray(p) ? fromValues(p[0], p[1], p[2]) : p;
-}
-class MouseHelper {
-    _xyz = null;
-    _raDecDeg = null;
-    _phiThetaDeg = null;
-    raHMS;
-    decDMS;
-    /**
-     * @param in_xyz [x, y, z]
-     * @param in_raDecDeg { ra, dec } in degrees (ICRS/J2000)
-     * @param in_phiThetaDeg { phi, theta } in degrees (spherical)
-     */
-    constructor(in_xyz, in_raDecDeg, in_phiThetaDeg) {
-        if (in_xyz != null)
-            this._xyz = in_xyz;
-        if (in_raDecDeg != null)
-            this._raDecDeg = in_raDecDeg;
-        if (in_phiThetaDeg != null)
-            this._phiThetaDeg = in_phiThetaDeg;
-        if (this._raDecDeg) {
-            this.raHMS = raDegToHMS(this._raDecDeg.ra);
-            this.decDMS = decDegToDMS(this._raDecDeg.dec);
-        }
-    }
-    /** (Formerly `computeNpix256`) Uses global.nsideForSelection. */
-    computeNpix() {
-        if (!this._xyz)
-            return null;
-        const hp = src_Global.getHealpix(src_Global.nsideForSelection);
-        const v = new Vec3(this._xyz[0], this._xyz[1], this._xyz[2]);
-        const ptg = new Pointing(v, false);
-        return hp.ang2pix(ptg, false);
-    }
-    /** Update helper state from a world-space 3D point on the unit sphere. */
-    update(mousePoint) {
-        const mp = toVec3(mousePoint);
-        const sph = cartesianToSpherical(mp);
-        const radec = sphericalToAstroDeg(sph.phi, sph.theta);
-        this._xyz = [mp[0], mp[1], mp[2]];
-        this._phiThetaDeg = sph;
-        this._raDecDeg = radec;
-        this.raHMS = raDegToHMS(radec.ra);
-        this.decDMS = decDegToDMS(radec.dec);
-    }
-    clear() {
-        this._xyz = null;
-        this._raDecDeg = null;
-        this._phiThetaDeg = null;
-        this.raHMS = undefined;
-        this.decDMS = undefined;
-    }
-    // --- getters ---
-    get xyz() {
-        return this._xyz;
-    }
-    get x() {
-        return this._xyz ? this._xyz[0] : null;
-    }
-    get y() {
-        return this._xyz ? this._xyz[1] : null;
-    }
-    get z() {
-        return this._xyz ? this._xyz[2] : null;
-    }
-    get ra() {
-        return this._raDecDeg ? this._raDecDeg.ra : null;
-    }
-    get dec() {
-        return this._raDecDeg ? this._raDecDeg.dec : null;
-    }
-    get phi() {
-        return this._phiThetaDeg ? this._phiThetaDeg.phi : null;
-    }
-    get theta() {
-        return this._phiThetaDeg ? this._phiThetaDeg.theta : null;
-    }
-    get raDecDeg() {
-        return this._raDecDeg;
-    }
-    get phiThetaDeg() {
-        return this._phiThetaDeg;
-    }
-}
-/* harmony default export */ const utils_MouseHelper = (MouseHelper);
+const fovHelper = new FoVHelper();
+/* harmony default export */ const hips_FoVHelper = ((/* unused pure expression or super */ null && (FoVHelper)));
 
 ;// ./src/model/ColorMaps.ts
 const ColorMaps = {
@@ -9803,8 +7269,6 @@ const ColorMaps = {
 
 
 
-
-
 class AncestorTile {
     _hips;
     _tileno;
@@ -9823,7 +7287,11 @@ class AncestorTile {
     vertexPositionBuffer;
     vertexIndices;
     vertexIndexBuffer;
-    constructor(tileno, order, hips) {
+    _tileBuffer;
+    _hipsShaderProgram;
+    constructor(tileno, order, hips, tileBuffer, hipsShaderProgram) {
+        this._hipsShaderProgram = hipsShaderProgram;
+        this._tileBuffer = tileBuffer;
         this._hips = hips;
         this._tileno = tileno;
         this._format = hips.format;
@@ -9858,7 +7326,8 @@ class AncestorTile {
         this._ready = true;
     }
     textureLoaded() {
-        hipsShaderProgram.enableProgram();
+        // hipsShaderProgram.enableProgram()
+        this._hipsShaderProgram.enableProgram();
         const gl = src_Global.gl;
         this._texture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
@@ -9868,7 +7337,8 @@ class AncestorTile {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.uniform1i(hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex);
+        // gl.uniform1i((hipsShaderProgram as any).shaderProgram.samplerUniform, this._hipsShaderIndex)
+        // gl.uniform1i(this._hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex)
         if (!gl.isTexture(this._texture)) {
             console.log('error in texture');
         }
@@ -10001,23 +7471,33 @@ class AncestorTile {
             if (q)
                 quadrantsToDraw = q;
         }
-        hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
         const gl = src_Global.gl;
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity);
+        // gl.uniform1f((hipsShaderProgram as any).locations.textureAlpha, this.opacity)
+        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
         const elemno = this.vertexIndices.length;
         quadrantsToDraw.forEach((qidx) => {
             gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-            gl.vertexAttribPointer(hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-            gl.vertexAttribPointer(hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+            gl.vertexAttribPointer(
+            // (hipsShaderProgram as any).locations.vertexPositionAttribute,
+            this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
+            gl.vertexAttribPointer(
+            // (hipsShaderProgram as any).locations.textureCoordAttribute,
+            this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
             gl.drawElements(gl.TRIANGLES, elemno, gl.UNSIGNED_SHORT, 0);
         });
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.disableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+        // gl.disableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
         return true;
     }
     drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
@@ -10030,8 +7510,11 @@ class AncestorTile {
             const visibleChildren = visibleTilesMap.get(childrenOrder);
             if (visibleChildren.includes(childTileNo)) {
                 const childTile = this._isGalacticHips
-                    ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-                    : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                    ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                    : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                // const childTile = this._isGalacticHips
+                //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
                 childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
                 if (childTile._ready) {
                     quadrantsToDraw.delete(childTile._tileno - (this._tileno << 2));
@@ -10044,8 +7527,6 @@ class AncestorTile {
 /* harmony default export */ const hips_AncestorTile = (AncestorTile);
 
 ;// ./src/model/hips/AllSky.ts
-
-
 
 
 class AllSky {
@@ -10068,11 +7549,17 @@ class AllSky {
     vertexPositionBuffer;
     vertexIndexBuffer;
     vidx = 0;
-    constructor(hips) {
+    _webgl;
+    _tileBuffer;
+    _hipsShaderProgram;
+    constructor(hips, webgl, tileBuffer, hipsShaderProgram) {
+        this._tileBuffer = tileBuffer;
         this._hips = hips;
+        this._webgl = webgl;
         this._format = hips.format;
         this._baseurl = hips.baseURL;
         this._isGalacticHips = hips.isGalacticHips;
+        this._hipsShaderProgram = hipsShaderProgram;
         this.initImage();
     }
     initImage() {
@@ -10092,8 +7579,9 @@ class AllSky {
         this._ready = true;
     }
     textureLoaded() {
-        hipsShaderProgram.enableProgram();
-        const gl = src_Global.gl;
+        // hipsShaderProgram.enableProgram()
+        this._hipsShaderProgram.enableProgram();
+        const gl = this._webgl;
         this._texture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -10218,24 +7706,34 @@ class AllSky {
             if (skipped)
                 allSkyTiles2Skip = skipped;
         }
-        const gl = src_Global.gl;
-        hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        const gl = this._webgl;
+        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity);
+        // gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity)
+        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
         gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        gl.vertexAttribPointer(hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-        gl.vertexAttribPointer(hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+        gl.vertexAttribPointer(
+        // hipsShaderProgram.locations.vertexPositionAttribute,
+        this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
+        gl.vertexAttribPointer(
+        // hipsShaderProgram.locations.textureCoordAttribute,
+        this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
         for (let t = 0; t < this._maxTiles; t++) {
             if (!allSkyTiles2Skip.includes(t)) {
                 gl.drawElements(gl.TRIANGLES, 6 * this._numFacesXTile, gl.UNSIGNED_SHORT, 12 * t * this._numFacesXTile);
             }
         }
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute)
+        // gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute)
         return true;
     }
     drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
@@ -10247,8 +7745,11 @@ class AllSky {
         for (let i = 0; i < visibleTiles.length; i++) {
             const tileno = visibleTiles[i];
             const childTile = this._isGalacticHips
-                ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-                : newTileBuffer.getTile(tileno, childrenOrder, this._hips);
+                ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
+                : this._tileBuffer.getTile(tileno, childrenOrder, this._hips);
+            // const childTile = this._isGalacticHips
+            //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
+            //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
             childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
             if (childTile.getReadyState()) {
                 allSkyTiles2Skip.push(tileno);
@@ -10266,15 +7767,12 @@ class AllSky {
 
 
 
+// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 
 
 
-
-
-
-
-
-class HiPS extends model_AbstractSkyEntity {
+class HiPS extends AbstractSkyEntity {
     _ancestorTiles;
     _allSkyTile;
     _format;
@@ -10286,15 +7784,19 @@ class HiPS extends model_AbstractSkyEntity {
     samplerIdx = 0;
     colorMapIdx = 0;
     colorMap = model_ColorMaps['native'];
+    _healpixGrid;
     // exposed read-only helpers
     get maxOrder() { return this._maxorder; }
     get minOrder() { return this._minorder; }
     get baseURL() { return this._baseurl; }
     get format() { return this._format; }
-    constructor(radius, position, xrad, yrad, descriptor) {
-        super(radius, position, xrad, yrad, descriptor.surveyName, descriptor.isGalactic);
-        this.initGL(src_Global.gl);
-        newTileBuffer.addHiPS(this);
+    constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
+        super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
+        // this.initGL((global as any).gl as WebGL2RenderingContext)
+        this.initGL(webgl);
+        this._healpixGrid = healpixGrid;
+        // newTileBuffer.addHiPS(this)
+        this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this);
         // DEBUG logs kept from JS (optional)
         // eslint-disable-next-line no-console
         console.log('HiPS frame ' + descriptor.hipsFrame);
@@ -10314,11 +7816,11 @@ class HiPS extends model_AbstractSkyEntity {
         // auto-detect all-sky: original code forces true
         this._allSky = true;
         if (this._allSky) {
-            this._allSkyTile = new AllSky(this);
+            this._allSkyTile = new AllSky(this, this._webgl, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram);
         }
         else {
             for (let t = 0; t < 12; t++) {
-                this._ancestorTiles.push(new hips_AncestorTile(t, 0, this));
+                this._ancestorTiles.push(new hips_AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram));
             }
         }
     }
@@ -10334,8 +7836,12 @@ class HiPS extends model_AbstractSkyEntity {
         if (this._tileBuffer)
             this._tileBuffer._format = this._format;
         const pixelByOrder = this.isGalacticHips
-            ? visibleTilesManager.galVisibleTilesByOrder
-            : visibleTilesManager.visibleTilesByOrder;
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder;
+        // const pixelByOrder =
+        //   this.isGalacticHips
+        //     ? visibleTilesManager.galVisibleTilesByOrder
+        //     : visibleTilesManager.visibleTilesByOrder
         // @ts-ignore
         if (this._tileBuffer?.updateTiles)
             this._tileBuffer.updateTiles(pixelByOrder.pixels, pixelByOrder.order);
@@ -10355,73 +7861,2740 @@ class HiPS extends model_AbstractSkyEntity {
         switch (colorMap.name) {
             case 'grayscale':
                 this.colorMapIdx = 1;
-                hipsShaderProgram.setGrayscaleShader();
+                // hipsShaderProgram.setGrayscaleShader()
+                super.hipsShaderProgram.setGrayscaleShader();
                 break;
             case 'planck':
                 this.colorMapIdx = 2;
-                hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'cmb':
                 this.colorMapIdx = 3;
-                hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'rainbow':
                 this.colorMapIdx = 4;
-                hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'eosb':
                 this.colorMapIdx = 5;
-                hipsShaderProgram.setColorMapShader();
+                super.hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
                 break;
             case 'cubehelix':
                 this.colorMapIdx = 6;
-                hipsShaderProgram.setColorMapShader();
+                super.hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
                 break;
             default:
                 this.colorMapIdx = 0;
-                hipsShaderProgram.setNativeShader();
+                super.hipsShaderProgram.setNativeShader();
+            // hipsShaderProgram.setNativeShader()
         }
     }
     initShaders() {
-        hipsShaderProgram.enableProgram();
-        this.shaderProgram = hipsShaderProgram.shaderProgram;
+        super.hipsShaderProgram.enableProgram();
+        // hipsShaderProgram.enableProgram()
+        // this.shaderProgram = super.hipsShaderProgram.shaderProgram
+        // this.shaderProgram = hipsShaderProgram.shaderProgram
     }
     getCurrentHealpixOrder() {
         return this._visibleorder;
     }
     refresh() {
-        const fov = grid_HealpixGridSingleton.getMinFoV();
+        // const fov = healpixGridSingleton.getMinFoV()
+        const fov = this._healpixGrid.getMinFoV();
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
-    draw() {
-        if (!src_Global.camera || src_Global.camera.getCameraMatrix() === undefined)
+    draw(input) {
+        const cameraMatrix = input.cameraMatrix;
+        // if (!global.camera || global.camera.getCameraMatrix() === undefined) return
+        if (!cameraMatrix)
             return;
         this.refresh();
-        const vMatrix = src_Global.camera.getCameraMatrix();
+        // const vMatrix = global.camera.getCameraMatrix() as Float32Array
+        const vMatrix = cameraMatrix;
         const pMatrix = ComputePerspectiveMatrix.pMatrix;
         const mMatrix = this.getModelMatrix();
         if (this._allSky && this._allSkyTile) {
             if (this.isGalacticHips) {
-                this._allSkyTile.draw(visibleTilesManager.galVisibleTilesByOrder.order, visibleTilesManager.galAncestorsMap, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+                this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.galAncestorsMap, 
+                // visibleTilesManager.galVisibleTilesByOrder.order,
+                // visibleTilesManager.galAncestorsMap,
+                pMatrix, vMatrix, mMatrix, this.colorMapIdx);
             }
             else {
-                this._allSkyTile.draw(visibleTilesManager.visibleTilesByOrder.order, visibleTilesManager.ancestorsMap, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+                this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.ancestorsMap, 
+                // visibleTilesManager.visibleTilesByOrder.order,
+                // visibleTilesManager.ancestorsMap,
+                pMatrix, vMatrix, mMatrix, this.colorMapIdx);
             }
             return;
         }
         // Non all-sky path
         const order = this.isGalacticHips
-            ? visibleTilesManager.galVisibleTilesByOrder.order
-            : visibleTilesManager.visibleTilesByOrder.order;
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order;
+        // ? visibleTilesManager.galVisibleTilesByOrder.order
+        // : visibleTilesManager.visibleTilesByOrder.order
         const map = this.isGalacticHips
-            ? visibleTilesManager.galAncestorsMap
-            : visibleTilesManager.ancestorsMap;
+            ? this._healpixGrid.visibleTilesManager.galAncestorsMap
+            : this._healpixGrid.visibleTilesManager.ancestorsMap;
+        // ? visibleTilesManager.galAncestorsMap
+        // : visibleTilesManager.ancestorsMap
         this._ancestorTiles.forEach((ancestor) => {
             ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
         });
     }
 }
 /* harmony default export */ const hips_HiPS = (HiPS);
+
+;// ./src/utils/CoordsType.ts
+/**
+ * Enum for coordinate types.
+ * @author Fabrizio Giordano (Fab77)
+ */
+var CoordsType;
+(function (CoordsType) {
+    CoordsType["CARTESIAN"] = "cartesian";
+    CoordsType["SPHERICAL"] = "spherical";
+    CoordsType["ASTRO"] = "astro";
+})(CoordsType || (CoordsType = {}));
+// export default CoordsType;
+
+;// ./src/model/Point.ts
+/**
+ * @author Fabrizio Giordano (Fab77)
+ */
+
+
+
+
+
+class Point {
+    _x;
+    _y;
+    _z;
+    _xyz;
+    _raDeg;
+    _decDeg;
+    _raRad;
+    _decRad;
+    _raDecDeg;
+    constructor(in_options, in_type) {
+        this._xyz = [0, 0, 0];
+        this._raDecDeg = [0, 0];
+        // Prefer config value if present, fallback to 12
+        const MAX_DECIMALS = src_Global.MAX_DECIMALS ?? src_Global.maxDecimals ?? 12;
+        if (in_type === CoordsType.CARTESIAN) {
+            const { x, y, z } = in_options;
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+            const [ra, dec] = this.computeAstroCoords();
+            this._raDeg = Number(ra);
+            this._decDeg = Number(dec);
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            this._raDecDeg = [this._raDeg, this._decDeg];
+        }
+        else if (in_type === CoordsType.ASTRO) {
+            const { raDeg, decDeg } = in_options;
+            this._raDeg = Number(raDeg);
+            this._decDeg = Number(decDeg);
+            this._raDecDeg = [this._raDeg, this._decDeg];
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            const [x, y, z] = this.computeCartesianCoords();
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+        }
+        else if (in_type === CoordsType.SPHERICAL) {
+            // Not implemented in original; keep behavior
+            console.log(`${CoordsType.SPHERICAL} not implemented yet`);
+            this._x = 0;
+            this._y = 0;
+            this._z = 0;
+            this._raDeg = 0;
+            this._decDeg = 0;
+            this._raRad = 0;
+            this._decRad = 0;
+        }
+        else {
+            console.error('CoordsType ' + String(in_type) + ' not recognised.');
+            // Initialize to zeroed state to keep object consistent
+            this._x = 0;
+            this._y = 0;
+            this._z = 0;
+            this._raDeg = 0;
+            this._decDeg = 0;
+            this._raRad = 0;
+            this._decRad = 0;
+        }
+    }
+    computeAstroCoords() {
+        const phiThetaDeg = cartesianToSpherical(fromValues(this._xyz[0], this._xyz[1], this._xyz[2]));
+        const rad = sphericalToAstroDeg(phiThetaDeg.phi, phiThetaDeg.theta);
+        return [rad.ra, rad.dec];
+    }
+    computeCartesianCoords() {
+        const phiThetaDeg = astroDegToSpherical(this._raDeg, this._decDeg);
+        const [x, y, z] = sphericalToCartesian(phiThetaDeg.phi, phiThetaDeg.theta, 1);
+        return [x, y, z];
+    }
+    /**
+     * @return {phi, theta} (degrees)
+     */
+    computeHealpixPhiTheta() {
+        return astroDegToSpherical(this._raDeg, this._decDeg);
+    }
+    /** Scale the vector by a given factor */
+    scale(n) {
+        return new Point({ x: this.x * n, y: this.y * n, z: this.z * n }, CoordsType.CARTESIAN);
+    }
+    dot(v) {
+        return this.x * v.x + this.y * v.y + this.z * v.z;
+    }
+    cross(v) {
+        return new Point({
+            x: this.y * v.z - v.y * this.z,
+            y: this.z * v.x - v.z * this.x,
+            z: this.x * v.y - v.x * this.y,
+        }, CoordsType.CARTESIAN);
+    }
+    norm() {
+        const d = 1 / this.length();
+        return new Point({ x: this.x * d, y: this.y * d, z: this.z * d }, CoordsType.CARTESIAN);
+    }
+    length() {
+        return Math.sqrt(this.lengthSquared());
+    }
+    lengthSquared() {
+        return this.x * this.x + this.y * this.y + this.z * this.z;
+    }
+    subtract(v) {
+        return new Point({ x: this.x - v.x, y: this.y - v.y, z: this.z - v.z }, CoordsType.CARTESIAN);
+    }
+    add(v) {
+        return new Point({ x: this.x + v.x, y: this.y + v.y, z: this.z + v.z }, CoordsType.CARTESIAN);
+    }
+    get x() { return this._x; }
+    get y() { return this._y; }
+    get z() { return this._z; }
+    get xyz() { return this._xyz; }
+    get raDeg() { return this._raDeg; }
+    get decDeg() { return this._decDeg; }
+    get raDecDeg() { return this._raDecDeg; }
+    toADQL() {
+        return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
+    }
+    toString() {
+        return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
+    }
+}
+
+;// ./src/utils/FoVUtils.ts
+
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+
+
+
+
+
+class FoVUtils {
+    /**
+     * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
+     * (Kept here for parity; this class doesn’t maintain those fields.)
+     */
+    getMinFoV() {
+        return this._fovY_deg <= this._fovX_deg ? this._fovY_deg : this._fovX_deg;
+    }
+    /**
+     * Compute the FoV polygon as a list of Points (clockwise).
+     * Uses ray picking + frustum planes against a unit sphere.
+     */
+    static getFoVPolygon(
+    // _pMatrix: ReadonlyMat4 | null,
+    camera, canvas, model, healpixGrid, webgl) {
+        // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
+        //   _pMatrix) as ReadonlyMat4;
+        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+        const vMatrix = camera.getCameraMatrix();
+        const mMatrix = model.getModelMatrix();
+        const canvasWidth = canvas.clientWidth;
+        const canvasHeight = canvas.clientHeight;
+        let points = [];
+        // First check: does the sphere cover the whole screen?
+        const intersectionWithModel = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl);
+        if (intersectionWithModel.length > 0) {
+            // Fully covered → grab corners + midpoints (CASE C)
+            const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
+            points = cornersPoints;
+        }
+        else {
+            // Partial coverage: build frustum planes
+            let M = mat4_create();
+            M = mat4_multiply(M, vMatrix, mMatrix);
+            M = mat4_multiply(M, pMatrix, M);
+            const topPlane = [M[3] - M[1], M[7] - M[5], M[11] - M[9], M[15] - M[13]]; // m41-m21, ...
+            const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
+            const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
+            const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
+            const intersectionTopMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl);
+            const intersectionRightMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl);
+            // CASE A: zoomed out, hemisphere fully visible
+            if (intersectionTopMiddle.length === 0 &&
+                intersectionRightMiddle.length === 0) {
+                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
+                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
+                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
+                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
+                points.push(topPoints[0], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], middleLeftTop);
+            }
+            // CASE E: no intersection on top/bottom planes
+            else if (intersectionTopMiddle.length === 0) {
+                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
+                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
+                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
+                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[1], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[1], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
+                points.push(topPoints[0], middleTopRight, rightPoints[0], rightPoints[1], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], leftPoints[1], middleLeftTop);
+            }
+            // CASE D: no intersection on right/left planes
+            else if (intersectionRightMiddle.length === 0) {
+                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
+                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
+                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
+                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[1], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[1], leftPoints[0])[0];
+                points.push(topPoints[0], topPoints[1], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], bottomPoints[1], middleBottomLeft, leftPoints[0], middleLeftTop);
+            }
+            // CASE B: all frustum planes intersect
+            else {
+                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
+                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
+                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
+                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
+                points.push(topPoints[0], topPoints[1], rightPoints[0], rightPoints[1], bottomPoints[0], bottomPoints[1], leftPoints[0], leftPoints[1]);
+            }
+        }
+        return points;
+    }
+    /**
+     * Ray pick against 8 key screen positions (corners + midpoints).
+     * Returns Points in clockwise order starting from top-left.
+     */
+    static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        const topLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl);
+        const middleTop = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl);
+        const topRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl);
+        const middleRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl);
+        const bottomRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl);
+        const middleBottom = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl);
+        const bottomLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl);
+        const middleLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl);
+        const out = [];
+        const pushIf = (ip) => {
+            if (ip.length > 0) {
+                out.push(new Point({ x: ip[0], y: ip[1], z: ip[2] }, CoordsType.CARTESIAN));
+            }
+        };
+        pushIf(topLeft);
+        pushIf(middleTop);
+        pushIf(topRight);
+        pushIf(middleRight);
+        pushIf(bottomRight);
+        pushIf(middleBottom);
+        pushIf(bottomLeft);
+        pushIf(middleLeft);
+        return out;
+    }
+    /** Returns the center point (in J2000) of the current view as a `Point`. */
+    static getCenterJ2000(canvas, healpixGrid, webgl) {
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        const center = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl);
+        if (center.length <= 0)
+            throw Error(`Central point is null`);
+        return new Point({ x: center[0], y: center[1], z: center[2] }, CoordsType.CARTESIAN);
+    }
+    /** Middle point on the unit sphere along the arc between two 3D points. */
+    static computeMiddlePoint(p1, p2) {
+        // midpoint of segment
+        const xm = (p1.x + p2.x) / 2;
+        const ym = (p1.y + p2.y) / 2;
+        const zm = (p1.z + p2.z) / 2;
+        // project the midpoint back to unit sphere
+        const len = Math.hypot(xm, ym, zm) || 1;
+        const x = xm / len;
+        const y = ym / len;
+        const z = zm / len;
+        return [new Point({ x, y, z }, CoordsType.CARTESIAN)];
+    }
+    /**
+     * Nearest intersection point between a frustum plane and the unit sphere,
+     * using the plane normal.
+     */
+    static getNearestSpherePoint(plane) {
+        const [A, B, C, D] = plane;
+        const R = 1;
+        const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
+        const t1 = R * invLen;
+        const t2 = -R * invLen;
+        const P1 = [A * t1, B * t1, C * t1];
+        const P2 = [A * t2, B * t2, C * t2];
+        const den = Math.sqrt(A * A + B * B + C * C) || 1;
+        const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
+        const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
+        const P = dist1 <= dist2 ? P1 : P2;
+        return [new Point({ x: P[0], y: P[1], z: P[2] }, CoordsType.CARTESIAN)];
+    }
+    /**
+     * Intersections between a frustum plane and the unit sphere,
+     * computed via two perpendicular planes.
+     * Returns two points (first from `plane4Circle_1`, second from `plane4Circle_2`).
+     */
+    static getFrustumIntersectionWithSphere(_M, plane4Sphere, plane4Circle_1, plane4Circle_2) {
+        const [A0, B0, C0, D0] = plane4Sphere;
+        // center of the circle (projection of sphere center onto plane)
+        const denom0 = (A0 * A0 + B0 * B0 + C0 * C0) || 1;
+        const x_c = -(A0 * D0) / denom0;
+        const y_c = -(B0 * D0) / denom0;
+        const z_c = -(C0 * D0) / denom0;
+        const d = Math.abs(D0) / Math.sqrt(denom0); // distance from sphere center (0,0,0)
+        const R = 1;
+        const out = [];
+        if (R > d) {
+            const r = Math.sqrt(R * R - d * d);
+            const pick = (plane) => {
+                const [A, B, C, D] = plane;
+                const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
+                const t1 = r * invLen;
+                const t2 = -r * invLen;
+                const P1 = [x_c + A * t1, y_c + B * t1, z_c + C * t1];
+                const P2 = [x_c + A * t2, y_c + B * t2, z_c + C * t2];
+                const den = Math.sqrt(A * A + B * B + C * C) || 1;
+                const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
+                const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
+                return dist1 <= dist2 ? P1 : P2;
+            };
+            const P_intersection_1 = pick(plane4Circle_1);
+            const P_intersection_2 = pick(plane4Circle_2);
+            out.push(new Point({ x: P_intersection_1[0], y: P_intersection_1[1], z: P_intersection_1[2] }, CoordsType.CARTESIAN), new Point({ x: P_intersection_2[0], y: P_intersection_2[1], z: P_intersection_2[2] }, CoordsType.CARTESIAN));
+        }
+        else if (R === d) {
+            // Tangent: both intersections collapse to the circle center on the plane
+            out.push(new Point({ x: x_c, y: y_c, z: z_c }, CoordsType.CARTESIAN), new Point({ x: x_c, y: y_c, z: z_c }, CoordsType.CARTESIAN));
+        }
+        else {
+            // No intersection; return empty to avoid pushing undefined values
+            // console.log('Frustum plane not intersecting the sphere');
+        }
+        return out;
+    }
+    /** Build ADQL string from an array of Points (ra,dec pairs). */
+    static getAstroFoVPolygon(points) {
+        return points.map(p => p.toADQL()).join(',');
+    }
+}
+
+;// ./node_modules/gl-matrix/esm/vec4.js
+
+
+/**
+ * 4 Dimensional Vector
+ * @module vec4
+ */
+
+/**
+ * Creates a new, empty vec4
+ *
+ * @returns {vec4} a new 4D vector
+ */
+function vec4_create() {
+  var out = new ARRAY_TYPE(4);
+  if (ARRAY_TYPE != Float32Array) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 0;
+  }
+  return out;
+}
+
+/**
+ * Creates a new vec4 initialized with values from an existing vector
+ *
+ * @param {ReadonlyVec4} a vector to clone
+ * @returns {vec4} a new 4D vector
+ */
+function vec4_clone(a) {
+  var out = new glMatrix.ARRAY_TYPE(4);
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  out[3] = a[3];
+  return out;
+}
+
+/**
+ * Creates a new vec4 initialized with the given values
+ *
+ * @param {Number} x X component
+ * @param {Number} y Y component
+ * @param {Number} z Z component
+ * @param {Number} w W component
+ * @returns {vec4} a new 4D vector
+ */
+function vec4_fromValues(x, y, z, w) {
+  var out = new glMatrix.ARRAY_TYPE(4);
+  out[0] = x;
+  out[1] = y;
+  out[2] = z;
+  out[3] = w;
+  return out;
+}
+
+/**
+ * Copy the values from one vec4 to another
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the source vector
+ * @returns {vec4} out
+ */
+function vec4_copy(out, a) {
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  out[3] = a[3];
+  return out;
+}
+
+/**
+ * Set the components of a vec4 to the given values
+ *
+ * @param {vec4} out the receiving vector
+ * @param {Number} x X component
+ * @param {Number} y Y component
+ * @param {Number} z Z component
+ * @param {Number} w W component
+ * @returns {vec4} out
+ */
+function vec4_set(out, x, y, z, w) {
+  out[0] = x;
+  out[1] = y;
+  out[2] = z;
+  out[3] = w;
+  return out;
+}
+
+/**
+ * Adds two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_add(out, a, b) {
+  out[0] = a[0] + b[0];
+  out[1] = a[1] + b[1];
+  out[2] = a[2] + b[2];
+  out[3] = a[3] + b[3];
+  return out;
+}
+
+/**
+ * Subtracts vector b from vector a
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_subtract(out, a, b) {
+  out[0] = a[0] - b[0];
+  out[1] = a[1] - b[1];
+  out[2] = a[2] - b[2];
+  out[3] = a[3] - b[3];
+  return out;
+}
+
+/**
+ * Multiplies two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_multiply(out, a, b) {
+  out[0] = a[0] * b[0];
+  out[1] = a[1] * b[1];
+  out[2] = a[2] * b[2];
+  out[3] = a[3] * b[3];
+  return out;
+}
+
+/**
+ * Divides two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_divide(out, a, b) {
+  out[0] = a[0] / b[0];
+  out[1] = a[1] / b[1];
+  out[2] = a[2] / b[2];
+  out[3] = a[3] / b[3];
+  return out;
+}
+
+/**
+ * Math.ceil the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to ceil
+ * @returns {vec4} out
+ */
+function vec4_ceil(out, a) {
+  out[0] = Math.ceil(a[0]);
+  out[1] = Math.ceil(a[1]);
+  out[2] = Math.ceil(a[2]);
+  out[3] = Math.ceil(a[3]);
+  return out;
+}
+
+/**
+ * Math.floor the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to floor
+ * @returns {vec4} out
+ */
+function vec4_floor(out, a) {
+  out[0] = Math.floor(a[0]);
+  out[1] = Math.floor(a[1]);
+  out[2] = Math.floor(a[2]);
+  out[3] = Math.floor(a[3]);
+  return out;
+}
+
+/**
+ * Returns the minimum of two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_min(out, a, b) {
+  out[0] = Math.min(a[0], b[0]);
+  out[1] = Math.min(a[1], b[1]);
+  out[2] = Math.min(a[2], b[2]);
+  out[3] = Math.min(a[3], b[3]);
+  return out;
+}
+
+/**
+ * Returns the maximum of two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_max(out, a, b) {
+  out[0] = Math.max(a[0], b[0]);
+  out[1] = Math.max(a[1], b[1]);
+  out[2] = Math.max(a[2], b[2]);
+  out[3] = Math.max(a[3], b[3]);
+  return out;
+}
+
+/**
+ * symmetric round the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to round
+ * @returns {vec4} out
+ */
+function vec4_round(out, a) {
+  out[0] = glMatrix.round(a[0]);
+  out[1] = glMatrix.round(a[1]);
+  out[2] = glMatrix.round(a[2]);
+  out[3] = glMatrix.round(a[3]);
+  return out;
+}
+
+/**
+ * Scales a vec4 by a scalar number
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the vector to scale
+ * @param {Number} b amount to scale the vector by
+ * @returns {vec4} out
+ */
+function vec4_scale(out, a, b) {
+  out[0] = a[0] * b;
+  out[1] = a[1] * b;
+  out[2] = a[2] * b;
+  out[3] = a[3] * b;
+  return out;
+}
+
+/**
+ * Adds two vec4's after scaling the second operand by a scalar value
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @param {Number} scale the amount to scale b by before adding
+ * @returns {vec4} out
+ */
+function vec4_scaleAndAdd(out, a, b, scale) {
+  out[0] = a[0] + b[0] * scale;
+  out[1] = a[1] + b[1] * scale;
+  out[2] = a[2] + b[2] * scale;
+  out[3] = a[3] + b[3] * scale;
+  return out;
+}
+
+/**
+ * Calculates the euclidian distance between two vec4's
+ *
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {Number} distance between a and b
+ */
+function vec4_distance(a, b) {
+  var x = b[0] - a[0];
+  var y = b[1] - a[1];
+  var z = b[2] - a[2];
+  var w = b[3] - a[3];
+  return Math.sqrt(x * x + y * y + z * z + w * w);
+}
+
+/**
+ * Calculates the squared euclidian distance between two vec4's
+ *
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {Number} squared distance between a and b
+ */
+function vec4_squaredDistance(a, b) {
+  var x = b[0] - a[0];
+  var y = b[1] - a[1];
+  var z = b[2] - a[2];
+  var w = b[3] - a[3];
+  return x * x + y * y + z * z + w * w;
+}
+
+/**
+ * Calculates the length of a vec4
+ *
+ * @param {ReadonlyVec4} a vector to calculate length of
+ * @returns {Number} length of a
+ */
+function vec4_length(a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var w = a[3];
+  return Math.sqrt(x * x + y * y + z * z + w * w);
+}
+
+/**
+ * Calculates the squared length of a vec4
+ *
+ * @param {ReadonlyVec4} a vector to calculate squared length of
+ * @returns {Number} squared length of a
+ */
+function vec4_squaredLength(a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var w = a[3];
+  return x * x + y * y + z * z + w * w;
+}
+
+/**
+ * Negates the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to negate
+ * @returns {vec4} out
+ */
+function vec4_negate(out, a) {
+  out[0] = -a[0];
+  out[1] = -a[1];
+  out[2] = -a[2];
+  out[3] = -a[3];
+  return out;
+}
+
+/**
+ * Returns the inverse of the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to invert
+ * @returns {vec4} out
+ */
+function vec4_inverse(out, a) {
+  out[0] = 1.0 / a[0];
+  out[1] = 1.0 / a[1];
+  out[2] = 1.0 / a[2];
+  out[3] = 1.0 / a[3];
+  return out;
+}
+
+/**
+ * Normalize a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to normalize
+ * @returns {vec4} out
+ */
+function vec4_normalize(out, a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var w = a[3];
+  var len = x * x + y * y + z * z + w * w;
+  if (len > 0) {
+    len = 1 / Math.sqrt(len);
+  }
+  out[0] = x * len;
+  out[1] = y * len;
+  out[2] = z * len;
+  out[3] = w * len;
+  return out;
+}
+
+/**
+ * Calculates the dot product of two vec4's
+ *
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {Number} dot product of a and b
+ */
+function dot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+}
+
+/**
+ * Returns the cross-product of three vectors in a 4-dimensional space
+ *
+ * @param {ReadonlyVec4} out the receiving vector
+ * @param {ReadonlyVec4} u the first vector
+ * @param {ReadonlyVec4} v the second vector
+ * @param {ReadonlyVec4} w the third vector
+ * @returns {vec4} result
+ */
+function vec4_cross(out, u, v, w) {
+  var A = v[0] * w[1] - v[1] * w[0],
+    B = v[0] * w[2] - v[2] * w[0],
+    C = v[0] * w[3] - v[3] * w[0],
+    D = v[1] * w[2] - v[2] * w[1],
+    E = v[1] * w[3] - v[3] * w[1],
+    F = v[2] * w[3] - v[3] * w[2];
+  var G = u[0];
+  var H = u[1];
+  var I = u[2];
+  var J = u[3];
+  out[0] = H * F - I * E + J * D;
+  out[1] = -(G * F) + I * C - J * B;
+  out[2] = G * E - H * C + J * A;
+  out[3] = -(G * D) + H * B - I * A;
+  return out;
+}
+
+/**
+ * Performs a linear interpolation between two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec4} out
+ */
+function vec4_lerp(out, a, b, t) {
+  var ax = a[0];
+  var ay = a[1];
+  var az = a[2];
+  var aw = a[3];
+  out[0] = ax + t * (b[0] - ax);
+  out[1] = ay + t * (b[1] - ay);
+  out[2] = az + t * (b[2] - az);
+  out[3] = aw + t * (b[3] - aw);
+  return out;
+}
+
+/**
+ * Generates a random vector with the given scale
+ *
+ * @param {vec4} out the receiving vector
+ * @param {Number} [scale] Length of the resulting vector. If omitted, a unit vector will be returned
+ * @returns {vec4} out
+ */
+function vec4_random(out, scale) {
+  scale = scale === undefined ? 1.0 : scale;
+
+  // Marsaglia, George. Choosing a Point from the Surface of a
+  // Sphere. Ann. Math. Statist. 43 (1972), no. 2, 645--646.
+  // http://projecteuclid.org/euclid.aoms/1177692644;
+  var v1, v2, v3, v4;
+  var s1, s2;
+  var rand;
+  rand = glMatrix.RANDOM();
+  v1 = rand * 2 - 1;
+  v2 = (4 * glMatrix.RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
+  s1 = v1 * v1 + v2 * v2;
+  rand = glMatrix.RANDOM();
+  v3 = rand * 2 - 1;
+  v4 = (4 * glMatrix.RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
+  s2 = v3 * v3 + v4 * v4;
+  var d = Math.sqrt((1 - s1) / s2);
+  out[0] = scale * v1;
+  out[1] = scale * v2;
+  out[2] = scale * v3 * d;
+  out[3] = scale * v4 * d;
+  return out;
+}
+
+/**
+ * Transforms the vec4 with a mat4.
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the vector to transform
+ * @param {ReadonlyMat4} m matrix to transform with
+ * @returns {vec4} out
+ */
+function vec4_transformMat4(out, a, m) {
+  var x = a[0],
+    y = a[1],
+    z = a[2],
+    w = a[3];
+  out[0] = m[0] * x + m[4] * y + m[8] * z + m[12] * w;
+  out[1] = m[1] * x + m[5] * y + m[9] * z + m[13] * w;
+  out[2] = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
+  out[3] = m[3] * x + m[7] * y + m[11] * z + m[15] * w;
+  return out;
+}
+
+/**
+ * Transforms the vec4 with a quat
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the vector to transform
+ * @param {ReadonlyQuat} q normalized quaternion to transform with
+ * @returns {vec4} out
+ */
+function vec4_transformQuat(out, a, q) {
+  // Fast Vector Rotation using Quaternions by Robert Eisele
+  // https://raw.org/proof/vector-rotation-using-quaternions/
+
+  var qx = q[0],
+    qy = q[1],
+    qz = q[2],
+    qw = q[3];
+  var vx = a[0],
+    vy = a[1],
+    vz = a[2];
+
+  // t = q x v
+  var tx = qy * vz - qz * vy;
+  var ty = qz * vx - qx * vz;
+  var tz = qx * vy - qy * vx;
+
+  // t = 2t
+  tx = tx + tx;
+  ty = ty + ty;
+  tz = tz + tz;
+
+  // v + w t + q x t
+  out[0] = vx + qw * tx + qy * tz - qz * ty;
+  out[1] = vy + qw * ty + qz * tx - qx * tz;
+  out[2] = vz + qw * tz + qx * ty - qy * tx;
+  out[3] = a[3];
+  return out;
+}
+
+/**
+ * Set the components of a vec4 to zero
+ *
+ * @param {vec4} out the receiving vector
+ * @returns {vec4} out
+ */
+function vec4_zero(out) {
+  out[0] = 0.0;
+  out[1] = 0.0;
+  out[2] = 0.0;
+  out[3] = 0.0;
+  return out;
+}
+
+/**
+ * Returns a string representation of a vector
+ *
+ * @param {ReadonlyVec4} a vector to represent as a string
+ * @returns {String} string representation of the vector
+ */
+function vec4_str(a) {
+  return "vec4(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ")";
+}
+
+/**
+ * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
+ *
+ * @param {ReadonlyVec4} a The first vector.
+ * @param {ReadonlyVec4} b The second vector.
+ * @returns {Boolean} True if the vectors are equal, false otherwise.
+ */
+function vec4_exactEquals(a, b) {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
+}
+
+/**
+ * Returns whether or not the vectors have approximately the same elements in the same position.
+ *
+ * @param {ReadonlyVec4} a The first vector.
+ * @param {ReadonlyVec4} b The second vector.
+ * @returns {Boolean} True if the vectors are equal, false otherwise.
+ */
+function vec4_equals(a, b) {
+  var a0 = a[0],
+    a1 = a[1],
+    a2 = a[2],
+    a3 = a[3];
+  var b0 = b[0],
+    b1 = b[1],
+    b2 = b[2],
+    b3 = b[3];
+  return Math.abs(a0 - b0) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3));
+}
+
+/**
+ * Alias for {@link vec4.subtract}
+ * @function
+ */
+var vec4_sub = (/* unused pure expression or super */ null && (vec4_subtract));
+
+/**
+ * Alias for {@link vec4.multiply}
+ * @function
+ */
+var vec4_mul = (/* unused pure expression or super */ null && (vec4_multiply));
+
+/**
+ * Alias for {@link vec4.divide}
+ * @function
+ */
+var vec4_div = (/* unused pure expression or super */ null && (vec4_divide));
+
+/**
+ * Alias for {@link vec4.distance}
+ * @function
+ */
+var vec4_dist = (/* unused pure expression or super */ null && (vec4_distance));
+
+/**
+ * Alias for {@link vec4.squaredDistance}
+ * @function
+ */
+var vec4_sqrDist = (/* unused pure expression or super */ null && (vec4_squaredDistance));
+
+/**
+ * Alias for {@link vec4.length}
+ * @function
+ */
+var vec4_len = (/* unused pure expression or super */ null && (vec4_length));
+
+/**
+ * Alias for {@link vec4.squaredLength}
+ * @function
+ */
+var vec4_sqrLen = (/* unused pure expression or super */ null && (vec4_squaredLength));
+
+/**
+ * Perform some operation over an array of vec4s.
+ *
+ * @param {Array} a the array of vectors to iterate over
+ * @param {Number} stride Number of elements between the start of each vec4. If 0 assumes tightly packed
+ * @param {Number} offset Number of elements to skip at the beginning of the array
+ * @param {Number} count Number of vec4s to iterate over. If 0 iterates over entire array
+ * @param {Function} fn Function to call for each vector in the array
+ * @param {Object} [arg] additional argument to pass to fn
+ * @returns {Array} a
+ * @function
+ */
+var vec4_forEach = function () {
+  var vec = vec4_create();
+  return function (a, stride, offset, count, fn, arg) {
+    var i, l;
+    if (!stride) {
+      stride = 4;
+    }
+    if (!offset) {
+      offset = 0;
+    }
+    if (count) {
+      l = Math.min(count * stride + offset, a.length);
+    } else {
+      l = a.length;
+    }
+    for (i = offset; i < l; i += stride) {
+      vec[0] = a[i];
+      vec[1] = a[i + 1];
+      vec[2] = a[i + 2];
+      vec[3] = a[i + 3];
+      fn(vec, vec, arg);
+      a[i] = vec[0];
+      a[i + 1] = vec[1];
+      a[i + 2] = vec[2];
+      a[i + 3] = vec[3];
+    }
+    return a;
+  };
+}();
+;// ./src/shader/GridShaderManager.ts
+// GridShaderManager.ts
+
+class GridShaderManager {
+    static healpixGridVS() {
+        return `#version 300 es
+        in vec4 aCatPosition;
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+
+        void main() {
+            gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+            gl_PointSize = 7.0;
+        }`;
+    }
+    static healpixGridFS() {
+        return `#version 300 es
+        precision mediump float;
+
+        uniform vec4 u_fragcolor;
+        out vec4 fragColor;
+
+        void main() {
+            // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            fragColor = u_fragcolor;
+        }`;
+    }
+}
+/* harmony default export */ const shader_GridShaderManager = (GridShaderManager);
+
+;// ./src/model/grid/GridTextHelper.ts
+/**
+ * @author Fabrizio Giordano (Fab)
+ * @param in_radius - number
+ * @param in_gl - GL context
+ * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
+ */
+class GridTextHelper {
+    _divEqContainerElement;
+    _divHPXContainerElement;
+    _divSets;
+    _divSetNdx;
+    constructor() {
+        this._divEqContainerElement = document.querySelector('#gridcoords');
+        this._divHPXContainerElement = document.querySelector('#gridhpx');
+        this._divSetNdx = 0;
+        this._divSets = [];
+    }
+    initHtml() {
+        // Kept for API parity; nothing required here with current logic.
+    }
+    resetDivSets() {
+        // Hide remaining divs and reset index
+        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
+            this._divSets[this._divSetNdx].style.display = 'none';
+        }
+        this._divSetNdx = 0;
+    }
+    /**
+     * Add / reuse a floating label for HPX coordinates
+     */
+    addHPXDivSet(msg, x, y) {
+        let divSet = this._divSets[this._divSetNdx++];
+        // Create on demand
+        if (!divSet) {
+            const div = document.createElement('div');
+            const textNode = document.createTextNode('');
+            div.className = 'floating-div-ra'; // style like RA tags
+            div.appendChild(textNode);
+            if (!this._divHPXContainerElement) {
+                this._divHPXContainerElement = document.querySelector('#gridhpx');
+            }
+            if (!this._divHPXContainerElement) {
+                // If container is still missing, abort gracefully
+                return;
+            }
+            this._divHPXContainerElement.appendChild(div);
+            divSet = { div, textNode, style: div.style };
+            this._divSets.push(divSet);
+        }
+        // Show & position
+        divSet.style.display = 'block';
+        divSet.style.left = `${Math.floor(x + 25)}px`;
+        divSet.style.top = `${Math.floor(y)}px`;
+        divSet.textNode.nodeValue = msg;
+    }
+    /**
+     * Add / reuse a floating label for Equatorial coords
+     * @param type 'ra' or 'dec'
+     */
+    addEqDivSet(msg, x, y, type) {
+        let divSet = this._divSets[this._divSetNdx++];
+        if (!divSet) {
+            const div = document.createElement('div');
+            const textNode = document.createTextNode('');
+            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
+            div.appendChild(textNode);
+            if (!this._divEqContainerElement) {
+                this._divEqContainerElement = document.querySelector('#gridcoords');
+            }
+            if (!this._divEqContainerElement) {
+                // If container is still missing, abort gracefully
+                return;
+            }
+            this._divEqContainerElement.appendChild(div);
+            divSet = { div, textNode, style: div.style };
+            this._divSets.push(divSet);
+        }
+        divSet.style.display = 'block';
+        if (type === 'ra') {
+            divSet.style.left = `${Math.floor(x + 25)}px`;
+            divSet.style.top = `${Math.floor(y)}px`;
+        }
+        else {
+            divSet.style.left = `${Math.floor(x)}px`;
+            divSet.style.top = `${Math.floor(y + 25)}px`;
+        }
+        divSet.textNode.nodeValue = msg;
+    }
+}
+// export const gridTextHelper = new GridTextHelper();
+/* harmony default export */ const grid_GridTextHelper = (GridTextHelper);
+
+;// ./src/model/FoV.ts
+
+/**
+ * FoV singleton (TypeScript)
+ * - Uses computePerspectiveMatrixSingleton.pMatrix
+ * - Guards acos domain (numeric safety)
+ * - Uses vec3.transformMat4 instead of custom mat4*vec3
+ * - Keeps original “insideSphere ? 360 - angle : angle” behavior
+ */
+
+
+
+
+
+class FoV {
+    fovXDeg = 180;
+    fovYDeg = 180;
+    ratio = +0;
+    _minFoV = 180;
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
+    }
+    /** Recomputes FoV for current camera + projection */
+    getFoV(insideSphere, healpixGridSingleton, webgl) {
+        // const gl = webgl
+        const gl = this._webgl;
+        if (!gl || !gl.canvas) {
+            // Handle the error or assign default values
+            this.fovXDeg = 180;
+            this.fovYDeg = 180;
+            this._minFoV = this.minFoV;
+            return this;
+        }
+        // horizontal FoV: ray through (centerY)
+        // const x = this.computeAngle(0, gl.canvas.height / 2, insideSphere)
+        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton);
+        this.fovXDeg = xFoVComputed.angleDeg;
+        // this.xDistance = xFoVComputed.distance
+        // this.xAngleRatio = this.fovXDeg / this.xDistance
+        // vertical FoV: ray through (centerX)
+        // this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere)
+        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton);
+        this.fovYDeg = yFoVComputed.angleDeg;
+        // this.yDistance = yFoVComputed.distance
+        // this.yAngleRatio = this.fovYDeg / this.yDistance
+        this._minFoV = this.minFoV;
+        this.ratio = this.computeRatio();
+        return this;
+    }
+    computeRatio() {
+        const camera = src_Global.camera;
+        if (!camera)
+            throw Error("Camera not defined");
+        const pos = camera.getCameraPosition();
+        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
+        const ratio = distanceFromCenter / this.fovYDeg;
+        return ratio;
+    }
+    changeMinFov(deg) {
+        console.log("inside changeMinFov");
+        if (this.fovYDeg <= this.fovXDeg) {
+            this.fovYDeg = deg;
+        }
+        else {
+            this.fovXDeg = deg;
+        }
+        console.log("changeMinFov: ping");
+        this.minFoV;
+        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
+    }
+    get minFoV() {
+        this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        return this._minFoV;
+    }
+    computeDistanceFromAngle(angleDeg) {
+        const desiredFoV = angleDeg;
+        const distance = desiredFoV * this.ratio;
+        // return Math.abs(distance)
+        return distance;
+    }
+    /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
+    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton) {
+        const camera = src_Global.camera;
+        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+        if (!pMatrix) {
+            // Handle the error or assign a default value
+            console.warn('FoV: projection matrix is null');
+            return { angleDeg: 180, distance: 1 };
+        }
+        if (!camera) {
+            // Handle the error or assign a default value
+            console.warn('FoV: camera is null');
+            return { angleDeg: 180, distance: 1 };
+        }
+        const rayWorld = utils_RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl);
+        const intersectionDistance = utils_RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
+        let angleDeg;
+        if (intersectionDistance > 0) {
+            // world-space intersection point on the sphere
+            const hit = create();
+            scale(hit, rayWorld, intersectionDistance);
+            add(hit, camera.getCameraPosition(), hit);
+            const center = healpixGridSingleton.center;
+            // vectors from sphere center
+            const vHit = create();
+            subtract(vHit, hit, center);
+            // reference vector: rotate world +Z into current camera orientation, then from center
+            const refWorldZ = fromValues(center[0], center[1], center[2] + healpixGridSingleton.radius);
+            const vInv = mat4_create();
+            invert(vInv, camera.getCameraMatrix());
+            const refCamZ = create();
+            transformMat4(refCamZ, refWorldZ, vInv);
+            const vRef = create();
+            subtract(vRef, refCamZ, center);
+            // angle between vHit and vRef, doubled
+            const dot = vec3_dot(vHit, vRef);
+            const n1 = vec3_length(vHit);
+            const n2 = vec3_length(vRef);
+            // numeric safety for acos
+            const c = Math.min(1, Math.max(-1, dot / (n1 * n2)));
+            const angleRad = Math.acos(c);
+            angleDeg = 2 * radToDeg(angleRad);
+        }
+        else {
+            angleDeg = 180;
+        }
+        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
+        // return insideSphere ? 360 - angleDeg : angleDeg
+        return { angleDeg: finalAngle, distance: intersectionDistance };
+    }
+    /**
+   * Computes the camera position (x,y,z) along the current view direction that would
+   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
+   * This method does NOT mutate the camera; it only returns the suggested position.
+   *
+   * Geometry: for a sphere of radius R observed from distance d (from center),
+   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
+   * along the tighter axis; we solve for d and place the camera on the current
+   * center→camera direction with that distance.
+   *
+   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
+   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
+   */
+    computeCameraPositionForMinFoV(targetMinFoVDeg) {
+        // const camera = global.camera
+        // const center = healpixGridSingleton.center
+        // const R = healpixGridSingleton.radius
+        // if (!camera) {
+        //   console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.')
+        //   return [center[0], center[1], center[2] + 2 * R]
+        // }
+        // // Clamp and validate input
+        // const eps = 1e-6
+        // const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg))
+        // const halfRad = (clamped * Math.PI / 180) * 0.5
+        // // Distance from center needed to achieve the angular diameter
+        // // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
+        // const sinHalf = Math.sin(halfRad)
+        // if (sinHalf <= 0) {
+        //   console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.')
+        //   return [center[0], center[1], center[2] + 2 * R]
+        // }
+        // let d = R / sinHalf
+        // // Ensure we remain strictly outside the sphere
+        // d = Math.max(d, R + 1e-4)
+        // // Use the current center→camera direction to keep orientation
+        // const camPos = camera.getCameraPosition()
+        // let dirX = camPos[0] - center[0]
+        // let dirY = camPos[1] - center[1]
+        // let dirZ = camPos[2] - center[2]
+        // const len = Math.hypot(dirX, dirY, dirZ)
+        // if (len < eps) {
+        //   // If somehow at the center, use +Z as a default direction
+        //   dirX = 0; dirY = 0; dirZ = 1;
+        // } else {
+        //   dirX /= len
+        //   dirY /= len
+        //   dirZ /= len
+        // }
+        // const newX = center[0] + dirX * d
+        // const newY = center[1] + dirY * d
+        // const newZ = center[2] + dirZ * d
+        // return [newX, newY, newZ]
+        return [0, 0, 0];
+    }
+    /**
+       * Computes the camera world-space position required to achieve a target FoV (deg),
+       * keeping the same viewing direction. Acts as the inverse of computeAngle().
+       *
+       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
+       * @param canvasWidth  canvas width in pixels
+       * @param canvasHeight canvas height in pixels
+       * @returns [x, y, z] coordinates for the new camera position
+       */
+    computeCameraPositionForFoV(targetFoVDeg) {
+        // const camera = global.camera;
+        // const center = healpixGridSingleton.center;
+        // const R = healpixGridSingleton.radius;
+        // if (!camera) {
+        //   console.warn("FoV.computeCameraPositionForFoV: camera missing.");
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // const eps = 1e-6;
+        // const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
+        // const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
+        // // Distance from center that yields this FoV
+        // const sinHalf = Math.sin(halfRad);
+        // if (sinHalf <= 0) {
+        //   console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // let d = R / sinHalf;
+        // // Slightly outside sphere to avoid clipping
+        // d = Math.max(d, R + 1e-4);
+        // // Get current viewing direction
+        // const camPos = camera.getCameraPosition();
+        // let dirX = camPos[0] - center[0];
+        // let dirY = camPos[1] - center[1];
+        // let dirZ = camPos[2] - center[2];
+        // const len = Math.hypot(dirX, dirY, dirZ);
+        // if (len < eps) {
+        //   dirX = 0; dirY = 0; dirZ = 1;
+        // } else {
+        //   dirX /= len;
+        //   dirY /= len;
+        //   dirZ /= len;
+        // }
+        // const newX = center[0] + dirX * d;
+        // const newY = center[1] + dirY * d;
+        // const newZ = center[2] + dirZ * d;
+        // return [newX, newY, newZ];
+        return [0, 0, 0];
+    }
+    /**
+   * Return a camera position such that the sphere's apparent angular diameter
+   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
+   * Keeps current view direction; does not mutate the camera.
+   *
+   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
+   * @returns [x,y,z] world position
+   */
+    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
+        // const camera = global.camera;
+        // const center = healpixGridSingleton.center;
+        // const R = healpixGridSingleton.radius;
+        // if (!camera) {
+        //   console.warn('computeCameraPositionForAngularDiameter: camera missing.');
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // const eps = 1e-6;
+        // const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
+        // const half = (α * Math.PI) / 360.0;
+        // const sinHalf = Math.sin(half);
+        // // d = R / sin(α/2)
+        // let d = R / sinHalf;
+        // d = Math.max(d, R + 1e-4); // stay outside
+        // // project along current center→camera direction
+        // const [cx, cy, cz] = center as [number, number, number];
+        // const [px, py, pz] = camera.getCameraPosition();
+        // let dx = px - cx, dy = py - cy, dz = pz - cz;
+        // const L = Math.hypot(dx, dy, dz);
+        // if (L < eps) { dx = 0; dy = 0; dz = 1; } else { dx /= L; dy /= L; dz /= L; }
+        // return [cx + dx * d, cy + dy * d, cz + dz * d];
+        return [0, 0, 0];
+    }
+}
+
+;// ./src/model/Point2D.ts
+class Point2D {
+    _x;
+    _y;
+    constructor(x, y) {
+        this._x = x;
+        this._y = y;
+    }
+    get x() {
+        return this._x;
+    }
+    get y() {
+        return this._y;
+    }
+}
+/* harmony default export */ const model_Point2D = (Point2D);
+
+;// ./src/utils/GeomUtils.ts
+
+
+
+class GeomUtils {
+    // Orthodromic (great-circle) distance in radians
+    static orthodromicDistance(p1, p2) {
+        return Math.acos(Math.sin(p1.decDeg * Math.PI / 180) * Math.sin(p2.decDeg * Math.PI / 180) +
+            Math.cos(p1.decDeg * Math.PI / 180) * Math.cos(p2.decDeg * Math.PI / 180) *
+                Math.cos((p2.raDeg - p1.raDeg) * Math.PI / 180));
+    }
+    /**
+     * Decide the 2D projection strategy and pre-project polygons for point-in-polygon tests.
+     * Returns the projected polygons + bbox + a flag describing the projection used:
+     * 0 → all points in same hemisphere with |Dec| > 10 → stereographic-like projection using x,y from 3D
+     * 1 → all points in equatorial belt (|Dec| < 10) → use RA/Dec directly
+     * 2 → equatorial belt and polygon crosses RA=0 → shift RA>180 by -360
+     */
+    static computeSelectionObject(polygons) {
+        let poly4selection = [];
+        let flag = 0;
+        let maxx;
+        let maxy;
+        let minx;
+        let miny;
+        const DEC_THRESHOLD = 10;
+        //  1 → northern hemisphere (Dec > +10), -1 → southern (Dec < -10), 0 → equatorial belt
+        let hemisphere = 0;
+        if (polygons[0][0].decDeg >= DEC_THRESHOLD) {
+            hemisphere = 1;
+        }
+        else if (polygons[0][0].decDeg <= -DEC_THRESHOLD) {
+            hemisphere = -1;
+        }
+        else {
+            flag = 1;
+        }
+        // Case flag = 0 → stereographic-like projection using x,y,z from 3D point
+        if (flag === 0) {
+            const first = GeomUtils.projectIn2D(polygons[0][0]);
+            maxx = minx = first.x;
+            maxy = miny = first.y;
+            for (const currpoly of polygons) {
+                const selpoly = [];
+                for (const point of currpoly) {
+                    // If a point violates the hemisphere constraint, fall back to belt logic
+                    if ((point.decDeg > hemisphere * DEC_THRESHOLD && hemisphere === -1) ||
+                        (point.decDeg < hemisphere * DEC_THRESHOLD && hemisphere === 1)) {
+                        flag = 1;
+                        poly4selection = [];
+                        break;
+                    }
+                    const p = GeomUtils.projectIn2D(point);
+                    selpoly.push(p);
+                    if (p.x > maxx)
+                        maxx = p.x;
+                    if (p.y > maxy)
+                        maxy = p.y;
+                    if (p.x < minx)
+                        minx = p.x;
+                    if (p.y < miny)
+                        miny = p.y;
+                }
+                poly4selection.push(selpoly);
+            }
+        }
+        if (flag === 0) {
+            return {
+                poly4selection,
+                flag,
+                maxx: maxx,
+                maxy: maxy,
+                minx: minx,
+                miny: miny,
+            };
+        }
+        // Case flag = 1 or 2 → work directly in (RA,Dec)
+        const RA_THRESHOLD = 180;
+        let belowThreshold = polygons[0][0].raDeg < RA_THRESHOLD;
+        maxx = minx = polygons[0][0].raDeg;
+        maxy = miny = polygons[0][0].decDeg;
+        for (const currpoly of polygons) {
+            const selpoly = [];
+            for (const point of currpoly) {
+                const p = new model_Point2D(point.raDeg, point.decDeg);
+                selpoly.push(p);
+                if (point.raDeg > maxx)
+                    maxx = point.raDeg;
+                if (point.decDeg > maxy)
+                    maxy = point.decDeg;
+                if (point.raDeg < minx)
+                    minx = point.raDeg;
+                if (point.decDeg < miny)
+                    miny = point.decDeg;
+                // Detect crossing of RA=0 meridian
+                if ((point.raDeg >= RA_THRESHOLD && belowThreshold) ||
+                    (point.raDeg <= RA_THRESHOLD && !belowThreshold)) {
+                    flag = 2;
+                    poly4selection = [];
+                    break;
+                }
+            }
+            poly4selection.push(selpoly);
+        }
+        if (flag === 1) {
+            return {
+                poly4selection,
+                flag,
+                maxx,
+                maxy,
+                minx,
+                miny,
+            };
+        }
+        // Case flag = 2 → shift RA>180 by -360 to unwrap around RA=0
+        let startRA = polygons[0][0].raDeg;
+        maxx = startRA >= RA_THRESHOLD ? startRA - 360 : startRA;
+        maxy = polygons[0][0].decDeg;
+        minx = maxx;
+        miny = maxy;
+        for (const currpoly of polygons) {
+            const selpoly = [];
+            for (const point of currpoly) {
+                const curra = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
+                if (curra > maxx)
+                    maxx = curra;
+                if (point.decDeg > maxy)
+                    maxy = point.decDeg;
+                if (curra < minx)
+                    minx = curra;
+                if (point.decDeg < miny)
+                    miny = point.decDeg;
+                selpoly.push(new model_Point2D(curra, point.decDeg));
+            }
+            poly4selection.push(selpoly);
+        }
+        return {
+            poly4selection,
+            flag,
+            maxx,
+            maxy,
+            minx,
+            miny,
+        };
+    }
+    /** Stereographic projection from 3D point on unit sphere onto plane */
+    static stereographic(point) {
+        const x = Number(point.xyz[0]);
+        const y = Number(point.xyz[1]);
+        const z = Number(point.xyz[2]);
+        return {
+            x: (2 * x) / (1 - z),
+            y: (2 * y) / (1 - z),
+        };
+    }
+    static projectIn2D(point) {
+        const p = GeomUtils.stereographic(point);
+        return new model_Point2D(p.x, p.y);
+    }
+    /**
+     * Robust point-in-polygon (ray casting) using the precomputed selection object.
+     * Works with any of the three flags (0,1,2).
+     */
+    static checkPointInsidePolygon5(selectionObj, point) {
+        let p0;
+        if (selectionObj.flag === 0) {
+            p0 = GeomUtils.projectIn2D(point);
+        }
+        else if (selectionObj.flag === 1) {
+            p0 = new model_Point2D(point.raDeg, point.decDeg);
+        }
+        else {
+            const RA_THRESHOLD = 180;
+            const raShifted = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
+            p0 = new model_Point2D(raShifted, point.decDeg);
+        }
+        const p1 = new model_Point2D(p0.x, p0.y + 2 * Math.abs(selectionObj.maxy - selectionObj.miny));
+        // quick reject by bbox
+        if (p0.x > selectionObj.maxx ||
+            p0.x < selectionObj.minx ||
+            p0.y > selectionObj.maxy ||
+            p0.y < selectionObj.miny) {
+            return false;
+        }
+        // Ray casting against each sub-polygon
+        for (const currpoly of selectionObj.poly4selection) {
+            let intersections = 0;
+            for (let i = 0; i < currpoly.length - 1; i++) {
+                const p2 = currpoly[i];
+                const p3 = currpoly[i + 1];
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            // close the polygon: last with first
+            {
+                const p2 = currpoly[currpoly.length - 1];
+                const p3 = currpoly[0];
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            if (intersections % 2 === 1) {
+                return true; // inside this subpolygon
+            }
+        }
+        return false;
+    }
+    // Legacy version kept for reference; now typed and using getters
+    static checkPointInsidePolygon4(polygons, point) {
+        const p0 = GeomUtils.projectIn2D(point);
+        let maxdist = point.raDeg + 15;
+        if (maxdist > 360)
+            maxdist = point.raDeg - 15;
+        const p1point = new Point({ raDeg: maxdist, decDeg: point.decDeg }, CoordsType.ASTRO);
+        const p1 = GeomUtils.projectIn2D(p1point);
+        for (const currpoly of polygons) {
+            let intersections = 0;
+            for (let i = 0; i < currpoly.length - 1; i++) {
+                const p2 = GeomUtils.projectIn2D(currpoly[i]);
+                const p3 = GeomUtils.projectIn2D(currpoly[i + 1]);
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            {
+                const p2 = GeomUtils.projectIn2D(currpoly[currpoly.length - 1]);
+                const p3 = GeomUtils.projectIn2D(currpoly[0]);
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            if (intersections % 2 === 1)
+                return true;
+        }
+        return false;
+    }
+}
+/* harmony default export */ const utils_GeomUtils = (GeomUtils);
+
+;// ./src/model/hips/Tile.ts
+// Tile.ts
+
+// import { visibleTilesManager } from './VisibleTilesManager.js'
+
+// ------------------------------------------------------------------------
+class Tile {
+    _hips;
+    _tileno;
+    _baseurl;
+    _order;
+    _format;
+    _maxorder;
+    _isGalacticHips;
+    _ready = false;
+    _abort = false;
+    _image;
+    _textureLoaded = false;
+    _texture;
+    _texurl = '';
+    _hipsShaderIndex = 0;
+    _cacheTime0;
+    _inView = true;
+    _amIStillInFoV_requsetID;
+    // geometry buffers
+    vertexPosition = [];
+    vertexPositionBuffer = [];
+    vertexIndices = new Uint16Array();
+    vertexIndexBuffer;
+    _tileBuffer;
+    opacity = 1.0;
+    _webgl;
+    _visibleTileManager;
+    _hipsShaderProgram;
+    constructor(tileno, order, hips, tileBuffer, webgl, visibleTileManager, hipsShaderProgram) {
+        this._hipsShaderProgram = hipsShaderProgram;
+        this._visibleTileManager = visibleTileManager;
+        this._webgl = webgl;
+        this._tileBuffer = tileBuffer;
+        this._hips = hips;
+        this._tileno = tileno;
+        this._format = hips.format;
+        this._baseurl = hips.baseURL;
+        this._maxorder = hips.maxOrder;
+        this._isGalacticHips = hips.isGalacticHips;
+        this._order = order;
+        this._amIStillInFoV_requsetID = window.setInterval(() => {
+            this.amIStillInFoV();
+        }, 5000);
+        this.initImage();
+    }
+    destroyIntervals() {
+        window.clearInterval(this._amIStillInFoV_requsetID);
+    }
+    getReadyState() {
+        return this._ready;
+    }
+    get cacheTime0() {
+        return this._cacheTime0;
+    }
+    resetCacheTime0() {
+        this._cacheTime0 = undefined;
+    }
+    setCacheTime0() {
+        this._cacheTime0 = new Date().getTime();
+    }
+    initImage() {
+        this._image = new Image();
+        const dirnumber = Math.floor(this._tileno / 10000) * 10000;
+        this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
+        this._image.onload = () => this.imageLoaded();
+        this._image.onerror = () => {
+            console.error('File not found?', this._texurl);
+            this._ready = false;
+            this._abort = true;
+            this.destroyIntervals();
+        };
+        this._image.crossOrigin = 'anonymous';
+        this._image.src = this._texurl;
+    }
+    imageLoaded() {
+        this.textureLoaded();
+        this.initModelBuffer();
+        const gl = this._webgl;
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
+        this._textureLoaded = true;
+        if (this._textureLoaded)
+            this._ready = true;
+    }
+    textureLoaded() {
+        const gl = this._webgl;
+        this._hipsShaderProgram.enableProgram();
+        // hipsShaderProgram.enableProgram()
+        this._texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        // FIX: use the sampler location we fetched in enableShaders()
+        gl.uniform1i(this._hipsShaderProgram.locations.sampler, this._hipsShaderIndex);
+        // gl.uniform1i((hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
+        if (!gl.isTexture(this._texture)) {
+            console.warn('Texture creation failed');
+        }
+    }
+    initModelBuffer() {
+        const gl = this._webgl;
+        this.vertexPosition = [];
+        this.vertexPositionBuffer = [];
+        this.vertexIndices = new Uint16Array();
+        const reforder = fovHelper.getRefOrder(this._order);
+        const orighealpix = src_Global.getHealpix(this._order);
+        const origxyf = orighealpix.nest2xyf(this._tileno);
+        const orderjump = reforder - this._order;
+        const dxmin = origxyf.ix << orderjump;
+        const dxmax = (origxyf.ix << orderjump) + (1 << orderjump);
+        const dymin = origxyf.iy << orderjump;
+        const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
+        const healpix = src_Global.getHealpix(reforder);
+        this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, 0, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, 1, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, 2, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin + (dymax - dymin) / 2, dymax, 3, healpix, orderjump, origxyf);
+        const pixelsXQuadrant = this.vertexPosition[0].length / 20;
+        const idx = this.computeVertexIndices(pixelsXQuadrant);
+        // If large, upgrade to Uint32 indices
+        if (idx.length > 65535) {
+            // Optional: require OES_element_index_uint if you’re still on WebGL1
+            this.vertexIndices = new Uint32Array(idx);
+        }
+        else {
+            this.vertexIndices = new Uint16Array(idx);
+        }
+        this.vertexIndexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndices, gl.STATIC_DRAW);
+    }
+    computeVertexIndices(pixelsXQuadrant) {
+        const vertexIndices = new Uint32Array(6 * pixelsXQuadrant);
+        let baseFaceIndex = 0;
+        for (let j = 0; j < pixelsXQuadrant; j++) {
+            const b = baseFaceIndex;
+            vertexIndices[6 * j] = b;
+            vertexIndices[6 * j + 1] = b + 1;
+            vertexIndices[6 * j + 2] = b + 2;
+            vertexIndices[6 * j + 3] = b + 2;
+            vertexIndices[6 * j + 4] = b + 3;
+            vertexIndices[6 * j + 5] = b;
+            baseFaceIndex += 4;
+        }
+        return vertexIndices;
+    }
+    setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
+        const gl = this._webgl;
+        this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
+        const step = 1 / (1 << orderjump);
+        let p = 0;
+        const s_pixel_size = 0;
+        const t_pixel_size = 0;
+        for (let dx = dxmin; dx < dxmax; dx++) {
+            for (let dy = dymin; dy < dymax; dy++) {
+                const facesVec3Array = healpix.getPointsForXyfNoStep(dx, dy, origxyf.face);
+                const uindex = dy - (origxyf.iy << orderjump);
+                const vindex = dx - (origxyf.ix << orderjump);
+                // v0
+                this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x;
+                this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y;
+                this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z;
+                this.vertexPosition[qidx][20 * p + 3] = step + step * uindex + s_pixel_size;
+                this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex) - t_pixel_size;
+                // v1
+                this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x;
+                this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y;
+                this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z;
+                this.vertexPosition[qidx][20 * p + 8] = step + step * uindex + s_pixel_size;
+                this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex + t_pixel_size;
+                // v2
+                this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x;
+                this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y;
+                this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z;
+                this.vertexPosition[qidx][20 * p + 13] = step * uindex - s_pixel_size;
+                this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex + t_pixel_size;
+                // v3
+                this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x;
+                this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y;
+                this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z;
+                this.vertexPosition[qidx][20 * p + 18] = step * uindex - s_pixel_size;
+                this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex) - t_pixel_size;
+                p++;
+            }
+        }
+        this.vertexPositionBuffer[qidx] = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition[qidx], gl.STATIC_DRAW);
+    }
+    get inView() {
+        return this._inView;
+    }
+    moveToCache() {
+        // newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips)
+        this._tileBuffer.moveTileToCache(this._tileno, this._order, this._hips);
+        this._inView = false;
+        this.destroyIntervals();
+    }
+    amIStillInFoV() {
+        if (this._textureLoaded)
+            this._ready = true;
+        if (this._isGalacticHips) {
+            if (this._visibleTileManager.galAncestorsMap.has(this._order)) {
+                if (!this._visibleTileManager.galAncestorsMap.get(this._order).includes(this._tileno)) {
+                    this.moveToCache();
+                }
+                else {
+                    this._inView = true;
+                }
+            }
+            // if (visibleTilesManager.galAncestorsMap.has(this._order)) {
+            //   if (!visibleTilesManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+            if (this._order == this._visibleTileManager.visibleOrder) {
+                if (!this._visibleTileManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+                    this.moveToCache();
+                }
+                else {
+                    this._inView = true;
+                }
+            }
+            // if (this._order == visibleTilesManager.visibleOrder) {
+            //   if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+        }
+        else {
+            if (this._visibleTileManager.ancestorsMap.has(this._order)) {
+                if (!this._visibleTileManager.ancestorsMap.get(this._order).includes(this._tileno)) {
+                    this.moveToCache();
+                }
+                else {
+                    this._inView = true;
+                }
+            }
+            // if (visibleTilesManager.ancestorsMap.has(this._order)) {
+            //   if (!visibleTilesManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+            if (this._order == this._visibleTileManager.visibleOrder) {
+                if (!this._visibleTileManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+                    this.moveToCache();
+                }
+                else {
+                    this._inView = true;
+                }
+            }
+            // if (this._order == visibleTilesManager.visibleOrder) {
+            //   if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+        }
+    }
+    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (!this._ready || this._abort)
+            return;
+        let quadrantsToDraw = new Set([0, 1, 2, 3]);
+        if (visibleOrder > this._order && this._order < this._maxorder) {
+            const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
+            if (kids)
+                quadrantsToDraw = kids;
+        }
+        const gl = this._webgl;
+        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        // Enable attributes (these locations are retrieved in enableShaders)
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
+        // gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
+        // gl.uniform1f((hipsShaderProgram.locations as ShaderLocations).textureAlpha, this.opacity)
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        const elemno = this.vertexIndices.length;
+        const indexType = this.vertexIndices instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
+        quadrantsToDraw.forEach((qidx) => {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+            gl.vertexAttribPointer(this._hipsShaderProgram.locations.vertexPositionAttribute, 
+            // (hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute,
+            3, gl.FLOAT, false, 5 * 4, 0);
+            gl.vertexAttribPointer(this._hipsShaderProgram.locations.textureCoordAttribute, 
+            // (hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute,
+            2, gl.FLOAT, false, 5 * 4, 3 * 4);
+            gl.drawElements(gl.TRIANGLES, elemno, indexType, 0);
+        });
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
+        // gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
+    }
+    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        const quadrantsToDraw = new Set([0, 1, 2, 3]);
+        const childrenOrder = this._order + 1;
+        if (!visibleTilesMap.has(childrenOrder))
+            return;
+        for (let c = 0; c < 4; c++) {
+            const childTileNo = (this._tileno << 2) + c;
+            const list = visibleTilesMap.get(childrenOrder);
+            if (list.includes(childTileNo)) {
+                const childTile = this._isGalacticHips
+                    ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                    : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                // const childTile = this._isGalacticHips
+                //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
+                childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
+                if (childTile._ready) {
+                    quadrantsToDraw.delete(childTileNo - (this._tileno << 2));
+                }
+            }
+        }
+        return quadrantsToDraw;
+    }
+}
+
+;// ./src/model/hips/TileBuffer.ts
+// TileBuffer.ts
+ // adjust if your file is named differently
+// export default class TileBuffer {
+class TileBuffer {
+    // Equatorial
+    _tiles;
+    _cachedTiles;
+    _activeHiPS;
+    // Galactic
+    _galTiles;
+    _galCachedTiles;
+    _galActiveHiPS;
+    _cacheAliveMilliSeconds;
+    _cleanerId;
+    _webgl;
+    _visibleTileManager;
+    _hipsShaderProgram;
+    constructor(minutesToLiveInCache = 1, webgl, hipsShaderProgram, visibleTileManager) {
+        this._hipsShaderProgram = hipsShaderProgram;
+        this._visibleTileManager = visibleTileManager;
+        this._webgl = webgl;
+        this._tiles = new Map();
+        this._cachedTiles = new Map();
+        this._activeHiPS = new Map();
+        this._galTiles = new Map();
+        this._galCachedTiles = new Map();
+        this._galActiveHiPS = new Map();
+        this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
+        this._cleanerId = window.setInterval(() => {
+            this.cacheCleaner();
+        }, 10_000);
+    }
+    /** Register an equatorial HiPS into the buffer. */
+    addHiPS(hips) {
+        if (this._activeHiPS.has(hips)) {
+            console.error('HiPS already present in TileBuffer');
+            return;
+        }
+        this._activeHiPS.set(hips, new Map());
+    }
+    /** Register a galactic HiPS into the buffer. */
+    addGalHiPS(hips) {
+        if (this._galActiveHiPS.has(hips)) {
+            console.error('HiPS already present in TileBuffer');
+            return;
+        }
+        this._galActiveHiPS.set(hips, new Map());
+    }
+    /** Preload/add tile for every registered equatorial HiPS. */
+    addTile(order, tileno) {
+        for (const hips of this._activeHiPS.keys()) {
+            this.getTile(tileno, order, hips);
+        }
+    }
+    /** Preload/add tile for every registered galactic HiPS. */
+    addGalTile(order, tileno) {
+        for (const hips of this._galActiveHiPS.keys()) {
+            this.getGalTile(tileno, order, hips);
+        }
+    }
+    /** Fetch (or create) an equatorial tile, reviving from cache if present. */
+    getTile(tileno, order, hips) {
+        const tileKey = this.key(order, tileno, hips.baseURL);
+        if (!this._tiles.has(tileKey)) {
+            if (this._cachedTiles.has(tileKey)) {
+                const tile = this._cachedTiles.get(tileKey);
+                this._tiles.set(tileKey, tile);
+                this._cachedTiles.delete(tileKey);
+                tile.resetCacheTime0();
+            }
+            else {
+                const tile = new Tile(tileno, order, hips, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram);
+                this._tiles.set(tileKey, tile);
+            }
+        }
+        return this._tiles.get(tileKey);
+    }
+    /** Fetch (or create) a galactic tile, reviving from cache if present. */
+    getGalTile(tileno, order, hips) {
+        const tileKey = this.key(order, tileno, hips.baseURL);
+        if (!this._galTiles.has(tileKey)) {
+            if (this._galCachedTiles.has(tileKey)) {
+                const tile = this._galCachedTiles.get(tileKey);
+                this._galTiles.set(tileKey, tile);
+                this._galCachedTiles.delete(tileKey);
+                tile.resetCacheTime0();
+            }
+            else {
+                const tile = new Tile(tileno, order, hips, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram);
+                this._galTiles.set(tileKey, tile);
+            }
+        }
+        return this._galTiles.get(tileKey);
+    }
+    /** Move a tile (equatorial or galactic) into cache. */
+    moveTileToCache(tileno, order, hips) {
+        const tileKey = this.key(order, tileno, hips.baseURL);
+        if (this._tiles.has(tileKey)) {
+            const tile = this._tiles.get(tileKey);
+            tile.setCacheTime0();
+            this._cachedTiles.set(tileKey, tile);
+            this._tiles.delete(tileKey);
+        }
+        if (this._galTiles.has(tileKey)) {
+            const tile = this._galTiles.get(tileKey);
+            tile.setCacheTime0();
+            this._galCachedTiles.set(tileKey, tile);
+            this._galTiles.delete(tileKey);
+        }
+    }
+    /** Periodically purge stale cached tiles. */
+    cacheCleaner() {
+        const now = Date.now();
+        for (const [tileKey, tile] of this._cachedTiles) {
+            const t0 = tile.cacheTime0;
+            if (!tile.inView && t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds) {
+                tile.destroyIntervals();
+                this._cachedTiles.delete(tileKey);
+            }
+        }
+        for (const [tileKey, tile] of this._galCachedTiles) {
+            const t0 = tile.cacheTime0;
+            if (!tile.inView && t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds) {
+                tile.destroyIntervals();
+                this._galCachedTiles.delete(tileKey);
+            }
+        }
+    }
+    /** Compose a stable key for maps. */
+    key(order, tileno, baseURL) {
+        return `${order}#${tileno}#${baseURL}`;
+    }
+    /** Optional: call to stop internal timers if you dispose this buffer. */
+    dispose() {
+        window.clearInterval(this._cleanerId);
+    }
+}
+// Singleton (kept for compatibility with your original export)
+// export const newTileBuffer = new TileBuffer()
+
+;// ./src/model/hips/VisibleTilesManager.ts
+
+
+
+// import { newTileBuffer } from './TileBuffer.js';
+
+
+// import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
+// import {HealpixGridSingleton} from '../grid/HealpixGridSingleton.js';
+
+class VisibleTilesManager {
+    _visibleTilesByOrder;
+    _ancestorsMap;
+    initialised;
+    _galVisibleTilesByOrder;
+    _galAncestorsMap;
+    _galacticMatrixInverted;
+    _galacticMatrix;
+    insideSphere = bootSetup.insideSphere;
+    _tileBuffer;
+    _healpixGrid;
+    _webgl;
+    constructor(webgl, hipsShaderProgram, healpixGrid) {
+        this._webgl = webgl;
+        this._healpixGrid = healpixGrid;
+        this._visibleTilesByOrder = { pixels: [], order: 0 };
+        this._ancestorsMap = new Map();
+        this.initialised = false;
+        this._galVisibleTilesByOrder = { pixels: [], order: 0 };
+        this._galAncestorsMap = new Map();
+        // Matrices for galactic <-> equatorial
+        this._galacticMatrixInverted = mat4_create();
+        this._galacticMatrix = mat4_create();
+        // From https://observablehq.com/@fil/galactic-rotations (single-precision friendly)
+        // This matrix is (galactic -> equatorial); we store its inverse too.
+        mat4_set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
+        invert(this._galacticMatrix, this._galacticMatrixInverted);
+        this._tileBuffer = new TileBuffer(1, webgl, hipsShaderProgram, this);
+    }
+    get healpixGrid() {
+        return this._healpixGrid;
+    }
+    get tileBuffer() {
+        return this._tileBuffer;
+    }
+    init(insideSphere) {
+        this.initialised = true;
+        this.insideSphere = insideSphere;
+        // this.computeVisiblePixels();
+        // setInterval(() => this.computeVisiblePixels(), 500);
+    }
+    getVisibleOrder() {
+        // return healpixGridSingleton.visibleorder;
+        return this._healpixGrid.visibleorder;
+    }
+    // computeVisiblePixels(): void {
+    computeVisiblePixels(order, webgl) {
+        if (!this.initialised)
+            return;
+        // let order = healpixGridSingleton.visibleorder;
+        if (src_Global.insideSphere && order < 3) {
+            order = 3;
+        }
+        this._ancestorsMap.set(order, []);
+        this._galAncestorsMap.set(order, []);
+        let pixels = [];
+        let galTiles = [];
+        if (order === 0) {
+            const geomhealpix = src_Global.getHealpix(0);
+            const npix = geomhealpix.getNPix();
+            for (let i = 0; i < npix; i++) {
+                pixels.push(i);
+                this._ancestorsMap.get(order).push(i);
+                galTiles.push(i);
+                this._galAncestorsMap.get(order).push(i);
+            }
+        }
+        else {
+            const geomhealpix = src_Global.getHealpix(order);
+            // const maxX = (global.gl as GL).canvas.width;
+            // const maxY = (global.gl as GL).canvas.height;
+            const maxX = webgl.canvas.width;
+            const maxY = webgl.canvas.height;
+            // Sample a grid of screen points, project to the sphere, then to galactic
+            for (let i = 0; i <= maxX; i += maxX / 30) {
+                for (let j = 0; j <= maxY; j += maxY / 30) {
+                    const hit = utils_RayPickingUtils.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl);
+                    if (hit.length > 0) {
+                        // Equatorial -> Galactic (use _galacticMatrix)
+                        const galVec = vec4_create();
+                        vec4_transformMat4(galVec, [hit[0], hit[1], hit[2], 1], this._galacticMatrix);
+                        // Index in galactic HEALPix
+                        const galPoint = new Pointing(new Vec3(galVec[0], galVec[1], galVec[2]));
+                        const galTileNo = geomhealpix.ang2pix(galPoint);
+                        // Index in equatorial HEALPix
+                        const curPoint = new Pointing(new Vec3(hit[0], hit[1], hit[2]));
+                        const currPixNo = geomhealpix.ang2pix(curPoint);
+                        if (!pixels.includes(currPixNo)) {
+                            pixels.push(currPixNo);
+                            this._ancestorsMap.get(order).push(currPixNo);
+                            // newTileBuffer.addTile(order, currPixNo);
+                            this._tileBuffer.addTile(order, currPixNo);
+                        }
+                        if (!galTiles.includes(galTileNo)) {
+                            galTiles.push(galTileNo);
+                            this._galAncestorsMap.get(order).push(galTileNo);
+                            // newTileBuffer.addGalTile(order, galTileNo);
+                            this._tileBuffer.addGalTile(order, galTileNo);
+                        }
+                    }
+                }
+            }
+        }
+        this._visibleTilesByOrder = { pixels: pixels, order: order };
+        this._galVisibleTilesByOrder = { pixels: galTiles, order: order };
+        // Build ancestor pyramids down to order 0
+        for (let o = 1; o < order; o++) {
+            const tgtOrder = order - o;
+            const list = this._ancestorsMap.get(tgtOrder) ?? [];
+            this._ancestorsMap.set(tgtOrder, list);
+            for (let p = 0; p < pixels.length; p++) {
+                const parent = pixels[p] >> (2 * o);
+                if (!list.includes(parent)) {
+                    list.push(parent);
+                    // newTileBuffer.addTile(tgtOrder, parent);
+                    this._tileBuffer.addTile(tgtOrder, parent);
+                }
+            }
+        }
+        for (let o = 1; o < order; o++) {
+            const tgtOrder = order - o;
+            const list = this._galAncestorsMap.get(tgtOrder) ?? [];
+            this._galAncestorsMap.set(tgtOrder, list);
+            for (let p = 0; p < galTiles.length; p++) {
+                const parent = galTiles[p] >> (2 * o);
+                if (!list.includes(parent)) {
+                    list.push(parent);
+                    // newTileBuffer.addGalTile(tgtOrder, parent);
+                    this._tileBuffer.addGalTile(tgtOrder, parent);
+                }
+            }
+        }
+    }
+    get visibleTilesByOrder() {
+        return this._visibleTilesByOrder;
+    }
+    get ancestorsMap() {
+        return this._ancestorsMap;
+    }
+    get galVisibleTilesByOrder() {
+        return this._galVisibleTilesByOrder;
+    }
+    get galAncestorsMap() {
+        return this._galAncestorsMap;
+    }
+    get visibleOrder() {
+        return this._visibleTilesByOrder.order;
+    }
+}
+// export const visibleTilesManager = new VisibleTilesManager();
+
+;// ./src/model/grid/HealpixGridSingleton.ts
+
+
+
+
+
+
+
+
+
+
+
+
+// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
+// import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
+
+
+
+
+class HealpixGridSingleton extends AbstractSkyEntity {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    _visibleorder = 0;
+    showGrid = false;
+    _shaderProgram;
+    fragmentShader;
+    vertexShader;
+    defaultColor = '#ec0acaff';
+    gridText = new grid_GridTextHelper();
+    // private _hipsShaderProgram: HiPSShaderProgram
+    _attribLocations = {
+        position: 0,
+        selected: 1,
+        pointSize: 2,
+        color: 3,
+    };
+    _nPrimitiveFlags = 0;
+    _vertexCataloguePositionBuffer;
+    _indexBuffer;
+    _vertexCataloguePosition = new Float32Array(0);
+    _indexes = new Uint32Array(0);
+    fovObj;
+    static INITIAL_FOV = 180;
+    static RADIUS = 1;
+    static INITIAL_POSITION = [0.0, 0.0, 0.0];
+    static INITIAL_PhiRad = 0;
+    static INITIAL_ThetaRad = 0;
+    _visibleTilesManager;
+    constructor(webgl) {
+        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', webgl);
+        this.init();
+        this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
+        this._visibleTilesManager.init(bootSetup.insideSphere);
+    }
+    init() {
+        console.log('HealpixGridSingleton.init()');
+        this.initGL(super.webgl);
+        this._shaderProgram = super.webgl.createProgram();
+        this.initShaders();
+        const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
+        this._visibleorder = order;
+        this._nPrimitiveFlags = 0;
+        this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
+        this._indexBuffer = super.webgl.createBuffer();
+        this._vertexCataloguePosition = new Float32Array(0);
+        this.fovObj = new FoV(super.webgl);
+    }
+    get RADIUS() {
+        return HealpixGridSingleton.RADIUS;
+    }
+    get INITIAL_POSITION() {
+        return HealpixGridSingleton.INITIAL_POSITION;
+    }
+    get INITIAL_PhiRad() {
+        return HealpixGridSingleton.INITIAL_PhiRad;
+    }
+    get INITIAL_ThetaRad() {
+        return HealpixGridSingleton.INITIAL_ThetaRad;
+    }
+    refreshFoV() {
+        return this.fovObj.getFoV(src_Global.insideSphere, this, super.webgl);
+    }
+    getFoV() {
+        return this.fovObj;
+    }
+    getMinFoV() {
+        return this.fovObj.minFoV;
+    }
+    initShaders() {
+        const gl = super.webgl;
+        const fragmentShaderStr = shader_GridShaderManager.healpixGridFS();
+        this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this.fragmentShader, fragmentShaderStr);
+        gl.compileShader(this.fragmentShader);
+        if (!gl.getShaderParameter(this.fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this.fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = shader_GridShaderManager.healpixGridVS();
+        this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this.vertexShader, vertexShaderStr);
+        gl.compileShader(this.vertexShader);
+        if (!gl.getShaderParameter(this.vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this.vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this._shaderProgram, this.vertexShader);
+        gl.attachShader(this._shaderProgram, this.fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this._shaderProgram);
+    }
+    initBuffers(pixels, order) {
+        this._nPrimitiveFlags = 0;
+        const healpix = src_Global.getHealpix(order);
+        const subhpx = src_Global.getHealpix(order + 1);
+        const subsubhpx = src_Global.getHealpix(order + 2);
+        let positionIndex = 0;
+        let vIdx = 0;
+        const R = 1.0;
+        const MAX_UINT = 0xffffffff;
+        this._indexes = new Uint32Array(17 * pixels.length);
+        this._vertexCataloguePosition = new Float32Array(3 * 16 * pixels.length);
+        for (let p = 0; p < pixels.length; p++) {
+            const vecs = healpix.getBoundaries(pixels[p]);
+            const cpix0 = pixels[p] << 2;
+            const cpix1 = cpix0 + 1;
+            const cpix2 = cpix0 + 2;
+            const cpix3 = cpix0 + 3;
+            const cp0vecs = subhpx.getBoundaries(cpix0);
+            const cp3vecs = subhpx.getBoundaries(cpix3);
+            // helper to push a vertex
+            const pushV = (v) => {
+                this._vertexCataloguePosition[positionIndex] = R * v.x;
+                this._vertexCataloguePosition[positionIndex + 1] = R * v.y;
+                this._vertexCataloguePosition[positionIndex + 2] = R * v.z;
+                this._indexes[vIdx] = Math.floor(positionIndex / 3);
+                vIdx += 1;
+                positionIndex += 3;
+            };
+            // v0(3/0)
+            pushV(vecs[0]);
+            // v1(15/2)
+            let subcpix3 = cpix3 << 2;
+            let subcpix3_3 = subcpix3 + 3;
+            let tmp = subsubhpx.getBoundaries(subcpix3_3);
+            pushV(tmp[1]);
+            // v1(3/1)
+            pushV(cp3vecs[1]);
+            // v0(2/2)
+            let subcpix2 = cpix2 << 2;
+            let subcpix2_2 = subcpix2 + 2;
+            tmp = subsubhpx.getBoundaries(subcpix2_2);
+            pushV(tmp[0]);
+            // v1(0/0)
+            pushV(vecs[1]);
+            // v2(2/2)
+            pushV(tmp[2]);
+            // v1(0/1)
+            pushV(cp0vecs[1]);
+            // v1(0/2)
+            let subcpix0 = cpix0 << 2;
+            let subcpix0_2 = subcpix0;
+            tmp = subsubhpx.getBoundaries(subcpix0_2);
+            pushV(tmp[1]);
+            // v2(0/0)
+            pushV(vecs[2]);
+            // v3(0/2)
+            pushV(tmp[3]);
+            // v3(0/1)
+            pushV(cp0vecs[3]);
+            // v2(5/2)
+            let subcpix1 = cpix1 << 2;
+            let subcpix1_1 = subcpix1 + 1;
+            tmp = subsubhpx.getBoundaries(subcpix1_1);
+            pushV(tmp[2]);
+            // v3(0/0)
+            pushV(vecs[3]);
+            // v0(5/2)
+            pushV(tmp[0]);
+            // v3(3/1)
+            pushV(cp3vecs[3]);
+            tmp = subsubhpx.getBoundaries(subcpix3_3);
+            pushV(tmp[3]);
+            // primitive restart
+            this._indexes[vIdx] = MAX_UINT;
+            this._nPrimitiveFlags += 1;
+            vIdx += 1;
+        }
+    }
+    // updateTiles(pixels: number[], order: number) {
+    //   return (this as any)._tileBuffer.updateTiles(pixels, order);
+    // }
+    refresh() {
+        this.refreshFoV();
+        const fov = this.getMinFoV();
+        // expose to global (legacy)
+        // (global as any).hipsFoV = fov;
+        // global.order = fovHelper.getHiPSNorder(fov);
+        // this._visibleorder = global.order;
+        this._visibleorder = fovHelper.getHiPSNorder(fov);
+    }
+    enableShader(in_mMatrix, pMatrix) {
+        const gl = super.webgl;
+        gl.useProgram(this._shaderProgram);
+        // TODO move locations retrieval elsewhere
+        // Uniform locations
+        const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = super.webgl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        // Attribute locations
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        let mvMatrix = mat4_create();
+        mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), in_mMatrix);
+        if (uMV)
+            gl.uniformMatrix4fv(uMV, false, mvMatrix);
+        if (uP)
+            gl.uniformMatrix4fv(uP, false, pMatrix);
+        if (uColor) {
+            const rgb = colorHex2RGB(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    isVisible() {
+        return this.showGrid;
+    }
+    toggleShowGrid() {
+        this.showGrid = !this.showGrid;
+    }
+    get visibleTilesManager() {
+        return this._visibleTilesManager;
+    }
+    draw(input) {
+        const gl = super.webgl;
+        const mMatrix = this.getModelMatrix();
+        this.refresh();
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
+            return;
+        }
+        // const visibleTiles = visibleTilesManager.visibleTilesByOrder
+        const visibleTiles = this._visibleTilesManager.visibleTilesByOrder;
+        const pixels = visibleTiles.pixels;
+        const order = visibleTiles.order;
+        this.initBuffers(pixels, order);
+        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+        this.enableShader(mMatrix, pMatrix);
+        // Upload positions
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
+        gl.vertexAttribPointer(this._attribLocations.position, HealpixGridSingleton.ELEM_SIZE, gl.FLOAT, false, HealpixGridSingleton.BYTES_X_ELEM * HealpixGridSingleton.ELEM_SIZE, 0);
+        gl.enableVertexAttribArray(this._attribLocations.position);
+        // Index buffer
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexes, gl.STATIC_DRAW);
+        gl.drawElements(gl.LINE_LOOP, this._vertexCataloguePosition.length / 3 + this._nPrimitiveFlags, gl.UNSIGNED_INT, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+        // Project and label pixel centers that are inside current FoV
+        let mvMatrix = mat4_create();
+        mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), mMatrix);
+        let mvpMatrix = mat4_create();
+        mvpMatrix = mat4_multiply(mvpMatrix, pMatrix, mvMatrix);
+        // FIX: pass model & pMatrix to match FoVUtils TS signature
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl);
+        const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
+        for (let p = 0; p < pixels.length; p++) {
+            const pixCenter = src_Global.getHealpix(this._visibleorder).pix2vec(pixels[p]);
+            // const pixCenter = (global.getHealpix(global.order).pix2vec(pixels[p]) as BoundVec);
+            const point = new Point({ x: pixCenter.x, y: pixCenter.y, z: pixCenter.z }, CoordsType.CARTESIAN);
+            const distance = utils_GeomUtils.orthodromicDistance(center, point);
+            if (distance < fovMin) {
+                const vertex = [pixCenter.x, pixCenter.y, pixCenter.z, 1];
+                const clipspace = vec4_create();
+                vec4_transformMat4(clipspace, vertex, mvpMatrix);
+                // NDC divide
+                clipspace[0] /= clipspace[3];
+                clipspace[1] /= clipspace[3];
+                // clip → pixels
+                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
+                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
+                this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+                // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+            }
+        }
+        // gridTextHelper.resetDivSets();
+        this.gridText.resetDivSets();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    get visibleorder() {
+        return this._visibleorder;
+    }
+}
 
 ;// ./src/model/grid/EquatorialGrid.ts
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
@@ -10436,10 +10609,10 @@ class HiPS extends model_AbstractSkyEntity {
 
 
 
-
+// import healpixGridSingleton from './HealpixGridSingleton.js';
 
 /** Equatorial grid rendered as RA/Dec great-circle line loops */
-class EquatorialGrid extends model_AbstractSkyEntity {
+class EquatorialGrid extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
     showGrid = false;
@@ -10470,21 +10643,23 @@ class EquatorialGrid extends model_AbstractSkyEntity {
     //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
     _dec4Labels = new Map();
     _ra4Labels = new Map();
+    _healpixGrid;
     /**
      * @param radius Not used by current implementation (sphere is unit-radius)
      * @param fov    Field of view in degrees
      */
-    constructor() {
-        super(grid_HealpixGridSingleton.RADIUS, grid_HealpixGridSingleton.INITIAL_POSITION, grid_HealpixGridSingleton.INITIAL_PhiRad, grid_HealpixGridSingleton.INITIAL_ThetaRad, 'equatorial-grid');
+    constructor(webgl, healpixGrid) {
+        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'equatorial-grid', webgl);
+        this._healpixGrid = healpixGrid;
     }
     init(fov) {
         this._fov = fov;
-        this.initGL(src_Global.gl);
+        this.initGL(super.webgl);
         // Program & buffers
-        this._shaderProgram = src_Global.gl.createProgram();
+        this._shaderProgram = super.webgl.createProgram();
         this.initShaders();
-        this._phiVertexPositionBuffer = src_Global.gl.createBuffer();
-        this._thetaVertexPositionBuffer = src_Global.gl.createBuffer();
+        this._phiVertexPositionBuffer = super.webgl.createBuffer();
+        this._thetaVertexPositionBuffer = super.webgl.createBuffer();
         // Build initial RA/Dec line buffers
         this.initBuffers(this._fov);
     }
@@ -10492,35 +10667,35 @@ class EquatorialGrid extends model_AbstractSkyEntity {
     initShaders() {
         // Fragment
         const fsSource = shader_GridShaderManager.healpixGridFS();
-        this._fragmentShader = src_Global.gl.createShader(src_Global.gl.FRAGMENT_SHADER);
-        src_Global.gl.shaderSource(this._fragmentShader, fsSource);
-        src_Global.gl.compileShader(this._fragmentShader);
-        if (!src_Global.gl.getShaderParameter(this._fragmentShader, src_Global.gl.COMPILE_STATUS)) {
+        this._fragmentShader = super.webgl.createShader(super.webgl.FRAGMENT_SHADER);
+        super.webgl.shaderSource(this._fragmentShader, fsSource);
+        super.webgl.compileShader(this._fragmentShader);
+        if (!super.webgl.getShaderParameter(this._fragmentShader, super.webgl.COMPILE_STATUS)) {
             // Keep identical behavior (alert) but surface errors in console too
-            const log = src_Global.gl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
+            const log = super.webgl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
             console.error(log);
             alert(log);
             return;
         }
         // Vertex
         const vsSource = shader_GridShaderManager.healpixGridVS();
-        this._vertexShader = src_Global.gl.createShader(src_Global.gl.VERTEX_SHADER);
-        src_Global.gl.shaderSource(this._vertexShader, vsSource);
-        src_Global.gl.compileShader(this._vertexShader);
-        if (!src_Global.gl.getShaderParameter(this._vertexShader, src_Global.gl.COMPILE_STATUS)) {
-            const log = src_Global.gl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
+        this._vertexShader = super.webgl.createShader(super.webgl.VERTEX_SHADER);
+        super.webgl.shaderSource(this._vertexShader, vsSource);
+        super.webgl.compileShader(this._vertexShader);
+        if (!super.webgl.getShaderParameter(this._vertexShader, super.webgl.COMPILE_STATUS)) {
+            const log = super.webgl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
             console.error(log);
             alert(log);
             return;
         }
         // Link
-        src_Global.gl.attachShader(this._shaderProgram, this._vertexShader);
-        src_Global.gl.attachShader(this._shaderProgram, this._fragmentShader);
-        src_Global.gl.linkProgram(this._shaderProgram);
-        if (!src_Global.gl.getProgramParameter(this._shaderProgram, src_Global.gl.LINK_STATUS)) {
+        super.webgl.attachShader(this._shaderProgram, this._vertexShader);
+        super.webgl.attachShader(this._shaderProgram, this._fragmentShader);
+        super.webgl.linkProgram(this._shaderProgram);
+        if (!super.webgl.getProgramParameter(this._shaderProgram, super.webgl.LINK_STATUS)) {
             alert('Could not initialise shaders');
         }
-        src_Global.gl.useProgram(this._shaderProgram);
+        super.webgl.useProgram(this._shaderProgram);
     }
     /** Build RA/Dec line vertex arrays based on FoV step helper */
     initBuffers(fovDeg) {
@@ -10577,8 +10752,8 @@ class EquatorialGrid extends model_AbstractSkyEntity {
         }
     }
     /** Update buffers when FoV (in degrees) changes */
-    refresh() {
-        const fovDeg = grid_HealpixGridSingleton.getMinFoV();
+    refresh(fovDeg) {
+        // const fovDeg = healpixGridSingleton.getMinFoV()
         if (this._fov !== fovDeg) {
             this._fov = fovDeg;
             this.initBuffers(this._fov);
@@ -10591,7 +10766,7 @@ class EquatorialGrid extends model_AbstractSkyEntity {
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
     enableShader(mMatrix, pMatrix) {
-        const gl = src_Global.gl;
+        const gl = super.webgl;
         gl.useProgram(this._shaderProgram);
         // uMVMatrix = camera * model
         const mvMatrix = mat4_create();
@@ -10623,12 +10798,15 @@ class EquatorialGrid extends model_AbstractSkyEntity {
      * @param fovObj  current field-of-view (degrees). If your FoV type differs,
      *                pass the numeric value here; this signature matches original usage.
      */
-    draw() {
-        const gl = src_Global.gl;
+    draw(input) {
+        const fovDeg = input.fovDeg;
+        if (!fovDeg)
+            return;
+        const gl = super.webgl;
         const mMatrix = this.getModelMatrix();
         if (this._thetaArray.length === 0)
             return;
-        this.refresh();
+        this.refresh(fovDeg);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();
@@ -10638,22 +10816,22 @@ class EquatorialGrid extends model_AbstractSkyEntity {
         this.enableShader(mMatrix, pMatrix);
         // Draw Dec rings
         for (let i = 0; i < this._phiArray.length; i++) {
-            src_Global.gl.bindBuffer(src_Global.gl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
-            src_Global.gl.bufferData(src_Global.gl.ARRAY_BUFFER, this._phiArray[i], src_Global.gl.STATIC_DRAW);
-            src_Global.gl.vertexAttribPointer(this._attribLocations.position, 3, src_Global.gl.FLOAT, false, 0, 0);
-            src_Global.gl.enableVertexAttribArray(this._attribLocations.position);
-            src_Global.gl.drawArrays(src_Global.gl.LINE_LOOP, 0, 360 / this._phiStep);
+            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
+            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._phiArray[i], super.webgl.STATIC_DRAW);
+            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
+            super.webgl.enableVertexAttribArray(this._attribLocations.position);
+            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._phiStep);
         }
         // Draw RA rings
         for (let j = 0; j < this._thetaArray.length; j++) {
-            src_Global.gl.bindBuffer(src_Global.gl.ARRAY_BUFFER, this._thetaVertexPositionBuffer);
-            src_Global.gl.bufferData(src_Global.gl.ARRAY_BUFFER, this._thetaArray[j], src_Global.gl.STATIC_DRAW);
-            src_Global.gl.vertexAttribPointer(this._attribLocations.position, 3, src_Global.gl.FLOAT, false, 0, 0);
-            src_Global.gl.enableVertexAttribArray(this._attribLocations.position);
-            src_Global.gl.drawArrays(src_Global.gl.LINE_LOOP, 0, 360 / this._thetaStep);
+            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._thetaVertexPositionBuffer);
+            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._thetaArray[j], super.webgl.STATIC_DRAW);
+            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
+            super.webgl.enableVertexAttribArray(this._attribLocations.position);
+            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
         }
         // Label layout (HTML overlay)
-        const center = FoVUtils.getCenterJ2000(gl.canvas);
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl);
         // MVP = P * V * M
         const mvMatrix = mat4_create();
         mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), mMatrix);
@@ -10674,8 +10852,8 @@ class EquatorialGrid extends model_AbstractSkyEntity {
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
                         // clip->pixel
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * src_Global.gl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * src_Global.gl.canvas.height;
+                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
+                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
                         this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                         // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                     }
@@ -10696,8 +10874,8 @@ class EquatorialGrid extends model_AbstractSkyEntity {
                         vec4_transformMat4(clipspace, phiPoint, mvpMatrix);
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * src_Global.gl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * src_Global.gl.canvas.height;
+                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
+                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
                         // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                         this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                     }
@@ -10710,8 +10888,8 @@ class EquatorialGrid extends model_AbstractSkyEntity {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     }
 }
-const equatorialGridSingleton = new EquatorialGrid();
-/* harmony default export */ const grid_EquatorialGrid = (equatorialGridSingleton);
+// const equatorialGridSingleton = new EquatorialGrid();
+// export default equatorialGridSingleton;
 
 ;// ./src/AstroSphere.ts
 // AstroSphere.ts
@@ -10721,12 +10899,15 @@ const equatorialGridSingleton = new EquatorialGrid();
 
 
 
-
+// import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 
 
 
 
 // import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
+// import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
+
+
 
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -10736,7 +10917,8 @@ class AstroSphere {
     centralPoinCoords;
     mousePointCoords;
     canvas;
-    showHPXGrid = false;
+    _healpixGrid;
+    _equatorialGrid;
     mouseHelper;
     mouseDown = false;
     lastMouseX = null;
@@ -10750,15 +10932,42 @@ class AstroSphere {
     fov;
     activeCatalogues = [];
     activeFootprintSets = [];
+    _webgl;
+    // private _tileBuffer: TileBuffer
     constructor(canvas, webgl) {
+        console.log('[AstroSphere] new instance for canvas', canvas.id);
         // Keep global GL context (as in original JS)
-        src_Global.gl = webgl;
+        // global.gl = webgl
+        this._webgl = webgl;
         this.mouseHelper = new utils_MouseHelper();
         this.canvas = canvas;
-        // this.insideSphere = bootSetup.insideSphere
         src_Global.insideSphere = bootSetup.insideSphere;
-        this.init(canvas);
-        this.fov = grid_HealpixGridSingleton.refreshFoV();
+        this.initCamera();
+        this._healpixGrid = new HealpixGridSingleton(this._webgl);
+        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
+        // equatorialGridSingleton.init(healpixGridSingleton.getMinFoV())
+        this._equatorialGrid.init(this._healpixGrid.getMinFoV());
+        this.updateCentralPoint();
+        this.startup = true;
+        this.addEventListeners(canvas);
+        // this.fov = healpixGridSingleton.refreshFoV()
+        this.fov = this._healpixGrid.refreshFoV();
+    }
+    initCamera() {
+        if (bootSetup.insideSphere) {
+            this.camera = new src_Camera([0.0, 0.0, -0.005], true);
+        }
+        else {
+            this.camera = new src_Camera([0.0, 0.0, 4.0], false);
+        }
+        src_Global.camera = this.camera;
+    }
+    get healpixGrid() {
+        return this._healpixGrid;
+    }
+    get equatorialGrid() {
+        return this._equatorialGrid;
     }
     // This is a lickely a duplication of FoVUtils.getCenterJ2000(this.canvas)
     updateCentralPoint() {
@@ -10794,25 +11003,6 @@ class AstroSphere {
     getLastMousePointCoordinates() {
         return this.mousePointCoords;
     }
-    init(canvas) {
-        this.initCamera();
-        grid_HealpixGridSingleton.init();
-        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
-        visibleTilesManager.init(bootSetup.insideSphere);
-        grid_EquatorialGrid.init(grid_HealpixGridSingleton.getMinFoV());
-        this.updateCentralPoint();
-        this.startup = true;
-        this.addEventListeners(canvas);
-    }
-    initCamera() {
-        if (bootSetup.insideSphere) {
-            this.camera = new src_Camera([0.0, 0.0, -0.005], true);
-        }
-        else {
-            this.camera = new src_Camera([0.0, 0.0, 4.0], false);
-        }
-        src_Global.camera = this.camera;
-    }
     addEventListeners(canvas) {
         if (src_Global.debug) {
             console.log('[AstroSphere::addEventListeners]');
@@ -10836,13 +11026,21 @@ class AstroSphere {
             this.lastMouseY = event.clientY;
         };
         const handleMouseMove = (event) => {
-            const newX = event.clientX;
-            const newY = event.clientY;
-            if (!grid_HealpixGridSingleton)
+            const rect = canvas.getBoundingClientRect();
+            // 🔹 canvas-local coordinates
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            // const newX = event.clientX;
+            // const newY = event.clientY;
+            const newX = localX;
+            const newY = localY;
+            // if (!healpixGridSingleton) return;
+            if (!this._healpixGrid)
                 return;
             let hit = false;
             if (this.mouseDown) {
                 document.body.style.cursor = 'grab';
+                // Rotation deltas – either use client-space or local-space, but be consistent
                 const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
                 const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
                 this.inertiaX += 0.1 * deltaX;
@@ -10851,7 +11049,8 @@ class AstroSphere {
                 hit = true;
             }
             else {
-                const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(newX, newY);
+                // 🔥 Use canvas-local coords for picking
+                const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl);
                 if (mousePoint && mousePoint.length > 0) {
                     this.mouseHelper.update(mousePoint);
                     this.updateLastMousePoint();
@@ -10862,21 +11061,29 @@ class AstroSphere {
                 this.updateCentralPoint();
                 hit = true;
             }
-            if (hit) {
+            const centralradeg = this.centralPoinCoords?.astroDeg.ra;
+            const centraldecdeg = this.centralPoinCoords?.astroDeg.dec;
+            if (hit && centraldecdeg && centralradeg) {
                 const detail = {
                     fovDeg: this.fov.minFoV,
                     position: this.camera.getCameraPosition(),
                     vMatrix: this.camera.getCameraMatrix(),
                     pMatrix: ComputePerspectiveMatrix.pMatrix,
                     timestamp: performance.now(),
-                    centralPoint: FoVUtils.getCenterJ2000(this.canvas),
+                    // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
+                    centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
                     mouseHoverPoint: this.mousePointCoords
                 };
-                this.canvas.dispatchEvent(new CustomEvent('cameraChanged', { detail, bubbles: false, composed: false }));
+                this.canvas.dispatchEvent(new CustomEvent('cameraChanged', {
+                    detail,
+                    bubbles: false,
+                    composed: false
+                }));
             }
             this.lastMouseX = newX;
             this.lastMouseY = newY;
             event.preventDefault();
+            console.log(`central point: (${this.centralPoinCoords?.astroDeg.ra}, ${this.centralPoinCoords?.astroDeg.dec})`);
         };
         const handleMouseWheel = (event) => {
             if (event.deltaY < 0) {
@@ -10897,17 +11104,14 @@ class AstroSphere {
     getPhiThetaDeg(canvas) {
         const maxX = canvas.width;
         const maxY = canvas.height;
-        const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2);
+        const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl);
         return cartesianToSpherical(pickerPoint);
     }
     activateHiPS(hipsDescriptor) {
-        this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor);
+        this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
     }
     // Catalogue section
     async showCatalogue(cat) {
-        // const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
-        // const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
-        // const cat = await queryCatalogueByFoV(catalogue, polygonAdql)
         console.log(cat);
         if (cat)
             this.activeCatalogues.push(cat);
@@ -10919,10 +11123,6 @@ class AstroSphere {
     // End Catalogue section
     // Footprint section
     async showFootprintSet(fset) {
-        // const fovPolyAstro = FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
-        // const polygonAdql = FoVUtils.getAstroFoVPolygon(fovPolyAstro) // -> "POLYGON('ICRS', ra1, dec1, ...)"
-        // const centralPoint = FoVUtils.getCenterJ2000(this.canvas)
-        // const fset = await queryFootprintSetByFov(footprintSet, polygonAdql, centralPoint)
         console.log(fset);
         if (fset)
             this.activeFootprintSets.push(fset);
@@ -10946,24 +11146,28 @@ class AstroSphere {
         return this.fov;
     }
     getFoVPolygon() {
-        return FoVUtils.getFoVPolygon(this.camera, this.canvas, grid_HealpixGridSingleton);
+        if (this.healpixGrid == null)
+            throw new Error(`healpixGrid is ${this.healpixGrid}`);
+        // return FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
+        return FoVUtils.getFoVPolygon(this.camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl);
     }
     changeFoV(deg) {
-        // throw new Error("not Implemented")
-        const distance = grid_HealpixGridSingleton.getFoV().computeDistanceFromAngle(deg);
+        // const distance = healpixGridSingleton.getFoV().computeDistanceFromAngle(deg)
+        const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg);
         // this.camera.moveAlongView(distance)
         this.camera.translate(distance);
-        grid_HealpixGridSingleton.refreshFoV();
+        // healpixGridSingleton.refreshFoV()
+        this._healpixGrid.refreshFoV();
     }
     changeFoV2(deg) {
         // throw new Error("not Implemented")
-        const newCameraPos = grid_HealpixGridSingleton.getFoV().computeCameraPositionForFoV(deg);
+        // const newCameraPos = healpixGridSingleton.getFoV().computeCameraPositionForFoV(deg)
+        const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
         this.camera.setCameraPosition(newCameraPos);
-        // this.camera.moveAlongView(distance)
-        // this.camera.translate(distance)
     }
     changeFoV3(deg) {
-        const newPos = grid_HealpixGridSingleton.getFoV().computeCameraPositionForAngularDiameter(deg);
+        // const newPos = healpixGridSingleton.getFoV().computeCameraPositionForAngularDiameter(deg);
+        const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
         this.camera.setCameraPosition(newPos);
         // Recompute projection after moving the camera
         ComputePerspectiveMatrix.computePerspectiveMatrix(this.canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
@@ -10980,13 +11184,16 @@ class AstroSphere {
     }
     prevFov = 0;
     draw(canvas) {
-        if (!src_Global.gl)
+        // if (!global.gl) return
+        if (!this._webgl)
             return;
         if (!this.activeHiPS)
             return;
-        if (!grid_HealpixGridSingleton || Object.keys(grid_HealpixGridSingleton).length === 0)
+        // if (!healpixGridSingleton || Object.keys(healpixGridSingleton).length === 0) return
+        // if ((healpixGridSingleton as any).fovObj === undefined) return
+        if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
-        if (grid_HealpixGridSingleton.fovObj === undefined)
+        if (this._healpixGrid.fovObj === undefined)
             return;
         // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
         // global.gl.getExtension('OES_element_index_uint')
@@ -10995,14 +11202,18 @@ class AstroSphere {
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;
-        src_Global.gl.viewport(0, 0, src_Global.gl.drawingBufferWidth, src_Global.gl.drawingBufferHeight);
-        src_Global.gl.clear(src_Global.gl.COLOR_BUFFER_BIT | src_Global.gl.DEPTH_BUFFER_BIT);
+        // global.gl.viewport(0, 0, global.gl.drawingBufferWidth, global.gl.drawingBufferHeight);
+        // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
+        this._webgl.viewport(0, 0, this._webgl.drawingBufferWidth, this._webgl.drawingBufferHeight);
+        this._webgl.clear(this._webgl.COLOR_BUFFER_BIT | this._webgl.DEPTH_BUFFER_BIT);
         // Zoom inertia
-        if (grid_HealpixGridSingleton.fovObj.minFoV > 0.1 || this.zoomInertia > 0) {
+        // if ((healpixGridSingleton as any).fovObj.minFoV > 0.1 || this.zoomInertia > 0) {
+        if (this._healpixGrid.fovObj.minFoV > 0.1 || this.zoomInertia > 0) {
             if (Math.abs(this.zoomInertia) > 0.0001) {
                 this.camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
-                this.fov = grid_HealpixGridSingleton.refreshFoV();
+                // this.fov = healpixGridSingleton.refreshFoV()
+                this.fov = this._healpixGrid.refreshFoV();
                 if (this.prevFov != this.fov.minFoV) {
                     const detail = {
                         fovDeg: this.fov.minFoV,
@@ -11010,7 +11221,7 @@ class AstroSphere {
                         vMatrix: this.camera.getCameraMatrix(),
                         pMatrix: ComputePerspectiveMatrix.pMatrix,
                         timestamp: performance.now(),
-                        centralPoint: FoVUtils.getCenterJ2000(this.canvas),
+                        centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
                         mouseHoverPoint: this.mousePointCoords
                     };
                     this.canvas.dispatchEvent(new CustomEvent('cameraChanged', { detail, bubbles: false, composed: false }));
@@ -11033,24 +11244,35 @@ class AstroSphere {
             this.inertiaX = 0;
         }
         // GL state
-        src_Global.gl.disable(src_Global.gl.DEPTH_TEST);
-        src_Global.gl.enable(src_Global.gl.BLEND);
-        src_Global.gl.enable(src_Global.gl.CULL_FACE);
-        src_Global.gl.cullFace(src_Global.insideSphere ? src_Global.gl.BACK : src_Global.gl.FRONT);
-        src_Global.gl.blendFunc(src_Global.gl.SRC_ALPHA, src_Global.gl.ONE_MINUS_SRC_ALPHA);
+        this._webgl.disable(this._webgl.DEPTH_TEST);
+        this._webgl.enable(this._webgl.BLEND);
+        this._webgl.enable(this._webgl.CULL_FACE);
+        this._webgl.cullFace(src_Global.insideSphere ? this._webgl.BACK : this._webgl.FRONT);
+        this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
+        // global.gl.disable(global.gl.DEPTH_TEST)
+        // global.gl.enable(global.gl.BLEND)
+        // global.gl.enable(global.gl.CULL_FACE)
+        // global.gl.cullFace(global.insideSphere ? global.gl.BACK : global.gl.FRONT)
+        // global.gl.blendFunc(global.gl.SRC_ALPHA, global.gl.ONE_MINUS_SRC_ALPHA)
+        this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl);
         // DRAW HiPS
-        this.activeHiPS.draw();
-        grid_HealpixGridSingleton.draw();
-        grid_EquatorialGrid.draw();
-        src_Global.gl.enable(src_Global.gl.DEPTH_TEST);
-        src_Global.gl.disable(src_Global.gl.CULL_FACE);
+        const skyEntityDrawInput = {
+            fovDeg: this._healpixGrid.getMinFoV(),
+            cameraMatrix: this.camera.getCameraMatrix()
+        };
+        this.activeHiPS.draw(skyEntityDrawInput);
+        this._healpixGrid.draw(skyEntityDrawInput);
+        this._equatorialGrid.draw(skyEntityDrawInput);
+        this._webgl.enable(this._webgl.DEPTH_TEST);
+        this._webgl.disable(this._webgl.CULL_FACE);
         if (this.startup) {
             this.startup = false;
             const phiTheta = this.getPhiThetaDeg(canvas);
             const raDecDeg = sphericalToAstroDeg(phiTheta.phi, phiTheta.theta);
             const raHMS = raDegToHMS(raDecDeg.ra);
             const decDMS = decDegToDMS(raDecDeg.dec);
-            this.prevFov = grid_HealpixGridSingleton.getMinFoV();
+            // this.prevFov = healpixGridSingleton.getMinFoV()
+            this.prevFov = this._healpixGrid.getMinFoV();
             console.log('(startup coords)', {
                 raDeg: raDecDeg.ra,
                 decDeg: raDecDeg.dec,
@@ -11060,12 +11282,12 @@ class AstroSphere {
         }
         this.activeCatalogues.forEach(cat => {
             if (this.activeHiPS) {
-                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper);
+                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this.camera.getCameraMatrix());
             }
         });
         this.activeFootprintSets.forEach(fst => {
             if (this.activeHiPS) {
-                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper);
+                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this.camera.getCameraMatrix());
             }
         });
     }
@@ -11188,8 +11410,837 @@ class HiPSDescriptor {
     }
 }
 
-;// ./src/AstroViewer.ts
+;// ./src/model/Source.ts
 
+
+
+class Source {
+    _point;
+    _name;
+    _details;
+    _h_pix;
+    _shapesize;
+    _brightnessFactor;
+    /**
+     * @param in_point Point.js (Cartesian/RA-Dec wrapper)
+     * @param in_details Optional array of key/value metadata
+     */
+    constructor(in_point, in_details = []) {
+        this._point = in_point;
+        this._details = in_details;
+        this._shapesize = 8.0;
+        this._brightnessFactor = -99;
+        this.computeHealpixPixel();
+    }
+    getDetailByindex(index) {
+        if (index < 0 || index >= this._details.length) {
+            return undefined;
+        }
+        return this._details[index];
+    }
+    get details() {
+        return this._details;
+    }
+    computeHealpixPixel() {
+        // Get Healpix instance from global
+        const healpix = src_Global.getHealpix(src_Global.nsideForSelection);
+        const vec3 = new Vec3(this._point.x, this._point.y, this._point.z);
+        const ptg = new Pointing(vec3, false);
+        this._h_pix = healpix.ang2pix(ptg, false);
+    }
+    get point() {
+        return this._point;
+    }
+    get name() {
+        return this._name;
+    }
+    get healpixPixel() {
+        return this._h_pix;
+    }
+    get shapeSize() {
+        return this._shapesize;
+    }
+    set shapeSize(size) {
+        this._shapesize = size;
+    }
+    get brightnessFactor() {
+        return this._brightnessFactor;
+    }
+    /**
+     * @param factor Must be in [-1..1]
+     */
+    set brightnessFactor(factor) {
+        this._brightnessFactor = factor;
+    }
+}
+/* harmony default export */ const model_Source = (Source);
+
+;// ./src/shader/CatalogueShaderProgram.ts
+// HiPSShaderProgram.ts
+
+
+// export default class CatalogueShaderProgram {
+class CatalogueShaderProgram {
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    gl_uniforms;
+    gl_attributes;
+    locations;
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
+        this.gl_uniforms = {
+            vertex_color: 'u_fragcolor',
+            m_perspective: 'uPMatrix',
+            m_model_view: 'uMVMatrix'
+        };
+        this.gl_attributes = {
+            vertex_pos: 'aCatPosition',
+            vertex_selected: 'a_selected',
+            point_size: 'a_pointsize',
+            point_hue: 'a_brightness'
+        };
+        this.locations = {
+            pMatrix: null,
+            mvMatrix: null,
+            color: null,
+            position: -1,
+            hovered: -1,
+            pointSize: -1,
+            brightness: -1
+        };
+    }
+    get shaderProgram() {
+        if (!this._shaderProgram) {
+            // const gl = global.gl as GL
+            const gl = this._webgl;
+            this._shaderProgram = gl.createProgram();
+            this.initShaders();
+        }
+        return this._shaderProgram;
+    }
+    initShaders() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        const fragmentShaderStr = ShaderManager.catalogueFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        console.log('FS log:', gl.getShaderInfoLog(this._fragmentShader) || 'ok');
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = ShaderManager.catalogueVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vertexShaderStr);
+        gl.compileShader(this._vertexShader);
+        console.log('VS log:', gl.getShaderInfoLog(this._vertexShader) || 'ok');
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this.shaderProgram, this._vertexShader);
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        // shaderUtility.useProgram(this.shaderProgram)
+        gl.useProgram(this.shaderProgram);
+        this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.hovered = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_selected);
+        this.locations.pointSize = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_size);
+        this.locations.brightness = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_hue);
+        this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
+    }
+    enableShaders(pMatrix, modelMatrix, viewMatrix) {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        // shaderUtility.useProgram(this.shaderProgram)
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
+        let mvMatrix = mat4_create();
+        mvMatrix = mat4_multiply(mvMatrix, viewMatrix, modelMatrix);
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
+    }
+}
+// export const catalogueShaderProgram = new CatalogueShaderProgram()
+
+;// ./src/model/MetadataColumn.ts
+
+var ColumnType;
+(function (ColumnType) {
+    ColumnType["STRING"] = "STRING";
+    ColumnType["NUMBER"] = "NUMBER";
+    ColumnType["GEOM_RA"] = "GEOM_RA";
+    ColumnType["GEOM_DEC"] = "GEOM_DEC";
+    ColumnType["GEOM_FOOTPRINT"] = "GEOM_FOOTPRINT";
+    ColumnType["MAIN_NAME"] = "MAIN_NAME";
+})(ColumnType || (ColumnType = {}));
+class MetadataColumn {
+    _index; // mandatory
+    _name; // mandatory
+    _description = ""; // mandatory default ""
+    _columnType; // mandatory
+    _unit; // mandatory
+    _details = new Map();
+    constructor(init) {
+        if (!init.name)
+            throw new Error(`No name column defined.`);
+        this._name = init.name;
+        if (init.index < 0 || isNaN(init.index))
+            throw new Error(`No index column defined.`);
+        this._index = init.index;
+        this._columnType = init.columnType ?? ColumnType.STRING;
+        this._unit = init.unit ?? "";
+        this._description = init.description ?? "";
+        if (init.details)
+            this._details = new Map(init.details);
+    }
+    get details() {
+        return new Map(this._details);
+    }
+    /** Get any detail; optional fallback. */
+    getDetail(key, fallback) {
+        return this._details.has(key) ? this._details.get(key) : fallback;
+    }
+    /** Type-leaning getters with fallbacks. */
+    getString(key, fallback = "") {
+        const v = this._details.get(key);
+        return typeof v === "string" ? v : fallback;
+    }
+    getNumber(key, fallback = NaN) {
+        const v = this._details.get(key);
+        return typeof v === "number" ? v : fallback;
+    }
+    /** Set or update a detail. */
+    setDetail(key, value) {
+        this._details.set(key, value);
+    }
+    /** Add many details at once. */
+    setDetails(details) {
+        const entries = details instanceof Map ? details.entries() : Object.entries(details);
+        for (const [k, v] of entries)
+            this._details.set(k, v);
+    }
+    /** Keys, values, entries (as arrays). */
+    detailKeys() {
+        return Array.from(this._details.keys());
+    }
+    detailValues() {
+        return Array.from(this._details.values());
+    }
+    detailEntries() {
+        return Array.from(this._details.entries());
+    }
+    // ---------- core getters/setters ----------
+    get name() {
+        return this._name;
+    }
+    get description() {
+        return this._description;
+    }
+    get columnType() {
+        return this._columnType;
+    }
+    get index() {
+        return this._index;
+    }
+    get unit() {
+        return this._unit;
+    }
+    // ---------- serialisation ----------
+    toJSON() {
+        return {
+            name: this._name,
+            description: this._description,
+            columnType: this._columnType,
+            index: this._index,
+            unit: this._unit,
+            details: Object.fromEntries(this._details),
+        };
+    }
+}
+
+;// ./src/model/MetadataManager.ts
+
+class MetadataManager {
+    static STANDARD_SIZE = "STANDARD_SIZE";
+    static STANDARD_HUE = "STANDARD_HUE";
+    _outlineColumnList = [];
+    _raColumnList = [];
+    _decColumnList = [];
+    _shapeColumnList = [];
+    _hueColumnList = [];
+    _selectedOutlineColumn;
+    _selectedRaColumn;
+    _selectedDecColumn;
+    _selectedShapeColumn;
+    _selectedHueColumn;
+    _selectedNameColumn;
+    _columns = [];
+    constructor(metadataColumns) {
+        metadataColumns.forEach(c => {
+            if (c.columnType == ColumnType.NUMBER) {
+                this.addHueColumn(c);
+                this.addShapeColumn(c);
+            }
+            if (c.columnType == ColumnType.GEOM_RA) {
+                this.addRaColumn(c);
+            }
+            if (c.columnType == ColumnType.GEOM_DEC) {
+                this.addDecColumn(c);
+            }
+            if (c.columnType == ColumnType.GEOM_FOOTPRINT) {
+                this.addOutlineColumn(c);
+            }
+            if (c.columnType == ColumnType.MAIN_NAME) {
+                this._selectedNameColumn = c;
+            }
+            this._columns.push(c);
+        });
+        // if (!this._selectedNameColumn) {
+        //     throw new Error("No name column found")
+        // }
+    }
+    addOutlineColumn(outlineColumn) {
+        this._outlineColumnList.push(outlineColumn);
+        this._selectedOutlineColumn = outlineColumn;
+    }
+    addRaColumn(column) {
+        this._selectedRaColumn = this._selectedRaColumn || column;
+        this._raColumnList.push(column);
+    }
+    addDecColumn(column) {
+        this._selectedDecColumn = this._selectedDecColumn || column;
+        this._decColumnList.push(column);
+    }
+    addHueColumn(column) {
+        this._hueColumnList.push(column);
+    }
+    addShapeColumn(column) {
+        this._shapeColumnList.push(column);
+    }
+    get selectedRaColumn() {
+        return this._selectedRaColumn;
+    }
+    get selectedDecColumn() {
+        return this._selectedDecColumn;
+    }
+    get selectedHueColumn() {
+        return this._selectedHueColumn;
+    }
+    get selectedShapeColumn() {
+        return this._selectedShapeColumn;
+    }
+    get selectedOutlineColumn() {
+        return this._selectedOutlineColumn;
+    }
+    get selectedNameColumn() {
+        return this._selectedNameColumn;
+    }
+    get columns() {
+        return this._columns;
+    }
+    get raColumnList() {
+        return this._raColumnList;
+    }
+    get decColumnList() {
+        return this._decColumnList;
+    }
+    get outlineColumnList() {
+        return this._outlineColumnList;
+    }
+    get hueColumnList() {
+        return this._hueColumnList;
+    }
+    get shapeColumnList() {
+        return this._shapeColumnList;
+    }
+    set selectedRaColumn(columnName) {
+        this._selectedRaColumn = this._raColumnList.find(c => c.name === columnName) || this._selectedRaColumn;
+    }
+    set selectedDecColumn(columnName) {
+        this._selectedDecColumn = this._decColumnList.find(c => c.name === columnName) || this._selectedDecColumn;
+    }
+    set selectedHueColumn(columnName) {
+        this._selectedHueColumn = this._hueColumnList.find(c => c.name === columnName);
+    }
+    set selectedShapeColumn(columnName) {
+        this._selectedShapeColumn = this._shapeColumnList.find(c => c.name === columnName);
+    }
+    set selectedNameColumn(columnName) {
+        this._selectedNameColumn = this._shapeColumnList.find(c => c.name === columnName);
+    }
+    resetShapeColumn() {
+        this._selectedShapeColumn = undefined;
+    }
+    resetHueColumn() {
+        this._selectedHueColumn = undefined;
+    }
+}
+
+;// ./src/model/catalogues/CatalogueGL.ts
+// import global from '../../Global.js';
+// import CatalogueProps from './CatalogueProps.js';
+
+
+// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
+
+
+
+// import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
+
+// import { TapMetadata } from '../tap/TapMetadata.js';
+
+// `Source` is assumed to expose at least these:
+class CatalogueGL {
+    _kind = "CatalogueGL";
+    static ELEM_SIZE = 6;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    static STANDARD_SHAPE_SIZE = 8.0;
+    static STANDARD_SHAPE_HUE = 3.0;
+    _ready;
+    _name;
+    _description;
+    // Data
+    sources;
+    // gl: GL;
+    // Buffers & arrays
+    vertexCataloguePositionBuffer = null;
+    vertexhoveredCataloguePositionBuffer = null;
+    vertexCataloguePosition;
+    _bufferInitialised = false;
+    _webgl;
+    // Index/selection bookkeeping
+    hoveredIndexes;
+    selectedIndexes;
+    extHoveredIndexes;
+    _oldMouseCoords;
+    _metadataManager;
+    _isVisible = true;
+    _shapeColor = '#8F00FF';
+    _healpixDensityMap;
+    _providerUrl;
+    _catalogueShaderProgram;
+    _visibleTilesManager;
+    constructor(catalogueName, catalogueDescription, providerUrl, metadataManager, webgl, visibleTilesManager) {
+        this._webgl = webgl;
+        this._ready = false;
+        this._visibleTilesManager = visibleTilesManager;
+        this.TYPE = 'SOURCE_CATALOGUE';
+        this._name = catalogueName;
+        this._description = catalogueDescription;
+        this._providerUrl = providerUrl;
+        this._metadataManager = metadataManager;
+        this.sources = [];
+        // GL init
+        // this.gl = global.gl as GL;
+        // this.vertexCataloguePositionBuffer = this.gl.createBuffer();
+        // this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
+        this.vertexCataloguePosition = new Float32Array(0);
+        this.hoveredIndexes = [];
+        this.selectedIndexes = [];
+        this.extHoveredIndexes = [];
+        this._oldMouseCoords = null;
+        this._healpixDensityMap = new Map();
+        // this.catalogueProps = new CatalogueProps(metadataManager, defaultColor);
+        // call catalogueShaderProgram to init shaders if they are not yet initialised 
+        this._catalogueShaderProgram = new CatalogueShaderProgram(this._webgl);
+        this._catalogueShaderProgram.shaderProgram;
+        // catalogueShaderProgram.shaderProgram
+        this._isVisible = true;
+    }
+    setIsVisible(visibility) {
+        this._isVisible = visibility;
+    }
+    get shapeColor() {
+        return this._shapeColor;
+    }
+    get providerUrl() {
+        return this._providerUrl;
+    }
+    get name() {
+        return this._name;
+    }
+    get isVisible() {
+        return this._isVisible;
+    }
+    minMax(columnindex) {
+        if (!this.sources.length)
+            return { min: 0, max: 0 };
+        let min = this.sources[0].details[columnindex];
+        if (isNaN(Number(min))) {
+            // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`)
+            console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain only number values`);
+            return { min: 0, max: 0 };
+        }
+        let max = min;
+        for (const source of this.sources) {
+            const v = source.details[columnindex];
+            if (isNaN(Number(v))) {
+                // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
+                console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain number only values`);
+                return { min: 0, max: 0 };
+            }
+            if (v < min)
+                min = v;
+            if (v > max)
+                max = v;
+        }
+        return {
+            min: Number(min),
+            max: Number(max)
+        };
+    }
+    get metadataManager() {
+        return this._metadataManager;
+    }
+    changeMetaRA(raColumnName) {
+        this._metadataManager.selectedRaColumn = raColumnName;
+    }
+    changeMetaDec(decColumnName) {
+        this._metadataManager.selectedDecColumn = decColumnName;
+    }
+    changeColor(color) {
+        this._shapeColor = color;
+    }
+    changeMetaShapeSize(metacolumnName) {
+        if (!this._webgl)
+            return;
+        if (metacolumnName == MetadataManager.STANDARD_SIZE) {
+            this._metadataManager.resetShapeColumn();
+            for (const source of this.sources) {
+                const size = CatalogueGL.STANDARD_SHAPE_SIZE;
+                source.shapeSize = size;
+            }
+            this._bufferInitialised = false;
+            // this.initBuffer(this._webgl);
+            return;
+        }
+        // const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
+        // this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
+        // const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
+        const oldShapeSizeName = this._metadataManager.selectedShapeColumn?.name;
+        this._metadataManager.selectedShapeColumn = metacolumnName;
+        const idx = this._metadataManager.selectedShapeColumn?.index ?? -1;
+        if (idx < 0) {
+            // if (oldShapeSizeName) this.catalogueProps.changeCatalogueMetaShapeSize(oldShapeSizeName);
+            if (oldShapeSizeName)
+                this._metadataManager.selectedShapeColumn = oldShapeSizeName;
+            return;
+        }
+        const minmax = this.minMax(idx);
+        if (minmax.min == minmax.max) {
+            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
+            return;
+        }
+        for (const source of this.sources) {
+            const raw = Number(source.getDetailByindex(idx));
+            const min = Number(minmax.min);
+            const max = Number(minmax.max);
+            const norm = (raw - min) / Math.max(1e-12, (max - min));
+            const size = norm * (20 - 8) + 8;
+            source.shapeSize = size;
+        }
+        this._bufferInitialised = false;
+        // this.initBuffer(this._webgl);
+    }
+    changeMetaShapeHue(metacolumnName) {
+        if (!this._webgl)
+            return;
+        if (metacolumnName == MetadataManager.STANDARD_HUE) {
+            this._metadataManager.resetHueColumn();
+            for (const source of this.sources) {
+                const hue = CatalogueGL.STANDARD_SHAPE_HUE;
+                source.brightnessFactor = hue;
+            }
+            this._bufferInitialised = false;
+            // this.initBuffer(this._webgl);
+            return;
+        }
+        const oldHueSizeName = this._metadataManager.selectedShapeColumn?.name;
+        this._metadataManager.selectedHueColumn = metacolumnName;
+        const idx = this._metadataManager.selectedHueColumn?.index ?? -1;
+        if (idx < 0) {
+            if (oldHueSizeName)
+                this._metadataManager.selectedHueColumn = oldHueSizeName;
+            return;
+        }
+        const minmax = this.minMax(idx);
+        if (minmax.min == minmax.max) {
+            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
+            return;
+        }
+        for (const source of this.sources) {
+            const raw = Number(source.getDetailByindex(idx));
+            const min = Number(minmax.min);
+            const max = Number(minmax.max);
+            const norm = (raw - min) / Math.max(1e-12, (max - min));
+            // map [0,1] -> [1,-1]
+            source.brightnessFactor = -(norm * 2 - 1);
+        }
+        this._bufferInitialised = false;
+        // this.initBuffer(this._webgl);
+    }
+    addSource(source) {
+        this.sources.push(source);
+    }
+    /**
+     * @param in_data Rows of TAP results
+     * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
+     */
+    addSources(in_data, columnsmeta) {
+        this._ready = false;
+        this.sources = [];
+        this._metadataManager = new MetadataManager(columnsmeta);
+        // const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
+        // const decDataIndex = (this.catalogueProps.decColumn as any).index ?? (this.catalogueProps.decColumn as any)._index;
+        const raDataIndex = this._metadataManager.selectedRaColumn?.index ?? -1;
+        const decDataIndex = this._metadataManager.selectedDecColumn?.index ?? -1;
+        if (raDataIndex < 0 || decDataIndex < 0)
+            throw new Error(`(ra, dec) idx not defined (${raDataIndex}, ${decDataIndex}) `);
+        for (let j = 0; j < in_data.length; j++) {
+            const point = new Point({
+                raDeg: in_data[j][raDataIndex],
+                decDeg: in_data[j][decDataIndex]
+            }, CoordsType.ASTRO);
+            const source = new model_Source(point, in_data[j]);
+            // Ensure optional fields exist
+            source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            source.brightnessFactor = 3;
+            this.addSource(source);
+            // if (this.catalogueProps.shapeHueColumn?.name) {
+            if (this._metadataManager.selectedHueColumn?.name) {
+                // this.changeCatalogueMetaShapeHue(this.catalogueProps.shapeHueColumn.name)
+                this.changeMetaShapeHue(this._metadataManager.selectedHueColumn.name);
+            }
+            // if (this.catalogueProps.shapeSizeColumn?.name) {
+            if (this._metadataManager.selectedShapeColumn?.name) {
+                // this.changeCatalogueMetaShapeSize(this.shapeSizeColumn.name)
+                this.changeMetaShapeSize(this._metadataManager.selectedShapeColumn.name);
+            }
+        }
+        // this.initBuffer();
+        this._ready = true;
+        this._bufferInitialised = false;
+    }
+    clearSources() {
+        this.sources = [];
+        this.hoveredIndexes = [];
+        this._healpixDensityMap.clear();
+        this.vertexCataloguePosition = new Float32Array(0);
+    }
+    extHighlightSource(source, highlighted) {
+        const sIdx = this.sources.indexOf(source);
+        if (sIdx < 0)
+            return;
+        if (highlighted) {
+            if (!this.extHoveredIndexes.includes(sIdx)) {
+                this.extHoveredIndexes.push(sIdx);
+            }
+        }
+        else {
+            const i = this.extHoveredIndexes.indexOf(sIdx);
+            if (i >= 0)
+                this.extHoveredIndexes.splice(i, 1);
+        }
+    }
+    extAddSources2Selected(sources) {
+        for (const s of sources) {
+            const sIdx = this.sources.indexOf(s);
+            if (sIdx >= 0 && !this.selectedIndexes.includes(sIdx)) {
+                this.selectedIndexes.push(sIdx);
+            }
+        }
+    }
+    extRemoveSourceFromSelection(source) {
+        const indexOfObject = this.sources.indexOf(source);
+        if (indexOfObject < 0)
+            return;
+        const sidx = this.selectedIndexes.indexOf(indexOfObject);
+        if (sidx >= 0)
+            this.selectedIndexes.splice(sidx, 1);
+        const eidx = this.extHoveredIndexes.indexOf(indexOfObject);
+        if (eidx >= 0)
+            this.extHoveredIndexes.splice(eidx, 1);
+        // Clear hovered flag in buffer view (if present)
+        if (this.vertexCataloguePosition.length >= (indexOfObject + 1) * CatalogueGL.ELEM_SIZE) {
+            this.vertexCataloguePosition[indexOfObject * CatalogueGL.ELEM_SIZE + 3] = 0.0;
+        }
+    }
+    initBuffer() {
+        // this._webgl = webgl
+        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
+        this.vertexhoveredCataloguePositionBuffer = this._webgl.createBuffer();
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        const nSources = this.sources.length;
+        this.vertexCataloguePosition = new Float32Array(nSources * CatalogueGL.ELEM_SIZE);
+        let positionIndex = 0;
+        for (let j = 0; j < nSources; j++) {
+            const currSource = this.sources[j];
+            const currPix = currSource.healpixPixel;
+            // density map
+            const bucket = this._healpixDensityMap.get(currPix);
+            if (bucket) {
+                if (!bucket.includes(j))
+                    bucket.push(j);
+            }
+            else {
+                this._healpixDensityMap.set(currPix, [j]);
+            }
+            // position
+            this.vertexCataloguePosition[positionIndex + 0] = currSource.point.x;
+            this.vertexCataloguePosition[positionIndex + 1] = currSource.point.y;
+            this.vertexCataloguePosition[positionIndex + 2] = currSource.point.z;
+            // hovered flag
+            this.vertexCataloguePosition[positionIndex + 3] = 0.0;
+            // size
+            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            // brightness
+            this.vertexCataloguePosition[positionIndex + 5] = currSource.brightnessFactor ?? 0.0;
+            positionIndex += CatalogueGL.ELEM_SIZE;
+        }
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        this._bufferInitialised = true;
+    }
+    getSelectionRadius() {
+        const order = this._visibleTilesManager.getVisibleOrder();
+        switch (order) {
+            case 0:
+            case 1:
+            case 2:
+                return 0.005;
+            case 3:
+                return 0.001;
+            case 4:
+                return 0.0009;
+            case 5:
+                return 0.0005;
+            case 6:
+                return 0.0001;
+            case 7:
+                return 0.00009;
+            case 8:
+                return 0.00005;
+            case 9:
+                return 0.00001;
+            default:
+                return 0.000005;
+        }
+    }
+    checkSelection(in_mouseHelper) {
+        if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
+            console.log('CatalogueGL.checkSelection: missing mouse coords');
+            return [];
+        }
+        const hoveredIndexes = [];
+        const sourcesHovered = [];
+        const mousePix = in_mouseHelper.computeNpix();
+        if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
+            const candidates = this._healpixDensityMap.get(mousePix);
+            const selR = this.getSelectionRadius();
+            for (let i = 0; i < candidates.length; i++) {
+                const sourceIdx = candidates[i];
+                const source = this.sources[sourceIdx];
+                if (!source)
+                    continue;
+                const dx = source.point.x - in_mouseHelper.x;
+                const dy = source.point.y - in_mouseHelper.y;
+                const dz = source.point.z - in_mouseHelper.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (dist <= selR) {
+                    hoveredIndexes.push(sourceIdx);
+                    sourcesHovered.push(source);
+                }
+            }
+        }
+        // session.updateHoveredSources(this, sourcesHovered);
+        return hoveredIndexes;
+    }
+    /**
+     * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
+     */
+    draw(in_mMatrix, in_mouseHelper, cameraMatrix) {
+        if (!this.isVisible)
+            return;
+        if (!this._ready)
+            return;
+        if (!cameraMatrix)
+            return;
+        // if (!global.camera) return
+        if (!this._bufferInitialised)
+            this.initBuffer();
+        if (!this._webgl)
+            return;
+        this._catalogueShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, cameraMatrix
+        // global.camera.getCameraMatrix() as Float32Array
+        );
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        // positions
+        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.position, 3, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.position);
+        // hovered flag
+        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.hovered, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.hovered);
+        // point size
+        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.pointSize, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.pointSize);
+        // brightness
+        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.brightness, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.brightness);
+        // color
+        // const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
+        const rgb = colorHex2RGB(this._shapeColor);
+        if (this._catalogueShaderProgram.locations.color) {
+            this._webgl.uniform4f(this._catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+        // Hover logic on mouse move
+        if (in_mouseHelper != null && in_mouseHelper.xyz !== this._oldMouseCoords) {
+            // clear old hovered
+            for (let k = 0; k < this.hoveredIndexes.length; k++) {
+                const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
+                this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
+                this.vertexCataloguePosition[base + 4] = this.sources[this.hoveredIndexes[k]].shapeSize; // size
+            }
+            this.hoveredIndexes = this.checkSelection(in_mouseHelper);
+            // new hovered
+            for (let i = 0; i < this.hoveredIndexes.length; i++) {
+                const idx = this.hoveredIndexes[i];
+                const base = idx * CatalogueGL.ELEM_SIZE;
+                this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+                this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+            }
+        }
+        // selected flags
+        for (let s = 0; s < this.selectedIndexes.length; s++) {
+            const idx = this.selectedIndexes[s];
+            const base = idx * CatalogueGL.ELEM_SIZE;
+            this.vertexCataloguePosition[base + 3] = 2.0; // selected
+            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+        }
+        // external hovered
+        for (let e = 0; e < this.extHoveredIndexes.length; e++) {
+            const idx = this.extHoveredIndexes[e];
+            const base = idx * CatalogueGL.ELEM_SIZE;
+            this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+        }
+        // upload buffer
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        // draw
+        const numItems = this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
+        this._webgl.drawArrays(this._webgl.POINTS, 0, numItems);
+        this._oldMouseCoords = in_mouseHelper.xyz;
+    }
+}
+// export default CatalogueGL;
+
+;// ./src/AstroViewer.ts
 
 
 
@@ -11205,6 +12256,9 @@ class AstroViewer {
         return this.tick();
     }
     // CATALOGUES
+    createCatalogue(catalogueName, catalogueDescription, providerUrl, metadataManager) {
+        return new CatalogueGL(catalogueName, catalogueDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
     showCatalogue(catalogue) {
         this.astroSphere.showCatalogue(catalogue);
     }
@@ -11282,16 +12336,20 @@ class AstroViewer {
     }
     // GRIDs
     toggleHealpixGrid() {
-        grid_HealpixGridSingleton.toggleShowGrid();
+        // healpixGridSingleton.toggleShowGrid()
+        this.astroSphere.healpixGrid.toggleShowGrid();
     }
     isHealpixGridVisible() {
-        return grid_HealpixGridSingleton.isVisible();
+        // return healpixGridSingleton.isVisible()
+        return this.astroSphere.healpixGrid.isVisible();
     }
     toggleEquatorialGrid() {
-        grid_EquatorialGrid.toggleShowGrid();
+        // equatorialGridSingleton.toggleShowGrid()
+        return this.astroSphere.equatorialGrid.toggleShowGrid();
     }
     isEquatorialGridVisible() {
-        return grid_EquatorialGrid.isVisible();
+        // return equatorialGridSingleton.isVisible()
+        return this.astroSphere.equatorialGrid.isVisible();
     }
     // FOV
     getFoV() {
@@ -11316,16 +12374,21 @@ class AstroViewer {
         this.astroSphere.toggleInsideSphere();
     }
     // Internal
-    constructor(canvasDomId) {
-        this.init(canvasDomId);
+    // constructor(canvasDomId: string) {
+    //   this.init(canvasDomId)
+    // }
+    constructor(canvasEl) {
+        this.init(canvasEl);
     }
-    init(canvasDomId) {
+    // private init(canvasDomId: string): void {
+    init(canvasEl) {
         console.log('init webgl');
-        const c = document.getElementById(canvasDomId);
-        if (!(c instanceof HTMLCanvasElement)) {
-            throw new Error(`Element with id ${canvasDomId} is not a canvas.`);
-        }
-        this.canvas = c;
+        // const c = document.getElementById(canvasDomId)
+        // if (!(c instanceof HTMLCanvasElement)) {
+        //   throw new Error(`Element with id ${canvasDomId} is not a canvas.`)
+        // }
+        // this.canvas = c
+        this.canvas = canvasEl;
         const gl = this.canvas.getContext('webgl2', { alpha: false });
         if (!gl) {
             alert('Could not initialise WebGL, sorry :-(');
@@ -11350,13 +12413,17 @@ class AstroViewer {
         console.log('inside initListeners');
         const resizeCanvas = () => {
             console.log('[resizeCanvas]');
-            const newWidth = window.innerWidth - 3;
-            const newHeight = window.innerHeight - 3;
-            this.canvas.width = newWidth;
-            this.canvas.height = newHeight;
-            this.webgl.viewportWidth = this.canvas.width;
-            this.webgl.viewportHeight = this.canvas.height;
-            this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const newWidth = Math.max(1, Math.floor(rect.width * dpr));
+            const newHeight = Math.max(1, Math.floor(rect.height * dpr));
+            if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
+                this.canvas.width = newWidth;
+                this.canvas.height = newHeight;
+                this.webgl.viewportWidth = this.canvas.width;
+                this.webgl.viewportHeight = this.canvas.height;
+                this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            }
         };
         const handleContextLost = (event) => {
             console.log('[handleContextLost]');
@@ -11374,6 +12441,16 @@ class AstroViewer {
             this.webgl.enable(this.webgl.DEPTH_TEST);
             this.rafId = requestAnimationFrame(() => this.tick());
         };
+        // 🔥 ResizeObserver per pannelli / split / layout dinamici
+        if ('ResizeObserver' in window) {
+            const ro = new ResizeObserver(() => {
+                resizeCanvas();
+            });
+            // Osserva il canvas o il suo parent (a tua scelta)
+            ro.observe(this.canvas);
+            // Se preferisci il contenitore:
+            // if (this.canvas.parentElement) ro.observe(this.canvas.parentElement);
+        }
         window.addEventListener('resize', resizeCanvas);
         this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
         this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
@@ -11596,15 +12673,17 @@ class Footprint {
 // HiPSShaderProgram.ts
 
 
-
 class FootprintShaderProgram {
+    // export default class FootprintShaderProgram {
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
     gl_uniforms;
     gl_attributes;
     locations;
-    constructor() {
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
         this.gl_uniforms = {
             vertex_color: 'u_fragcolor',
             m_perspective: 'uPMatrix',
@@ -11624,14 +12703,16 @@ class FootprintShaderProgram {
     }
     get shaderProgram() {
         if (!this._shaderProgram) {
-            const gl = src_Global.gl;
+            const gl = this._webgl;
+            // const gl = global.gl as GL
             this._shaderProgram = gl.createProgram();
             this.initShaders();
         }
         return this._shaderProgram;
     }
     initShaders() {
-        const gl = src_Global.gl;
+        const gl = this._webgl;
+        // const gl = global.gl as GL
         const fragmentShaderStr = ShaderManager.footprintFS();
         this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this._fragmentShader, fragmentShaderStr);
@@ -11662,7 +12743,8 @@ class FootprintShaderProgram {
         this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
     }
     enableShaders(pMatrix, modelMatrix, viewMatrix) {
-        const gl = src_Global.gl;
+        const gl = this._webgl;
+        // const gl = global.gl as GL
         gl.useProgram(this.shaderProgram);
         this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
         this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
@@ -11672,229 +12754,16 @@ class FootprintShaderProgram {
         gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
     }
 }
-const footprintShaderProgram = new FootprintShaderProgram();
-
-;// ./src/model/MetadataColumn.ts
-
-var ColumnType;
-(function (ColumnType) {
-    ColumnType["STRING"] = "STRING";
-    ColumnType["NUMBER"] = "NUMBER";
-    ColumnType["GEOM_RA"] = "GEOM_RA";
-    ColumnType["GEOM_DEC"] = "GEOM_DEC";
-    ColumnType["GEOM_FOOTPRINT"] = "GEOM_FOOTPRINT";
-    ColumnType["MAIN_NAME"] = "MAIN_NAME";
-})(ColumnType || (ColumnType = {}));
-class MetadataColumn {
-    _index; // mandatory
-    _name; // mandatory
-    _description = ""; // mandatory default ""
-    _columnType; // mandatory
-    _unit; // mandatory
-    _details = new Map();
-    constructor(init) {
-        if (!init.name)
-            throw new Error(`No name column defined.`);
-        this._name = init.name;
-        if (init.index < 0 || isNaN(init.index))
-            throw new Error(`No index column defined.`);
-        this._index = init.index;
-        this._columnType = init.columnType ?? ColumnType.STRING;
-        this._unit = init.unit ?? "";
-        this._description = init.description ?? "";
-        if (init.details)
-            this._details = new Map(init.details);
-    }
-    get details() {
-        return new Map(this._details);
-    }
-    /** Get any detail; optional fallback. */
-    getDetail(key, fallback) {
-        return this._details.has(key) ? this._details.get(key) : fallback;
-    }
-    /** Type-leaning getters with fallbacks. */
-    getString(key, fallback = "") {
-        const v = this._details.get(key);
-        return typeof v === "string" ? v : fallback;
-    }
-    getNumber(key, fallback = NaN) {
-        const v = this._details.get(key);
-        return typeof v === "number" ? v : fallback;
-    }
-    /** Set or update a detail. */
-    setDetail(key, value) {
-        this._details.set(key, value);
-    }
-    /** Add many details at once. */
-    setDetails(details) {
-        const entries = details instanceof Map ? details.entries() : Object.entries(details);
-        for (const [k, v] of entries)
-            this._details.set(k, v);
-    }
-    /** Keys, values, entries (as arrays). */
-    detailKeys() {
-        return Array.from(this._details.keys());
-    }
-    detailValues() {
-        return Array.from(this._details.values());
-    }
-    detailEntries() {
-        return Array.from(this._details.entries());
-    }
-    // ---------- core getters/setters ----------
-    get name() {
-        return this._name;
-    }
-    get description() {
-        return this._description;
-    }
-    get columnType() {
-        return this._columnType;
-    }
-    get index() {
-        return this._index;
-    }
-    get unit() {
-        return this._unit;
-    }
-    // ---------- serialisation ----------
-    toJSON() {
-        return {
-            name: this._name,
-            description: this._description,
-            columnType: this._columnType,
-            index: this._index,
-            unit: this._unit,
-            details: Object.fromEntries(this._details),
-        };
-    }
-}
-
-;// ./src/model/MetadataManager.ts
-
-class MetadataManager {
-    static STANDARD_SIZE = "STANDARD_SIZE";
-    static STANDARD_HUE = "STANDARD_HUE";
-    _outlineColumnList = [];
-    _raColumnList = [];
-    _decColumnList = [];
-    _shapeColumnList = [];
-    _hueColumnList = [];
-    _selectedOutlineColumn;
-    _selectedRaColumn;
-    _selectedDecColumn;
-    _selectedShapeColumn;
-    _selectedHueColumn;
-    _selectedNameColumn;
-    _columns = [];
-    constructor(metadataColumns) {
-        metadataColumns.forEach(c => {
-            if (c.columnType == ColumnType.NUMBER) {
-                this.addHueColumn(c);
-                this.addShapeColumn(c);
-            }
-            if (c.columnType == ColumnType.GEOM_RA) {
-                this.addRaColumn(c);
-            }
-            if (c.columnType == ColumnType.GEOM_DEC) {
-                this.addDecColumn(c);
-            }
-            if (c.columnType == ColumnType.GEOM_FOOTPRINT) {
-                this.addOutlineColumn(c);
-            }
-            if (c.columnType == ColumnType.MAIN_NAME) {
-                this._selectedNameColumn = c;
-            }
-            this._columns.push(c);
-        });
-        // if (!this._selectedNameColumn) {
-        //     throw new Error("No name column found")
-        // }
-    }
-    addOutlineColumn(outlineColumn) {
-        this._outlineColumnList.push(outlineColumn);
-        this._selectedOutlineColumn = outlineColumn;
-    }
-    addRaColumn(column) {
-        this._selectedRaColumn = this._selectedRaColumn || column;
-        this._raColumnList.push(column);
-    }
-    addDecColumn(column) {
-        this._selectedDecColumn = this._selectedDecColumn || column;
-        this._decColumnList.push(column);
-    }
-    addHueColumn(column) {
-        this._hueColumnList.push(column);
-    }
-    addShapeColumn(column) {
-        this._shapeColumnList.push(column);
-    }
-    get selectedRaColumn() {
-        return this._selectedRaColumn;
-    }
-    get selectedDecColumn() {
-        return this._selectedDecColumn;
-    }
-    get selectedHueColumn() {
-        return this._selectedHueColumn;
-    }
-    get selectedShapeColumn() {
-        return this._selectedShapeColumn;
-    }
-    get selectedOutlineColumn() {
-        return this._selectedOutlineColumn;
-    }
-    get selectedNameColumn() {
-        return this._selectedNameColumn;
-    }
-    get columns() {
-        return this._columns;
-    }
-    get raColumnList() {
-        return this._raColumnList;
-    }
-    get decColumnList() {
-        return this._decColumnList;
-    }
-    get outlineColumnList() {
-        return this._outlineColumnList;
-    }
-    get hueColumnList() {
-        return this._hueColumnList;
-    }
-    get shapeColumnList() {
-        return this._shapeColumnList;
-    }
-    set selectedRaColumn(columnName) {
-        this._selectedRaColumn = this._raColumnList.find(c => c.name === columnName) || this._selectedRaColumn;
-    }
-    set selectedDecColumn(columnName) {
-        this._selectedDecColumn = this._decColumnList.find(c => c.name === columnName) || this._selectedDecColumn;
-    }
-    set selectedHueColumn(columnName) {
-        this._selectedHueColumn = this._hueColumnList.find(c => c.name === columnName);
-    }
-    set selectedShapeColumn(columnName) {
-        this._selectedShapeColumn = this._shapeColumnList.find(c => c.name === columnName);
-    }
-    set selectedNameColumn(columnName) {
-        this._selectedNameColumn = this._shapeColumnList.find(c => c.name === columnName);
-    }
-    resetShapeColumn() {
-        this._selectedShapeColumn = undefined;
-    }
-    resetHueColumn() {
-        this._selectedHueColumn = undefined;
-    }
-}
+// export const footprintShaderProgram = new FootprintShaderProgram()
 
 ;// ./src/model/footprints/FootprintSetGL.ts
 
-
+// import global from '../../Global.js'
 
 
 // import { TapRepo } from '../tap/TapRepo.js'
 // import {TapMetadataList} from '../tap/TapMetadataList.js'
+// import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
 
 
 
@@ -11916,7 +12785,7 @@ class FootprintSetGL {
     _providerUrl;
     totConvexPoints;
     // footprintsInPix256: Map<number, Footprint[]>
-    gl;
+    // gl: GL;
     // shaderProgram: WebGLProgram
     vertexCataloguePositionBuffer;
     indexBuffer;
@@ -11940,25 +12809,23 @@ class FootprintSetGL {
     totSelectedPoints;
     nSlectedPrimitiveFlags = 0;
     _shapeColor = '#00fff2ff';
+    _bufferInitialised = false;
+    _webgl;
+    _footprintShaderProgram;
     _isVisible = true;
     _metadataManager;
-    constructor(fsetName, fsetDescription, providerUrl, metadataManager) {
+    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl) {
+        this._webgl = webgl;
         this._ready = false;
         this.TYPE = 'FOOTPRINT_SET';
         this._name = fsetName;
         this._description = fsetDescription;
         this._providerUrl = providerUrl;
-        // this.footprintsInPix256 = new Map()
         this._metadataManager = metadataManager;
         this.initFootprintArrays();
-        if (!src_Global.gl) {
-            throw new Error('WebGL2RenderingContext is not initialized (global.gl is null)');
-        }
-        this.gl = src_Global.gl;
-        this.initGLBuffers();
         this.oldMouseCoords = null;
-        // this.footprintsetProps = new FootprintProps(tapMetadataList, defaultColor)
-        footprintShaderProgram.shaderProgram;
+        this._footprintShaderProgram = new FootprintShaderProgram(this._webgl);
+        this._footprintShaderProgram.shaderProgram;
     }
     initFootprintArrays() {
         this.footprintPolygons = [];
@@ -11977,12 +12844,14 @@ class FootprintSetGL {
         this.selectedIndexes = new Uint32Array;
     }
     initGLBuffers() {
-        this.vertexCataloguePositionBuffer = this.gl.createBuffer();
-        this.indexBuffer = this.gl.createBuffer();
-        this.hoveredVertexPositionBuffer = this.gl.createBuffer();
-        this.hoveredIndexBuffer = this.gl.createBuffer();
-        this.selectedVertexPositionBuffer = this.gl.createBuffer();
-        this.selectedIndexBuffer = this.gl.createBuffer();
+        if (!this._webgl)
+            return;
+        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
+        this.indexBuffer = this._webgl.createBuffer();
+        this.hoveredVertexPositionBuffer = this._webgl.createBuffer();
+        this.hoveredIndexBuffer = this._webgl.createBuffer();
+        this.selectedVertexPositionBuffer = this._webgl.createBuffer();
+        this.selectedIndexBuffer = this._webgl.createBuffer();
     }
     setIsVisible(visibility) {
         this._isVisible = visibility;
@@ -12024,13 +12893,18 @@ class FootprintSetGL {
                 }
             }
         }
-        this.initBuffer();
+        // this.initBuffer()
         this._ready = true;
+        this._bufferInitialised = false;
     }
     clearFootprints() {
         this.initFootprintArrays();
     }
     initBuffer() {
+        // this._webgl = webgl
+        if (!this._webgl)
+            return;
+        this.initGLBuffers();
         const nFootprints = this.footprintPolygons.length;
         let npolygons = nFootprints - 1;
         for (let j = 0; j < nFootprints; j++) {
@@ -12038,7 +12912,7 @@ class FootprintSetGL {
         }
         this.indexes = new Uint32Array(this.totPoints + npolygons + 1);
         const MAX_UNSIGNED_INT = 0xffffffff;
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
         this.vertexCataloguePosition = new Float32Array(3 * this.totPoints);
         let positionIndex = 0;
         let vIdx = 0;
@@ -12107,49 +12981,48 @@ class FootprintSetGL {
     get selectedFootprints() {
         return this._selectedFootprints;
     }
-    highlightFootprint(footprint, highlighted) {
-        if (highlighted) {
-            this._hoveredFootprints.push(footprint);
-            this.totHoveredPoints += footprint.totPoints;
-        }
-        else {
-            const indexOfFootprint = this._hoveredFootprints.indexOf(footprint);
-            this._hoveredFootprints.splice(indexOfFootprint, 1);
-            this.totHoveredPoints -= footprint.totPoints;
-        }
-        this.initHoveringBuffer();
-    }
+    // highlightFootprint(footprint: Footprint, highlighted: boolean) {
+    //   if (highlighted) {
+    //     this._hoveredFootprints.push(footprint)
+    //     this.totHoveredPoints += footprint.totPoints
+    //   } else {
+    //     const indexOfFootprint = this._hoveredFootprints.indexOf(footprint)
+    //     this._hoveredFootprints.splice(indexOfFootprint, 1)
+    //     this.totHoveredPoints -= footprint.totPoints
+    //   }
+    //   this.initHoveringBuffer()
+    // }
     /**
      *
      * @param {Footprint[]} footprints
      */
-    addFootprint2Selected(footprints) {
-        let refreshBuffer = false;
-        for (let f of footprints) {
-            if (!this._selectedFootprints.includes(f)) {
-                this._selectedFootprints.push(f);
-                this.totSelectedPoints += f.totPoints;
-                refreshBuffer = true;
-            }
-        }
-        if (refreshBuffer) {
-            this.initSelectionBuffer();
-        }
-    }
+    // addFootprint2Selected(footprints: Footprint[]) {
+    //   let refreshBuffer = false
+    //   for (let f of footprints) {
+    //     if (!this._selectedFootprints.includes(f)) {
+    //       this._selectedFootprints.push(f)
+    //       this.totSelectedPoints += f.totPoints
+    //       refreshBuffer = true
+    //     }
+    //   }
+    //   if (refreshBuffer) {
+    //     this.initSelectionBuffer()
+    //   }
+    // }
     /**
      *
      * @param {Footprint} footprint
      */
-    removeFootprintFromSelection(footprint) {
-        const indexOfObject = this._selectedFootprints.indexOf(footprint);
-        if (indexOfObject >= 0) {
-            this._selectedFootprints.splice(indexOfObject, 1);
-            this.totSelectedPoints -= footprint.totPoints;
-            if (this._selectedFootprints.length > 0) {
-                this.initSelectionBuffer();
-            }
-        }
-    }
+    // removeFootprintFromSelection(footprint: Footprint) {
+    //   const indexOfObject = this._selectedFootprints.indexOf(footprint)
+    //   if (indexOfObject >= 0) {
+    //     this._selectedFootprints.splice(indexOfObject, 1)
+    //     this.totSelectedPoints -= footprint.totPoints
+    //     if (this._selectedFootprints.length > 0) {
+    //       this.initSelectionBuffer()
+    //     }
+    //   }
+    // }
     initHoveringBuffer() {
         /*
                 TODO better approach. when creating the indexbuffer of footprints,
@@ -12161,6 +13034,8 @@ class FootprintSetGL {
                 This will ease checking the selection in the vertex/fragment shader and
                 set the pointsize and shape color.
                 */
+        if (!this._webgl)
+            return;
         if (this._hoveredFootprints.length == 0) {
             return;
         }
@@ -12174,7 +13049,7 @@ class FootprintSetGL {
         this.hoveredIndexes = new Uint32Array(this.totHoveredPoints + npolygons);
         const MAX_UNSIGNED_INT = 0xffffffff; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
         // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
         this.hoveredVertexPosition = new Float32Array(3 * this.totHoveredPoints);
         let positionIndex = 0;
         let vIdx = 0;
@@ -12206,70 +13081,77 @@ class FootprintSetGL {
             }
         }
     }
-    initSelectionBuffer() {
-        /*
-                TODO better approach. when creating the indexbuffer of footprints,
-                add 1 extra position for the selection (set to 0 == not selected),
-                and save the position "positionIndex" in an array (selectionIndexes).
-                When checking the selection, I get the index of the footprint, which
-                matches with the index in the selectionIndexes to retrieve the position
-                of the flag to be set to 1 in the vertexposition
-                This will ease checking the selection in the vertex/fragment shader and
-                set the pointsize and shape color.
-                */
-        let nFootprints = this._selectedFootprints.length;
-        let npolygons = nFootprints - 1;
-        for (let j = 0; j < nFootprints; j++) {
-            npolygons += this._selectedFootprints[j].polygons.length - 1;
-        }
-        // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
-        // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-        this.selectedIndexes = new Uint32Array(this.totSelectedPoints + npolygons);
-        const MAX_UNSIGNED_INT = 0xffffffff; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-        // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
-        this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints);
-        let positionIndex = 0;
-        let vIdx = 0;
-        let R = 1.0;
-        this.nSlectedPrimitiveFlags = 0;
-        for (let j = 0; j < nFootprints; j++) {
-            let footprintPoly = this._selectedFootprints[j].polygons;
-            if (j > 0) {
-                this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
-                this.nSlectedPrimitiveFlags += 1;
-                vIdx += 1;
-            }
-            for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
-                if (polyIdx > 0) {
-                    this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
-                    this.nSlectedPrimitiveFlags += 1;
-                    vIdx += 1;
-                }
-                const poly = footprintPoly[polyIdx];
-                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
-                    const p = poly[pointIdx];
-                    this.selectedVertexPosition[positionIndex] = R * p.x;
-                    this.selectedVertexPosition[positionIndex + 1] = R * p.y;
-                    this.selectedVertexPosition[positionIndex + 2] = R * p.z;
-                    this.selectedIndexes[vIdx] = Math.floor(positionIndex / 3);
-                    vIdx += 1;
-                    positionIndex += 3;
-                }
-            }
-        }
-    }
+    // initSelectionBuffer() {
+    //   /*
+    //           TODO better approach. when creating the indexbuffer of footprints, 
+    //           add 1 extra position for the selection (set to 0 == not selected), 
+    //           and save the position "positionIndex" in an array (selectionIndexes).
+    //           When checking the selection, I get the index of the footprint, which
+    //           matches with the index in the selectionIndexes to retrieve the position 
+    //           of the flag to be set to 1 in the vertexposition
+    //           This will ease checking the selection in the vertex/fragment shader and
+    //           set the pointsize and shape color.
+    //           */
+    //   let nFootprints = this._selectedFootprints.length
+    //   let npolygons = nFootprints - 1
+    //   for (let j = 0; j < nFootprints; j++) {
+    //     npolygons += this._selectedFootprints[j].polygons.length - 1
+    //   }
+    //   // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
+    //   // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+    //   this.selectedIndexes = new Uint32Array(this.totSelectedPoints + npolygons)
+    //   const MAX_UNSIGNED_INT = 0xffffffff // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+    //   // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
+    //   this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer)
+    //   this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints)
+    //   let positionIndex = 0
+    //   let vIdx = 0
+    //   let R = 1.0
+    //   this.nSlectedPrimitiveFlags = 0
+    //   for (let j = 0; j < nFootprints; j++) {
+    //     let footprintPoly = this._selectedFootprints[j].polygons
+    //     if (j > 0) {
+    //       this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT
+    //       this.nSlectedPrimitiveFlags += 1
+    //       vIdx += 1
+    //     }
+    //     for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
+    //       if (polyIdx > 0) {
+    //         this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
+    //         this.nSlectedPrimitiveFlags += 1;
+    //         vIdx += 1;
+    //       }
+    //       const poly = footprintPoly[polyIdx];
+    //       for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+    //         const p = poly[pointIdx];
+    //         this.selectedVertexPosition[positionIndex] = R * p.x;
+    //         this.selectedVertexPosition[positionIndex + 1] = R * p.y;
+    //         this.selectedVertexPosition[positionIndex + 2] = R * p.z;
+    //         this.selectedIndexes[vIdx] = Math.floor(positionIndex / 3);
+    //         vIdx += 1;
+    //         positionIndex += 3;
+    //       }
+    //     }
+    //   }
+    // }
     changeColor(color) {
         this._shapeColor = color;
     }
-    draw(in_mMatrix, in_mouseHelper) {
+    draw(in_mMatrix, in_mouseHelper, cameraMatrix) {
         if (!this.isVisible)
             return;
         if (!this._ready)
             return;
-        if (!src_Global.camera)
+        if (!cameraMatrix)
             return;
-        footprintShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, src_Global.camera.getCameraMatrix());
+        // if (!global.camera) return
+        if (!this._bufferInitialised)
+            this.initBuffer();
+        if (!this._webgl)
+            return;
+        this._footprintShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, cameraMatrix
+        // global.camera.getCameraMatrix() as Float32Array
+        );
         if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
             this.checkSelection(in_mouseHelper);
         }
@@ -12277,638 +13159,49 @@ class FootprintSetGL {
             // TODO POINT_SIZE doesn't have any effect on line thickness!! it only applies to points
             const rgb = colorHex2RGB('#00FF00');
             const alpha = 1.0;
-            this.gl.uniform4f(footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
-            this.gl.uniform1f(footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.hoveredVertexPosition, this.gl.STATIC_DRAW);
+            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
+            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
+            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.hoveredVertexPosition, this._webgl.STATIC_DRAW);
             // setting footprint position
-            this.gl.vertexAttribPointer(footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-            this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position);
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer);
-            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexes, this.gl.STATIC_DRAW);
+            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer);
+            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexes, this._webgl.STATIC_DRAW);
             // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
-            this.gl.drawElements(this.gl.LINE_LOOP, this.hoveredVertexPosition.length / 3 + this.nHoveredPrimitiveFlags, this.gl.UNSIGNED_INT, 0);
+            this._webgl.drawElements(this._webgl.LINE_LOOP, this.hoveredVertexPosition.length / 3 + this.nHoveredPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
         }
         if (this._selectedFootprints.length > 0) {
             const rgb = colorHex2RGB('#ECB462');
             const alpha = 1.0;
-            this.gl.uniform4f(footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
-            this.gl.uniform1f(footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
-            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
-            this.gl.bufferData(this.gl.ARRAY_BUFFER, this.selectedVertexPosition, this.gl.STATIC_DRAW);
+            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
+            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
+            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.selectedVertexPosition, this._webgl.STATIC_DRAW);
             // setting footprint position
-            this.gl.vertexAttribPointer(footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-            this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position);
-            this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer);
-            this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.selectedIndexes, this.gl.STATIC_DRAW);
+            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer);
+            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexes, this._webgl.STATIC_DRAW);
             // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
-            this.gl.drawElements(this.gl.LINE_LOOP, this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags, this.gl.UNSIGNED_INT, 0);
+            this._webgl.drawElements(this._webgl.LINE_LOOP, this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
         }
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
-        this.gl.vertexAttribPointer(footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this.gl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-        this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position);
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.indexes, this.gl.STATIC_DRAW);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+        this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexes, this._webgl.STATIC_DRAW);
         // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
         const shapeColor = [...colorHex2RGB(this._shapeColor), 1.0];
-        this.gl.uniform4f(footprintShaderProgram.locations.color, ...shapeColor);
-        this.gl.drawElements(this.gl.LINE_LOOP, this.indexes.length, this.gl.UNSIGNED_INT, 0);
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
-        this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null);
+        this._webgl.uniform4f(this._footprintShaderProgram.locations.color, ...shapeColor);
+        this._webgl.drawElements(this._webgl.LINE_LOOP, this.indexes.length, this._webgl.UNSIGNED_INT, 0);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, null);
         this.oldMouseCoords = in_mouseHelper.xyz;
     }
 }
 // export default FootprintSetGL
-
-;// ./src/model/Source.ts
-
-
-
-class Source {
-    _point;
-    _name;
-    _details;
-    _h_pix;
-    _shapesize;
-    _brightnessFactor;
-    /**
-     * @param in_point Point.js (Cartesian/RA-Dec wrapper)
-     * @param in_details Optional array of key/value metadata
-     */
-    constructor(in_point, in_details = []) {
-        this._point = in_point;
-        this._details = in_details;
-        this._shapesize = 8.0;
-        this._brightnessFactor = -99;
-        this.computeHealpixPixel();
-    }
-    getDetailByindex(index) {
-        if (index < 0 || index >= this._details.length) {
-            return undefined;
-        }
-        return this._details[index];
-    }
-    get details() {
-        return this._details;
-    }
-    computeHealpixPixel() {
-        // Get Healpix instance from global
-        const healpix = src_Global.getHealpix(src_Global.nsideForSelection);
-        const vec3 = new Vec3(this._point.x, this._point.y, this._point.z);
-        const ptg = new Pointing(vec3, false);
-        this._h_pix = healpix.ang2pix(ptg, false);
-    }
-    get point() {
-        return this._point;
-    }
-    get name() {
-        return this._name;
-    }
-    get healpixPixel() {
-        return this._h_pix;
-    }
-    get shapeSize() {
-        return this._shapesize;
-    }
-    set shapeSize(size) {
-        this._shapesize = size;
-    }
-    get brightnessFactor() {
-        return this._brightnessFactor;
-    }
-    /**
-     * @param factor Must be in [-1..1]
-     */
-    set brightnessFactor(factor) {
-        this._brightnessFactor = factor;
-    }
-}
-/* harmony default export */ const model_Source = (Source);
-
-;// ./src/shader/CatalogueShaderProgram.ts
-// HiPSShaderProgram.ts
-
-
-
-class CatalogueShaderProgram {
-    _shaderProgram;
-    _vertexShader;
-    _fragmentShader;
-    gl_uniforms;
-    gl_attributes;
-    locations;
-    constructor() {
-        this.gl_uniforms = {
-            vertex_color: 'u_fragcolor',
-            m_perspective: 'uPMatrix',
-            m_model_view: 'uMVMatrix'
-        };
-        this.gl_attributes = {
-            vertex_pos: 'aCatPosition',
-            vertex_selected: 'a_selected',
-            point_size: 'a_pointsize',
-            point_hue: 'a_brightness'
-        };
-        this.locations = {
-            pMatrix: null,
-            mvMatrix: null,
-            color: null,
-            position: -1,
-            hovered: -1,
-            pointSize: -1,
-            brightness: -1
-        };
-    }
-    get shaderProgram() {
-        if (!this._shaderProgram) {
-            const gl = src_Global.gl;
-            this._shaderProgram = gl.createProgram();
-            this.initShaders();
-        }
-        return this._shaderProgram;
-    }
-    initShaders() {
-        const gl = src_Global.gl;
-        const fragmentShaderStr = ShaderManager.catalogueFS();
-        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
-        gl.compileShader(this._fragmentShader);
-        console.log('FS log:', gl.getShaderInfoLog(this._fragmentShader) || 'ok');
-        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
-            return;
-        }
-        const vertexShaderStr = ShaderManager.catalogueVS();
-        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(this._vertexShader, vertexShaderStr);
-        gl.compileShader(this._vertexShader);
-        console.log('VS log:', gl.getShaderInfoLog(this._vertexShader) || 'ok');
-        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
-            return;
-        }
-        gl.attachShader(this.shaderProgram, this._vertexShader);
-        gl.attachShader(this.shaderProgram, this._fragmentShader);
-        gl.linkProgram(this.shaderProgram);
-        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        // shaderUtility.useProgram(this.shaderProgram)
-        gl.useProgram(this.shaderProgram);
-        this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.hovered = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_selected);
-        this.locations.pointSize = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_size);
-        this.locations.brightness = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_hue);
-        this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
-    }
-    enableShaders(pMatrix, modelMatrix, viewMatrix) {
-        const gl = src_Global.gl;
-        // shaderUtility.useProgram(this.shaderProgram)
-        gl.useProgram(this.shaderProgram);
-        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
-        this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
-        let mvMatrix = mat4_create();
-        mvMatrix = mat4_multiply(mvMatrix, viewMatrix, modelMatrix);
-        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
-        gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
-    }
-}
-const catalogueShaderProgram = new CatalogueShaderProgram();
-
-;// ./src/model/catalogues/CatalogueGL.ts
-
-// import CatalogueProps from './CatalogueProps.js';
-
-
-
-
-
-
-
-// import { TapMetadata } from '../tap/TapMetadata.js';
-
-// `Source` is assumed to expose at least these:
-class CatalogueGL {
-    _kind = "CatalogueGL";
-    static ELEM_SIZE = 6;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    static STANDARD_SHAPE_SIZE = 8.0;
-    static STANDARD_SHAPE_HUE = 3.0;
-    _ready;
-    _name;
-    _description;
-    // Data
-    sources;
-    gl;
-    // Buffers & arrays
-    vertexCataloguePositionBuffer;
-    vertexhoveredCataloguePositionBuffer;
-    vertexCataloguePosition;
-    // Index/selection bookkeeping
-    hoveredIndexes;
-    selectedIndexes;
-    extHoveredIndexes;
-    _oldMouseCoords;
-    _metadataManager;
-    _isVisible = true;
-    _shapeColor = '#8F00FF';
-    _healpixDensityMap;
-    _providerUrl;
-    constructor(catalogueName, catalogueDescription, providerUrl, metadataManager) {
-        this._ready = false;
-        this.TYPE = 'SOURCE_CATALOGUE';
-        this._name = catalogueName;
-        this._description = catalogueDescription;
-        this._providerUrl = providerUrl;
-        this._metadataManager = metadataManager;
-        this.sources = [];
-        // GL init
-        this.gl = src_Global.gl;
-        this.vertexCataloguePositionBuffer = this.gl.createBuffer();
-        this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
-        this.vertexCataloguePosition = new Float32Array(0);
-        this.hoveredIndexes = [];
-        this.selectedIndexes = [];
-        this.extHoveredIndexes = [];
-        this._oldMouseCoords = null;
-        this._healpixDensityMap = new Map();
-        // this.catalogueProps = new CatalogueProps(metadataManager, defaultColor);
-        // call catalogueShaderProgram to init shaders if they are not yet initialised 
-        catalogueShaderProgram.shaderProgram;
-        this._isVisible = true;
-    }
-    setIsVisible(visibility) {
-        this._isVisible = visibility;
-    }
-    get shapeColor() {
-        return this._shapeColor;
-    }
-    get providerUrl() {
-        return this._providerUrl;
-    }
-    get name() {
-        return this._name;
-    }
-    get isVisible() {
-        return this._isVisible;
-    }
-    minMax(columnindex) {
-        if (!this.sources.length)
-            return { min: 0, max: 0 };
-        let min = this.sources[0].details[columnindex];
-        if (isNaN(Number(min))) {
-            // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`)
-            console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain only number values`);
-            return { min: 0, max: 0 };
-        }
-        let max = min;
-        for (const source of this.sources) {
-            const v = source.details[columnindex];
-            if (isNaN(Number(v))) {
-                // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
-                console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain number only values`);
-                return { min: 0, max: 0 };
-            }
-            if (v < min)
-                min = v;
-            if (v > max)
-                max = v;
-        }
-        return {
-            min: Number(min),
-            max: Number(max)
-        };
-    }
-    get metadataManager() {
-        return this._metadataManager;
-    }
-    changeMetaRA(raColumnName) {
-        this._metadataManager.selectedRaColumn = raColumnName;
-    }
-    changeMetaDec(decColumnName) {
-        this._metadataManager.selectedDecColumn = decColumnName;
-    }
-    changeColor(color) {
-        this._shapeColor = color;
-    }
-    changeMetaShapeSize(metacolumnName) {
-        // if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
-        if (metacolumnName == MetadataManager.STANDARD_SIZE) {
-            this._metadataManager.resetShapeColumn();
-            for (const source of this.sources) {
-                const size = CatalogueGL.STANDARD_SHAPE_SIZE;
-                source.shapeSize = size;
-            }
-            this.initBuffer();
-            return;
-        }
-        // const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
-        // this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
-        // const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
-        const oldShapeSizeName = this._metadataManager.selectedShapeColumn?.name;
-        this._metadataManager.selectedShapeColumn = metacolumnName;
-        const idx = this._metadataManager.selectedShapeColumn?.index ?? -1;
-        if (idx < 0) {
-            // if (oldShapeSizeName) this.catalogueProps.changeCatalogueMetaShapeSize(oldShapeSizeName);
-            if (oldShapeSizeName)
-                this._metadataManager.selectedShapeColumn = oldShapeSizeName;
-            return;
-        }
-        const minmax = this.minMax(idx);
-        if (minmax.min == minmax.max) {
-            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
-            return;
-        }
-        for (const source of this.sources) {
-            const raw = Number(source.getDetailByindex(idx));
-            const min = Number(minmax.min);
-            const max = Number(minmax.max);
-            const norm = (raw - min) / Math.max(1e-12, (max - min));
-            const size = norm * (20 - 8) + 8;
-            source.shapeSize = size;
-        }
-        this.initBuffer();
-    }
-    changeMetaShapeHue(metacolumnName) {
-        // if (metacolumnName == CatalogueProps.STANDARD_HUE) {
-        if (metacolumnName == MetadataManager.STANDARD_HUE) {
-            // this.catalogueProps.resetCatalogueMetaShapeHue()
-            this._metadataManager.resetHueColumn();
-            for (const source of this.sources) {
-                const hue = CatalogueGL.STANDARD_SHAPE_HUE;
-                source.brightnessFactor = hue;
-            }
-            this.initBuffer();
-            return;
-        }
-        // const oldHueSizeName = this.catalogueProps.shapeHueColumn?.name
-        // this.catalogueProps.changeCatalogueMetaShapeHue(metacolumnName);
-        // const idx = this.catalogueProps.shapeHueColumn?.index ?? this.catalogueProps.shapeHueColumn?.index;
-        const oldHueSizeName = this._metadataManager.selectedShapeColumn?.name;
-        this._metadataManager.selectedHueColumn = metacolumnName;
-        const idx = this._metadataManager.selectedHueColumn?.index ?? -1;
-        if (idx < 0) {
-            // if (oldHueSizeName) this.catalogueProps.changeCatalogueMetaShapeHue(oldHueSizeName);
-            if (oldHueSizeName)
-                this._metadataManager.selectedHueColumn = oldHueSizeName;
-            return;
-        }
-        const minmax = this.minMax(idx);
-        if (minmax.min == minmax.max) {
-            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
-            return;
-        }
-        for (const source of this.sources) {
-            const raw = Number(source.getDetailByindex(idx));
-            const min = Number(minmax.min);
-            const max = Number(minmax.max);
-            const norm = (raw - min) / Math.max(1e-12, (max - min));
-            // map [0,1] -> [1,-1]
-            source.brightnessFactor = -(norm * 2 - 1);
-        }
-        this.initBuffer();
-    }
-    addSource(source) {
-        this.sources.push(source);
-    }
-    /**
-     * @param in_data Rows of TAP results
-     * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
-     */
-    addSources(in_data, columnsmeta) {
-        this._ready = false;
-        this.sources = [];
-        this._metadataManager = new MetadataManager(columnsmeta);
-        // const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
-        // const decDataIndex = (this.catalogueProps.decColumn as any).index ?? (this.catalogueProps.decColumn as any)._index;
-        const raDataIndex = this._metadataManager.selectedRaColumn?.index ?? -1;
-        const decDataIndex = this._metadataManager.selectedDecColumn?.index ?? -1;
-        if (raDataIndex < 0 || decDataIndex < 0)
-            throw new Error(`(ra, dec) idx not defined (${raDataIndex}, ${decDataIndex}) `);
-        for (let j = 0; j < in_data.length; j++) {
-            const point = new Point({
-                raDeg: in_data[j][raDataIndex],
-                decDeg: in_data[j][decDataIndex]
-            }, CoordsType.ASTRO);
-            const source = new model_Source(point, in_data[j]);
-            // Ensure optional fields exist
-            source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
-            source.brightnessFactor = 3;
-            this.addSource(source);
-            // if (this.catalogueProps.shapeHueColumn?.name) {
-            if (this._metadataManager.selectedHueColumn?.name) {
-                // this.changeCatalogueMetaShapeHue(this.catalogueProps.shapeHueColumn.name)
-                this.changeMetaShapeHue(this._metadataManager.selectedHueColumn.name);
-            }
-            // if (this.catalogueProps.shapeSizeColumn?.name) {
-            if (this._metadataManager.selectedShapeColumn?.name) {
-                // this.changeCatalogueMetaShapeSize(this.shapeSizeColumn.name)
-                this.changeMetaShapeSize(this._metadataManager.selectedShapeColumn.name);
-            }
-        }
-        this.initBuffer();
-        this._ready = true;
-    }
-    clearSources() {
-        this.sources = [];
-        this.hoveredIndexes = [];
-        this._healpixDensityMap.clear();
-        this.vertexCataloguePosition = new Float32Array(0);
-    }
-    extHighlightSource(source, highlighted) {
-        const sIdx = this.sources.indexOf(source);
-        if (sIdx < 0)
-            return;
-        if (highlighted) {
-            if (!this.extHoveredIndexes.includes(sIdx)) {
-                this.extHoveredIndexes.push(sIdx);
-            }
-        }
-        else {
-            const i = this.extHoveredIndexes.indexOf(sIdx);
-            if (i >= 0)
-                this.extHoveredIndexes.splice(i, 1);
-        }
-    }
-    extAddSources2Selected(sources) {
-        for (const s of sources) {
-            const sIdx = this.sources.indexOf(s);
-            if (sIdx >= 0 && !this.selectedIndexes.includes(sIdx)) {
-                this.selectedIndexes.push(sIdx);
-            }
-        }
-    }
-    extRemoveSourceFromSelection(source) {
-        const indexOfObject = this.sources.indexOf(source);
-        if (indexOfObject < 0)
-            return;
-        const sidx = this.selectedIndexes.indexOf(indexOfObject);
-        if (sidx >= 0)
-            this.selectedIndexes.splice(sidx, 1);
-        const eidx = this.extHoveredIndexes.indexOf(indexOfObject);
-        if (eidx >= 0)
-            this.extHoveredIndexes.splice(eidx, 1);
-        // Clear hovered flag in buffer view (if present)
-        if (this.vertexCataloguePosition.length >= (indexOfObject + 1) * CatalogueGL.ELEM_SIZE) {
-            this.vertexCataloguePosition[indexOfObject * CatalogueGL.ELEM_SIZE + 3] = 0.0;
-        }
-    }
-    initBuffer() {
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        const nSources = this.sources.length;
-        this.vertexCataloguePosition = new Float32Array(nSources * CatalogueGL.ELEM_SIZE);
-        let positionIndex = 0;
-        for (let j = 0; j < nSources; j++) {
-            const currSource = this.sources[j];
-            const currPix = currSource.healpixPixel;
-            // density map
-            const bucket = this._healpixDensityMap.get(currPix);
-            if (bucket) {
-                if (!bucket.includes(j))
-                    bucket.push(j);
-            }
-            else {
-                this._healpixDensityMap.set(currPix, [j]);
-            }
-            // position
-            this.vertexCataloguePosition[positionIndex + 0] = currSource.point.x;
-            this.vertexCataloguePosition[positionIndex + 1] = currSource.point.y;
-            this.vertexCataloguePosition[positionIndex + 2] = currSource.point.z;
-            // hovered flag
-            this.vertexCataloguePosition[positionIndex + 3] = 0.0;
-            // size
-            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
-            // brightness
-            this.vertexCataloguePosition[positionIndex + 5] = currSource.brightnessFactor ?? 0.0;
-            positionIndex += CatalogueGL.ELEM_SIZE;
-        }
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
-    }
-    getSelectionRadius() {
-        const order = visibleTilesManager.getVisibleOrder();
-        switch (order) {
-            case 0:
-            case 1:
-            case 2:
-                return 0.005;
-            case 3:
-                return 0.001;
-            case 4:
-                return 0.0009;
-            case 5:
-                return 0.0005;
-            case 6:
-                return 0.0001;
-            case 7:
-                return 0.00009;
-            case 8:
-                return 0.00005;
-            case 9:
-                return 0.00001;
-            default:
-                return 0.000005;
-        }
-    }
-    checkSelection(in_mouseHelper) {
-        if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
-            console.log('CatalogueGL.checkSelection: missing mouse coords');
-            return [];
-        }
-        const hoveredIndexes = [];
-        const sourcesHovered = [];
-        const mousePix = in_mouseHelper.computeNpix();
-        if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
-            const candidates = this._healpixDensityMap.get(mousePix);
-            const selR = this.getSelectionRadius();
-            for (let i = 0; i < candidates.length; i++) {
-                const sourceIdx = candidates[i];
-                const source = this.sources[sourceIdx];
-                if (!source)
-                    continue;
-                const dx = source.point.x - in_mouseHelper.x;
-                const dy = source.point.y - in_mouseHelper.y;
-                const dz = source.point.z - in_mouseHelper.z;
-                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                if (dist <= selR) {
-                    hoveredIndexes.push(sourceIdx);
-                    sourcesHovered.push(source);
-                }
-            }
-        }
-        // session.updateHoveredSources(this, sourcesHovered);
-        return hoveredIndexes;
-    }
-    /**
-     * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
-     */
-    draw(in_mMatrix, in_mouseHelper) {
-        if (!this.isVisible)
-            return;
-        if (!this._ready)
-            return;
-        if (!src_Global.camera)
-            return;
-        catalogueShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, src_Global.camera.getCameraMatrix());
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        // positions
-        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.position, 3, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
-        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.position);
-        // hovered flag
-        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.hovered, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
-        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.hovered);
-        // point size
-        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.pointSize, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
-        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.pointSize);
-        // brightness
-        this.gl.vertexAttribPointer(catalogueShaderProgram.locations.brightness, 1, this.gl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
-        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.brightness);
-        // color
-        // const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
-        const rgb = colorHex2RGB(this._shapeColor);
-        if (catalogueShaderProgram.locations.color) {
-            this.gl.uniform4f(catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
-        }
-        // Hover logic on mouse move
-        if (in_mouseHelper != null && in_mouseHelper.xyz !== this._oldMouseCoords) {
-            // clear old hovered
-            for (let k = 0; k < this.hoveredIndexes.length; k++) {
-                const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
-                this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-                this.vertexCataloguePosition[base + 4] = this.sources[this.hoveredIndexes[k]].shapeSize; // size
-            }
-            this.hoveredIndexes = this.checkSelection(in_mouseHelper);
-            // new hovered
-            for (let i = 0; i < this.hoveredIndexes.length; i++) {
-                const idx = this.hoveredIndexes[i];
-                const base = idx * CatalogueGL.ELEM_SIZE;
-                this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-                this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-            }
-        }
-        // selected flags
-        for (let s = 0; s < this.selectedIndexes.length; s++) {
-            const idx = this.selectedIndexes[s];
-            const base = idx * CatalogueGL.ELEM_SIZE;
-            this.vertexCataloguePosition[base + 3] = 2.0; // selected
-            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-        }
-        // external hovered
-        for (let e = 0; e < this.extHoveredIndexes.length; e++) {
-            const idx = this.extHoveredIndexes[e];
-            const base = idx * CatalogueGL.ELEM_SIZE;
-            this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-        }
-        // upload buffer
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
-        // draw
-        const numItems = this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
-        this.gl.drawArrays(this.gl.POINTS, 0, numItems);
-        this._oldMouseCoords = in_mouseHelper.xyz;
-    }
-}
-// export default CatalogueGL;
 
 ;// ./src/index.ts
 

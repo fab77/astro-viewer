@@ -9,7 +9,7 @@ type GL = WebGLRenderingContext | WebGL2RenderingContext;
 class Global {
   // --- cached / runtime state ---
   private _camera: Camera | null;
-  private _gl: GL | null;
+  // private _gl: GL | null;
   private _healpix: Record<number, Healpix>;
 
   // --- config/state flags ---
@@ -33,7 +33,7 @@ class Global {
     this._version = bootSetup.version;
 
     this._camera = null;
-    this._gl = null;
+    // this._gl = null;
     this._healpix = {};
 
     this._selectionnside = 32;
@@ -69,8 +69,8 @@ class Global {
   get camera(): Camera | null { return this._camera; }
   set camera(in_camera: Camera | null) { this._camera = in_camera; }
 
-  get gl(): GL | null { return this._gl; }
-  set gl(in_gl: GL | null) { this._gl = in_gl; }
+  // get gl(): GL | null { return this._gl; }
+  // set gl(in_gl: GL | null) { this._gl = in_gl; }
 
   set insideSphere(v: boolean) { this._insideSphere = v; }
   get insideSphere(): boolean { return this._insideSphere; }

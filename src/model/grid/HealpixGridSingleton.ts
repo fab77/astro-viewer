@@ -1,6 +1,6 @@
 'use strict';
 
-import AbstractSkyEntity from '../AbstractSkyEntity.js';
+import {AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import global from '../../Global.js';
 
 import { mat4, vec4, ReadonlyMat4 } from 'gl-matrix';
@@ -16,9 +16,13 @@ import {Point} from '../Point.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import GeomUtils from '../../utils/GeomUtils.js';
 import GridTextHelper from './GridTextHelper.js';
-import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
+// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
+// import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
+import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
+import { bootSetup } from '../../Config.js';
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -29,7 +33,7 @@ interface BoundVec {
 }
 
 
-class HealpixGridSingleton extends AbstractSkyEntity {
+export class HealpixGridSingleton extends AbstractSkyEntity {
 
   static ELEM_SIZE = 3;
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -42,6 +46,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
   private defaultColor = '#ec0acaff'
   private gridText: GridTextHelper = new GridTextHelper()
+  // private _hipsShaderProgram: HiPSShaderProgram
 
   private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
     position: 0,
@@ -65,18 +70,20 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   static INITIAL_POSITION: [number, number, number] = [0.0, 0.0, 0.0];
   static INITIAL_PhiRad = 0;
   static INITIAL_ThetaRad = 0;
+  private _visibleTilesManager: VisibleTilesManager;
 
-
-
-  constructor() {
-    super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid');
+  constructor(webgl: WebGL2RenderingContext) {
+    super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', webgl);
+    this.init()
+    this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this)
+    this._visibleTilesManager.init(bootSetup.insideSphere)
   }
 
   init(): void {
     console.log('HealpixGridSingleton.init()');
-    this.initGL(global.gl as GL);
+    this.initGL(super.webgl as GL);
 
-    this._shaderProgram = (global.gl as GL).createProgram() as WebGLProgram;
+    this._shaderProgram = (super.webgl as GL).createProgram() as WebGLProgram;
     this.initShaders();
 
     const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
@@ -84,12 +91,12 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
     this._nPrimitiveFlags = 0;
 
-    this._vertexCataloguePositionBuffer = (global.gl as GL).createBuffer()!;
-    this._indexBuffer = (global.gl as GL).createBuffer()!;
+    this._vertexCataloguePositionBuffer = (super.webgl as GL).createBuffer()!;
+    this._indexBuffer = (super.webgl as GL).createBuffer()!;
 
     this._vertexCataloguePosition = new Float32Array(0);
 
-    this.fovObj = new FoV();
+    this.fovObj = new FoV(super.webgl);
   }
 
   get RADIUS(): number {
@@ -109,7 +116,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   }
 
   refreshFoV() {
-    return this.fovObj.getFoV(global.insideSphere);
+    return this.fovObj.getFoV(global.insideSphere, this, super.webgl);
   }
 
   getFoV(): FoV {
@@ -121,7 +128,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   }
 
   private initShaders(): void {
-    const gl = global.gl as GL;
+    const gl = super.webgl as GL;
 
     const fragmentShaderStr = GridShaderManager.healpixGridFS();
     this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)!;
@@ -274,7 +281,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   }
 
   private enableShader(in_mMatrix: ReadonlyMat4, pMatrix: ReadonlyMat4): void {
-    const gl = global.gl as GL;
+    const gl = super.webgl as GL;
 
     gl.useProgram(this._shaderProgram);
     // TODO move locations retrieval elsewhere
@@ -282,7 +289,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     // Uniform locations
     const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
     const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-    const uColor = (global.gl as GL).getUniformLocation(this._shaderProgram, 'u_fragcolor');
+    const uColor = (super.webgl as GL).getUniformLocation(this._shaderProgram, 'u_fragcolor');
 
     // Attribute locations
     this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
@@ -306,8 +313,12 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     this.showGrid = !this.showGrid
   }
 
-  draw(): void {
-    const gl = global.gl as GL;
+  get visibleTilesManager(){
+    return this._visibleTilesManager
+  }
+
+  draw(input: SkyEntityDrawInput): void {
+    const gl = super.webgl as GL;
 
     const mMatrix = this.getModelMatrix();
     this.refresh();
@@ -319,7 +330,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
       return;
     }
 
-    const visibleTiles = visibleTilesManager.visibleTilesByOrder
+    // const visibleTiles = visibleTilesManager.visibleTilesByOrder
+    const visibleTiles = this._visibleTilesManager.visibleTilesByOrder
     const pixels = visibleTiles.pixels;
     const order = visibleTiles.order;
 
@@ -364,7 +376,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     mvpMatrix = mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
 
     // FIX: pass model & pMatrix to match FoVUtils TS signature
-    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement);
+    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this, this._webgl);
 
     const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
 
@@ -407,5 +419,5 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   }
 }
 
-const healpixGridSingleton = new HealpixGridSingleton();
-export default healpixGridSingleton;
+// const healpixGridSingleton = new HealpixGridSingleton();
+// export default healpixGridSingleton;

@@ -5,8 +5,25 @@ body {
 }
 
 #astrocanvas {
-    width: 100vw;
-    height: 100vh;
+    width: 50vw;
+    height: 50vh;
+    display: block;
+    background: #000;
+}
+
+#divcanvas{
+    position: absolute;
+    top: 50px;
+    left: 0px;
+}
+#divcanvas2{
+    position: absolute;
+    top: 50px;
+    left: 380px;
+}
+#astrocanvas2 {
+    width: 50vw;
+    height: 50vh;
     display: block;
     background: #000;
 }

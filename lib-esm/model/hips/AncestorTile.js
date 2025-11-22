@@ -1,7 +1,5 @@
 'use strict';
 import global from '../../Global.js';
-import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js';
-import { newTileBuffer } from './TileBuffer.js';
 import { fovHelper } from './FoVHelper.js';
 class AncestorTile {
     _hips;
@@ -21,7 +19,11 @@ class AncestorTile {
     vertexPositionBuffer;
     vertexIndices;
     vertexIndexBuffer;
-    constructor(tileno, order, hips) {
+    _tileBuffer;
+    _hipsShaderProgram;
+    constructor(tileno, order, hips, tileBuffer, hipsShaderProgram) {
+        this._hipsShaderProgram = hipsShaderProgram;
+        this._tileBuffer = tileBuffer;
         this._hips = hips;
         this._tileno = tileno;
         this._format = hips.format;
@@ -56,7 +58,8 @@ class AncestorTile {
         this._ready = true;
     }
     textureLoaded() {
-        hipsShaderProgram.enableProgram();
+        // hipsShaderProgram.enableProgram()
+        this._hipsShaderProgram.enableProgram();
         const gl = global.gl;
         this._texture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
@@ -66,7 +69,8 @@ class AncestorTile {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        gl.uniform1i(hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex);
+        // gl.uniform1i((hipsShaderProgram as any).shaderProgram.samplerUniform, this._hipsShaderIndex)
+        // gl.uniform1i(this._hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex)
         if (!gl.isTexture(this._texture)) {
             console.log('error in texture');
         }
@@ -199,23 +203,33 @@ class AncestorTile {
             if (q)
                 quadrantsToDraw = q;
         }
-        hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
         const gl = global.gl;
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity);
+        // gl.uniform1f((hipsShaderProgram as any).locations.textureAlpha, this.opacity)
+        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
         const elemno = this.vertexIndices.length;
         quadrantsToDraw.forEach((qidx) => {
             gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-            gl.vertexAttribPointer(hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-            gl.vertexAttribPointer(hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+            gl.vertexAttribPointer(
+            // (hipsShaderProgram as any).locations.vertexPositionAttribute,
+            this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
+            gl.vertexAttribPointer(
+            // (hipsShaderProgram as any).locations.textureCoordAttribute,
+            this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
             gl.drawElements(gl.TRIANGLES, elemno, gl.UNSIGNED_SHORT, 0);
         });
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.disableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+        // gl.disableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
         return true;
     }
     drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
@@ -228,8 +242,11 @@ class AncestorTile {
             const visibleChildren = visibleTilesMap.get(childrenOrder);
             if (visibleChildren.includes(childTileNo)) {
                 const childTile = this._isGalacticHips
-                    ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-                    : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                    ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                    : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                // const childTile = this._isGalacticHips
+                //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
                 childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
                 if (childTile._ready) {
                     quadrantsToDraw.delete(childTile._tileno - (this._tileno << 2));

@@ -4,6 +4,8 @@ import { FoV } from './model/FoV.js';
 import { Point } from './model/Point.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
+import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
+import { HealpixGridSingleton } from './model/grid/HealpixGridSingleton.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -27,7 +29,8 @@ declare class AstroSphere {
     private centralPoinCoords;
     private mousePointCoords;
     private canvas;
-    private showHPXGrid;
+    private _healpixGrid;
+    private _equatorialGrid;
     private mouseHelper;
     private mouseDown;
     private lastMouseX;
@@ -40,13 +43,15 @@ declare class AstroSphere {
     private fov;
     private activeCatalogues;
     private activeFootprintSets;
+    private _webgl;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
+    private initCamera;
+    get healpixGrid(): HealpixGridSingleton;
+    get equatorialGrid(): EquatorialGrid;
     private updateCentralPoint;
     private updateLastMousePoint;
     getCentralPointCoordinates(): PointCoordinates | undefined;
     getLastMousePointCoordinates(): PointCoordinates | undefined;
-    private init;
-    private initCamera;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;

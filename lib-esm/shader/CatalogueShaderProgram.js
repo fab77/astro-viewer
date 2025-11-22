@@ -1,15 +1,17 @@
 // HiPSShaderProgram.ts
 import { mat4 } from 'gl-matrix';
-import global from '../Global.js';
 import ShaderManager from './ShaderManager.js';
-export default class CatalogueShaderProgram {
+// export default class CatalogueShaderProgram {
+export class CatalogueShaderProgram {
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
     gl_uniforms;
     gl_attributes;
     locations;
-    constructor() {
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
         this.gl_uniforms = {
             vertex_color: 'u_fragcolor',
             m_perspective: 'uPMatrix',
@@ -33,14 +35,16 @@ export default class CatalogueShaderProgram {
     }
     get shaderProgram() {
         if (!this._shaderProgram) {
-            const gl = global.gl;
+            // const gl = global.gl as GL
+            const gl = this._webgl;
             this._shaderProgram = gl.createProgram();
             this.initShaders();
         }
         return this._shaderProgram;
     }
     initShaders() {
-        const gl = global.gl;
+        // const gl = global.gl as GL
+        const gl = this._webgl;
         const fragmentShaderStr = ShaderManager.catalogueFS();
         this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this._fragmentShader, fragmentShaderStr);
@@ -74,7 +78,8 @@ export default class CatalogueShaderProgram {
         this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
     }
     enableShaders(pMatrix, modelMatrix, viewMatrix) {
-        const gl = global.gl;
+        // const gl = global.gl as GL
+        const gl = this._webgl;
         // shaderUtility.useProgram(this.shaderProgram)
         gl.useProgram(this.shaderProgram);
         this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
@@ -85,5 +90,5 @@ export default class CatalogueShaderProgram {
         gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
     }
 }
-export const catalogueShaderProgram = new CatalogueShaderProgram();
+// export const catalogueShaderProgram = new CatalogueShaderProgram()
 //# sourceMappingURL=CatalogueShaderProgram.js.map

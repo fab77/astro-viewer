@@ -1,6 +1,7 @@
-import AbstractSkyEntity from '../AbstractSkyEntity.js';
+import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import { FoV } from '../FoV.js';
-declare class HealpixGridSingleton extends AbstractSkyEntity {
+import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
+export declare class HealpixGridSingleton extends AbstractSkyEntity {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     private _visibleorder;
@@ -22,7 +23,8 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     static INITIAL_POSITION: [number, number, number];
     static INITIAL_PhiRad: number;
     static INITIAL_ThetaRad: number;
-    constructor();
+    private _visibleTilesManager;
+    constructor(webgl: WebGL2RenderingContext);
     init(): void;
     get RADIUS(): number;
     get INITIAL_POSITION(): [number, number, number];
@@ -37,9 +39,8 @@ declare class HealpixGridSingleton extends AbstractSkyEntity {
     private enableShader;
     isVisible(): boolean;
     toggleShowGrid(): void;
-    draw(): void;
+    get visibleTilesManager(): VisibleTilesManager;
+    draw(input: SkyEntityDrawInput): void;
     get visibleorder(): number;
 }
-declare const healpixGridSingleton: HealpixGridSingleton;
-export default healpixGridSingleton;
 //# sourceMappingURL=HealpixGridSingleton.d.ts.map

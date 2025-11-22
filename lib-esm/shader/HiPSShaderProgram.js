@@ -1,8 +1,7 @@
-// HiPSShaderProgram.ts
-import global from '../Global.js';
 import ShaderManager from './ShaderManager.js';
 import { colorMap } from '../model/hips/ColorMap.js';
-export default class HiPSShaderProgram {
+// export default class HiPSShaderProgram {
+export class HiPSShaderProgram {
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
@@ -15,7 +14,9 @@ export default class HiPSShaderProgram {
     gl_uniforms;
     gl_attributes;
     locations;
-    constructor() {
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
         this.gl_uniforms = {
             sampler: 'uSampler0',
             factor: 'uFactor0',
@@ -43,17 +44,19 @@ export default class HiPSShaderProgram {
         };
     }
     get shaderProgram() {
+        const gl = this._webgl;
         if (!this._shaderProgram) {
-            const gl = global.gl;
+            // const gl = global.gl as GL
             this._shaderProgram = gl.createProgram();
             this.initShaders();
         }
         ;
-        global.gl.useProgram(this._shaderProgram);
+        gl.useProgram(this._shaderProgram);
         return this._shaderProgram;
     }
     initShaders() {
-        const gl = global.gl;
+        // const gl = global.gl as GL
+        const gl = this._webgl;
         const fragmentShaderStr = ShaderManager.hipsNativeFS();
         this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this._fragmentShader, fragmentShaderStr);
@@ -78,32 +81,35 @@ export default class HiPSShaderProgram {
         }
     }
     enableProgram() {
-        ;
-        global.gl.useProgram(this._shaderProgram);
+        // (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
+        this._webgl.useProgram(this.shaderProgram);
     }
     setGrayscaleShader() {
-        const gl = global.gl;
-        gl.detachShader(this._shaderProgram, this._fragmentShader);
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
         const fragmentShaderStr = ShaderManager.hipsGrayscaleFS();
         this.changeFSShader(fragmentShaderStr);
     }
     setNativeShader() {
-        const gl = global.gl;
-        gl.detachShader(this._shaderProgram, this._fragmentShader);
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
         const fragmentShaderStr = ShaderManager.hipsNativeFS();
         this.changeFSShader(fragmentShaderStr);
     }
     setColorMapShader() {
-        const gl = global.gl;
-        gl.detachShader(this._shaderProgram, this._fragmentShader);
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
         const fragmentShaderStr = ShaderManager.hipsColorMapFS();
         this.changeFSShader(fragmentShaderStr);
         // UBO discovery
-        const blockIndex = gl.getUniformBlockIndex(this._shaderProgram, 'colormap');
-        const blockSize = gl.getActiveUniformBlockParameter(this._shaderProgram, blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE);
+        const blockIndex = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
+        const blockSize = gl.getActiveUniformBlockParameter(this.shaderProgram, blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE);
         const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'];
-        const uboVariableIndices = gl.getUniformIndices(this._shaderProgram, uboVariableNames);
-        const uboVariableOffsets = gl.getActiveUniforms(this._shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
+        const uboVariableIndices = gl.getUniformIndices(this.shaderProgram, uboVariableNames);
+        const uboVariableOffsets = gl.getActiveUniforms(this.shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
         this._UBO_colorMapBuffer = gl.createBuffer();
         gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
         // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
@@ -119,7 +125,8 @@ export default class HiPSShaderProgram {
         });
     }
     changeFSShader(fragmentShaderStr) {
-        const gl = global.gl;
+        // const gl = global.gl as GL
+        const gl = this._webgl;
         this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this._fragmentShader, fragmentShaderStr);
         gl.compileShader(this._fragmentShader);
@@ -127,27 +134,28 @@ export default class HiPSShaderProgram {
             alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
             return;
         }
-        gl.attachShader(this._shaderProgram, this._fragmentShader);
-        gl.linkProgram(this._shaderProgram);
-        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
             alert('Could not initialise shaders');
         }
-        gl.useProgram(this._shaderProgram);
+        gl.useProgram(this.shaderProgram);
     }
     enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        const gl = global.gl;
-        gl.useProgram(this._shaderProgram);
-        this.locations.pMatrix = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.m_perspective);
-        this.locations.mMatrix = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.m_model);
-        this.locations.vMatrix = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.m_view);
-        this.locations.sampler = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.sampler);
-        this.locations.textureAlpha = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.factor);
-        this.locations.clorMapIdx = gl.getUniformLocation(this._shaderProgram, this.gl_uniforms.colormapIdx);
-        this.locations.vertexPositionAttribute = gl.getAttribLocation(this._shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.textureCoordAttribute = gl.getAttribLocation(this._shaderProgram, this.gl_attributes.text_coords);
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model);
+        this.locations.vMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_view);
+        this.locations.sampler = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.sampler);
+        this.locations.textureAlpha = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.factor);
+        this.locations.clorMapIdx = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.colormapIdx);
+        this.locations.vertexPositionAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.textureCoordAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.text_coords);
         if (colorMapIdx >= 2) {
-            const index = gl.getUniformBlockIndex(this._shaderProgram, 'colormap');
-            gl.uniformBlockBinding(this._shaderProgram, index, 0);
+            const index = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
+            gl.uniformBlockBinding(this.shaderProgram, index, 0);
             gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
             let currentColorMap;
             if (colorMapIdx === 2)
@@ -173,5 +181,5 @@ export default class HiPSShaderProgram {
         gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
     }
 }
-export const hipsShaderProgram = new HiPSShaderProgram();
+// export const hipsShaderProgram = new HiPSShaderProgram()
 //# sourceMappingURL=HiPSShaderProgram.js.map

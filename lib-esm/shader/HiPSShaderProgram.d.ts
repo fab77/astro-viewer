@@ -23,7 +23,7 @@ type Locations = {
     vertexPositionAttribute: number;
     textureCoordAttribute: number;
 };
-export default class HiPSShaderProgram {
+export declare class HiPSShaderProgram {
     private _shaderProgram;
     private _vertexShader;
     private _fragmentShader;
@@ -32,7 +32,8 @@ export default class HiPSShaderProgram {
     readonly gl_uniforms: UniformNames;
     readonly gl_attributes: AttributeNames;
     readonly locations: Locations;
-    constructor();
+    private _webgl;
+    constructor(webgl: WebGL2RenderingContext);
     get shaderProgram(): WebGLProgram;
     private initShaders;
     enableProgram(): void;
@@ -42,6 +43,5 @@ export default class HiPSShaderProgram {
     private changeFSShader;
     enableShaders(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, colorMapIdx: number): void;
 }
-export declare const hipsShaderProgram: HiPSShaderProgram;
 export {};
 //# sourceMappingURL=HiPSShaderProgram.d.ts.map

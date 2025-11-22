@@ -1,9 +1,10 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import AbstractSkyEntity from '../AbstractSkyEntity.js';
+import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import { ColorMap } from '../ColorMaps.js';
 import { HiPSDescriptor } from './HiPSDescriptor.js';
+import { HealpixGridSingleton } from '../grid/HealpixGridSingleton.js';
 declare class HiPS extends AbstractSkyEntity {
     private _ancestorTiles;
     private _allSkyTile;
@@ -16,11 +17,12 @@ declare class HiPS extends AbstractSkyEntity {
     samplerIdx: number;
     colorMapIdx: number;
     colorMap: ColorMap;
+    private _healpixGrid;
     get maxOrder(): number;
     get minOrder(): number;
     get baseURL(): string;
     get format(): string;
-    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, descriptor: HiPSDescriptor);
+    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, descriptor: HiPSDescriptor, webgl: WebGL2RenderingContext, healpixGrid: HealpixGridSingleton);
     changeFormat(format: string): void;
     /**
      * Shader colormap switcher
@@ -36,7 +38,7 @@ declare class HiPS extends AbstractSkyEntity {
     private initShaders;
     getCurrentHealpixOrder(): number;
     private refresh;
-    draw(): void;
+    draw(input: SkyEntityDrawInput): void;
 }
 export default HiPS;
 //# sourceMappingURL=HiPS.d.ts.map

@@ -1,8 +1,11 @@
+import { TileBuffer } from './TileBuffer.js';
+import { HealpixGridSingleton } from '../grid/HealpixGridSingleton.js';
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 interface VisibleTiles {
     pixels: number[];
     order: number;
 }
-declare class VisibleTilesManager {
+export declare class VisibleTilesManager {
     private _visibleTilesByOrder;
     private _ancestorsMap;
     private initialised;
@@ -11,16 +14,20 @@ declare class VisibleTilesManager {
     private _galacticMatrixInverted;
     private _galacticMatrix;
     private insideSphere;
-    constructor();
+    private _tileBuffer;
+    private _healpixGrid;
+    private _webgl;
+    constructor(webgl: WebGL2RenderingContext, hipsShaderProgram: HiPSShaderProgram, healpixGrid: HealpixGridSingleton);
+    get healpixGrid(): HealpixGridSingleton;
+    get tileBuffer(): TileBuffer;
     init(insideSphere: boolean): void;
     getVisibleOrder(): number;
-    computeVisiblePixels(): void;
+    computeVisiblePixels(order: number, webgl: WebGL2RenderingContext): void;
     get visibleTilesByOrder(): VisibleTiles;
     get ancestorsMap(): Map<number, number[]>;
     get galVisibleTilesByOrder(): VisibleTiles;
     get galAncestorsMap(): Map<number, number[]>;
     get visibleOrder(): number;
 }
-export declare const visibleTilesManager: VisibleTilesManager;
 export {};
 //# sourceMappingURL=VisibleTilesManager.d.ts.map

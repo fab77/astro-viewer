@@ -1,17 +1,18 @@
 import Footprint from './Footprint.js'
 // import FootprintProps from './FootprintProps.js'
 import { mat4 } from 'gl-matrix'
-import global from '../../Global.js'
+// import global from '../../Global.js'
 import { colorHex2RGB } from '../../utils/Utils.js'
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 // import { TapRepo } from '../tap/TapRepo.js'
 // import {TapMetadataList} from '../tap/TapMetadataList.js'
-import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
-// import {TapMetadata} from '../tap/TapMetadata.js'
+// import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
+import { FootprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
+
 import MouseHelper from '../../utils/MouseHelper.js'
 import { Point } from '../Point.js'
 import GeomUtils from '../../utils/GeomUtils.js'
-import {CoordsType} from '../../utils/CoordsType.js'
+import { CoordsType } from '../../utils/CoordsType.js'
 import { MetadataManager } from '../MetadataManager.js'
 import { MetadataColumn } from '../MetadataColumn.js'
 
@@ -52,7 +53,7 @@ export class FootprintSetGL {
 
   // footprintsInPix256: Map<number, Footprint[]>
 
-  gl: GL;
+  // gl: GL;
 
   // shaderProgram: WebGLProgram
   vertexCataloguePositionBuffer!: WebGLBuffer
@@ -85,15 +86,23 @@ export class FootprintSetGL {
   nSlectedPrimitiveFlags: number = 0
   _shapeColor = '#00fff2ff'
 
+  private _bufferInitialised = false
+  private _webgl: WebGL2RenderingContext
+  private _footprintShaderProgram: FootprintShaderProgram
+
   _isVisible: boolean = true
   private _metadataManager: MetadataManager
+
+
 
   constructor(
     fsetName: string,
     fsetDescription: string,
     providerUrl: string,
-    metadataManager: MetadataManager) {
+    metadataManager: MetadataManager,
+    webgl: WebGL2RenderingContext,) {
 
+    this._webgl = webgl
     this._ready = false;
     (this as any).TYPE = 'FOOTPRINT_SET';
 
@@ -101,23 +110,14 @@ export class FootprintSetGL {
     this._description = fsetDescription
     this._providerUrl = providerUrl
 
-    // this.footprintsInPix256 = new Map()
     this._metadataManager = metadataManager
 
     this.initFootprintArrays()
-    if (!global.gl) {
-      throw new Error('WebGL2RenderingContext is not initialized (global.gl is null)')
-    }
-
-    this.gl = global.gl as GL
-    this.initGLBuffers()
 
     this.oldMouseCoords = null
 
-
-    // this.footprintsetProps = new FootprintProps(tapMetadataList, defaultColor)
-
-    footprintShaderProgram.shaderProgram
+    this._footprintShaderProgram = new FootprintShaderProgram(this._webgl)
+    this._footprintShaderProgram.shaderProgram
 
   }
 
@@ -141,15 +141,15 @@ export class FootprintSetGL {
   }
 
   private initGLBuffers(): void {
+    if (!this._webgl) return
+    this.vertexCataloguePositionBuffer = this._webgl.createBuffer()
+    this.indexBuffer = this._webgl.createBuffer()
 
-    this.vertexCataloguePositionBuffer = this.gl.createBuffer()
-    this.indexBuffer = this.gl.createBuffer()
+    this.hoveredVertexPositionBuffer = this._webgl.createBuffer()
+    this.hoveredIndexBuffer = this._webgl.createBuffer()
 
-    this.hoveredVertexPositionBuffer = this.gl.createBuffer()
-    this.hoveredIndexBuffer = this.gl.createBuffer()
-
-    this.selectedVertexPositionBuffer = this.gl.createBuffer()
-    this.selectedIndexBuffer = this.gl.createBuffer()
+    this.selectedVertexPositionBuffer = this._webgl.createBuffer()
+    this.selectedIndexBuffer = this._webgl.createBuffer()
 
   }
 
@@ -205,8 +205,10 @@ export class FootprintSetGL {
       }
     }
 
-    this.initBuffer()
+    // this.initBuffer()
     this._ready = true
+    this._bufferInitialised = false
+
   }
 
   clearFootprints(): void {
@@ -215,6 +217,10 @@ export class FootprintSetGL {
 
 
   private initBuffer(): void {
+    // this._webgl = webgl
+    if (!this._webgl) return
+    this.initGLBuffers()
+
     const nFootprints = this.footprintPolygons.length
     let npolygons = nFootprints - 1
 
@@ -225,7 +231,7 @@ export class FootprintSetGL {
     this.indexes = new Uint32Array(this.totPoints + npolygons + 1)
     const MAX_UNSIGNED_INT = 0xffffffff
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer)
+    this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer)
     this.vertexCataloguePosition = new Float32Array(3 * this.totPoints)
 
     let positionIndex = 0
@@ -311,52 +317,52 @@ export class FootprintSetGL {
     return this._selectedFootprints
   }
 
-  highlightFootprint(footprint: Footprint, highlighted: boolean) {
-    if (highlighted) {
-      this._hoveredFootprints.push(footprint)
-      this.totHoveredPoints += footprint.totPoints
-    } else {
-      const indexOfFootprint = this._hoveredFootprints.indexOf(footprint)
-      this._hoveredFootprints.splice(indexOfFootprint, 1)
-      this.totHoveredPoints -= footprint.totPoints
-    }
-    this.initHoveringBuffer()
-  }
+  // highlightFootprint(footprint: Footprint, highlighted: boolean) {
+  //   if (highlighted) {
+  //     this._hoveredFootprints.push(footprint)
+  //     this.totHoveredPoints += footprint.totPoints
+  //   } else {
+  //     const indexOfFootprint = this._hoveredFootprints.indexOf(footprint)
+  //     this._hoveredFootprints.splice(indexOfFootprint, 1)
+  //     this.totHoveredPoints -= footprint.totPoints
+  //   }
+  //   this.initHoveringBuffer()
+  // }
 
   /**
    *
    * @param {Footprint[]} footprints
    */
 
-  addFootprint2Selected(footprints: Footprint[]) {
-    let refreshBuffer = false
-    for (let f of footprints) {
-      if (!this._selectedFootprints.includes(f)) {
-        this._selectedFootprints.push(f)
-        this.totSelectedPoints += f.totPoints
-        refreshBuffer = true
-      }
-    }
-    if (refreshBuffer) {
-      this.initSelectionBuffer()
-    }
-  }
+  // addFootprint2Selected(footprints: Footprint[]) {
+  //   let refreshBuffer = false
+  //   for (let f of footprints) {
+  //     if (!this._selectedFootprints.includes(f)) {
+  //       this._selectedFootprints.push(f)
+  //       this.totSelectedPoints += f.totPoints
+  //       refreshBuffer = true
+  //     }
+  //   }
+  //   if (refreshBuffer) {
+  //     this.initSelectionBuffer()
+  //   }
+  // }
 
   /**
    *
    * @param {Footprint} footprint
    */
-  removeFootprintFromSelection(footprint: Footprint) {
-    const indexOfObject = this._selectedFootprints.indexOf(footprint)
-    if (indexOfObject >= 0) {
-      this._selectedFootprints.splice(indexOfObject, 1)
-      this.totSelectedPoints -= footprint.totPoints
-      if (this._selectedFootprints.length > 0) {
-        this.initSelectionBuffer()
-      }
-    }
+  // removeFootprintFromSelection(footprint: Footprint) {
+  //   const indexOfObject = this._selectedFootprints.indexOf(footprint)
+  //   if (indexOfObject >= 0) {
+  //     this._selectedFootprints.splice(indexOfObject, 1)
+  //     this.totSelectedPoints -= footprint.totPoints
+  //     if (this._selectedFootprints.length > 0) {
+  //       this.initSelectionBuffer()
+  //     }
+  //   }
 
-  }
+  // }
 
   initHoveringBuffer() {
     /*
@@ -370,6 +376,7 @@ export class FootprintSetGL {
             set the pointsize and shape color.
             */
 
+    if (!this._webgl) return
     if (this._hoveredFootprints.length == 0) {
       return
     }
@@ -386,7 +393,7 @@ export class FootprintSetGL {
     const MAX_UNSIGNED_INT = 0xffffffff // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
     // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer)
+    this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer)
 
     this.hoveredVertexPosition = new Float32Array(3 * this.totHoveredPoints)
     let positionIndex = 0
@@ -426,85 +433,88 @@ export class FootprintSetGL {
     }
   }
 
-  initSelectionBuffer() {
-    /*
-            TODO better approach. when creating the indexbuffer of footprints, 
-            add 1 extra position for the selection (set to 0 == not selected), 
-            and save the position "positionIndex" in an array (selectionIndexes).
-            When checking the selection, I get the index of the footprint, which
-            matches with the index in the selectionIndexes to retrieve the position 
-            of the flag to be set to 1 in the vertexposition
-            This will ease checking the selection in the vertex/fragment shader and
-            set the pointsize and shape color.
-            */
+  // initSelectionBuffer() {
+  //   /*
+  //           TODO better approach. when creating the indexbuffer of footprints, 
+  //           add 1 extra position for the selection (set to 0 == not selected), 
+  //           and save the position "positionIndex" in an array (selectionIndexes).
+  //           When checking the selection, I get the index of the footprint, which
+  //           matches with the index in the selectionIndexes to retrieve the position 
+  //           of the flag to be set to 1 in the vertexposition
+  //           This will ease checking the selection in the vertex/fragment shader and
+  //           set the pointsize and shape color.
+  //           */
 
-    let nFootprints = this._selectedFootprints.length
+  //   let nFootprints = this._selectedFootprints.length
 
-    let npolygons = nFootprints - 1
-    for (let j = 0; j < nFootprints; j++) {
-      npolygons += this._selectedFootprints[j].polygons.length - 1
-    }
-    // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
-    // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+  //   let npolygons = nFootprints - 1
+  //   for (let j = 0; j < nFootprints; j++) {
+  //     npolygons += this._selectedFootprints[j].polygons.length - 1
+  //   }
+  //   // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
+  //   // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
 
-    this.selectedIndexes = new Uint32Array(this.totSelectedPoints + npolygons)
-    const MAX_UNSIGNED_INT = 0xffffffff // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-    // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
+  //   this.selectedIndexes = new Uint32Array(this.totSelectedPoints + npolygons)
+  //   const MAX_UNSIGNED_INT = 0xffffffff // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+  //   // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.selectedVertexPositionBuffer)
+  //   this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer)
 
-    this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints)
-    let positionIndex = 0
-    let vIdx = 0
+  //   this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints)
+  //   let positionIndex = 0
+  //   let vIdx = 0
 
-    let R = 1.0
-    this.nSlectedPrimitiveFlags = 0
+  //   let R = 1.0
+  //   this.nSlectedPrimitiveFlags = 0
 
-    for (let j = 0; j < nFootprints; j++) {
-      let footprintPoly = this._selectedFootprints[j].polygons
+  //   for (let j = 0; j < nFootprints; j++) {
+  //     let footprintPoly = this._selectedFootprints[j].polygons
 
-      if (j > 0) {
-        this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT
-        this.nSlectedPrimitiveFlags += 1
-        vIdx += 1
-      }
+  //     if (j > 0) {
+  //       this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT
+  //       this.nSlectedPrimitiveFlags += 1
+  //       vIdx += 1
+  //     }
 
-      for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
-        if (polyIdx > 0) {
-          this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
-          this.nSlectedPrimitiveFlags += 1;
-          vIdx += 1;
-        }
-        const poly = footprintPoly[polyIdx];
-        for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
-          const p = poly[pointIdx];
-          this.selectedVertexPosition[positionIndex] = R * p.x;
-          this.selectedVertexPosition[positionIndex + 1] = R * p.y;
-          this.selectedVertexPosition[positionIndex + 2] = R * p.z;
+  //     for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
+  //       if (polyIdx > 0) {
+  //         this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
+  //         this.nSlectedPrimitiveFlags += 1;
+  //         vIdx += 1;
+  //       }
+  //       const poly = footprintPoly[polyIdx];
+  //       for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+  //         const p = poly[pointIdx];
+  //         this.selectedVertexPosition[positionIndex] = R * p.x;
+  //         this.selectedVertexPosition[positionIndex + 1] = R * p.y;
+  //         this.selectedVertexPosition[positionIndex + 2] = R * p.z;
 
-          this.selectedIndexes[vIdx] = Math.floor(positionIndex / 3);
+  //         this.selectedIndexes[vIdx] = Math.floor(positionIndex / 3);
 
-          vIdx += 1;
-          positionIndex += 3;
-        }
-      }
-    }
-  }
+  //         vIdx += 1;
+  //         positionIndex += 3;
+  //       }
+  //     }
+  //   }
+  // }
 
   changeColor(color: string): void {
     this._shapeColor = color;
   }
 
-  draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper): void {
+  draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, cameraMatrix: Float32Array): void {
     if (!this.isVisible) return
     if (!this._ready) return
-    if (!global.camera) return
+    if (!cameraMatrix) return
+    // if (!global.camera) return
+    if (!this._bufferInitialised) this.initBuffer()
+    if (!this._webgl) return
 
-
-    footprintShaderProgram.enableShaders(
+    this._footprintShaderProgram.enableShaders(
       computePerspectiveMatrixSingleton.pMatrix as Float32Array,
-      in_mMatrix as Float32Array,
-      global.camera.getCameraMatrix() as Float32Array
+      in_mMatrix,
+      cameraMatrix
+      // global.camera.getCameraMatrix() as Float32Array
     )
 
     if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
@@ -516,31 +526,31 @@ export class FootprintSetGL {
       // TODO POINT_SIZE doesn't have any effect on line thickness!! it only applies to points
       const rgb = colorHex2RGB('#00FF00')
       const alpha = 1.0
-      this.gl.uniform4f(footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha)
-      this.gl.uniform1f(footprintShaderProgram.locations.pointSize, 14.0) // <--- POINT_SIZE in LINE_LOOP is not applicable
+      this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha)
+      this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0) // <--- POINT_SIZE in LINE_LOOP is not applicable
 
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer)
-      this.gl.bufferData(this.gl.ARRAY_BUFFER, this.hoveredVertexPosition, this.gl.STATIC_DRAW)
+      this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer)
+      this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.hoveredVertexPosition, this._webgl.STATIC_DRAW)
 
       // setting footprint position
-      this.gl.vertexAttribPointer(
-        footprintShaderProgram.locations.position,
+      this._webgl.vertexAttribPointer(
+        this._footprintShaderProgram.locations.position,
         FootprintSetGL.ELEM_SIZE,
-        this.gl.FLOAT,
+        this._webgl.FLOAT,
         false,
         FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE,
         0
       )
-      this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position)
+      this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position)
 
-      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer)
-      this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexes, this.gl.STATIC_DRAW)
+      this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer)
+      this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexes, this._webgl.STATIC_DRAW)
 
       // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
-      this.gl.drawElements(
-        this.gl.LINE_LOOP,
+      this._webgl.drawElements(
+        this._webgl.LINE_LOOP,
         this.hoveredVertexPosition.length / 3 + this.nHoveredPrimitiveFlags,
-        this.gl.UNSIGNED_INT,
+        this._webgl.UNSIGNED_INT,
         0
       )
     }
@@ -548,60 +558,60 @@ export class FootprintSetGL {
     if (this._selectedFootprints.length > 0) {
       const rgb = colorHex2RGB('#ECB462')
       const alpha = 1.0
-      this.gl.uniform4f(footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha)
-      this.gl.uniform1f(footprintShaderProgram.locations.pointSize, 14.0) // <--- POINT_SIZE in LINE_LOOP is not applicable
+      this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha)
+      this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0) // <--- POINT_SIZE in LINE_LOOP is not applicable
 
-      this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.selectedVertexPositionBuffer)
-      this.gl.bufferData(this.gl.ARRAY_BUFFER, this.selectedVertexPosition, this.gl.STATIC_DRAW)
+      this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer)
+      this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.selectedVertexPosition, this._webgl.STATIC_DRAW)
 
       // setting footprint position
-      this.gl.vertexAttribPointer(
-        footprintShaderProgram.locations.position,
+      this._webgl.vertexAttribPointer(
+        this._footprintShaderProgram.locations.position,
         FootprintSetGL.ELEM_SIZE,
-        this.gl.FLOAT,
+        this._webgl.FLOAT,
         false,
         FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE,
         0
       )
-      this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position)
+      this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position)
 
-      this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer)
-      this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.selectedIndexes, this.gl.STATIC_DRAW)
+      this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer)
+      this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexes, this._webgl.STATIC_DRAW)
 
       // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
-      this.gl.drawElements(
-        this.gl.LINE_LOOP,
+      this._webgl.drawElements(
+        this._webgl.LINE_LOOP,
         this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags,
-        this.gl.UNSIGNED_INT,
+        this._webgl.UNSIGNED_INT,
         0
       )
     }
 
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer)
-    this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW)
+    this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer)
+    this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW)
 
-    this.gl.vertexAttribPointer(
-      footprintShaderProgram.locations.position as number,
+    this._webgl.vertexAttribPointer(
+      this._footprintShaderProgram.locations.position as number,
       FootprintSetGL.ELEM_SIZE,
-      this.gl.FLOAT,
+      this._webgl.FLOAT,
       false,
       FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE,
       0
     )
-    this.gl.enableVertexAttribArray(footprintShaderProgram.locations.position as number)
+    this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position as number)
 
-    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
-    this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, this.indexes, this.gl.STATIC_DRAW)
+    this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer)
+    this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexes, this._webgl.STATIC_DRAW)
 
     // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
     const shapeColor = [...colorHex2RGB(this._shapeColor), 1.0] as [number, number, number, number]
-    this.gl.uniform4f(footprintShaderProgram.locations.color as WebGLUniformLocation, ...shapeColor)
+    this._webgl.uniform4f(this._footprintShaderProgram.locations.color as WebGLUniformLocation, ...shapeColor)
 
-    this.gl.drawElements(this.gl.LINE_LOOP, this.indexes.length, this.gl.UNSIGNED_INT, 0)
+    this._webgl.drawElements(this._webgl.LINE_LOOP, this.indexes.length, this._webgl.UNSIGNED_INT, 0)
 
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
-    this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, null)
+    this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null)
+    this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, null)
     this.oldMouseCoords = in_mouseHelper.xyz
   }
 }

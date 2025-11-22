@@ -1,8 +1,6 @@
 // Tile.ts
 import global from '../../Global.js';
-import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js';
-import { newTileBuffer } from './TileBuffer.js';
-import { visibleTilesManager } from './VisibleTilesManager.js';
+// import { visibleTilesManager } from './VisibleTilesManager.js'
 import { fovHelper } from './FoVHelper.js';
 // ------------------------------------------------------------------------
 export default class Tile {
@@ -28,8 +26,16 @@ export default class Tile {
     vertexPositionBuffer = [];
     vertexIndices = new Uint16Array();
     vertexIndexBuffer;
+    _tileBuffer;
     opacity = 1.0;
-    constructor(tileno, order, hips) {
+    _webgl;
+    _visibleTileManager;
+    _hipsShaderProgram;
+    constructor(tileno, order, hips, tileBuffer, webgl, visibleTileManager, hipsShaderProgram) {
+        this._hipsShaderProgram = hipsShaderProgram;
+        this._visibleTileManager = visibleTileManager;
+        this._webgl = webgl;
+        this._tileBuffer = tileBuffer;
         this._hips = hips;
         this._tileno = tileno;
         this._format = hips.format;
@@ -74,7 +80,7 @@ export default class Tile {
     imageLoaded() {
         this.textureLoaded();
         this.initModelBuffer();
-        const gl = global.gl;
+        const gl = this._webgl;
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
@@ -83,8 +89,9 @@ export default class Tile {
             this._ready = true;
     }
     textureLoaded() {
-        const gl = global.gl;
-        hipsShaderProgram.enableProgram();
+        const gl = this._webgl;
+        this._hipsShaderProgram.enableProgram();
+        // hipsShaderProgram.enableProgram()
         this._texture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -94,13 +101,14 @@ export default class Tile {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         // FIX: use the sampler location we fetched in enableShaders()
-        gl.uniform1i(hipsShaderProgram.locations.sampler, this._hipsShaderIndex);
+        gl.uniform1i(this._hipsShaderProgram.locations.sampler, this._hipsShaderIndex);
+        // gl.uniform1i((hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
         if (!gl.isTexture(this._texture)) {
             console.warn('Texture creation failed');
         }
     }
     initModelBuffer() {
-        const gl = global.gl;
+        const gl = this._webgl;
         this.vertexPosition = [];
         this.vertexPositionBuffer = [];
         this.vertexIndices = new Uint16Array();
@@ -147,7 +155,7 @@ export default class Tile {
         return vertexIndices;
     }
     setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        const gl = global.gl;
+        const gl = this._webgl;
         this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
         const step = 1 / (1 << orderjump);
         let p = 0;
@@ -193,7 +201,8 @@ export default class Tile {
         return this._inView;
     }
     moveToCache() {
-        newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips);
+        // newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips)
+        this._tileBuffer.moveTileToCache(this._tileno, this._order, this._hips);
         this._inView = false;
         this.destroyIntervals();
     }
@@ -201,40 +210,68 @@ export default class Tile {
         if (this._textureLoaded)
             this._ready = true;
         if (this._isGalacticHips) {
-            if (visibleTilesManager.galAncestorsMap.has(this._order)) {
-                if (!visibleTilesManager.galAncestorsMap.get(this._order).includes(this._tileno)) {
+            if (this._visibleTileManager.galAncestorsMap.has(this._order)) {
+                if (!this._visibleTileManager.galAncestorsMap.get(this._order).includes(this._tileno)) {
                     this.moveToCache();
                 }
                 else {
                     this._inView = true;
                 }
             }
-            if (this._order == visibleTilesManager.visibleOrder) {
-                if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+            // if (visibleTilesManager.galAncestorsMap.has(this._order)) {
+            //   if (!visibleTilesManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+            if (this._order == this._visibleTileManager.visibleOrder) {
+                if (!this._visibleTileManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
                     this.moveToCache();
                 }
                 else {
                     this._inView = true;
                 }
             }
+            // if (this._order == visibleTilesManager.visibleOrder) {
+            //   if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
         }
         else {
-            if (visibleTilesManager.ancestorsMap.has(this._order)) {
-                if (!visibleTilesManager.ancestorsMap.get(this._order).includes(this._tileno)) {
+            if (this._visibleTileManager.ancestorsMap.has(this._order)) {
+                if (!this._visibleTileManager.ancestorsMap.get(this._order).includes(this._tileno)) {
                     this.moveToCache();
                 }
                 else {
                     this._inView = true;
                 }
             }
-            if (this._order == visibleTilesManager.visibleOrder) {
-                if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+            // if (visibleTilesManager.ancestorsMap.has(this._order)) {
+            //   if (!visibleTilesManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+            if (this._order == this._visibleTileManager.visibleOrder) {
+                if (!this._visibleTileManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
                     this.moveToCache();
                 }
                 else {
                     this._inView = true;
                 }
             }
+            // if (this._order == visibleTilesManager.visibleOrder) {
+            //   if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
         }
     }
     draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
@@ -246,25 +283,35 @@ export default class Tile {
             if (kids)
                 quadrantsToDraw = kids;
         }
-        const gl = global.gl;
-        hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        const gl = this._webgl;
+        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
         // Enable attributes (these locations are retrieved in enableShaders)
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
+        // gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity);
+        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
+        // gl.uniform1f((hipsShaderProgram.locations as ShaderLocations).textureAlpha, this.opacity)
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
         const elemno = this.vertexIndices.length;
         const indexType = this.vertexIndices instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
         quadrantsToDraw.forEach((qidx) => {
             gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-            gl.vertexAttribPointer(hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-            gl.vertexAttribPointer(hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+            gl.vertexAttribPointer(this._hipsShaderProgram.locations.vertexPositionAttribute, 
+            // (hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute,
+            3, gl.FLOAT, false, 5 * 4, 0);
+            gl.vertexAttribPointer(this._hipsShaderProgram.locations.textureCoordAttribute, 
+            // (hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute,
+            2, gl.FLOAT, false, 5 * 4, 3 * 4);
             gl.drawElements(gl.TRIANGLES, elemno, indexType, 0);
         });
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
+        // gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
     }
     drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
         const quadrantsToDraw = new Set([0, 1, 2, 3]);
@@ -276,8 +323,11 @@ export default class Tile {
             const list = visibleTilesMap.get(childrenOrder);
             if (list.includes(childTileNo)) {
                 const childTile = this._isGalacticHips
-                    ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-                    : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                    ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                    : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                // const childTile = this._isGalacticHips
+                //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
                 childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
                 if (childTile._ready) {
                     quadrantsToDraw.delete(childTileNo - (this._tileno << 2));

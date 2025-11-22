@@ -18,18 +18,18 @@ type Locations = {
     pointSize: number;
     brightness: number;
 };
-export default class CatalogueShaderProgram {
+export declare class CatalogueShaderProgram {
     private _shaderProgram;
     private _vertexShader;
     private _fragmentShader;
     readonly gl_uniforms: UniformNames;
     readonly gl_attributes: AttributeNames;
     readonly locations: Locations;
-    constructor();
+    private _webgl;
+    constructor(webgl: WebGL2RenderingContext);
     get shaderProgram(): WebGLProgram;
     private initShaders;
     enableShaders(pMatrix: Float32Array, modelMatrix: Float32Array, viewMatrix: Float32Array): void;
 }
-export declare const catalogueShaderProgram: CatalogueShaderProgram;
 export {};
 //# sourceMappingURL=CatalogueShaderProgram.d.ts.map

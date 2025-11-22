@@ -4,12 +4,14 @@ import { Point } from './model/Point.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import type { PointCoordinates } from './AstroSphere.js';
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
+import { MetadataManager } from './model/MetadataManager.js';
 export declare class AstroViewer {
     private astroSphere;
     private canvas;
     private webgl;
     private rafId;
     run(): number;
+    createCatalogue(catalogueName: string, catalogueDescription: string, providerUrl: string, metadataManager: MetadataManager): CatalogueGL;
     showCatalogue(catalogue: CatalogueGL): void;
     hideCatalogue(catalogue: CatalogueGL, isVisible: boolean): void;
     deleteCatalogue(catalogue: CatalogueGL): void;
@@ -40,7 +42,7 @@ export declare class AstroViewer {
     changeFoV3(deg: number): void;
     getInsideSphere(): boolean;
     toggleInsideSphere(): void;
-    constructor(canvasDomId: string);
+    constructor(canvasEl: HTMLCanvasElement);
     private init;
     private initListeners;
     private tick;

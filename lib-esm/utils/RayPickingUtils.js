@@ -5,7 +5,6 @@
 import { vec3, mat4 } from "gl-matrix";
 import global from "../Global.js";
 import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix.js";
-import healpixGridSingleton from "../model/grid/HealpixGridSingleton.js";
 class RayPickingUtils {
     static lastNearestVisibleObjectIdx = -1;
     /** Get index of the last object found under the mouse (if any). */
@@ -19,18 +18,23 @@ class RayPickingUtils {
      * @param pMatrix Projection matrix
      * @returns World-space direction (normalized) as a vec3
      */
-    static getRayFromMouse(mouseX, mouseY, pMatrix) {
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl) {
         if (!global.camera) {
             throw new Error("Camera is not initialized.");
         }
         const vMatrix = global.camera.getCameraMatrix();
-        const gl = global.gl;
+        // const gl = global.gl as GL;
+        const gl = webgl;
         const rect = gl.canvas.getBoundingClientRect();
-        const canvasMX = mouseX - rect.left;
-        const canvasMY = mouseY - rect.top;
+        // const canvasMX = mouseX - rect.left;
+        // const canvasMY = mouseY - rect.top;
+        const canvasMX = mouseX;
+        const canvasMY = mouseY;
         // viewport → NDC
-        const x = (2.0 * canvasMX) / gl.canvas.clientWidth - 1.0;
-        const y = 1.0 - (2.0 * canvasMY) / gl.canvas.clientHeight;
+        // const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).clientWidth - 1.0;
+        // const y = 1.0 - (2.0 * canvasMY) / (gl.canvas as HTMLCanvasElement).clientHeight;
+        const x = (2.0 * canvasMX) / gl.canvas.width - 1.0;
+        const y = 1.0 - (2.0 * canvasMY) / gl.canvas.height;
         const z = -1.0;
         // NDC → clip
         const rayClip = [x, y, z, 1.0];
@@ -63,7 +67,7 @@ class RayPickingUtils {
      * Ray–sphere intersection (world space).
      * @returns distance `t` along the ray to the first hit, or `-1` if no hit.
      */
-    static raySphere(rayOrigWorld, rayDirectionWorld) {
+    static raySphere(rayOrigWorld, rayDirectionWorld, healpixGridSingleton) {
         let intersectionDistance = -1;
         const L = vec3.create();
         vec3.subtract(L, rayOrigWorld, healpixGridSingleton.center);
@@ -96,14 +100,16 @@ class RayPickingUtils {
      * Compute intersection with a single model (defaults to the Healpix grid).
      * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
      */
-    static getIntersectionPointWithSingleModel(mouseX, mouseY) {
+    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl) {
         const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
         const camera = global.camera;
+        const canvas = webgl.canvas;
+        console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`);
         if (!camera) {
             throw new Error("Camera is not initialized.");
         }
-        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix);
-        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld);
+        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
         let intersectionModelPoint = [];
         if (t >= 0) {
             // world intersection
@@ -113,7 +119,8 @@ class RayPickingUtils {
             // world → model
             const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
             const modelHit4 = [0, 0, 0, 0];
-            RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
+            // RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
+            RayPickingUtils.mat4MultiplyVec4(healpixGrid.getModelMatrixInverse(), worldHit4, modelHit4);
             intersectionModelPoint = [modelHit4[0], modelHit4[1], modelHit4[2]];
         }
         return intersectionModelPoint;

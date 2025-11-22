@@ -1,9 +1,7 @@
 import { Healpix } from 'healpixjs';
 import Camera from './Camera.js';
-type GL = WebGLRenderingContext | WebGL2RenderingContext;
 declare class Global {
     private _camera;
-    private _gl;
     private _healpix;
     private _selectionnside;
     private _useCORSProxy;
@@ -24,8 +22,6 @@ declare class Global {
     get MAX_DECIMALS(): number;
     get camera(): Camera | null;
     set camera(in_camera: Camera | null);
-    get gl(): GL | null;
-    set gl(in_gl: GL | null);
     set insideSphere(v: boolean);
     get insideSphere(): boolean;
     get nsideForSelection(): number;

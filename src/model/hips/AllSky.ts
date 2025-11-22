@@ -1,8 +1,10 @@
 'use strict'
 
-import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import global from '../../Global.js'
-import { newTileBuffer } from './TileBuffer.js'
+// import { newTileBuffer } from './TileBuffer.js'
+import { TileBuffer } from './TileBuffer.js'
 import HiPS from './HiPS.js'
 
 
@@ -32,13 +34,18 @@ export default class AllSky {
   private vertexPositionBuffer!: WebGLBuffer
   private vertexIndexBuffer!: WebGLBuffer
   private vidx = 0
+  private _webgl: WebGL2RenderingContext
+  private _tileBuffer: TileBuffer
+  private _hipsShaderProgram
 
-  constructor(hips: HiPS) {
+  constructor(hips: HiPS, webgl: WebGL2RenderingContext, tileBuffer: TileBuffer, hipsShaderProgram: HiPSShaderProgram) {
+    this._tileBuffer = tileBuffer
     this._hips = hips
-
+    this._webgl = webgl
     this._format = hips.format
     this._baseurl = hips.baseURL
     this._isGalacticHips = hips.isGalacticHips
+    this._hipsShaderProgram = hipsShaderProgram
 
     this.initImage()
   }
@@ -65,9 +72,10 @@ export default class AllSky {
   }
 
   private textureLoaded(): void {
-    hipsShaderProgram.enableProgram()
+    // hipsShaderProgram.enableProgram()
+    this._hipsShaderProgram.enableProgram()
 
-    const gl = global.gl as WebGL2RenderingContext
+    const gl = this._webgl as WebGL2RenderingContext
     this._texture = gl.createTexture()
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
@@ -297,21 +305,26 @@ export default class AllSky {
       if (skipped) allSkyTiles2Skip = skipped
     }
 
-    const gl = global.gl as WebGL2RenderingContext
+    const gl = this._webgl as WebGL2RenderingContext
 
-    hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
-    gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
-    gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
+    this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+    gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+    gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
+    // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+    // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+    // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
 
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.bindTexture(gl.TEXTURE_2D, this._texture)
-    gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity)
+    // gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity)
+    gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer)
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer)
 
     gl.vertexAttribPointer(
-      hipsShaderProgram.locations.vertexPositionAttribute,
+      // hipsShaderProgram.locations.vertexPositionAttribute,
+      this._hipsShaderProgram.locations.vertexPositionAttribute,
       3,
       gl.FLOAT,
       false,
@@ -319,7 +332,8 @@ export default class AllSky {
       0
     )
     gl.vertexAttribPointer(
-      hipsShaderProgram.locations.textureCoordAttribute,
+      // hipsShaderProgram.locations.textureCoordAttribute,
+      this._hipsShaderProgram.locations.textureCoordAttribute,
       2,
       gl.FLOAT,
       false,
@@ -338,8 +352,10 @@ export default class AllSky {
       }
     }
 
-    gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute)
-    gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute)
+    gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+    gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
+    // gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute)
+    // gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute)
 
     return true
   }
@@ -361,8 +377,11 @@ export default class AllSky {
     for (let i = 0; i < visibleTiles.length; i++) {
       const tileno = visibleTiles[i]
       const childTile = this._isGalacticHips
-        ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-        : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
+        ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
+        : this._tileBuffer.getTile(tileno, childrenOrder, this._hips)
+      // const childTile = this._isGalacticHips
+      //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
+      //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
 
       childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
       if (childTile.getReadyState()) {

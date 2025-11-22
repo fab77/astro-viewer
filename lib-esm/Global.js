@@ -4,7 +4,7 @@ import { bootSetup } from './Config.js';
 class Global {
     // --- cached / runtime state ---
     _camera;
-    _gl;
+    // private _gl: GL | null;
     _healpix;
     // --- config/state flags ---
     _selectionnside;
@@ -23,7 +23,7 @@ class Global {
         this._insideSphere = bootSetup.insideView;
         this._version = bootSetup.version;
         this._camera = null;
-        this._gl = null;
+        // this._gl = null;
         this._healpix = {};
         this._selectionnside = 32;
         // this._healpix4footprints = false;
@@ -48,8 +48,8 @@ class Global {
     get MAX_DECIMALS() { return this._maxDecimals; }
     get camera() { return this._camera; }
     set camera(in_camera) { this._camera = in_camera; }
-    get gl() { return this._gl; }
-    set gl(in_gl) { this._gl = in_gl; }
+    // get gl(): GL | null { return this._gl; }
+    // set gl(in_gl: GL | null) { this._gl = in_gl; }
     set insideSphere(v) { this._insideSphere = v; }
     get insideSphere() { return this._insideSphere; }
     get nsideForSelection() { return this._selectionnside; }

@@ -1,17 +1,19 @@
-import global from '../../Global.js';
+// import global from '../../Global.js';
 // import CatalogueProps from './CatalogueProps.js';
 import Source from '../Source.js';
-import {Point} from '../Point.js';
-import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
-import {CoordsType} from '../..//utils/CoordsType.js';
+import { Point } from '../Point.js';
+// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
+import { CoordsType } from '../..//utils/CoordsType.js';
 import { mat4 } from 'gl-matrix';
 import { colorHex2RGB } from '../../utils/Utils.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import MouseHelper from '../../utils/MouseHelper.js';
-import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
+// import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
+import { CatalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 // import { TapMetadata } from '../tap/TapMetadata.js';
 import { MetadataManager } from '../MetadataManager.js';
 import { MetadataColumn } from '../MetadataColumn.js';
+import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 
 // ---- Minimal typings for external classes you already have ----
 type GL = WebGL2RenderingContext;
@@ -20,7 +22,7 @@ type GL = WebGL2RenderingContext;
 
 export class CatalogueGL {
 
-    _kind:string = "CatalogueGL"
+    _kind: string = "CatalogueGL"
     static ELEM_SIZE: number = 6
     static BYTES_X_ELEM: number = new Float32Array().BYTES_PER_ELEMENT;
     static STANDARD_SHAPE_SIZE: number = 8.0
@@ -33,12 +35,14 @@ export class CatalogueGL {
     // Data
     sources: Source[];
 
-    gl: GL;
+    // gl: GL;
 
     // Buffers & arrays
-    vertexCataloguePositionBuffer: WebGLBuffer | null;
-    vertexhoveredCataloguePositionBuffer: WebGLBuffer | null;
+    vertexCataloguePositionBuffer: WebGLBuffer | null = null
+    vertexhoveredCataloguePositionBuffer: WebGLBuffer | null = null
     vertexCataloguePosition: Float32Array;
+    private _bufferInitialised = false
+    private _webgl: WebGL2RenderingContext
 
     // Index/selection bookkeeping
     hoveredIndexes: number[];
@@ -53,14 +57,21 @@ export class CatalogueGL {
     _shapeColor = '#8F00FF';
     _healpixDensityMap: Map<number, number[]>;
     _providerUrl: string;
+    _catalogueShaderProgram: CatalogueShaderProgram
+    private _visibleTilesManager: VisibleTilesManager;
 
     constructor(
         catalogueName: string,
         catalogueDescription: string,
         providerUrl: string,
-        metadataManager: MetadataManager
+        metadataManager: MetadataManager,
+        webgl: WebGL2RenderingContext,
+        visibleTilesManager: VisibleTilesManager
     ) {
+        this._webgl = webgl
         this._ready = false;
+        this._visibleTilesManager = visibleTilesManager;
+
         (this as any).TYPE = 'SOURCE_CATALOGUE';
 
         this._name = catalogueName;
@@ -71,9 +82,9 @@ export class CatalogueGL {
         this.sources = [];
 
         // GL init
-        this.gl = global.gl as GL;
-        this.vertexCataloguePositionBuffer = this.gl.createBuffer();
-        this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
+        // this.gl = global.gl as GL;
+        // this.vertexCataloguePositionBuffer = this.gl.createBuffer();
+        // this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
 
         this.vertexCataloguePosition = new Float32Array(0);
         this.hoveredIndexes = [];
@@ -87,7 +98,9 @@ export class CatalogueGL {
         // this.catalogueProps = new CatalogueProps(metadataManager, defaultColor);
 
         // call catalogueShaderProgram to init shaders if they are not yet initialised 
-        catalogueShaderProgram.shaderProgram
+        this._catalogueShaderProgram = new CatalogueShaderProgram(this._webgl)
+        this._catalogueShaderProgram.shaderProgram
+        // catalogueShaderProgram.shaderProgram
 
         this._isVisible = true
 
@@ -105,7 +118,7 @@ export class CatalogueGL {
         return this._providerUrl
     }
 
-    get name(){
+    get name() {
         return this._name
     }
 
@@ -144,11 +157,11 @@ export class CatalogueGL {
         return this._metadataManager
     }
 
-    changeMetaRA(raColumnName: string){
+    changeMetaRA(raColumnName: string) {
         this._metadataManager.selectedRaColumn = raColumnName
     }
-    
-    changeMetaDec(decColumnName: string){
+
+    changeMetaDec(decColumnName: string) {
         this._metadataManager.selectedDecColumn = decColumnName
     }
 
@@ -157,7 +170,7 @@ export class CatalogueGL {
     }
 
     changeMetaShapeSize(metacolumnName: string) {
-        // if (metacolumnName == CatalogueProps.STANDARD_SIZE) {
+        if (!this._webgl) return
         if (metacolumnName == MetadataManager.STANDARD_SIZE) {
 
             this._metadataManager.resetShapeColumn()
@@ -165,7 +178,8 @@ export class CatalogueGL {
                 const size = CatalogueGL.STANDARD_SHAPE_SIZE;
                 source.shapeSize = size;
             }
-            this.initBuffer();
+            this._bufferInitialised = false
+            // this.initBuffer(this._webgl);
             return
         }
         // const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
@@ -193,31 +207,27 @@ export class CatalogueGL {
             const size = norm * (20 - 8) + 8;
             source.shapeSize = size;
         }
-        this.initBuffer();
+        this._bufferInitialised = false
+            // this.initBuffer(this._webgl);
     }
 
     changeMetaShapeHue(metacolumnName: string) {
-        // if (metacolumnName == CatalogueProps.STANDARD_HUE) {
+        if (!this._webgl) return
         if (metacolumnName == MetadataManager.STANDARD_HUE) {
-            // this.catalogueProps.resetCatalogueMetaShapeHue()
             this._metadataManager.resetHueColumn()
             for (const source of this.sources) {
                 const hue = CatalogueGL.STANDARD_SHAPE_HUE;
                 source.brightnessFactor = hue;
             }
-            this.initBuffer();
+            this._bufferInitialised = false
+            // this.initBuffer(this._webgl);
             return
         }
 
-        // const oldHueSizeName = this.catalogueProps.shapeHueColumn?.name
-        // this.catalogueProps.changeCatalogueMetaShapeHue(metacolumnName);
-        // const idx = this.catalogueProps.shapeHueColumn?.index ?? this.catalogueProps.shapeHueColumn?.index;
         const oldHueSizeName = this._metadataManager.selectedShapeColumn?.name
         this._metadataManager.selectedHueColumn = metacolumnName;
         const idx = this._metadataManager.selectedHueColumn?.index ?? -1
         if (idx < 0) {
-
-            // if (oldHueSizeName) this.catalogueProps.changeCatalogueMetaShapeHue(oldHueSizeName);
             if (oldHueSizeName) this._metadataManager.selectedHueColumn = oldHueSizeName
             return;
         }
@@ -235,7 +245,8 @@ export class CatalogueGL {
             // map [0,1] -> [1,-1]
             source.brightnessFactor = -(norm * 2 - 1);
         }
-        this.initBuffer();
+        this._bufferInitialised = false
+            // this.initBuffer(this._webgl);
     }
 
     addSource(source: Source) {
@@ -287,8 +298,9 @@ export class CatalogueGL {
 
         }
 
-        this.initBuffer();
+        // this.initBuffer();
         this._ready = true;
+        this._bufferInitialised = false
     }
 
     clearSources() {
@@ -337,8 +349,15 @@ export class CatalogueGL {
         }
     }
 
+
+    
     private initBuffer() {
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+
+        // this._webgl = webgl
+        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
+        this.vertexhoveredCataloguePositionBuffer = this._webgl.createBuffer();
+
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
 
         const nSources = this.sources.length;
         this.vertexCataloguePosition = new Float32Array(nSources * CatalogueGL.ELEM_SIZE);
@@ -372,12 +391,12 @@ export class CatalogueGL {
 
             positionIndex += CatalogueGL.ELEM_SIZE;
         }
-
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        this._bufferInitialised = true
     }
 
     private getSelectionRadius(): number {
-        const order = visibleTilesManager.getVisibleOrder();
+        const order = this._visibleTilesManager.getVisibleOrder();
         switch (order) {
             case 0:
             case 1:
@@ -442,67 +461,72 @@ export class CatalogueGL {
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
-    draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper) {
+    draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, cameraMatrix: Float32Array) {
         if (!this.isVisible) return
         if (!this._ready) return
-        if (!global.camera) return
+        if (!cameraMatrix) return
+        // if (!global.camera) return
+        if (!this._bufferInitialised) this.initBuffer()
+        if (!this._webgl) return
 
-        catalogueShaderProgram.enableShaders(computePerspectiveMatrixSingleton.pMatrix as Float32Array,
-            in_mMatrix as Float32Array,
-            global.camera.getCameraMatrix() as Float32Array
+        this._catalogueShaderProgram.enableShaders(
+            computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+            in_mMatrix,
+            cameraMatrix
+            // global.camera.getCameraMatrix() as Float32Array
         )
 
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
 
         // positions
-        this.gl.vertexAttribPointer(
-            catalogueShaderProgram.locations.position,
+        this._webgl.vertexAttribPointer(
+            this._catalogueShaderProgram.locations.position,
             3,
-            this.gl.FLOAT,
+            this._webgl.FLOAT,
             false,
             CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE,
             0
         );
-        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.position);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.position);
 
         // hovered flag
-        this.gl.vertexAttribPointer(
-            catalogueShaderProgram.locations.hovered,
+        this._webgl.vertexAttribPointer(
+            this._catalogueShaderProgram.locations.hovered,
             1,
-            this.gl.FLOAT,
+            this._webgl.FLOAT,
             false,
             CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE,
             CatalogueGL.BYTES_X_ELEM * 3
         );
-        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.hovered);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.hovered);
 
         // point size
-        this.gl.vertexAttribPointer(
-            catalogueShaderProgram.locations.pointSize,
+        this._webgl.vertexAttribPointer(
+            this._catalogueShaderProgram.locations.pointSize,
             1,
-            this.gl.FLOAT,
+            this._webgl.FLOAT,
             false,
             CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE,
             CatalogueGL.BYTES_X_ELEM * 4
         );
-        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.pointSize);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.pointSize);
 
         // brightness
-        this.gl.vertexAttribPointer(
-            catalogueShaderProgram.locations.brightness,
+        this._webgl.vertexAttribPointer(
+            this._catalogueShaderProgram.locations.brightness,
             1,
-            this.gl.FLOAT,
+            this._webgl.FLOAT,
             false,
             CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE,
             CatalogueGL.BYTES_X_ELEM * 5
         );
-        this.gl.enableVertexAttribArray(catalogueShaderProgram.locations.brightness);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.brightness);
 
         // color
         // const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
         const rgb = colorHex2RGB(this._shapeColor);
-        if (catalogueShaderProgram.locations.color) {
-            this.gl.uniform4f(catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
+        if (this._catalogueShaderProgram.locations.color) {
+            this._webgl.uniform4f(this._catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
         }
 
         // Hover logic on mouse move
@@ -542,11 +566,11 @@ export class CatalogueGL {
         }
 
         // upload buffer
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, this.vertexCataloguePosition, this.gl.STATIC_DRAW);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
 
         // draw
         const numItems = this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
-        this.gl.drawArrays(this.gl.POINTS, 0, numItems);
+        this._webgl.drawArrays(this._webgl.POINTS, 0, numItems);
 
         this._oldMouseCoords = in_mouseHelper.xyz;
     }

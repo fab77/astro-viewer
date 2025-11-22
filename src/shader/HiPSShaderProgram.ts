@@ -33,7 +33,8 @@ type Locations = {
   textureCoordAttribute: number
 }
 
-export default class HiPSShaderProgram {
+// export default class HiPSShaderProgram {
+export class HiPSShaderProgram {
   private _shaderProgram: WebGLProgram | undefined
   private _vertexShader!: WebGLShader
   private _fragmentShader!: WebGLShader
@@ -51,8 +52,10 @@ export default class HiPSShaderProgram {
   readonly gl_uniforms: UniformNames
   readonly gl_attributes: AttributeNames
   readonly locations: Locations
+  private _webgl: WebGL2RenderingContext
 
-  constructor() {
+  constructor(webgl: WebGL2RenderingContext) {
+    this._webgl = webgl
     this.gl_uniforms = {
       sampler: 'uSampler0',
       factor: 'uFactor0',
@@ -83,17 +86,19 @@ export default class HiPSShaderProgram {
   }
 
   get shaderProgram(): WebGLProgram {
+    const gl = this._webgl as GL
     if (!this._shaderProgram) {
-      const gl = global.gl as GL
+      // const gl = global.gl as GL
       this._shaderProgram = gl.createProgram() as WebGLProgram
       this.initShaders()
     }
-    ; (global.gl as GL).useProgram(this._shaderProgram)
+    ; gl.useProgram(this._shaderProgram)
     return this._shaderProgram
   }
 
   private initShaders(): void {
-    const gl = global.gl as GL
+    // const gl = global.gl as GL
+    const gl = this._webgl as GL
 
     const fragmentShaderStr = ShaderManager.hipsNativeFS()
     this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER) as WebGLShader
@@ -123,44 +128,49 @@ export default class HiPSShaderProgram {
   }
 
   enableProgram(): void {
-    ; (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
+    // (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
+    (this._webgl as GL).useProgram(this.shaderProgram as WebGLProgram)
+    
   }
 
   setGrayscaleShader(): void {
-    const gl = global.gl as GL
-    gl.detachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
+    // const gl = global.gl as GL
+    const gl = this._webgl as GL
+    gl.detachShader(this.shaderProgram as WebGLProgram, this._fragmentShader)
     const fragmentShaderStr = ShaderManager.hipsGrayscaleFS()
     this.changeFSShader(fragmentShaderStr)
   }
 
   setNativeShader(): void {
-    const gl = global.gl as GL
-    gl.detachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
+    // const gl = global.gl as GL
+    const gl = this._webgl as GL
+    gl.detachShader(this.shaderProgram as WebGLProgram, this._fragmentShader)
     const fragmentShaderStr = ShaderManager.hipsNativeFS()
     this.changeFSShader(fragmentShaderStr)
   }
 
   setColorMapShader(): void {
-    const gl = global.gl as GL
-    gl.detachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
+    // const gl = global.gl as GL
+    const gl = this._webgl as GL
+    gl.detachShader(this.shaderProgram as WebGLProgram, this._fragmentShader)
     const fragmentShaderStr = ShaderManager.hipsColorMapFS()
     this.changeFSShader(fragmentShaderStr)
 
     // UBO discovery
-    const blockIndex = gl.getUniformBlockIndex(this._shaderProgram as WebGLProgram, 'colormap')
+    const blockIndex = gl.getUniformBlockIndex(this.shaderProgram as WebGLProgram, 'colormap')
     const blockSize = gl.getActiveUniformBlockParameter(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       blockIndex,
       gl.UNIFORM_BLOCK_DATA_SIZE
     ) as number
 
     const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'] as const
     const uboVariableIndices = gl.getUniformIndices(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       uboVariableNames as unknown as string[]
     ) as number[]
     const uboVariableOffsets = gl.getActiveUniforms(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       uboVariableIndices,
       gl.UNIFORM_OFFSET
     ) as number[]
@@ -184,7 +194,8 @@ export default class HiPSShaderProgram {
   }
 
   private changeFSShader(fragmentShaderStr: string): void {
-    const gl = global.gl as GL
+    // const gl = global.gl as GL
+    const gl = this._webgl as GL
     this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER) as WebGLShader
     gl.shaderSource(this._fragmentShader, fragmentShaderStr)
     gl.compileShader(this._fragmentShader)
@@ -192,12 +203,12 @@ export default class HiPSShaderProgram {
       alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error')
       return
     }
-    gl.attachShader(this._shaderProgram as WebGLProgram, this._fragmentShader)
-    gl.linkProgram(this._shaderProgram as WebGLProgram)
-    if (!gl.getProgramParameter(this._shaderProgram as WebGLProgram, gl.LINK_STATUS)) {
+    gl.attachShader(this.shaderProgram as WebGLProgram, this._fragmentShader)
+    gl.linkProgram(this.shaderProgram as WebGLProgram)
+    if (!gl.getProgramParameter(this.shaderProgram as WebGLProgram, gl.LINK_STATUS)) {
       alert('Could not initialise shaders')
     }
-    gl.useProgram(this._shaderProgram as WebGLProgram)
+    gl.useProgram(this.shaderProgram as WebGLProgram)
   }
 
   enableShaders(
@@ -206,46 +217,47 @@ export default class HiPSShaderProgram {
     mMatrix: Float32Array,
     colorMapIdx: number
   ): void {
-    const gl = global.gl as GL
-    gl.useProgram(this._shaderProgram as WebGLProgram)
+    // const gl = global.gl as GL
+    const gl = this._webgl as GL
+    gl.useProgram(this.shaderProgram as WebGLProgram)
 
     this.locations.pMatrix = gl.getUniformLocation(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       this.gl_uniforms.m_perspective
     )
     this.locations.mMatrix = gl.getUniformLocation(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       this.gl_uniforms.m_model
     )
     this.locations.vMatrix = gl.getUniformLocation(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       this.gl_uniforms.m_view
     )
     this.locations.sampler = gl.getUniformLocation(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       this.gl_uniforms.sampler
     )
     this.locations.textureAlpha = gl.getUniformLocation(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       this.gl_uniforms.factor
     )
     this.locations.clorMapIdx = gl.getUniformLocation(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       this.gl_uniforms.colormapIdx
     )
 
     this.locations.vertexPositionAttribute = gl.getAttribLocation(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       this.gl_attributes.vertex_pos
     )
     this.locations.textureCoordAttribute = gl.getAttribLocation(
-      this._shaderProgram as WebGLProgram,
+      this.shaderProgram as WebGLProgram,
       this.gl_attributes.text_coords
     )
 
     if (colorMapIdx >= 2) {
-      const index = gl.getUniformBlockIndex(this._shaderProgram as WebGLProgram, 'colormap')
-      gl.uniformBlockBinding(this._shaderProgram as WebGLProgram, index, 0)
+      const index = gl.getUniformBlockIndex(this.shaderProgram as WebGLProgram, 'colormap')
+      gl.uniformBlockBinding(this.shaderProgram as WebGLProgram, index, 0)
       gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer)
 
       let currentColorMap: { r: Float32Array; g: Float32Array; b: Float32Array } | undefined
@@ -270,4 +282,4 @@ export default class HiPSShaderProgram {
   }
 }
 
-export const hipsShaderProgram = new HiPSShaderProgram()
+// export const hipsShaderProgram = new HiPSShaderProgram()

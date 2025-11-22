@@ -4,7 +4,8 @@
 import { Point } from '../model/Point.js';
 import { ReadonlyMat4 } from 'gl-matrix';
 import Camera from '../Camera.js';
-import AbstractSkyEntity from '../model/AbstractSkyEntity.js';
+import { AbstractSkyEntity } from '../model/AbstractSkyEntity.js';
+import { HealpixGridSingleton } from '../model/grid/HealpixGridSingleton.js';
 export declare class FoVUtils {
     /**
      * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
@@ -18,14 +19,14 @@ export declare class FoVUtils {
      * Compute the FoV polygon as a list of Points (clockwise).
      * Uses ray picking + frustum planes against a unit sphere.
      */
-    static getFoVPolygon(camera: Camera, canvas: HTMLCanvasElement, model: AbstractSkyEntity): Point[];
+    static getFoVPolygon(camera: Camera, canvas: HTMLCanvasElement, model: AbstractSkyEntity, healpixGrid: HealpixGridSingleton, webgl: WebGL2RenderingContext): Point[];
     /**
      * Ray pick against 8 key screen positions (corners + midpoints).
      * Returns Points in clockwise order starting from top-left.
      */
-    static getScreenCornersIntersection(pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement): Point[];
+    static getScreenCornersIntersection(pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement, healpixGrid: HealpixGridSingleton, webgl: WebGL2RenderingContext): Point[];
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas: HTMLCanvasElement): Point;
+    static getCenterJ2000(canvas: HTMLCanvasElement, healpixGrid: HealpixGridSingleton, webgl: WebGL2RenderingContext): Point;
     /** Middle point on the unit sphere along the arc between two 3D points. */
     static computeMiddlePoint(p1: Point, p2: Point): Point[];
     /**

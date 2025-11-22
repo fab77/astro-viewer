@@ -2,16 +2,13 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import AbstractSkyEntity from '../AbstractSkyEntity.js';
+import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
 import { fovHelper } from './FoVHelper.js';
-import { newTileBuffer } from './TileBuffer.js';
 import ColorMaps from '../ColorMaps.js';
-import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js';
+// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import AncestorTile from './AncestorTile.js';
-import { visibleTilesManager } from './VisibleTilesManager.js';
 import AllSky from './AllSky.js';
-import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
-import global from '../../Global.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 class HiPS extends AbstractSkyEntity {
     _ancestorTiles;
@@ -25,15 +22,19 @@ class HiPS extends AbstractSkyEntity {
     samplerIdx = 0;
     colorMapIdx = 0;
     colorMap = ColorMaps['native'];
+    _healpixGrid;
     // exposed read-only helpers
     get maxOrder() { return this._maxorder; }
     get minOrder() { return this._minorder; }
     get baseURL() { return this._baseurl; }
     get format() { return this._format; }
-    constructor(radius, position, xrad, yrad, descriptor) {
-        super(radius, position, xrad, yrad, descriptor.surveyName, descriptor.isGalactic);
-        this.initGL(global.gl);
-        newTileBuffer.addHiPS(this);
+    constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
+        super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
+        // this.initGL((global as any).gl as WebGL2RenderingContext)
+        this.initGL(webgl);
+        this._healpixGrid = healpixGrid;
+        // newTileBuffer.addHiPS(this)
+        this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this);
         // DEBUG logs kept from JS (optional)
         // eslint-disable-next-line no-console
         console.log('HiPS frame ' + descriptor.hipsFrame);
@@ -53,11 +54,11 @@ class HiPS extends AbstractSkyEntity {
         // auto-detect all-sky: original code forces true
         this._allSky = true;
         if (this._allSky) {
-            this._allSkyTile = new AllSky(this);
+            this._allSkyTile = new AllSky(this, this._webgl, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram);
         }
         else {
             for (let t = 0; t < 12; t++) {
-                this._ancestorTiles.push(new AncestorTile(t, 0, this));
+                this._ancestorTiles.push(new AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram));
             }
         }
     }
@@ -73,8 +74,12 @@ class HiPS extends AbstractSkyEntity {
         if (this._tileBuffer)
             this._tileBuffer._format = this._format;
         const pixelByOrder = this.isGalacticHips
-            ? visibleTilesManager.galVisibleTilesByOrder
-            : visibleTilesManager.visibleTilesByOrder;
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder;
+        // const pixelByOrder =
+        //   this.isGalacticHips
+        //     ? visibleTilesManager.galVisibleTilesByOrder
+        //     : visibleTilesManager.visibleTilesByOrder
         // @ts-ignore
         if (this._tileBuffer?.updateTiles)
             this._tileBuffer.updateTiles(pixelByOrder.pixels, pixelByOrder.order);
@@ -94,67 +99,90 @@ class HiPS extends AbstractSkyEntity {
         switch (colorMap.name) {
             case 'grayscale':
                 this.colorMapIdx = 1;
-                hipsShaderProgram.setGrayscaleShader();
+                // hipsShaderProgram.setGrayscaleShader()
+                super.hipsShaderProgram.setGrayscaleShader();
                 break;
             case 'planck':
                 this.colorMapIdx = 2;
-                hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'cmb':
                 this.colorMapIdx = 3;
-                hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'rainbow':
                 this.colorMapIdx = 4;
-                hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'eosb':
                 this.colorMapIdx = 5;
-                hipsShaderProgram.setColorMapShader();
+                super.hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
                 break;
             case 'cubehelix':
                 this.colorMapIdx = 6;
-                hipsShaderProgram.setColorMapShader();
+                super.hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
                 break;
             default:
                 this.colorMapIdx = 0;
-                hipsShaderProgram.setNativeShader();
+                super.hipsShaderProgram.setNativeShader();
+            // hipsShaderProgram.setNativeShader()
         }
     }
     initShaders() {
-        hipsShaderProgram.enableProgram();
-        this.shaderProgram = hipsShaderProgram.shaderProgram;
+        super.hipsShaderProgram.enableProgram();
+        // hipsShaderProgram.enableProgram()
+        // this.shaderProgram = super.hipsShaderProgram.shaderProgram
+        // this.shaderProgram = hipsShaderProgram.shaderProgram
     }
     getCurrentHealpixOrder() {
         return this._visibleorder;
     }
     refresh() {
-        const fov = healpixGridSingleton.getMinFoV();
+        // const fov = healpixGridSingleton.getMinFoV()
+        const fov = this._healpixGrid.getMinFoV();
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
-    draw() {
-        if (!global.camera || global.camera.getCameraMatrix() === undefined)
+    draw(input) {
+        const cameraMatrix = input.cameraMatrix;
+        // if (!global.camera || global.camera.getCameraMatrix() === undefined) return
+        if (!cameraMatrix)
             return;
         this.refresh();
-        const vMatrix = global.camera.getCameraMatrix();
+        // const vMatrix = global.camera.getCameraMatrix() as Float32Array
+        const vMatrix = cameraMatrix;
         const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
         const mMatrix = this.getModelMatrix();
         if (this._allSky && this._allSkyTile) {
             if (this.isGalacticHips) {
-                this._allSkyTile.draw(visibleTilesManager.galVisibleTilesByOrder.order, visibleTilesManager.galAncestorsMap, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+                this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.galAncestorsMap, 
+                // visibleTilesManager.galVisibleTilesByOrder.order,
+                // visibleTilesManager.galAncestorsMap,
+                pMatrix, vMatrix, mMatrix, this.colorMapIdx);
             }
             else {
-                this._allSkyTile.draw(visibleTilesManager.visibleTilesByOrder.order, visibleTilesManager.ancestorsMap, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+                this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.ancestorsMap, 
+                // visibleTilesManager.visibleTilesByOrder.order,
+                // visibleTilesManager.ancestorsMap,
+                pMatrix, vMatrix, mMatrix, this.colorMapIdx);
             }
             return;
         }
         // Non all-sky path
         const order = this.isGalacticHips
-            ? visibleTilesManager.galVisibleTilesByOrder.order
-            : visibleTilesManager.visibleTilesByOrder.order;
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order;
+        // ? visibleTilesManager.galVisibleTilesByOrder.order
+        // : visibleTilesManager.visibleTilesByOrder.order
         const map = this.isGalacticHips
-            ? visibleTilesManager.galAncestorsMap
-            : visibleTilesManager.ancestorsMap;
+            ? this._healpixGrid.visibleTilesManager.galAncestorsMap
+            : this._healpixGrid.visibleTilesManager.ancestorsMap;
+        // ? visibleTilesManager.galAncestorsMap
+        // : visibleTilesManager.ancestorsMap
         this._ancestorTiles.forEach((ancestor) => {
             ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
         });

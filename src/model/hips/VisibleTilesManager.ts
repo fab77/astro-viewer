@@ -1,10 +1,14 @@
 import global from '../../Global.js';
 import { Pointing, Vec3, Healpix } from 'healpixjs';
 import RayPickingUtils from '../../utils/RayPickingUtils.js';
-import { newTileBuffer } from './TileBuffer.js';
+// import { newTileBuffer } from './TileBuffer.js';
+import { TileBuffer } from './TileBuffer.js';
 import { vec4, mat4 } from 'gl-matrix';
-import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
+// import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
+// import {HealpixGridSingleton} from '../grid/HealpixGridSingleton.js';
 import { bootSetup } from '../../Config.js';
+import { HealpixGridSingleton } from '../grid/HealpixGridSingleton.js';
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 interface VisibleTiles {
@@ -13,7 +17,7 @@ interface VisibleTiles {
 }
 
 
-class VisibleTilesManager {
+export class VisibleTilesManager {
   private _visibleTilesByOrder: VisibleTiles;
   private _ancestorsMap: Map<number, number[]>;
 
@@ -24,8 +28,14 @@ class VisibleTilesManager {
   private _galacticMatrixInverted: mat4;
   private _galacticMatrix: mat4;
   private insideSphere: boolean = bootSetup.insideSphere
+  private _tileBuffer: TileBuffer
+  private _healpixGrid: HealpixGridSingleton;
+  private _webgl: WebGL2RenderingContext;
 
-  constructor() {
+  constructor(webgl: WebGL2RenderingContext, hipsShaderProgram: HiPSShaderProgram, healpixGrid: HealpixGridSingleton) {
+    
+    this._webgl = webgl
+    this._healpixGrid = healpixGrid
     this._visibleTilesByOrder = { pixels: [], order: 0 };
     this._ancestorsMap = new Map();
     this.initialised = false;
@@ -47,29 +57,35 @@ class VisibleTilesManager {
       0, 0, 0, 1
     )
     mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
+    this._tileBuffer = new TileBuffer(1, webgl, hipsShaderProgram, this)
+  }
+
+  get healpixGrid() {
+    return this._healpixGrid
+  }
+
+  get tileBuffer() { 
+    return this._tileBuffer
   }
 
   init(insideSphere: boolean): void {
     this.initialised = true;
     this.insideSphere = insideSphere
-    this.computeVisiblePixels();
-    // Consider debouncing/throttling in real-time UIs
-    setInterval(() => this.computeVisiblePixels(), 500);
+    // this.computeVisiblePixels();
+    // setInterval(() => this.computeVisiblePixels(), 500);
   }
 
   getVisibleOrder(): number {
-    return healpixGridSingleton.visibleorder;
+    // return healpixGridSingleton.visibleorder;
+    return this._healpixGrid.visibleorder;
   }
 
-  // toggleInsideSphere(){
-  //   this.insideSphere = !this.insideSphere
-  //   this.computeVisiblePixels();
-  // }
 
-  computeVisiblePixels(): void {
+  // computeVisiblePixels(): void {
+  computeVisiblePixels(order: number, webgl: WebGL2RenderingContext): void {
     if (!this.initialised) return;
 
-    let order = healpixGridSingleton.visibleorder;
+    // let order = healpixGridSingleton.visibleorder;
     if (global.insideSphere && order < 3) {
       order = 3;
     }
@@ -91,15 +107,17 @@ class VisibleTilesManager {
       }
     } else {
       const geomhealpix: Healpix = global.getHealpix(order);
-      const maxX = (global.gl as GL).canvas.width;
-      const maxY = (global.gl as GL).canvas.height;
+      // const maxX = (global.gl as GL).canvas.width;
+      // const maxY = (global.gl as GL).canvas.height;
+      const maxX = (webgl as GL).canvas.width;
+      const maxY = (webgl as GL).canvas.height;
 
       // Sample a grid of screen points, project to the sphere, then to galactic
       for (let i = 0; i <= maxX; i += maxX / 30) {
         for (let j = 0; j <= maxY; j += maxY / 30) {
           const hit = RayPickingUtils.getIntersectionPointWithSingleModel(
             i,
-            j
+            j, this._healpixGrid, this._webgl
           );
 
           if (hit.length > 0) {
@@ -118,13 +136,15 @@ class VisibleTilesManager {
             if (!pixels.includes(currPixNo)) {
               pixels.push(currPixNo);
               this._ancestorsMap.get(order)!.push(currPixNo);
-              newTileBuffer.addTile(order, currPixNo);
+              // newTileBuffer.addTile(order, currPixNo);
+              this._tileBuffer.addTile(order, currPixNo);
             }
 
             if (!galTiles.includes(galTileNo)) {
               galTiles.push(galTileNo);
               this._galAncestorsMap.get(order)!.push(galTileNo);
-              newTileBuffer.addGalTile(order, galTileNo);
+              // newTileBuffer.addGalTile(order, galTileNo);
+              this._tileBuffer.addGalTile(order, galTileNo);
             }
           }
         }
@@ -144,7 +164,8 @@ class VisibleTilesManager {
         const parent = pixels[p] >> (2 * o);
         if (!list.includes(parent)) {
           list.push(parent);
-          newTileBuffer.addTile(tgtOrder, parent);
+          // newTileBuffer.addTile(tgtOrder, parent);
+          this._tileBuffer.addTile(tgtOrder, parent);
         }
       }
     }
@@ -158,7 +179,8 @@ class VisibleTilesManager {
         const parent = galTiles[p] >> (2 * o);
         if (!list.includes(parent)) {
           list.push(parent);
-          newTileBuffer.addGalTile(tgtOrder, parent);
+          // newTileBuffer.addGalTile(tgtOrder, parent);
+          this._tileBuffer.addGalTile(tgtOrder, parent);
         }
       }
     }
@@ -185,4 +207,4 @@ class VisibleTilesManager {
   }
 }
 
-export const visibleTilesManager = new VisibleTilesManager();
+// export const visibleTilesManager = new VisibleTilesManager();

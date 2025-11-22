@@ -1,8 +1,10 @@
 'use strict'
 
 import global from '../../Global.js'
-import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
-import { newTileBuffer } from './TileBuffer.js'
+// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
+// import { newTileBuffer } from './TileBuffer.js'
+import { TileBuffer } from './TileBuffer.js'
 import { fovHelper } from './FoVHelper.js'
 import HiPS from './HiPS.js'
 
@@ -40,8 +42,13 @@ class AncestorTile {
   private vertexPositionBuffer!: WebGLBuffer[]
   private vertexIndices!: Uint16Array
   private vertexIndexBuffer!: WebGLBuffer
+  private _tileBuffer: TileBuffer
+  private _hipsShaderProgram: HiPSShaderProgram
 
-  constructor(tileno: number, order: number, hips: HiPS) {
+  constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, hipsShaderProgram: HiPSShaderProgram) {
+
+    this._hipsShaderProgram = hipsShaderProgram
+    this._tileBuffer = tileBuffer
     this._hips = hips
     this._tileno = tileno
 
@@ -86,7 +93,8 @@ class AncestorTile {
   }
 
   private textureLoaded(): void {
-    hipsShaderProgram.enableProgram()
+    // hipsShaderProgram.enableProgram()
+    this._hipsShaderProgram.enableProgram()
 
     const gl = (global as any).gl as WebGL2RenderingContext
     this._texture = gl.createTexture()
@@ -99,7 +107,8 @@ class AncestorTile {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
-    gl.uniform1i((hipsShaderProgram as any).shaderProgram.samplerUniform, this._hipsShaderIndex)
+    // gl.uniform1i((hipsShaderProgram as any).shaderProgram.samplerUniform, this._hipsShaderIndex)
+    // gl.uniform1i(this._hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex)
 
     if (!gl.isTexture(this._texture)) {
       console.log('error in texture')
@@ -292,15 +301,19 @@ class AncestorTile {
       if (q) quadrantsToDraw = q
     }
 
-    hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+    // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+    this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
 
     const gl = (global as any).gl as WebGL2RenderingContext
-    gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
-    gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
+    gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+    gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
+    // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+    // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
 
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.bindTexture(gl.TEXTURE_2D, this._texture)
-    gl.uniform1f((hipsShaderProgram as any).locations.textureAlpha, this.opacity)
+    // gl.uniform1f((hipsShaderProgram as any).locations.textureAlpha, this.opacity)
+    gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer)
     const elemno = this.vertexIndices.length
@@ -309,7 +322,8 @@ class AncestorTile {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx])
 
       gl.vertexAttribPointer(
-        (hipsShaderProgram as any).locations.vertexPositionAttribute,
+        // (hipsShaderProgram as any).locations.vertexPositionAttribute,
+        this._hipsShaderProgram.locations.vertexPositionAttribute,
         3,
         gl.FLOAT,
         false,
@@ -317,7 +331,8 @@ class AncestorTile {
         0
       )
       gl.vertexAttribPointer(
-        (hipsShaderProgram as any).locations.textureCoordAttribute,
+        // (hipsShaderProgram as any).locations.textureCoordAttribute,
+        this._hipsShaderProgram.locations.textureCoordAttribute,
         2,
         gl.FLOAT,
         false,
@@ -328,8 +343,10 @@ class AncestorTile {
       gl.drawElements(gl.TRIANGLES, elemno, gl.UNSIGNED_SHORT, 0)
     })
 
-    gl.disableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
-    gl.disableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
+    gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+    gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
+    // gl.disableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+    // gl.disableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
 
     return true
   }
@@ -351,8 +368,11 @@ class AncestorTile {
       const visibleChildren = visibleTilesMap.get(childrenOrder)!
       if (visibleChildren.includes(childTileNo)) {
         const childTile = this._isGalacticHips
-          ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-          : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
+          ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+          : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips)
+        // const childTile = this._isGalacticHips
+        //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+        //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
 
         childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
         if ((childTile as any)._ready) {

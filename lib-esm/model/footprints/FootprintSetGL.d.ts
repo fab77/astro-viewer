@@ -1,9 +1,7 @@
 import Footprint from './Footprint.js';
-import { mat4 } from 'gl-matrix';
 import MouseHelper from '../../utils/MouseHelper.js';
 import { MetadataManager } from '../MetadataManager.js';
 import { MetadataColumn } from '../MetadataColumn.js';
-type GL = WebGL2RenderingContext;
 export interface HoveredFootprintDetail {
     metadata: MetadataManager;
     footprints: Footprint[];
@@ -24,7 +22,6 @@ export declare class FootprintSetGL {
     healpixDensityMap: any;
     _providerUrl: string;
     totConvexPoints: number;
-    gl: GL;
     vertexCataloguePositionBuffer: WebGLBuffer;
     indexBuffer: WebGLBuffer;
     hoveredVertexPositionBuffer: WebGLBuffer;
@@ -47,9 +44,12 @@ export declare class FootprintSetGL {
     totSelectedPoints: number;
     nSlectedPrimitiveFlags: number;
     _shapeColor: string;
+    private _bufferInitialised;
+    private _webgl;
+    private _footprintShaderProgram;
     _isVisible: boolean;
     private _metadataManager;
-    constructor(fsetName: string, fsetDescription: string, providerUrl: string, metadataManager: MetadataManager);
+    constructor(fsetName: string, fsetDescription: string, providerUrl: string, metadataManager: MetadataManager, webgl: WebGL2RenderingContext);
     private initFootprintArrays;
     private initGLBuffers;
     setIsVisible(visibility: boolean): void;
@@ -65,21 +65,16 @@ export declare class FootprintSetGL {
     checkSelection(mouseHelper: MouseHelper): void;
     get hoveredFootprints(): HoveredFootprintDetail;
     get selectedFootprints(): Footprint[];
-    highlightFootprint(footprint: Footprint, highlighted: boolean): void;
     /**
      *
      * @param {Footprint[]} footprints
      */
-    addFootprint2Selected(footprints: Footprint[]): void;
     /**
      *
      * @param {Footprint} footprint
      */
-    removeFootprintFromSelection(footprint: Footprint): void;
     initHoveringBuffer(): void;
-    initSelectionBuffer(): void;
     changeColor(color: string): void;
-    draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper): void;
+    draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, cameraMatrix: Float32Array): void;
 }
-export {};
 //# sourceMappingURL=FootprintSetGL.d.ts.map

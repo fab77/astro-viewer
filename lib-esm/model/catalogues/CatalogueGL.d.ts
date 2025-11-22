@@ -1,9 +1,9 @@
 import Source from '../Source.js';
-import { mat4 } from 'gl-matrix';
 import MouseHelper from '../../utils/MouseHelper.js';
+import { CatalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 import { MetadataManager } from '../MetadataManager.js';
 import { MetadataColumn } from '../MetadataColumn.js';
-type GL = WebGL2RenderingContext;
+import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 export declare class CatalogueGL {
     _kind: string;
     static ELEM_SIZE: number;
@@ -14,10 +14,11 @@ export declare class CatalogueGL {
     _name: string;
     _description: string;
     sources: Source[];
-    gl: GL;
     vertexCataloguePositionBuffer: WebGLBuffer | null;
     vertexhoveredCataloguePositionBuffer: WebGLBuffer | null;
     vertexCataloguePosition: Float32Array;
+    private _bufferInitialised;
+    private _webgl;
     hoveredIndexes: number[];
     selectedIndexes: number[];
     extHoveredIndexes: number[];
@@ -27,7 +28,9 @@ export declare class CatalogueGL {
     _shapeColor: string;
     _healpixDensityMap: Map<number, number[]>;
     _providerUrl: string;
-    constructor(catalogueName: string, catalogueDescription: string, providerUrl: string, metadataManager: MetadataManager);
+    _catalogueShaderProgram: CatalogueShaderProgram;
+    private _visibleTilesManager;
+    constructor(catalogueName: string, catalogueDescription: string, providerUrl: string, metadataManager: MetadataManager, webgl: WebGL2RenderingContext, visibleTilesManager: VisibleTilesManager);
     setIsVisible(visibility: boolean): void;
     get shapeColor(): string;
     get providerUrl(): string;
@@ -56,7 +59,6 @@ export declare class CatalogueGL {
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
-    draw(in_mMatrix: mat4, in_mouseHelper: MouseHelper): void;
+    draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, cameraMatrix: Float32Array): void;
 }
-export {};
 //# sourceMappingURL=CatalogueGL.d.ts.map

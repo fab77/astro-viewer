@@ -1,9 +1,8 @@
 import global from './Global.js';
 import AstroSphere from './AstroSphere.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
+import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { bootSetup } from './Config.js';
-import healpixGridSingleton from './model/grid/HealpixGridSingleton.js';
-import equatorialGridSingleton from './model/grid/EquatorialGrid.js';
 export class AstroViewer {
     astroSphere;
     canvas;
@@ -14,6 +13,9 @@ export class AstroViewer {
         return this.tick();
     }
     // CATALOGUES
+    createCatalogue(catalogueName, catalogueDescription, providerUrl, metadataManager) {
+        return new CatalogueGL(catalogueName, catalogueDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
     showCatalogue(catalogue) {
         this.astroSphere.showCatalogue(catalogue);
     }
@@ -91,16 +93,20 @@ export class AstroViewer {
     }
     // GRIDs
     toggleHealpixGrid() {
-        healpixGridSingleton.toggleShowGrid();
+        // healpixGridSingleton.toggleShowGrid()
+        this.astroSphere.healpixGrid.toggleShowGrid();
     }
     isHealpixGridVisible() {
-        return healpixGridSingleton.isVisible();
+        // return healpixGridSingleton.isVisible()
+        return this.astroSphere.healpixGrid.isVisible();
     }
     toggleEquatorialGrid() {
-        equatorialGridSingleton.toggleShowGrid();
+        // equatorialGridSingleton.toggleShowGrid()
+        return this.astroSphere.equatorialGrid.toggleShowGrid();
     }
     isEquatorialGridVisible() {
-        return equatorialGridSingleton.isVisible();
+        // return equatorialGridSingleton.isVisible()
+        return this.astroSphere.equatorialGrid.isVisible();
     }
     // FOV
     getFoV() {
@@ -125,16 +131,21 @@ export class AstroViewer {
         this.astroSphere.toggleInsideSphere();
     }
     // Internal
-    constructor(canvasDomId) {
-        this.init(canvasDomId);
+    // constructor(canvasDomId: string) {
+    //   this.init(canvasDomId)
+    // }
+    constructor(canvasEl) {
+        this.init(canvasEl);
     }
-    init(canvasDomId) {
+    // private init(canvasDomId: string): void {
+    init(canvasEl) {
         console.log('init webgl');
-        const c = document.getElementById(canvasDomId);
-        if (!(c instanceof HTMLCanvasElement)) {
-            throw new Error(`Element with id ${canvasDomId} is not a canvas.`);
-        }
-        this.canvas = c;
+        // const c = document.getElementById(canvasDomId)
+        // if (!(c instanceof HTMLCanvasElement)) {
+        //   throw new Error(`Element with id ${canvasDomId} is not a canvas.`)
+        // }
+        // this.canvas = c
+        this.canvas = canvasEl;
         const gl = this.canvas.getContext('webgl2', { alpha: false });
         if (!gl) {
             alert('Could not initialise WebGL, sorry :-(');
@@ -159,13 +170,17 @@ export class AstroViewer {
         console.log('inside initListeners');
         const resizeCanvas = () => {
             console.log('[resizeCanvas]');
-            const newWidth = window.innerWidth - 3;
-            const newHeight = window.innerHeight - 3;
-            this.canvas.width = newWidth;
-            this.canvas.height = newHeight;
-            this.webgl.viewportWidth = this.canvas.width;
-            this.webgl.viewportHeight = this.canvas.height;
-            this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const newWidth = Math.max(1, Math.floor(rect.width * dpr));
+            const newHeight = Math.max(1, Math.floor(rect.height * dpr));
+            if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
+                this.canvas.width = newWidth;
+                this.canvas.height = newHeight;
+                this.webgl.viewportWidth = this.canvas.width;
+                this.webgl.viewportHeight = this.canvas.height;
+                this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            }
         };
         const handleContextLost = (event) => {
             console.log('[handleContextLost]');
@@ -183,6 +198,16 @@ export class AstroViewer {
             this.webgl.enable(this.webgl.DEPTH_TEST);
             this.rafId = requestAnimationFrame(() => this.tick());
         };
+        // 🔥 ResizeObserver per pannelli / split / layout dinamici
+        if ('ResizeObserver' in window) {
+            const ro = new ResizeObserver(() => {
+                resizeCanvas();
+            });
+            // Osserva il canvas o il suo parent (a tua scelta)
+            ro.observe(this.canvas);
+            // Se preferisci il contenitore:
+            // if (this.canvas.parentElement) ro.observe(this.canvas.parentElement);
+        }
         window.addEventListener('resize', resizeCanvas);
         this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
         this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);

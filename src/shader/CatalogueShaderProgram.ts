@@ -1,6 +1,5 @@
 // HiPSShaderProgram.ts
 import { mat4 } from 'gl-matrix';
-import global from '../Global.js'
 import ShaderManager from './ShaderManager.js'
 
 type GL = WebGL2RenderingContext;
@@ -28,7 +27,8 @@ type Locations = {
   brightness: number
 }
 
-export default class CatalogueShaderProgram {
+// export default class CatalogueShaderProgram {
+export class CatalogueShaderProgram {
   private _shaderProgram: WebGLProgram | undefined
   private _vertexShader!: WebGLShader
   private _fragmentShader!: WebGLShader
@@ -36,9 +36,11 @@ export default class CatalogueShaderProgram {
   readonly gl_uniforms: UniformNames
   readonly gl_attributes: AttributeNames
   readonly locations: Locations
+  private _webgl: WebGL2RenderingContext;
 
   
-  constructor() {
+  constructor(webgl: WebGL2RenderingContext) {
+    this._webgl = webgl
     this.gl_uniforms = {
       vertex_color: 'u_fragcolor',
       m_perspective: 'uPMatrix',
@@ -65,7 +67,8 @@ export default class CatalogueShaderProgram {
 
   get shaderProgram(): WebGLProgram {
     if (!this._shaderProgram) {
-      const gl = global.gl as GL
+      // const gl = global.gl as GL
+      const gl = this._webgl as GL
       this._shaderProgram = gl.createProgram() as WebGLProgram
       this.initShaders()
     }
@@ -73,7 +76,8 @@ export default class CatalogueShaderProgram {
   }
 
   private initShaders(): void {
-    const gl = global.gl as GL
+    // const gl = global.gl as GL
+    const gl = this._webgl as GL
 
     const fragmentShaderStr = ShaderManager.catalogueFS()
     this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER) as WebGLShader
@@ -135,7 +139,8 @@ export default class CatalogueShaderProgram {
     modelMatrix: Float32Array,
     viewMatrix: Float32Array
   ): void {
-    const gl = global.gl as GL
+    // const gl = global.gl as GL
+    const gl = this._webgl as GL
     
     // shaderUtility.useProgram(this.shaderProgram)
     gl.useProgram(this.shaderProgram);
@@ -158,4 +163,4 @@ export default class CatalogueShaderProgram {
   }
 }
 
-export const catalogueShaderProgram = new CatalogueShaderProgram()
+// export const catalogueShaderProgram = new CatalogueShaderProgram()

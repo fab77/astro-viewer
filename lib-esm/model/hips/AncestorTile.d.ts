@@ -1,3 +1,5 @@
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
+import { TileBuffer } from './TileBuffer.js';
 import HiPS from './HiPS.js';
 declare class AncestorTile {
     private _hips;
@@ -17,7 +19,9 @@ declare class AncestorTile {
     private vertexPositionBuffer;
     private vertexIndices;
     private vertexIndexBuffer;
-    constructor(tileno: number, order: number, hips: HiPS);
+    private _tileBuffer;
+    private _hipsShaderProgram;
+    constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, hipsShaderProgram: HiPSShaderProgram);
     destroyIntervals(): void;
     private initImage;
     private imageLoaded;
