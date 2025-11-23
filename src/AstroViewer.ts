@@ -8,6 +8,8 @@ import type { CameraChangedDetail, PointCoordinates } from './AstroSphere.js'
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
 import { bootSetup } from './Config.js'
 import { MetadataManager } from './model/MetadataManager.js'
+import Camera from './Camera.js'
+import { ReadonlyMat4 } from 'gl-matrix'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext 
@@ -121,6 +123,10 @@ export class AstroViewer {
   }
 
   // Camera: GOTOs and COORDS
+  setCamera(camera: Camera) {
+    this.astroSphere.setCamera(camera)
+  }
+
   setCameraPosition(pos: [number, number, number]){
     this.astroSphere.setCameraPosition(pos)
   }
@@ -130,10 +136,12 @@ export class AstroViewer {
   }
 
   applyFullCameraState(detail: CameraChangedDetail) {
+    console.log(`AstroViewer.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
     this.astroSphere.applyFullCameraState(detail)
   }
 
   goTo(raDeg: number, decDeg: number): void {
+    console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
     this.astroSphere.goTo(raDeg, decDeg)
   }
   getCenterCoordinates(): PointCoordinates | undefined {
@@ -145,6 +153,9 @@ export class AstroViewer {
   }
 
   // GRIDs
+  setModelMatrix(modelMatrix: ReadonlyMat4){
+    this.astroSphere.healpixGrid.setModelMatrix(modelMatrix)
+  }
   toggleHealpixGrid() {
     // healpixGridSingleton.toggleShowGrid()
     this.astroSphere.healpixGrid.toggleShowGrid()

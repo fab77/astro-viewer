@@ -163,6 +163,10 @@ export abstract class AbstractSkyEntity {
     return this.modelMatrix;
   }
 
+  setModelMatrix(modelMatrix: ReadonlyMat4) {
+    this.modelMatrix = modelMatrix
+  }
+
   /** Children with hierarchical geometry (e.g., HiPS) can override this. */
   setGeometryNeedsToBeRefreshed(): void {
     (this as any).refreshGeometryOnFoVChanged = false;

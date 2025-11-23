@@ -5,6 +5,8 @@ import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import type { CameraChangedDetail, PointCoordinates } from './AstroSphere.js';
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
 import { MetadataManager } from './model/MetadataManager.js';
+import Camera from './Camera.js';
+import { ReadonlyMat4 } from 'gl-matrix';
 export declare class AstroViewer {
     private astroSphere;
     private canvas;
@@ -29,12 +31,14 @@ export declare class AstroViewer {
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     loadHiPS(baseUrl: string): Promise<void>;
+    setCamera(camera: Camera): void;
     setCameraPosition(pos: [number, number, number]): void;
     setCameraMatrix(viewMatrix: Float32Array): void;
     applyFullCameraState(detail: CameraChangedDetail): void;
     goTo(raDeg: number, decDeg: number): void;
     getCenterCoordinates(): PointCoordinates | undefined;
     getCoordinatesFromMouse(): PointCoordinates | undefined;
+    setModelMatrix(modelMatrix: ReadonlyMat4): void;
     toggleHealpixGrid(): void;
     isHealpixGridVisible(): boolean;
     toggleEquatorialGrid(): void;

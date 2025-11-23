@@ -43,6 +43,7 @@ export declare abstract class AbstractSkyEntity {
     protected refreshModelMatrix(): void;
     getModelMatrixInverse(): ReadonlyMat4;
     getModelMatrix(): ReadonlyMat4;
+    setModelMatrix(modelMatrix: ReadonlyMat4): void;
     /** Children with hierarchical geometry (e.g., HiPS) can override this. */
     setGeometryNeedsToBeRefreshed(): void;
     rotateX(m: mat4, angle: number): mat4;

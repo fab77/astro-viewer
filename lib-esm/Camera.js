@@ -36,12 +36,13 @@ class Camera {
     }
     goTo(raDeg, decDeg) {
         // eslint-disable-next-line no-console
-        console.log(`global.insideSphere: ${global.insideSphere}`);
+        console.log(`Camera.goto ${raDeg} ${decDeg}`);
         // mirror RA
         const mirroredRA = 360 - raDeg;
         this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
     }
     goToPhiTheta(ptDeg) {
+        console.log(`Camera.goToPhiTheta ${ptDeg.phi} ${ptDeg.theta}`);
         const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
         let cameraMatrix = mat4.create();
         cameraMatrix = mat4.translate(cameraMatrix, cameraMatrix, vec3.fromValues(xyz[0], xyz[1], xyz[2]));

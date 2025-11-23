@@ -1,3 +1,4 @@
+import Camera from './Camera.js';
 import { AstroCoords, HMS, SphericalCoords, DMS } from './utils/Utils.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
@@ -17,6 +18,8 @@ export type CameraChangedDetail = {
     position: [number, number, number];
     vMatrix: Float32Array;
     pMatrix: Float32Array;
+    mMatrix: Float32Array;
+    camera: Camera;
     timestamp: number;
     centralPoint: Point;
     mouseHoverPoint: PointCoordinates | undefined;
@@ -47,6 +50,7 @@ declare class AstroSphere {
     private _webgl;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private initCamera;
+    setCamera(camera: Camera): void;
     get healpixGrid(): HealpixGrid;
     get equatorialGrid(): EquatorialGrid;
     private updateCentralPoint;

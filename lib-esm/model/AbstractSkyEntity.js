@@ -114,6 +114,9 @@ export class AbstractSkyEntity {
     getModelMatrix() {
         return this.modelMatrix;
     }
+    setModelMatrix(modelMatrix) {
+        this.modelMatrix = modelMatrix;
+    }
     /** Children with hierarchical geometry (e.g., HiPS) can override this. */
     setGeometryNeedsToBeRefreshed() {
         this.refreshGeometryOnFoVChanged = false;

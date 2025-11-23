@@ -87,6 +87,9 @@ export class AstroViewer {
         this.activateHiPS(desc);
     }
     // Camera: GOTOs and COORDS
+    setCamera(camera) {
+        this.astroSphere.setCamera(camera);
+    }
     setCameraPosition(pos) {
         this.astroSphere.setCameraPosition(pos);
     }
@@ -94,9 +97,11 @@ export class AstroViewer {
         this.astroSphere.setCameraMatrix(viewMatrix);
     }
     applyFullCameraState(detail) {
+        console.log(`AstroViewer.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`);
         this.astroSphere.applyFullCameraState(detail);
     }
     goTo(raDeg, decDeg) {
+        console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`);
         this.astroSphere.goTo(raDeg, decDeg);
     }
     getCenterCoordinates() {
@@ -106,6 +111,9 @@ export class AstroViewer {
         return this.astroSphere.getLastMousePointCoordinates();
     }
     // GRIDs
+    setModelMatrix(modelMatrix) {
+        this.astroSphere.healpixGrid.setModelMatrix(modelMatrix);
+    }
     toggleHealpixGrid() {
         // healpixGridSingleton.toggleShowGrid()
         this.astroSphere.healpixGrid.toggleShowGrid();

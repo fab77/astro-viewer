@@ -50,6 +50,8 @@ export type CameraChangedDetail = {
   position: [number, number, number];
   vMatrix: Float32Array;
   pMatrix: Float32Array;
+  mMatrix: Float32Array;
+  camera: Camera,
   timestamp: number;
   centralPoint: Point,
   mouseHoverPoint: PointCoordinates | undefined,
@@ -127,6 +129,10 @@ class AstroSphere {
       this._camera = new Camera([0.0, 0.0, 4.0], false)
     }
     // global.camera = this.camera
+  }
+
+  setCamera(camera: Camera){
+    this._camera = camera
   }
 
   get healpixGrid() {
@@ -273,6 +279,8 @@ class AstroSphere {
           position: this._camera.getCameraPosition(),
           vMatrix: this._camera.getCameraMatrix() as Float32Array,
           pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
+          mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
+          camera: this._camera,
           timestamp: performance.now(),
           // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
           centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
@@ -375,6 +383,7 @@ class AstroSphere {
 
 
   goTo(raDeg: number, decDeg: number): void {
+    console.log(`AstroSphere.goTo goto(${raDeg}, ${decDeg})`)
     this._camera.goTo(raDeg, decDeg)
   }
 
@@ -450,14 +459,22 @@ class AstroSphere {
 
   // 👉 set completo camera (pos + orientamento)
   public applyFullCameraState(detail: CameraChangedDetail) {
-    this.setCameraPosition(detail.position);
+    console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
+    
+    this._camera = detail.camera
+    this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
+    
+    // this._healpixGrid.setModelMatrix(detail.mMatrix)  
+    // this.setCameraPosition(detail.position);
     this.setCameraMatrix(detail.vMatrix);
+    
+    
 
     // aggiorna FoV
-    this.fov = this._healpixGrid.refreshFoV(
-      this._camera,
-      this._perspectiveMatrixManager.pMatrix
-    );
+    // this.fov = this._healpixGrid.refreshFoV(
+    //   this._camera,
+    //   this._perspectiveMatrixManager.pMatrix
+    // );
   }
 
 
@@ -496,13 +513,21 @@ class AstroSphere {
         this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix)
         if (this.prevFov != this.fov.minFoV) {
 
+          if (!this.centralPoinCoords) {
+            this.centralPoinCoords = this.updateCentralPoint()
+          }
+          
+
           const detail: CameraChangedDetail = {
             fovDeg: this.fov.minFoV,
             position: this._camera.getCameraPosition(),
             vMatrix: this._camera.getCameraMatrix() as Float32Array,
             pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
+            mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
+            camera: this._camera,
             timestamp: performance.now(),
-            centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix),
+            // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix),
+            centralPoint: new Point({ raDeg: this.centralPoinCoords.astroDeg.ra, decDeg: this.centralPoinCoords.astroDeg.dec }, CoordsType.ASTRO),
             mouseHoverPoint: this.mousePointCoords
           };
 
@@ -534,16 +559,10 @@ class AstroSphere {
     // 🔥 Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
     if (cameraRotated) {
       // Ricalcola il punto centrale
-      const centralCoords = FoVUtils.getCenterJ2000(
-        this.canvas,
-        this._healpixGrid,
-        this._webgl,
-        this._camera,
-        this._perspectiveMatrixManager.pMatrix
-      );
+      const center = this.updateCentralPoint()
+      const centralRaDeg = center.astroDeg.ra
+      const centralDecDeg = center.astroDeg.dec;
 
-      const centralRaDeg = centralCoords.raDeg;
-      const centralDecDeg = centralCoords.decDeg;
 
       // Evita spam: emetti solo se è cambiato abbastanza
       const raChanged =
@@ -559,6 +578,8 @@ class AstroSphere {
           position: this._camera.getCameraPosition(),
           vMatrix: this._camera.getCameraMatrix() as Float32Array,
           pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
+          mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
+          camera: this._camera,
           timestamp: performance.now(),
           centralPoint: new Point(
             { raDeg: centralRaDeg, decDeg: centralDecDeg },
