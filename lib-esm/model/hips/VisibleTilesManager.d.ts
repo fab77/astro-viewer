@@ -1,5 +1,5 @@
 import { TileBuffer } from './TileBuffer.js';
-import { HealpixGridSingleton } from '../grid/HealpixGridSingleton.js';
+import { HealpixGrid } from '../grid/HealpixGrid.js';
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 import Camera from '../../Camera.js';
 interface VisibleTiles {
@@ -18,8 +18,8 @@ export declare class VisibleTilesManager {
     private _tileBuffer;
     private _healpixGrid;
     private _webgl;
-    constructor(webgl: WebGL2RenderingContext, hipsShaderProgram: HiPSShaderProgram, healpixGrid: HealpixGridSingleton);
-    get healpixGrid(): HealpixGridSingleton;
+    constructor(webgl: WebGL2RenderingContext, hipsShaderProgram: HiPSShaderProgram, healpixGrid: HealpixGrid);
+    get healpixGrid(): HealpixGrid;
     get tileBuffer(): TileBuffer;
     init(insideSphere: boolean): void;
     getVisibleOrder(): number;

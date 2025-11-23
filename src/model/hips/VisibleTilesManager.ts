@@ -7,7 +7,7 @@ import { vec4, mat4 } from 'gl-matrix';
 // import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
 // import {HealpixGridSingleton} from '../grid/HealpixGridSingleton.js';
 import { bootSetup } from '../../Config.js';
-import { HealpixGridSingleton } from '../grid/HealpixGridSingleton.js';
+import { HealpixGrid } from '../grid/HealpixGrid.js';
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 import Camera from '../../Camera.js';
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
@@ -30,10 +30,10 @@ export class VisibleTilesManager {
   private _galacticMatrix: mat4;
   private insideSphere: boolean = bootSetup.insideSphere
   private _tileBuffer: TileBuffer
-  private _healpixGrid: HealpixGridSingleton;
+  private _healpixGrid: HealpixGrid;
   private _webgl: WebGL2RenderingContext;
 
-  constructor(webgl: WebGL2RenderingContext, hipsShaderProgram: HiPSShaderProgram, healpixGrid: HealpixGridSingleton) {
+  constructor(webgl: WebGL2RenderingContext, hipsShaderProgram: HiPSShaderProgram, healpixGrid: HealpixGrid) {
     
     this._webgl = webgl
     this._healpixGrid = healpixGrid

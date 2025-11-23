@@ -2,7 +2,7 @@ import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import { FoV } from '../FoV.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 import Camera from '../../Camera.js';
-export declare class HealpixGridSingleton extends AbstractSkyEntity {
+export declare class HealpixGrid extends AbstractSkyEntity {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     private _visibleorder;
@@ -44,4 +44,4 @@ export declare class HealpixGridSingleton extends AbstractSkyEntity {
     draw(input: SkyEntityDrawInput): void;
     get visibleorder(): number;
 }
-//# sourceMappingURL=HealpixGridSingleton.d.ts.map
+//# sourceMappingURL=HealpixGrid.d.ts.map

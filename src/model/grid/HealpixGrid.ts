@@ -34,7 +34,7 @@ interface BoundVec {
 }
 
 
-export class HealpixGridSingleton extends AbstractSkyEntity {
+export class HealpixGrid extends AbstractSkyEntity {
 
   static ELEM_SIZE = 3;
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -75,7 +75,7 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
   
 
   constructor(webgl: WebGL2RenderingContext) {
-    super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', webgl);
+    super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
     this.init()
     this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this)
     this._visibleTilesManager.init(bootSetup.insideSphere)
@@ -88,7 +88,7 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
     this._shaderProgram = (super.webgl as GL).createProgram() as WebGLProgram;
     this.initShaders();
 
-    const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
+    const order = fovHelper.getHiPSNorder(HealpixGrid.INITIAL_FOV);
     this._visibleorder = order;
 
     this._nPrimitiveFlags = 0;
@@ -102,19 +102,19 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
   }
 
   get RADIUS(): number {
-    return HealpixGridSingleton.RADIUS
+    return HealpixGrid.RADIUS
   }
 
   get INITIAL_POSITION(): [number, number, number] {
-    return HealpixGridSingleton.INITIAL_POSITION
+    return HealpixGrid.INITIAL_POSITION
   }
 
   get INITIAL_PhiRad(): number {
-    return HealpixGridSingleton.INITIAL_PhiRad
+    return HealpixGrid.INITIAL_PhiRad
   }
 
   get INITIAL_ThetaRad(): number {
-    return HealpixGridSingleton.INITIAL_ThetaRad
+    return HealpixGrid.INITIAL_ThetaRad
   }
 
   refreshFoV(camera: Camera) {
@@ -355,10 +355,10 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
 
     gl.vertexAttribPointer(
       this._attribLocations.position,
-      HealpixGridSingleton.ELEM_SIZE,
+      HealpixGrid.ELEM_SIZE,
       gl.FLOAT,
       false,
-      HealpixGridSingleton.BYTES_X_ELEM * HealpixGridSingleton.ELEM_SIZE,
+      HealpixGrid.BYTES_X_ELEM * HealpixGrid.ELEM_SIZE,
       0
     );
     gl.enableVertexAttribArray(this._attribLocations.position);

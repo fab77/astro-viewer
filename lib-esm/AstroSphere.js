@@ -15,7 +15,7 @@ import { FoVUtils } from './utils/FoVUtils.js';
 // import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
-import { HealpixGridSingleton } from './model/grid/HealpixGridSingleton.js';
+import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { CoordsType } from './utils/CoordsType.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -51,7 +51,7 @@ class AstroSphere {
         this.canvas = canvas;
         global.insideSphere = bootSetup.insideSphere;
         this.initCamera();
-        this._healpixGrid = new HealpixGridSingleton(this._webgl);
+        this._healpixGrid = new HealpixGrid(this._webgl);
         computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
         this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
         // equatorialGridSingleton.init(healpixGridSingleton.getMinFoV())

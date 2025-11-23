@@ -9,7 +9,7 @@ import { CoordsType } from '../../utils/CoordsType.js';
 import { FoVUtils } from '../../utils/FoVUtils.js';
 
 import GridTextHelper from './GridTextHelper.js';
-import { HealpixGridSingleton } from './HealpixGridSingleton.js';
+import { HealpixGrid } from './HealpixGrid.js';
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 // import healpixGridSingleton from './HealpixGridSingleton.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
@@ -59,14 +59,14 @@ export class EquatorialGrid extends AbstractSkyEntity {
 	//  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
 	private _dec4Labels: Map<number, number[][]> = new Map();
 	private _ra4Labels: Map<number, number[][]> = new Map();
-	private _healpixGrid: HealpixGridSingleton;
+	private _healpixGrid: HealpixGrid;
 
 	/**
 	 * @param radius Not used by current implementation (sphere is unit-radius)
 	 * @param fov    Field of view in degrees
 	 */
-	constructor(webgl: WebGL2RenderingContext, healpixGrid: HealpixGridSingleton) {
-		super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'equatorial-grid', webgl);
+	constructor(webgl: WebGL2RenderingContext, healpixGrid: HealpixGrid) {
+		super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
 		this._healpixGrid = healpixGrid
 	}
 

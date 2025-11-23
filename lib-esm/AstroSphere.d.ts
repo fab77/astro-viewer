@@ -5,7 +5,7 @@ import { Point } from './model/Point.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
-import { HealpixGridSingleton } from './model/grid/HealpixGridSingleton.js';
+import { HealpixGrid } from './model/grid/HealpixGrid.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -46,7 +46,7 @@ declare class AstroSphere {
     private _webgl;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private initCamera;
-    get healpixGrid(): HealpixGridSingleton;
+    get healpixGrid(): HealpixGrid;
     get equatorialGrid(): EquatorialGrid;
     private updateCentralPoint;
     private updateLastMousePoint;

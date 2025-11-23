@@ -16,7 +16,7 @@ import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMat
 import { colorHex2RGB } from '../../utils/Utils.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { bootSetup } from '../../Config.js';
-export class HealpixGridSingleton extends AbstractSkyEntity {
+export class HealpixGrid extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
     _visibleorder = 0;
@@ -46,7 +46,7 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
     static INITIAL_ThetaRad = 0;
     _visibleTilesManager;
     constructor(webgl) {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', webgl);
+        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
         this.init();
         this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
         this._visibleTilesManager.init(bootSetup.insideSphere);
@@ -56,7 +56,7 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
         this.initGL(super.webgl);
         this._shaderProgram = super.webgl.createProgram();
         this.initShaders();
-        const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
+        const order = fovHelper.getHiPSNorder(HealpixGrid.INITIAL_FOV);
         this._visibleorder = order;
         this._nPrimitiveFlags = 0;
         this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
@@ -65,16 +65,16 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
         this.fovObj = new FoV(super.webgl);
     }
     get RADIUS() {
-        return HealpixGridSingleton.RADIUS;
+        return HealpixGrid.RADIUS;
     }
     get INITIAL_POSITION() {
-        return HealpixGridSingleton.INITIAL_POSITION;
+        return HealpixGrid.INITIAL_POSITION;
     }
     get INITIAL_PhiRad() {
-        return HealpixGridSingleton.INITIAL_PhiRad;
+        return HealpixGrid.INITIAL_PhiRad;
     }
     get INITIAL_ThetaRad() {
-        return HealpixGridSingleton.INITIAL_ThetaRad;
+        return HealpixGrid.INITIAL_ThetaRad;
     }
     refreshFoV(camera) {
         return this.fovObj.getFoV(global.insideSphere, this, camera);
@@ -256,7 +256,7 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
         // Upload positions
         gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
-        gl.vertexAttribPointer(this._attribLocations.position, HealpixGridSingleton.ELEM_SIZE, gl.FLOAT, false, HealpixGridSingleton.BYTES_X_ELEM * HealpixGridSingleton.ELEM_SIZE, 0);
+        gl.vertexAttribPointer(this._attribLocations.position, HealpixGrid.ELEM_SIZE, gl.FLOAT, false, HealpixGrid.BYTES_X_ELEM * HealpixGrid.ELEM_SIZE, 0);
         gl.enableVertexAttribArray(this._attribLocations.position);
         // Index buffer
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
@@ -300,4 +300,4 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
         return this._visibleorder;
     }
 }
-//# sourceMappingURL=HealpixGridSingleton.js.map
+//# sourceMappingURL=HealpixGrid.js.map

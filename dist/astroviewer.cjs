@@ -10306,7 +10306,7 @@ class VisibleTilesManager {
 }
 // export const visibleTilesManager = new VisibleTilesManager();
 
-;// ./src/model/grid/HealpixGridSingleton.ts
+;// ./src/model/grid/HealpixGrid.ts
 
 
 
@@ -10325,7 +10325,7 @@ class VisibleTilesManager {
 
 
 
-class HealpixGridSingleton extends AbstractSkyEntity {
+class HealpixGrid extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
     _visibleorder = 0;
@@ -10355,7 +10355,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     static INITIAL_ThetaRad = 0;
     _visibleTilesManager;
     constructor(webgl) {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', webgl);
+        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
         this.init();
         this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
         this._visibleTilesManager.init(bootSetup.insideSphere);
@@ -10365,7 +10365,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         this.initGL(super.webgl);
         this._shaderProgram = super.webgl.createProgram();
         this.initShaders();
-        const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
+        const order = fovHelper.getHiPSNorder(HealpixGrid.INITIAL_FOV);
         this._visibleorder = order;
         this._nPrimitiveFlags = 0;
         this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
@@ -10374,16 +10374,16 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         this.fovObj = new FoV(super.webgl);
     }
     get RADIUS() {
-        return HealpixGridSingleton.RADIUS;
+        return HealpixGrid.RADIUS;
     }
     get INITIAL_POSITION() {
-        return HealpixGridSingleton.INITIAL_POSITION;
+        return HealpixGrid.INITIAL_POSITION;
     }
     get INITIAL_PhiRad() {
-        return HealpixGridSingleton.INITIAL_PhiRad;
+        return HealpixGrid.INITIAL_PhiRad;
     }
     get INITIAL_ThetaRad() {
-        return HealpixGridSingleton.INITIAL_ThetaRad;
+        return HealpixGrid.INITIAL_ThetaRad;
     }
     refreshFoV(camera) {
         return this.fovObj.getFoV(src_Global.insideSphere, this, camera);
@@ -10565,7 +10565,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         // Upload positions
         gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
-        gl.vertexAttribPointer(this._attribLocations.position, HealpixGridSingleton.ELEM_SIZE, gl.FLOAT, false, HealpixGridSingleton.BYTES_X_ELEM * HealpixGridSingleton.ELEM_SIZE, 0);
+        gl.vertexAttribPointer(this._attribLocations.position, HealpixGrid.ELEM_SIZE, gl.FLOAT, false, HealpixGrid.BYTES_X_ELEM * HealpixGrid.ELEM_SIZE, 0);
         gl.enableVertexAttribArray(this._attribLocations.position);
         // Index buffer
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
@@ -10662,7 +10662,7 @@ class EquatorialGrid extends AbstractSkyEntity {
      * @param fov    Field of view in degrees
      */
     constructor(webgl, healpixGrid) {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'equatorial-grid', webgl);
+        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
         this._healpixGrid = healpixGrid;
     }
     init(fov) {
@@ -10967,7 +10967,7 @@ class AstroSphere {
         this.canvas = canvas;
         src_Global.insideSphere = bootSetup.insideSphere;
         this.initCamera();
-        this._healpixGrid = new HealpixGridSingleton(this._webgl);
+        this._healpixGrid = new HealpixGrid(this._webgl);
         ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
         this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
         // equatorialGridSingleton.init(healpixGridSingleton.getMinFoV())

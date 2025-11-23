@@ -10,7 +10,7 @@ import { mat4, ReadonlyMat4 } from 'gl-matrix';
 import computePerspectiveMatrixSingleton from './ComputePerspectiveMatrix.js';
 import Camera from '../Camera.js';
 import {AbstractSkyEntity} from '../model/AbstractSkyEntity.js';
-import { HealpixGridSingleton } from '../model/grid/HealpixGridSingleton.js';
+import { HealpixGrid } from '../model/grid/HealpixGrid.js';
 
 export class FoVUtils {
   /**
@@ -30,7 +30,7 @@ export class FoVUtils {
     camera: Camera,
     canvas: HTMLCanvasElement,
     model: AbstractSkyEntity,
-    healpixGrid: HealpixGridSingleton,
+    healpixGrid: HealpixGrid,
     webgl: WebGL2RenderingContext,
   ): Point[] {
     // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
@@ -212,7 +212,7 @@ export class FoVUtils {
    * Returns Points in clockwise order starting from top-left.
    */
   static getScreenCornersIntersection(
-pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement, healpixGrid: HealpixGridSingleton, webgl: WebGL2RenderingContext  ): Point[] {
+pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext  ): Point[] {
     const w = canvas.clientWidth;
     const h = canvas.clientHeight;
 
@@ -249,7 +249,7 @@ pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement, healpixGrid: H
 
   /** Returns the center point (in J2000) of the current view as a `Point`. */
   static getCenterJ2000(canvas: HTMLCanvasElement, 
-    healpixGrid: HealpixGridSingleton, 
+    healpixGrid: HealpixGrid, 
     webgl: WebGL2RenderingContext,
     camera: Camera): Point {
     const w = canvas.clientWidth;

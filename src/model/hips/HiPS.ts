@@ -13,7 +13,7 @@ import AllSky from './AllSky.js'
 // import global from '../../Global.js'
 import {HiPSDescriptor} from './HiPSDescriptor.js'
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
-import { HealpixGridSingleton } from '../grid/HealpixGridSingleton.js'
+import { HealpixGrid } from '../grid/HealpixGrid.js'
 import { ReadonlyMat4 } from 'gl-matrix'
 
 
@@ -33,7 +33,7 @@ class HiPS extends AbstractSkyEntity {
   public samplerIdx = 0
   public colorMapIdx = 0
   public colorMap = ColorMaps['native']
-  private _healpixGrid: HealpixGridSingleton
+  private _healpixGrid: HealpixGrid
 
   // exposed read-only helpers
   get maxOrder(): number { return this._maxorder }
@@ -48,7 +48,7 @@ class HiPS extends AbstractSkyEntity {
     yrad: number,
     descriptor: HiPSDescriptor,
     webgl: WebGL2RenderingContext,
-    healpixGrid: HealpixGridSingleton
+    healpixGrid: HealpixGrid
   ) {
     super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic)
     // this.initGL((global as any).gl as WebGL2RenderingContext)

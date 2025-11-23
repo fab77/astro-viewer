@@ -33,7 +33,7 @@ import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/Footp
 
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js'
-import { HealpixGridSingleton } from './model/grid/HealpixGridSingleton.js'
+import { HealpixGrid } from './model/grid/HealpixGrid.js'
 import { TileBuffer } from './model/hips/TileBuffer.js'
 import { SkyEntityDrawInput } from './model/AbstractSkyEntity.js'
 import { CoordsType } from './utils/CoordsType.js'
@@ -66,7 +66,7 @@ class AstroSphere {
   private mousePointCoords: PointCoordinates | undefined
 
   private canvas: HTMLCanvasElement
-  private _healpixGrid: HealpixGridSingleton
+  private _healpixGrid: HealpixGrid
   private _equatorialGrid: EquatorialGrid
 
 
@@ -103,7 +103,7 @@ class AstroSphere {
 
     this.initCamera()
 
-    this._healpixGrid = new HealpixGridSingleton(this._webgl)
+    this._healpixGrid = new HealpixGrid(this._webgl)
     
     computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere)
 

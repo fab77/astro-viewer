@@ -7,7 +7,7 @@ import { Point } from '../Point.js';
 import { CoordsType } from '../../utils/CoordsType.js';
 import { FoVUtils } from '../../utils/FoVUtils.js';
 import GridTextHelper from './GridTextHelper.js';
-import { HealpixGridSingleton } from './HealpixGridSingleton.js';
+import { HealpixGrid } from './HealpixGrid.js';
 import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
 // import healpixGridSingleton from './HealpixGridSingleton.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
@@ -49,7 +49,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
      * @param fov    Field of view in degrees
      */
     constructor(webgl, healpixGrid) {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'equatorial-grid', webgl);
+        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
         this._healpixGrid = healpixGrid;
     }
     init(fov) {

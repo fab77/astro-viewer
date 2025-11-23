@@ -7,7 +7,7 @@ import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
 import global from "../Global.js";
 import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix.js";
 // import healpixGridSingleton from "../model/grid/HealpixGridSingleton.js";
-import { HealpixGridSingleton } from "../model/grid/HealpixGridSingleton.js";
+import { HealpixGrid } from "../model/grid/HealpixGrid.js";
 import Camera from "../Camera.js";
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -98,7 +98,7 @@ class RayPickingUtils {
   static raySphere(
     rayOrigWorld: ReadonlyVec3,
     rayDirectionWorld: ReadonlyVec3,
-    healpixGridSingleton: HealpixGridSingleton): number {
+    healpixGridSingleton: HealpixGrid): number {
 
     let intersectionDistance = -1;
     const L = vec3.create();
@@ -137,7 +137,7 @@ class RayPickingUtils {
    */
   static getIntersectionPointWithSingleModel(
     mouseX: number, mouseY: number,
-    healpixGrid: HealpixGridSingleton,
+    healpixGrid: HealpixGrid,
     webgl: WebGL2RenderingContext,
     camera: Camera): number[] {
     

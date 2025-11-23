@@ -12,7 +12,7 @@ import global from '../Global.js'
 import RayPickingUtils from '../utils/RayPickingUtils.js'
 import { radToDeg } from '../utils/Utils.js'
 import computePerspectiveMatrixSingleton from '../utils/ComputePerspectiveMatrix.js'
-import { HealpixGridSingleton } from './grid/HealpixGridSingleton.js'
+import { HealpixGrid } from './grid/HealpixGrid.js'
 import Camera from '../Camera.js'
 // import healpixGridSingleton from './grid/HealpixGridSingleton.js'
 
@@ -37,7 +37,7 @@ export class FoV {
   }
 
   /** Recomputes FoV for current camera + projection */
-  public getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGridSingleton, camera: Camera): FoV {
+  public getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGrid, camera: Camera): FoV {
     // const gl = webgl
     const gl = this._webgl
 
@@ -110,7 +110,7 @@ export class FoV {
   private computeAngle(
     canvasX: number, canvasY: number,
     insideSphere: boolean,
-    healpixGridSingleton: HealpixGridSingleton,
+    healpixGridSingleton: HealpixGrid,
     camera: Camera): FoVComputed {
     // const camera = global.camera
     const pMatrix = computePerspectiveMatrixSingleton.pMatrix
