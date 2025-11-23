@@ -53,7 +53,7 @@ export class VisibleTilesManager {
         return this._healpixGrid.visibleorder;
     }
     // computeVisiblePixels(): void {
-    computeVisiblePixels(order, webgl) {
+    computeVisiblePixels(order, webgl, camera) {
         if (!this.initialised)
             return;
         // let order = healpixGridSingleton.visibleorder;
@@ -83,7 +83,7 @@ export class VisibleTilesManager {
             // Sample a grid of screen points, project to the sphere, then to galactic
             for (let i = 0; i <= maxX; i += maxX / 30) {
                 for (let j = 0; j <= maxY; j += maxY / 30) {
-                    const hit = RayPickingUtils.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl);
+                    const hit = RayPickingUtils.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl, camera);
                     if (hit.length > 0) {
                         // Equatorial -> Galactic (use _galacticMatrix)
                         const galVec = vec4.create();

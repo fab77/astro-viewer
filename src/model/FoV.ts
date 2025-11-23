@@ -13,6 +13,7 @@ import RayPickingUtils from '../utils/RayPickingUtils.js'
 import { radToDeg } from '../utils/Utils.js'
 import computePerspectiveMatrixSingleton from '../utils/ComputePerspectiveMatrix.js'
 import { HealpixGridSingleton } from './grid/HealpixGridSingleton.js'
+import Camera from '../Camera.js'
 // import healpixGridSingleton from './grid/HealpixGridSingleton.js'
 
 
@@ -36,7 +37,7 @@ export class FoV {
   }
 
   /** Recomputes FoV for current camera + projection */
-  public getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGridSingleton, webgl: WebGL2RenderingContext): FoV {
+  public getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGridSingleton, camera: Camera): FoV {
     // const gl = webgl
     const gl = this._webgl
 
@@ -50,7 +51,7 @@ export class FoV {
 
     // horizontal FoV: ray through (centerY)
     // const x = this.computeAngle(0, gl.canvas.height / 2, insideSphere)
-    const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton)
+    const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
     this.fovXDeg = xFoVComputed.angleDeg
     // this.xDistance = xFoVComputed.distance
     // this.xAngleRatio = this.fovXDeg / this.xDistance
@@ -58,18 +59,18 @@ export class FoV {
 
     // vertical FoV: ray through (centerX)
     // this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere)
-    const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton)
+    const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera)
     this.fovYDeg = yFoVComputed.angleDeg
     // this.yDistance = yFoVComputed.distance
     // this.yAngleRatio = this.fovYDeg / this.yDistance
 
     this._minFoV = this.minFoV
-    this.ratio = this.computeRatio()
+    this.ratio = this.computeRatio(camera)
     return this
   }
 
-  private computeRatio(): number {
-    const camera = global.camera
+  private computeRatio(camera: Camera): number {
+    // const camera = global.camera
     if (!camera) throw Error("Camera not defined")
     const pos = camera.getCameraPosition()
     const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2])
@@ -109,20 +110,22 @@ export class FoV {
   private computeAngle(
     canvasX: number, canvasY: number,
     insideSphere: boolean,
-    healpixGridSingleton: HealpixGridSingleton): FoVComputed {
-    const camera = global.camera
+    healpixGridSingleton: HealpixGridSingleton,
+    camera: Camera): FoVComputed {
+    // const camera = global.camera
     const pMatrix = computePerspectiveMatrixSingleton.pMatrix
     if (!pMatrix) {
       // Handle the error or assign a default value
       console.warn('FoV: projection matrix is null')
       return { angleDeg: 180, distance: 1 }
     }
+    const vMatrix = camera.getCameraMatrix()
     if (!camera) {
       // Handle the error or assign a default value
       console.warn('FoV: camera is null')
       return { angleDeg: 180, distance: 1 }
     }
-    const rayWorld = RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl)
+    const rayWorld = RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix)
 
     const intersectionDistance = RayPickingUtils.raySphere(
       camera.getCameraPosition(),

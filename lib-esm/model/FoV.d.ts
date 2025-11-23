@@ -1,4 +1,5 @@
 import { HealpixGridSingleton } from './grid/HealpixGridSingleton.js';
+import Camera from '../Camera.js';
 export declare class FoV {
     private fovXDeg;
     private fovYDeg;
@@ -7,7 +8,7 @@ export declare class FoV {
     private _webgl;
     constructor(webgl: WebGL2RenderingContext);
     /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGridSingleton, webgl: WebGL2RenderingContext): FoV;
+    getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGridSingleton, camera: Camera): FoV;
     private computeRatio;
     changeMinFov(deg: number): void;
     get minFoV(): number;

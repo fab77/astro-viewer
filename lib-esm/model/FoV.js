@@ -7,7 +7,6 @@
  * - Keeps original “insideSphere ? 360 - angle : angle” behavior
  */
 import { vec3, mat4 } from 'gl-matrix';
-import global from '../Global.js';
 import RayPickingUtils from '../utils/RayPickingUtils.js';
 import { radToDeg } from '../utils/Utils.js';
 import computePerspectiveMatrixSingleton from '../utils/ComputePerspectiveMatrix.js';
@@ -21,7 +20,7 @@ export class FoV {
         this._webgl = webgl;
     }
     /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere, healpixGridSingleton, webgl) {
+    getFoV(insideSphere, healpixGridSingleton, camera) {
         // const gl = webgl
         const gl = this._webgl;
         if (!gl || !gl.canvas) {
@@ -33,22 +32,22 @@ export class FoV {
         }
         // horizontal FoV: ray through (centerY)
         // const x = this.computeAngle(0, gl.canvas.height / 2, insideSphere)
-        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton);
+        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera);
         this.fovXDeg = xFoVComputed.angleDeg;
         // this.xDistance = xFoVComputed.distance
         // this.xAngleRatio = this.fovXDeg / this.xDistance
         // vertical FoV: ray through (centerX)
         // this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere)
-        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton);
+        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera);
         this.fovYDeg = yFoVComputed.angleDeg;
         // this.yDistance = yFoVComputed.distance
         // this.yAngleRatio = this.fovYDeg / this.yDistance
         this._minFoV = this.minFoV;
-        this.ratio = this.computeRatio();
+        this.ratio = this.computeRatio(camera);
         return this;
     }
-    computeRatio() {
-        const camera = global.camera;
+    computeRatio(camera) {
+        // const camera = global.camera
         if (!camera)
             throw Error("Camera not defined");
         const pos = camera.getCameraPosition();
@@ -80,20 +79,21 @@ export class FoV {
         return distance;
     }
     /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton) {
-        const camera = global.camera;
+    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera) {
+        // const camera = global.camera
         const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
         if (!pMatrix) {
             // Handle the error or assign a default value
             console.warn('FoV: projection matrix is null');
             return { angleDeg: 180, distance: 1 };
         }
+        const vMatrix = camera.getCameraMatrix();
         if (!camera) {
             // Handle the error or assign a default value
             console.warn('FoV: camera is null');
             return { angleDeg: 180, distance: 1 };
         }
-        const rayWorld = RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl);
+        const rayWorld = RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix);
         const intersectionDistance = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
         let angleDeg;
         if (intersectionDistance > 0) {

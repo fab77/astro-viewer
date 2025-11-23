@@ -22,7 +22,8 @@ import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMat
 import { colorHex2RGB } from '../../utils/Utils.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { bootSetup } from '../../Config.js';
-import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
+// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
+import Camera from '../../Camera.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -71,6 +72,7 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
   static INITIAL_PhiRad = 0;
   static INITIAL_ThetaRad = 0;
   private _visibleTilesManager: VisibleTilesManager;
+  
 
   constructor(webgl: WebGL2RenderingContext) {
     super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid', webgl);
@@ -115,8 +117,8 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
     return HealpixGridSingleton.INITIAL_ThetaRad
   }
 
-  refreshFoV() {
-    return this.fovObj.getFoV(global.insideSphere, this, super.webgl);
+  refreshFoV(camera: Camera) {
+    return this.fovObj.getFoV(global.insideSphere, this, camera) ;
   }
 
   getFoV(): FoV {
@@ -269,9 +271,9 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
   // }
 
 
-  private refresh(): void {
+  private refresh(camera: Camera): void {
 
-    this.refreshFoV();
+    this.refreshFoV(camera);
     const fov = this.getMinFoV();
     // expose to global (legacy)
     // (global as any).hipsFoV = fov;
@@ -280,7 +282,7 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
     this._visibleorder = fovHelper.getHiPSNorder(fov);
   }
 
-  private enableShader(in_mMatrix: ReadonlyMat4, pMatrix: ReadonlyMat4): void {
+  private enableShader(in_mMatrix: ReadonlyMat4, pMatrix: ReadonlyMat4, vMatrix: ReadonlyMat4): void {
     const gl = super.webgl as GL;
 
     gl.useProgram(this._shaderProgram);
@@ -295,7 +297,8 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
     this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
 
     let mvMatrix = mat4.create();
-    mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
+    // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
+    mvMatrix = mat4.multiply(mvMatrix, vMatrix, in_mMatrix);
 
     if (uMV) gl.uniformMatrix4fv(uMV, false, mvMatrix as Float32Array);
     if (uP) gl.uniformMatrix4fv(uP, false, pMatrix as Float32Array);
@@ -321,7 +324,12 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
     const gl = super.webgl as GL;
 
     const mMatrix = this.getModelMatrix();
-    this.refresh();
+    // const vMatrix = input.camera.getCameraMatrix()
+    const camera = input.camera
+    if (!camera ) return
+    const vMatrix = camera.getCameraMatrix()
+
+    this.refresh(camera);
 
     if (!this.showGrid) {
 
@@ -337,8 +345,9 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
 
     this.initBuffers(pixels, order);
 
+    
     const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-    this.enableShader(mMatrix, pMatrix);
+    this.enableShader(mMatrix, pMatrix, vMatrix);
 
     // Upload positions
     gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
@@ -370,13 +379,14 @@ export class HealpixGridSingleton extends AbstractSkyEntity {
 
     // Project and label pixel centers that are inside current FoV
     let mvMatrix = mat4.create();
-    mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
+    // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
+    mvMatrix = mat4.multiply(mvMatrix, vMatrix, mMatrix);
 
     let mvpMatrix = mat4.create();
     mvpMatrix = mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
 
     // FIX: pass model & pMatrix to match FoVUtils TS signature
-    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this, this._webgl);
+    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this, this._webgl, camera);
 
     const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
 

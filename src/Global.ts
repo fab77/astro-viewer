@@ -2,13 +2,13 @@
 
 import { Healpix } from 'healpixjs';
 import { bootSetup } from './Config.js';
-import Camera from './Camera.js';
+// import Camera from './Camera.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 class Global {
   // --- cached / runtime state ---
-  private _camera: Camera | null;
+  // private _camera: Camera | null;
   // private _gl: GL | null;
   private _healpix: Record<number, Healpix>;
 
@@ -32,7 +32,7 @@ class Global {
     this._insideSphere = bootSetup.insideView;
     this._version = bootSetup.version;
 
-    this._camera = null;
+    // this._camera = null;
     // this._gl = null;
     this._healpix = {};
 
@@ -66,10 +66,11 @@ class Global {
 
   get MAX_DECIMALS(): number { return this._maxDecimals; }
 
-  get camera(): Camera | null { return this._camera; }
-  set camera(in_camera: Camera | null) { this._camera = in_camera; }
+  // get camera(): Camera | null { return this._camera; }
+  // set camera(in_camera: Camera | null) { this._camera = in_camera; }
 
-  // get gl(): GL | null { return this._gl; }
+  // get gl(): 
+  // GL | null { return this._gl; }
   // set gl(in_gl: GL | null) { this._gl = in_gl; }
 
   set insideSphere(v: boolean) { this._insideSphere = v; }

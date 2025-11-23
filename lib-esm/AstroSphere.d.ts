@@ -25,7 +25,7 @@ export type CameraChangedDetail = {
  * AstroSphere — main WebGL scene controller (TS port)
  */
 declare class AstroSphere {
-    private camera;
+    private _camera;
     private centralPoinCoords;
     private mousePointCoords;
     private canvas;

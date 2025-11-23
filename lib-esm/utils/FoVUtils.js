@@ -31,7 +31,7 @@ export class FoVUtils {
         const canvasHeight = canvas.clientHeight;
         let points = [];
         // First check: does the sphere cover the whole screen?
-        const intersectionWithModel = RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl);
+        const intersectionWithModel = RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera);
         if (intersectionWithModel.length > 0) {
             // Fully covered → grab corners + midpoints (CASE C)
             const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
@@ -46,8 +46,8 @@ export class FoVUtils {
             const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
             const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
             const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
-            const intersectionTopMiddle = RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl);
-            const intersectionRightMiddle = RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl);
+            const intersectionTopMiddle = RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera);
+            const intersectionRightMiddle = RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera);
             // CASE A: zoomed out, hemisphere fully visible
             if (intersectionTopMiddle.length === 0 &&
                 intersectionRightMiddle.length === 0) {
@@ -103,14 +103,14 @@ export class FoVUtils {
     static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
-        const topLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl);
-        const middleTop = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl);
-        const topRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl);
-        const middleRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl);
-        const bottomRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl);
-        const middleBottom = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl);
-        const bottomLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl);
-        const middleLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl);
+        const topLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera);
+        const middleTop = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera);
+        const topRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera);
+        const middleRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera);
+        const bottomRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera);
+        const middleBottom = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera);
+        const bottomLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera);
+        const middleLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera);
         const out = [];
         const pushIf = (ip) => {
             if (ip.length > 0) {
@@ -128,10 +128,10 @@ export class FoVUtils {
         return out;
     }
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas, healpixGrid, webgl) {
+    static getCenterJ2000(canvas, healpixGrid, webgl, camera) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
-        const center = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl);
+        const center = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera);
         if (center.length <= 0)
             throw Error(`Central point is null`);
         return new Point({ x: center[0], y: center[1], z: center[2] }, CoordsType.CARTESIAN);

@@ -1502,7 +1502,7 @@ const bootSetup = {
 
 class Global {
     // --- cached / runtime state ---
-    _camera;
+    // private _camera: Camera | null;
     // private _gl: GL | null;
     _healpix;
     // --- config/state flags ---
@@ -1521,7 +1521,7 @@ class Global {
         this._debug = bootSetup.debug;
         this._insideSphere = bootSetup.insideView;
         this._version = bootSetup.version;
-        this._camera = null;
+        // this._camera = null;
         // this._gl = null;
         this._healpix = {};
         this._selectionnside = 32;
@@ -1545,9 +1545,10 @@ class Global {
         return this._healpix[order];
     }
     get MAX_DECIMALS() { return this._maxDecimals; }
-    get camera() { return this._camera; }
-    set camera(in_camera) { this._camera = in_camera; }
-    // get gl(): GL | null { return this._gl; }
+    // get camera(): Camera | null { return this._camera; }
+    // set camera(in_camera: Camera | null) { this._camera = in_camera; }
+    // get gl(): 
+    // GL | null { return this._gl; }
     // set gl(in_gl: GL | null) { this._gl = in_gl; }
     set insideSphere(v) { this._insideSphere = v; }
     get insideSphere() { return this._insideSphere; }
@@ -4749,7 +4750,6 @@ const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton(
 
 
 
-
 class RayPickingUtils {
     static lastNearestVisibleObjectIdx = -1;
     /** Get index of the last object found under the mouse (if any). */
@@ -4763,12 +4763,11 @@ class RayPickingUtils {
      * @param pMatrix Projection matrix
      * @returns World-space direction (normalized) as a vec3
      */
-    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl) {
-        if (!src_Global.camera) {
-            throw new Error("Camera is not initialized.");
-        }
-        const vMatrix = src_Global.camera.getCameraMatrix();
-        // const gl = global.gl as GL;
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
+        // if (!global.camera) {
+        //   throw new Error("Camera is not initialized.");
+        // }
+        // const vMatrix = global.camera.getCameraMatrix() as ReadonlyMat4;
         const gl = webgl;
         const rect = gl.canvas.getBoundingClientRect();
         // const canvasMX = mouseX - rect.left;
@@ -4845,15 +4844,21 @@ class RayPickingUtils {
      * Compute intersection with a single model (defaults to the Healpix grid).
      * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
      */
-    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl) {
+    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera) {
         const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        const camera = src_Global.camera;
+        // const camera = global.camera;
+        const vMatrix = camera.getCameraMatrix();
         const canvas = webgl.canvas;
         console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`);
-        if (!camera) {
-            throw new Error("Camera is not initialized.");
-        }
-        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+        // if (!camera) {
+        //   throw new Error("Camera is not initialized.");
+        // }
+        // const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
+        // const t = RayPickingUtils.raySphere(
+        //   camera.getCameraPosition() as ReadonlyVec3,
+        //   rayWorld, healpixGrid
+        // );
         const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
         let intersectionModelPoint = [];
         if (t >= 0) {
@@ -7910,13 +7915,15 @@ class HiPS extends AbstractSkyEntity {
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
     draw(input) {
-        const cameraMatrix = input.cameraMatrix;
+        // const cameraMatrix = input.cameraMatrix
+        // const camera = input.camera
+        const vMatrix = input.camera.getCameraMatrix();
         // if (!global.camera || global.camera.getCameraMatrix() === undefined) return
-        if (!cameraMatrix)
+        if (!vMatrix)
             return;
         this.refresh();
         // const vMatrix = global.camera.getCameraMatrix() as Float32Array
-        const vMatrix = cameraMatrix;
+        // const vMatrix = cameraMatrix
         const pMatrix = ComputePerspectiveMatrix.pMatrix;
         const mMatrix = this.getModelMatrix();
         if (this._allSky && this._allSkyTile) {
@@ -8133,7 +8140,7 @@ class FoVUtils {
         const canvasHeight = canvas.clientHeight;
         let points = [];
         // First check: does the sphere cover the whole screen?
-        const intersectionWithModel = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl);
+        const intersectionWithModel = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera);
         if (intersectionWithModel.length > 0) {
             // Fully covered → grab corners + midpoints (CASE C)
             const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
@@ -8148,8 +8155,8 @@ class FoVUtils {
             const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
             const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
             const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
-            const intersectionTopMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl);
-            const intersectionRightMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl);
+            const intersectionTopMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera);
+            const intersectionRightMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera);
             // CASE A: zoomed out, hemisphere fully visible
             if (intersectionTopMiddle.length === 0 &&
                 intersectionRightMiddle.length === 0) {
@@ -8205,14 +8212,14 @@ class FoVUtils {
     static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
-        const topLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl);
-        const middleTop = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl);
-        const topRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl);
-        const middleRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl);
-        const bottomRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl);
-        const middleBottom = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl);
-        const bottomLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl);
-        const middleLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl);
+        const topLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera);
+        const middleTop = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera);
+        const topRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera);
+        const middleRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera);
+        const bottomRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera);
+        const middleBottom = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera);
+        const bottomLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera);
+        const middleLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera);
         const out = [];
         const pushIf = (ip) => {
             if (ip.length > 0) {
@@ -8230,10 +8237,10 @@ class FoVUtils {
         return out;
     }
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas, healpixGrid, webgl) {
+    static getCenterJ2000(canvas, healpixGrid, webgl, camera) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
-        const center = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl);
+        const center = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera);
         if (center.length <= 0)
             throw Error(`Central point is null`);
         return new Point({ x: center[0], y: center[1], z: center[2] }, CoordsType.CARTESIAN);
@@ -9115,7 +9122,6 @@ class GridTextHelper {
 
 
 
-
 class FoV {
     fovXDeg = 180;
     fovYDeg = 180;
@@ -9126,7 +9132,7 @@ class FoV {
         this._webgl = webgl;
     }
     /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere, healpixGridSingleton, webgl) {
+    getFoV(insideSphere, healpixGridSingleton, camera) {
         // const gl = webgl
         const gl = this._webgl;
         if (!gl || !gl.canvas) {
@@ -9138,22 +9144,22 @@ class FoV {
         }
         // horizontal FoV: ray through (centerY)
         // const x = this.computeAngle(0, gl.canvas.height / 2, insideSphere)
-        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton);
+        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera);
         this.fovXDeg = xFoVComputed.angleDeg;
         // this.xDistance = xFoVComputed.distance
         // this.xAngleRatio = this.fovXDeg / this.xDistance
         // vertical FoV: ray through (centerX)
         // this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere)
-        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton);
+        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera);
         this.fovYDeg = yFoVComputed.angleDeg;
         // this.yDistance = yFoVComputed.distance
         // this.yAngleRatio = this.fovYDeg / this.yDistance
         this._minFoV = this.minFoV;
-        this.ratio = this.computeRatio();
+        this.ratio = this.computeRatio(camera);
         return this;
     }
-    computeRatio() {
-        const camera = src_Global.camera;
+    computeRatio(camera) {
+        // const camera = global.camera
         if (!camera)
             throw Error("Camera not defined");
         const pos = camera.getCameraPosition();
@@ -9185,20 +9191,21 @@ class FoV {
         return distance;
     }
     /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton) {
-        const camera = src_Global.camera;
+    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera) {
+        // const camera = global.camera
         const pMatrix = ComputePerspectiveMatrix.pMatrix;
         if (!pMatrix) {
             // Handle the error or assign a default value
             console.warn('FoV: projection matrix is null');
             return { angleDeg: 180, distance: 1 };
         }
+        const vMatrix = camera.getCameraMatrix();
         if (!camera) {
             // Handle the error or assign a default value
             console.warn('FoV: camera is null');
             return { angleDeg: 180, distance: 1 };
         }
-        const rayWorld = utils_RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl);
+        const rayWorld = utils_RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix);
         const intersectionDistance = utils_RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
         let angleDeg;
         if (intersectionDistance > 0) {
@@ -10194,7 +10201,7 @@ class VisibleTilesManager {
         return this._healpixGrid.visibleorder;
     }
     // computeVisiblePixels(): void {
-    computeVisiblePixels(order, webgl) {
+    computeVisiblePixels(order, webgl, camera) {
         if (!this.initialised)
             return;
         // let order = healpixGridSingleton.visibleorder;
@@ -10224,7 +10231,7 @@ class VisibleTilesManager {
             // Sample a grid of screen points, project to the sphere, then to galactic
             for (let i = 0; i <= maxX; i += maxX / 30) {
                 for (let j = 0; j <= maxY; j += maxY / 30) {
-                    const hit = utils_RayPickingUtils.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl);
+                    const hit = utils_RayPickingUtils.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl, camera);
                     if (hit.length > 0) {
                         // Equatorial -> Galactic (use _galacticMatrix)
                         const galVec = vec4_create();
@@ -10378,8 +10385,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     get INITIAL_ThetaRad() {
         return HealpixGridSingleton.INITIAL_ThetaRad;
     }
-    refreshFoV() {
-        return this.fovObj.getFoV(src_Global.insideSphere, this, super.webgl);
+    refreshFoV(camera) {
+        return this.fovObj.getFoV(src_Global.insideSphere, this, camera);
     }
     getFoV() {
         return this.fovObj;
@@ -10494,8 +10501,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     // updateTiles(pixels: number[], order: number) {
     //   return (this as any)._tileBuffer.updateTiles(pixels, order);
     // }
-    refresh() {
-        this.refreshFoV();
+    refresh(camera) {
+        this.refreshFoV(camera);
         const fov = this.getMinFoV();
         // expose to global (legacy)
         // (global as any).hipsFoV = fov;
@@ -10503,7 +10510,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         // this._visibleorder = global.order;
         this._visibleorder = fovHelper.getHiPSNorder(fov);
     }
-    enableShader(in_mMatrix, pMatrix) {
+    enableShader(in_mMatrix, pMatrix, vMatrix) {
         const gl = super.webgl;
         gl.useProgram(this._shaderProgram);
         // TODO move locations retrieval elsewhere
@@ -10514,7 +10521,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         // Attribute locations
         this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
         let mvMatrix = mat4_create();
-        mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), in_mMatrix);
+        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
+        mvMatrix = mat4_multiply(mvMatrix, vMatrix, in_mMatrix);
         if (uMV)
             gl.uniformMatrix4fv(uMV, false, mvMatrix);
         if (uP)
@@ -10536,7 +10544,12 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     draw(input) {
         const gl = super.webgl;
         const mMatrix = this.getModelMatrix();
-        this.refresh();
+        // const vMatrix = input.camera.getCameraMatrix()
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const vMatrix = camera.getCameraMatrix();
+        this.refresh(camera);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();
@@ -10548,7 +10561,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         const order = visibleTiles.order;
         this.initBuffers(pixels, order);
         const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        this.enableShader(mMatrix, pMatrix);
+        this.enableShader(mMatrix, pMatrix, vMatrix);
         // Upload positions
         gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
@@ -10562,11 +10575,12 @@ class HealpixGridSingleton extends AbstractSkyEntity {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
         // Project and label pixel centers that are inside current FoV
         let mvMatrix = mat4_create();
-        mvMatrix = mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), mMatrix);
+        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
+        mvMatrix = mat4_multiply(mvMatrix, vMatrix, mMatrix);
         let mvpMatrix = mat4_create();
         mvpMatrix = mat4_multiply(mvpMatrix, pMatrix, mvMatrix);
         // FIX: pass model & pMatrix to match FoVUtils TS signature
-        const center = FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl);
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl, camera);
         const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
         for (let p = 0; p < pixels.length; p++) {
             const pixCenter = src_Global.getHealpix(this._visibleorder).pix2vec(pixels[p]);
@@ -10598,7 +10612,6 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
 ;// ./src/model/grid/EquatorialGrid.ts
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-
 
 
 
@@ -10765,12 +10778,13 @@ class EquatorialGrid extends AbstractSkyEntity {
         const dz = p1.z - p2.z;
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
-    enableShader(mMatrix, pMatrix) {
+    enableShader(mMatrix, pMatrix, vMatrix) {
         const gl = super.webgl;
         gl.useProgram(this._shaderProgram);
         // uMVMatrix = camera * model
         const mvMatrix = mat4_create();
-        mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), mMatrix);
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
+        mat4_multiply(mvMatrix, vMatrix, mMatrix);
         // TODO move locations retrieval elsewhere
         // Uniform locations
         const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
@@ -10804,6 +10818,12 @@ class EquatorialGrid extends AbstractSkyEntity {
             return;
         const gl = super.webgl;
         const mMatrix = this.getModelMatrix();
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const vMatrix = camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
         if (this._thetaArray.length === 0)
             return;
         this.refresh(fovDeg);
@@ -10813,7 +10833,8 @@ class EquatorialGrid extends AbstractSkyEntity {
             return;
         }
         const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        this.enableShader(mMatrix, pMatrix);
+        // this.enableShader(mMatrix, pMatrix);
+        this.enableShader(mMatrix, pMatrix, vMatrix);
         // Draw Dec rings
         for (let i = 0; i < this._phiArray.length; i++) {
             super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
@@ -10831,10 +10852,11 @@ class EquatorialGrid extends AbstractSkyEntity {
             super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
         }
         // Label layout (HTML overlay)
-        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl);
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera);
         // MVP = P * V * M
         const mvMatrix = mat4_create();
-        mat4_multiply(mvMatrix, src_Global.camera.getCameraMatrix(), mMatrix);
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
+        mat4_multiply(mvMatrix, vMatrix, mMatrix);
         const mvpMatrix = mat4_create();
         mat4_multiply(mvpMatrix, pMatrix, mvMatrix);
         // Dec labels (loop over RA keys)
@@ -10897,6 +10919,8 @@ class EquatorialGrid extends AbstractSkyEntity {
 
 
 
+// import { visibleTilesManager } from './model/hips/VisibleTilesManager.js'
+// import { VisibleTilesManager } from './model/hips/VisibleTilesManager.js'
 
 
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
@@ -10913,7 +10937,7 @@ class EquatorialGrid extends AbstractSkyEntity {
  * AstroSphere — main WebGL scene controller (TS port)
  */
 class AstroSphere {
-    camera;
+    _camera;
     centralPoinCoords;
     mousePointCoords;
     canvas;
@@ -10944,7 +10968,7 @@ class AstroSphere {
         src_Global.insideSphere = bootSetup.insideSphere;
         this.initCamera();
         this._healpixGrid = new HealpixGridSingleton(this._webgl);
-        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
         this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
         // equatorialGridSingleton.init(healpixGridSingleton.getMinFoV())
         this._equatorialGrid.init(this._healpixGrid.getMinFoV());
@@ -10952,16 +10976,16 @@ class AstroSphere {
         this.startup = true;
         this.addEventListeners(canvas);
         // this.fov = healpixGridSingleton.refreshFoV()
-        this.fov = this._healpixGrid.refreshFoV();
+        this.fov = this._healpixGrid.refreshFoV(this._camera);
     }
     initCamera() {
         if (bootSetup.insideSphere) {
-            this.camera = new src_Camera([0.0, 0.0, -0.005], true);
+            this._camera = new src_Camera([0.0, 0.0, -0.005], true);
         }
         else {
-            this.camera = new src_Camera([0.0, 0.0, 4.0], false);
+            this._camera = new src_Camera([0.0, 0.0, 4.0], false);
         }
-        src_Global.camera = this.camera;
+        // global.camera = this.camera
     }
     get healpixGrid() {
         return this._healpixGrid;
@@ -11050,7 +11074,7 @@ class AstroSphere {
             }
             else {
                 // 🔥 Use canvas-local coords for picking
-                const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl);
+                const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera);
                 if (mousePoint && mousePoint.length > 0) {
                     this.mouseHelper.update(mousePoint);
                     this.updateLastMousePoint();
@@ -11066,8 +11090,8 @@ class AstroSphere {
             if (hit && centraldecdeg && centralradeg) {
                 const detail = {
                     fovDeg: this.fov.minFoV,
-                    position: this.camera.getCameraPosition(),
-                    vMatrix: this.camera.getCameraMatrix(),
+                    position: this._camera.getCameraPosition(),
+                    vMatrix: this._camera.getCameraMatrix(),
                     pMatrix: ComputePerspectiveMatrix.pMatrix,
                     timestamp: performance.now(),
                     // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
@@ -11104,7 +11128,7 @@ class AstroSphere {
     getPhiThetaDeg(canvas) {
         const maxX = canvas.width;
         const maxY = canvas.height;
-        const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl);
+        const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera);
         return cartesianToSpherical(pickerPoint);
     }
     activateHiPS(hipsDescriptor) {
@@ -11140,7 +11164,7 @@ class AstroSphere {
     }
     // End Footprint section
     goTo(raDeg, decDeg) {
-        this.camera.goTo(raDeg, decDeg);
+        this._camera.goTo(raDeg, decDeg);
     }
     getFoV() {
         return this.fov;
@@ -11149,28 +11173,28 @@ class AstroSphere {
         if (this.healpixGrid == null)
             throw new Error(`healpixGrid is ${this.healpixGrid}`);
         // return FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
-        return FoVUtils.getFoVPolygon(this.camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl);
+        return FoVUtils.getFoVPolygon(this._camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl);
     }
     changeFoV(deg) {
         // const distance = healpixGridSingleton.getFoV().computeDistanceFromAngle(deg)
         const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg);
         // this.camera.moveAlongView(distance)
-        this.camera.translate(distance);
+        this._camera.translate(distance);
         // healpixGridSingleton.refreshFoV()
-        this._healpixGrid.refreshFoV();
+        this._healpixGrid.refreshFoV(this._camera);
     }
     changeFoV2(deg) {
         // throw new Error("not Implemented")
         // const newCameraPos = healpixGridSingleton.getFoV().computeCameraPositionForFoV(deg)
         const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
-        this.camera.setCameraPosition(newCameraPos);
+        this._camera.setCameraPosition(newCameraPos);
     }
     changeFoV3(deg) {
         // const newPos = healpixGridSingleton.getFoV().computeCameraPositionForAngularDiameter(deg);
         const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
-        this.camera.setCameraPosition(newPos);
+        this._camera.setCameraPosition(newPos);
         // Recompute projection after moving the camera
-        ComputePerspectiveMatrix.computePerspectiveMatrix(this.canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
+        ComputePerspectiveMatrix.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
     }
     getInsideSphere() {
         return src_Global.insideSphere;
@@ -11179,7 +11203,7 @@ class AstroSphere {
         // this.insideSphere = !this.insideSphere
         src_Global.insideSphere = !src_Global.insideSphere;
         console.log(src_Global.insideSphere);
-        this.camera.toggleInsideSphere();
+        this._camera.toggleInsideSphere();
         // visibleTilesManager.toggleInsideSphere()
     }
     prevFov = 0;
@@ -11198,7 +11222,7 @@ class AstroSphere {
         // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
         // global.gl.getExtension('OES_element_index_uint')
         // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
-        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
+        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;
@@ -11210,18 +11234,18 @@ class AstroSphere {
         // if ((healpixGridSingleton as any).fovObj.minFoV > 0.1 || this.zoomInertia > 0) {
         if (this._healpixGrid.fovObj.minFoV > 0.1 || this.zoomInertia > 0) {
             if (Math.abs(this.zoomInertia) > 0.0001) {
-                this.camera.zoom(this.zoomInertia);
+                this._camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
                 // this.fov = healpixGridSingleton.refreshFoV()
-                this.fov = this._healpixGrid.refreshFoV();
+                this.fov = this._healpixGrid.refreshFoV(this._camera);
                 if (this.prevFov != this.fov.minFoV) {
                     const detail = {
                         fovDeg: this.fov.minFoV,
-                        position: this.camera.getCameraPosition(),
-                        vMatrix: this.camera.getCameraMatrix(),
+                        position: this._camera.getCameraPosition(),
+                        vMatrix: this._camera.getCameraMatrix(),
                         pMatrix: ComputePerspectiveMatrix.pMatrix,
                         timestamp: performance.now(),
-                        centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
+                        centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera),
                         mouseHoverPoint: this.mousePointCoords
                     };
                     this.canvas.dispatchEvent(new CustomEvent('cameraChanged', { detail, bubbles: false, composed: false }));
@@ -11236,8 +11260,8 @@ class AstroSphere {
             PHI = this.inertiaX;
             this.inertiaX *= 0.95;
             this.inertiaY *= 0.95;
-            this.camera.rotate(PHI, THETA);
-            ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this.camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
+            this._camera.rotate(PHI, THETA);
+            ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
         }
         else {
             this.inertiaY = 0;
@@ -11254,11 +11278,12 @@ class AstroSphere {
         // global.gl.enable(global.gl.CULL_FACE)
         // global.gl.cullFace(global.insideSphere ? global.gl.BACK : global.gl.FRONT)
         // global.gl.blendFunc(global.gl.SRC_ALPHA, global.gl.ONE_MINUS_SRC_ALPHA)
-        this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl);
+        this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl, this._camera);
         // DRAW HiPS
         const skyEntityDrawInput = {
             fovDeg: this._healpixGrid.getMinFoV(),
-            cameraMatrix: this.camera.getCameraMatrix()
+            // cameraMatrix: this.camera.getCameraMatrix() as Float32Array}
+            camera: this._camera
         };
         this.activeHiPS.draw(skyEntityDrawInput);
         this._healpixGrid.draw(skyEntityDrawInput);
@@ -11282,12 +11307,12 @@ class AstroSphere {
         }
         this.activeCatalogues.forEach(cat => {
             if (this.activeHiPS) {
-                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this.camera.getCameraMatrix());
+                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix());
             }
         });
         this.activeFootprintSets.forEach(fst => {
             if (this.activeHiPS) {
-                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this.camera.getCameraMatrix());
+                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix());
             }
         });
     }

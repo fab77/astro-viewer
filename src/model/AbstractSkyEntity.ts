@@ -6,14 +6,16 @@ import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
 import global from "../Global.js";
 
 import { HiPSShaderProgram } from '../shader/HiPSShaderProgram.js'
-import { VisibleTilesManager } from "./hips/VisibleTilesManager.js";
-import { TileBuffer } from "./hips/TileBuffer.js";
+// import { VisibleTilesManager } from "./hips/VisibleTilesManager.js";
+// import { TileBuffer } from "./hips/TileBuffer.js";
+import Camera from "../Camera.js";
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 export interface SkyEntityDrawInput {
   fovDeg?: number
-  cameraMatrix?: Float32Array
+  // cameraMatrix?: Float32Array
+  camera: Camera
 }
 
 export abstract class AbstractSkyEntity {

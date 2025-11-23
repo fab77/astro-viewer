@@ -3,10 +3,11 @@
  */
 import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
 import { HiPSShaderProgram } from '../shader/HiPSShaderProgram.js';
+import Camera from "../Camera.js";
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 export interface SkyEntityDrawInput {
     fovDeg?: number;
-    cameraMatrix?: Float32Array;
+    camera: Camera;
 }
 export declare abstract class AbstractSkyEntity {
     refreshMe: boolean;

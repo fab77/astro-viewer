@@ -14,6 +14,7 @@ import AllSky from './AllSky.js'
 import {HiPSDescriptor} from './HiPSDescriptor.js'
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 import { HealpixGridSingleton } from '../grid/HealpixGridSingleton.js'
+import { ReadonlyMat4 } from 'gl-matrix'
 
 
 class HiPS extends AbstractSkyEntity {
@@ -179,14 +180,16 @@ class HiPS extends AbstractSkyEntity {
 
   draw(input: SkyEntityDrawInput): void {
     
-    const cameraMatrix = input.cameraMatrix
+    // const cameraMatrix = input.cameraMatrix
+    // const camera = input.camera
+    const vMatrix = input.camera.getCameraMatrix() as Float32Array
 
     // if (!global.camera || global.camera.getCameraMatrix() === undefined) return
-    if (!cameraMatrix) return
+    if (!vMatrix) return
     this.refresh()
     
     // const vMatrix = global.camera.getCameraMatrix() as Float32Array
-    const vMatrix = cameraMatrix
+    // const vMatrix = cameraMatrix
     const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
     const mMatrix = this.getModelMatrix() as Float32Array
 

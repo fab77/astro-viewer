@@ -1,19 +1,19 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { vec4, mat4, ReadonlyMat4 } from 'gl-matrix';
 
-import global from '../../Global.js';
 import { fovHelper } from '../hips/FoVHelper.js';
 import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
-import {Point} from '../Point.js';
-import {CoordsType} from '../../utils/CoordsType.js';
-import {FoVUtils} from '../../utils/FoVUtils.js';
+import { Point } from '../Point.js';
+import { CoordsType } from '../../utils/CoordsType.js';
+import { FoVUtils } from '../../utils/FoVUtils.js';
 
 import GridTextHelper from './GridTextHelper.js';
-import {HealpixGridSingleton} from './HealpixGridSingleton.js';
-import {AbstractSkyEntity, SkyEntityDrawInput} from '../AbstractSkyEntity.js';
+import { HealpixGridSingleton } from './HealpixGridSingleton.js';
+import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 // import healpixGridSingleton from './HealpixGridSingleton.js';
 import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+import Camera from '../../Camera.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -208,13 +208,14 @@ export class EquatorialGrid extends AbstractSkyEntity {
 		return Math.sqrt(dx * dx + dy * dy + dz * dz);
 	}
 
-	private enableShader(mMatrix: ReadonlyMat4, pMatrix: ReadonlyMat4): void {
+	private enableShader(mMatrix: ReadonlyMat4, pMatrix: ReadonlyMat4, vMatrix: ReadonlyMat4): void {
 		const gl = super.webgl as GL;
 		gl.useProgram(this._shaderProgram);
 
 		// uMVMatrix = camera * model
 		const mvMatrix = mat4.create();
-		mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
+		// mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
+		mat4.multiply(mvMatrix, vMatrix as mat4, mMatrix);
 
 		// TODO move locations retrieval elsewhere
 
@@ -253,6 +254,12 @@ export class EquatorialGrid extends AbstractSkyEntity {
 
 		const gl = super.webgl as GL;
 		const mMatrix = this.getModelMatrix();
+
+		const camera = input.camera
+		if (!camera) return
+		const vMatrix = camera.getCameraMatrix()
+
+		if (!vMatrix) return
 		if (this._thetaArray.length === 0) return;
 
 		this.refresh(fovDeg);
@@ -264,7 +271,8 @@ export class EquatorialGrid extends AbstractSkyEntity {
 		}
 
 		const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-		this.enableShader(mMatrix, pMatrix);
+		// this.enableShader(mMatrix, pMatrix);
+		this.enableShader(mMatrix, pMatrix, vMatrix);
 
 		// Draw Dec rings
 		for (let i = 0; i < this._phiArray.length; i++) {
@@ -287,13 +295,14 @@ export class EquatorialGrid extends AbstractSkyEntity {
 		}
 
 		// Label layout (HTML overlay)
-		const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this._healpixGrid, this._webgl);
-		
+		const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this._healpixGrid, this._webgl, camera);
+
 		// MVP = P * V * M
 		const mvMatrix = mat4.create();
-		mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
+		// mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
+		mat4.multiply(mvMatrix, vMatrix, mMatrix);
 		const mvpMatrix = mat4.create();
-		mat4.multiply(mvpMatrix, pMatrix as unknown as mat4, mvMatrix);
+		mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
 
 		// Dec labels (loop over RA keys)
 		for (const [raDegKey, points] of this._dec4Labels.entries()) {

@@ -8,6 +8,7 @@ import global from "../Global.js";
 import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix.js";
 // import healpixGridSingleton from "../model/grid/HealpixGridSingleton.js";
 import { HealpixGridSingleton } from "../model/grid/HealpixGridSingleton.js";
+import Camera from "../Camera.js";
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 
@@ -30,20 +31,21 @@ class RayPickingUtils {
     mouseX: number,
     mouseY: number,
     pMatrix: ReadonlyMat4,
-    webgl: WebGL2RenderingContext
+    webgl: WebGL2RenderingContext,
+    vMatrix: ReadonlyMat4
   ): vec3 {
-    if (!global.camera) {
-      throw new Error("Camera is not initialized.");
-    }
-    const vMatrix = global.camera.getCameraMatrix() as ReadonlyMat4;
-    // const gl = global.gl as GL;
+    // if (!global.camera) {
+    //   throw new Error("Camera is not initialized.");
+    // }
+    // const vMatrix = global.camera.getCameraMatrix() as ReadonlyMat4;
+
     const gl = webgl as GL;
     const rect = (gl.canvas as HTMLCanvasElement).getBoundingClientRect();
 
     // const canvasMX = mouseX - rect.left;
     // const canvasMY = mouseY - rect.top;
-    const canvasMX = mouseX 
-    const canvasMY = mouseY 
+    const canvasMX = mouseX
+    const canvasMY = mouseY
 
     // viewport → NDC
     // const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).clientWidth - 1.0;
@@ -134,20 +136,28 @@ class RayPickingUtils {
    * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
    */
   static getIntersectionPointWithSingleModel(
-    mouseX: number, mouseY: number, 
-    healpixGrid: HealpixGridSingleton, 
-    webgl: WebGL2RenderingContext): number[] {
+    mouseX: number, mouseY: number,
+    healpixGrid: HealpixGridSingleton,
+    webgl: WebGL2RenderingContext,
+    camera: Camera): number[] {
+    
     const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-    const camera = global.camera;
+    // const camera = global.camera;
+    const vMatrix = camera.getCameraMatrix();
 
     const canvas = webgl.canvas as HTMLCanvasElement
     console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`)
-    if (!camera) {
-      throw new Error("Camera is not initialized.");
-    }
+    // if (!camera) {
+    //   throw new Error("Camera is not initialized.");
+    // }
 
-    const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+    // const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+    const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
 
+    // const t = RayPickingUtils.raySphere(
+    //   camera.getCameraPosition() as ReadonlyVec3,
+    //   rayWorld, healpixGrid
+    // );
     const t = RayPickingUtils.raySphere(
       camera.getCameraPosition() as ReadonlyVec3,
       rayWorld, healpixGrid

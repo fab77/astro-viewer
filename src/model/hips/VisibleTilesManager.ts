@@ -9,6 +9,7 @@ import { vec4, mat4 } from 'gl-matrix';
 import { bootSetup } from '../../Config.js';
 import { HealpixGridSingleton } from '../grid/HealpixGridSingleton.js';
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
+import Camera from '../../Camera.js';
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 interface VisibleTiles {
@@ -82,7 +83,7 @@ export class VisibleTilesManager {
 
 
   // computeVisiblePixels(): void {
-  computeVisiblePixels(order: number, webgl: WebGL2RenderingContext): void {
+  computeVisiblePixels(order: number, webgl: WebGL2RenderingContext, camera: Camera): void {
     if (!this.initialised) return;
 
     // let order = healpixGridSingleton.visibleorder;
@@ -117,7 +118,7 @@ export class VisibleTilesManager {
         for (let j = 0; j <= maxY; j += maxY / 30) {
           const hit = RayPickingUtils.getIntersectionPointWithSingleModel(
             i,
-            j, this._healpixGrid, this._webgl
+            j, this._healpixGrid, this._webgl, camera
           );
 
           if (hit.length > 0) {

@@ -148,13 +148,15 @@ class HiPS extends AbstractSkyEntity {
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
     draw(input) {
-        const cameraMatrix = input.cameraMatrix;
+        // const cameraMatrix = input.cameraMatrix
+        // const camera = input.camera
+        const vMatrix = input.camera.getCameraMatrix();
         // if (!global.camera || global.camera.getCameraMatrix() === undefined) return
-        if (!cameraMatrix)
+        if (!vMatrix)
             return;
         this.refresh();
         // const vMatrix = global.camera.getCameraMatrix() as Float32Array
-        const vMatrix = cameraMatrix;
+        // const vMatrix = cameraMatrix
         const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
         const mMatrix = this.getModelMatrix();
         if (this._allSky && this._allSkyTile) {

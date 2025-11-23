@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { vec4, mat4 } from 'gl-matrix';
-import global from '../../Global.js';
 import { fovHelper } from '../hips/FoVHelper.js';
 import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
@@ -166,12 +165,13 @@ export class EquatorialGrid extends AbstractSkyEntity {
         const dz = p1.z - p2.z;
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
-    enableShader(mMatrix, pMatrix) {
+    enableShader(mMatrix, pMatrix, vMatrix) {
         const gl = super.webgl;
         gl.useProgram(this._shaderProgram);
         // uMVMatrix = camera * model
         const mvMatrix = mat4.create();
-        mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), mMatrix);
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
+        mat4.multiply(mvMatrix, vMatrix, mMatrix);
         // TODO move locations retrieval elsewhere
         // Uniform locations
         const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
@@ -205,6 +205,12 @@ export class EquatorialGrid extends AbstractSkyEntity {
             return;
         const gl = super.webgl;
         const mMatrix = this.getModelMatrix();
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const vMatrix = camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
         if (this._thetaArray.length === 0)
             return;
         this.refresh(fovDeg);
@@ -214,7 +220,8 @@ export class EquatorialGrid extends AbstractSkyEntity {
             return;
         }
         const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-        this.enableShader(mMatrix, pMatrix);
+        // this.enableShader(mMatrix, pMatrix);
+        this.enableShader(mMatrix, pMatrix, vMatrix);
         // Draw Dec rings
         for (let i = 0; i < this._phiArray.length; i++) {
             super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
@@ -232,10 +239,11 @@ export class EquatorialGrid extends AbstractSkyEntity {
             super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
         }
         // Label layout (HTML overlay)
-        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl);
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera);
         // MVP = P * V * M
         const mvMatrix = mat4.create();
-        mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), mMatrix);
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
+        mat4.multiply(mvMatrix, vMatrix, mMatrix);
         const mvpMatrix = mat4.create();
         mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
         // Dec labels (loop over RA keys)

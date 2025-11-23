@@ -1,6 +1,7 @@
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import { FoV } from '../FoV.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
+import Camera from '../../Camera.js';
 export declare class HealpixGridSingleton extends AbstractSkyEntity {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
@@ -30,7 +31,7 @@ export declare class HealpixGridSingleton extends AbstractSkyEntity {
     get INITIAL_POSITION(): [number, number, number];
     get INITIAL_PhiRad(): number;
     get INITIAL_ThetaRad(): number;
-    refreshFoV(): FoV;
+    refreshFoV(camera: Camera): FoV;
     getFoV(): FoV;
     getMinFoV(): number;
     private initShaders;

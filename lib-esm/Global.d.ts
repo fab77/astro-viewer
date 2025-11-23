@@ -1,7 +1,5 @@
 import { Healpix } from 'healpixjs';
-import Camera from './Camera.js';
 declare class Global {
-    private _camera;
     private _healpix;
     private _selectionnside;
     private _useCORSProxy;
@@ -20,8 +18,6 @@ declare class Global {
     get debug(): boolean;
     getHealpix(order: number): Healpix;
     get MAX_DECIMALS(): number;
-    get camera(): Camera | null;
-    set camera(in_camera: Camera | null);
     set insideSphere(v: boolean);
     get insideSphere(): boolean;
     get nsideForSelection(): number;

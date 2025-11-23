@@ -3,7 +3,7 @@ import { Healpix } from 'healpixjs';
 import { bootSetup } from './Config.js';
 class Global {
     // --- cached / runtime state ---
-    _camera;
+    // private _camera: Camera | null;
     // private _gl: GL | null;
     _healpix;
     // --- config/state flags ---
@@ -22,7 +22,7 @@ class Global {
         this._debug = bootSetup.debug;
         this._insideSphere = bootSetup.insideView;
         this._version = bootSetup.version;
-        this._camera = null;
+        // this._camera = null;
         // this._gl = null;
         this._healpix = {};
         this._selectionnside = 32;
@@ -46,9 +46,10 @@ class Global {
         return this._healpix[order];
     }
     get MAX_DECIMALS() { return this._maxDecimals; }
-    get camera() { return this._camera; }
-    set camera(in_camera) { this._camera = in_camera; }
-    // get gl(): GL | null { return this._gl; }
+    // get camera(): Camera | null { return this._camera; }
+    // set camera(in_camera: Camera | null) { this._camera = in_camera; }
+    // get gl(): 
+    // GL | null { return this._gl; }
     // set gl(in_gl: GL | null) { this._gl = in_gl; }
     set insideSphere(v) { this._insideSphere = v; }
     get insideSphere() { return this._insideSphere; }

@@ -3,7 +3,6 @@
  */
 "use strict";
 import { vec3, mat4 } from "gl-matrix";
-import global from "../Global.js";
 import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix.js";
 class RayPickingUtils {
     static lastNearestVisibleObjectIdx = -1;
@@ -18,12 +17,11 @@ class RayPickingUtils {
      * @param pMatrix Projection matrix
      * @returns World-space direction (normalized) as a vec3
      */
-    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl) {
-        if (!global.camera) {
-            throw new Error("Camera is not initialized.");
-        }
-        const vMatrix = global.camera.getCameraMatrix();
-        // const gl = global.gl as GL;
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
+        // if (!global.camera) {
+        //   throw new Error("Camera is not initialized.");
+        // }
+        // const vMatrix = global.camera.getCameraMatrix() as ReadonlyMat4;
         const gl = webgl;
         const rect = gl.canvas.getBoundingClientRect();
         // const canvasMX = mouseX - rect.left;
@@ -100,15 +98,21 @@ class RayPickingUtils {
      * Compute intersection with a single model (defaults to the Healpix grid).
      * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
      */
-    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl) {
+    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera) {
         const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-        const camera = global.camera;
+        // const camera = global.camera;
+        const vMatrix = camera.getCameraMatrix();
         const canvas = webgl.canvas;
         console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`);
-        if (!camera) {
-            throw new Error("Camera is not initialized.");
-        }
-        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+        // if (!camera) {
+        //   throw new Error("Camera is not initialized.");
+        // }
+        // const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
+        // const t = RayPickingUtils.raySphere(
+        //   camera.getCameraPosition() as ReadonlyVec3,
+        //   rayWorld, healpixGrid
+        // );
         const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
         let intersectionModelPoint = [];
         if (t >= 0) {

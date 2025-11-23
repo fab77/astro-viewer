@@ -26,7 +26,7 @@ export declare class FoVUtils {
      */
     static getScreenCornersIntersection(pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement, healpixGrid: HealpixGridSingleton, webgl: WebGL2RenderingContext): Point[];
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas: HTMLCanvasElement, healpixGrid: HealpixGridSingleton, webgl: WebGL2RenderingContext): Point;
+    static getCenterJ2000(canvas: HTMLCanvasElement, healpixGrid: HealpixGridSingleton, webgl: WebGL2RenderingContext, camera: Camera): Point;
     /** Middle point on the unit sphere along the arc between two 3D points. */
     static computeMiddlePoint(p1: Point, p2: Point): Point[];
     /**
