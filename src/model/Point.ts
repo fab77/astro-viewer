@@ -37,7 +37,7 @@ export class Point {
 
     // Prefer config value if present, fallback to 12
     const MAX_DECIMALS: number =
-      (global as any).MAX_DECIMALS ?? (global as any).maxDecimals ?? 12;
+      global.MAX_DECIMALS ?? 12;
 
     if (in_type === CoordsType.CARTESIAN) {
       const { x, y, z } = in_options as CartesianOpts;

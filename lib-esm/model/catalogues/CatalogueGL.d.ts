@@ -59,6 +59,6 @@ export declare class CatalogueGL {
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
-    draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, cameraMatrix: Float32Array): void;
+    draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, vMatrix: Float32Array, pMatrix: Float32Array): void;
 }
 //# sourceMappingURL=CatalogueGL.d.ts.map

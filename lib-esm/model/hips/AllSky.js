@@ -77,12 +77,11 @@ export default class AllSky {
             gl.generateMipmap(gl.TEXTURE_2D);
     }
     initModelBuffer() {
-        const gl = global.gl;
-        const hpx = global.getHealpix(this._order);
-        this._maxTiles = hpx.getNPix();
+        const gl = this._webgl;
         const orderjump = 1;
         const tgtHpxOrder = this._order + orderjump;
         const healpix = global.getHealpix(this._order);
+        this._maxTiles = healpix.getNPix();
         const tgtHealpix = global.getHealpix(tgtHpxOrder);
         this._numFacesXTile = 4 ** orderjump; // used in gl.draw
         this._numFaces = this._numFacesXTile * this._maxTiles;

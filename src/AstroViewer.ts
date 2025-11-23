@@ -1,4 +1,4 @@
-import global from './Global.js'
+// import global from './Global.js'
 import AstroSphere from './AstroSphere.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { FoV } from './model/FoV.js'
@@ -10,16 +10,18 @@ import { bootSetup } from './Config.js'
 import { MetadataManager } from './model/MetadataManager.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
-type GL2WithViewport = WebGL2RenderingContext & {
-  viewportWidth: number
-  viewportHeight: number
-}
+type GL2WithViewport = WebGL2RenderingContext 
+// & {
+//   viewportWidth: number
+//   viewportHeight: number
+// }
 
 export class AstroViewer {
   private astroSphere!: AstroSphere
   private canvas!: HTMLCanvasElement
   private webgl!: GL2WithViewport
   private rafId: number | null = null
+  private webglContextList: Map<string, GL2WithViewport> = new Map<string, GL2WithViewport>()
 
 
 
@@ -180,22 +182,13 @@ export class AstroViewer {
   }
 
   // Internal
-  // constructor(canvasDomId: string) {
-  //   this.init(canvasDomId)
-  // }
   constructor(canvasEl: HTMLCanvasElement) {
     this.init(canvasEl)
+    this.webglContextList = new Map<string, GL2WithViewport>()
   }
 
-  // private init(canvasDomId: string): void {
   private init(canvasEl: HTMLCanvasElement): void {
     console.log('init webgl')
-
-    // const c = document.getElementById(canvasDomId)
-    // if (!(c instanceof HTMLCanvasElement)) {
-    //   throw new Error(`Element with id ${canvasDomId} is not a canvas.`)
-    // }
-    // this.canvas = c
     this.canvas = canvasEl
 
     const gl = this.canvas.getContext('webgl2', { alpha: false })
@@ -206,8 +199,8 @@ export class AstroViewer {
 
     // Extend with custom fields used elsewhere
     this.webgl = gl as GL2WithViewport
-    this.webgl.viewportWidth = this.canvas.width
-    this.webgl.viewportHeight = this.canvas.height
+    // this.webgl.viewportWidth = this.canvas.width
+    // this.webgl.viewportHeight = this.canvas.height
 
     try {
       // 1/255 = 0.00392156862
@@ -217,7 +210,7 @@ export class AstroViewer {
     }
 
     this.initListeners()
-      ; (global as any).gl = this.webgl
+      // ; (global as any).gl = this.webgl
     this.astroSphere = new AstroSphere(this.canvas, this.webgl)
   }
 
@@ -237,8 +230,8 @@ export class AstroViewer {
         this.canvas.width = newWidth;
         this.canvas.height = newHeight;
 
-        this.webgl.viewportWidth = this.canvas.width
-        this.webgl.viewportHeight = this.canvas.height
+        // this.webgl.viewportWidth = this.canvas.width
+        // this.webgl.viewportHeight = this.canvas.height
         this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height)
       }
     }
@@ -254,8 +247,8 @@ export class AstroViewer {
 
     const handleContextRestored = (_event: Event) => {
       console.log('[handleContextRestored]')
-      this.webgl.viewportWidth = this.canvas.width
-      this.webgl.viewportHeight = this.canvas.height
+      // this.webgl.viewportWidth = this.canvas.width
+      // this.webgl.viewportHeight = this.canvas.height
       this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7)
       this.webgl.enable(this.webgl.DEPTH_TEST)
       this.rafId = requestAnimationFrame(() => this.tick())
@@ -269,8 +262,7 @@ export class AstroViewer {
 
       // Osserva il canvas o il suo parent (a tua scelta)
       ro.observe(this.canvas);
-      // Se preferisci il contenitore:
-      // if (this.canvas.parentElement) ro.observe(this.canvas.parentElement);
+      
     }
 
     window.addEventListener('resize', resizeCanvas)

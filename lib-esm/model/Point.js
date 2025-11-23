@@ -20,7 +20,7 @@ export class Point {
         this._xyz = [0, 0, 0];
         this._raDecDeg = [0, 0];
         // Prefer config value if present, fallback to 12
-        const MAX_DECIMALS = global.MAX_DECIMALS ?? global.maxDecimals ?? 12;
+        const MAX_DECIMALS = global.MAX_DECIMALS ?? 12;
         if (in_type === CoordsType.CARTESIAN) {
             const { x, y, z } = in_options;
             this._x = Number(x.toFixed(MAX_DECIMALS));

@@ -1,4 +1,5 @@
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
+import { ReadonlyMat4 } from 'gl-matrix';
 import { FoV } from '../FoV.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 import Camera from '../../Camera.js';
@@ -31,7 +32,7 @@ export declare class HealpixGrid extends AbstractSkyEntity {
     get INITIAL_POSITION(): [number, number, number];
     get INITIAL_PhiRad(): number;
     get INITIAL_ThetaRad(): number;
-    refreshFoV(camera: Camera): FoV;
+    refreshFoV(camera: Camera, pMatrix: ReadonlyMat4): FoV;
     getFoV(): FoV;
     getMinFoV(): number;
     private initShaders;

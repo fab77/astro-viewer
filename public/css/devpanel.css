@@ -11,16 +11,20 @@ body {
     background: #000;
 }
 
-#divcanvas{
-    position: absolute;
+#divcanvas {
+    /* position: relative; */
     top: 50px;
     left: 0px;
+    float: left;
 }
-#divcanvas2{
-    position: absolute;
+
+#divcanvas2 {
+    float: right;
     top: 50px;
-    left: 380px;
+    /* position: absolute;
+    left: 380px; */
 }
+
 #astrocanvas2 {
     width: 50vw;
     height: 50vh;
@@ -207,11 +211,11 @@ summary {
 }
 
 .floating-div-ra {
-	position: absolute;
-	color: blue;
+    position: absolute;
+    color: blue;
 }
 
 .floating-div-dec {
-	position: absolute;
-	color: green;
+    position: absolute;
+    color: green;
 }

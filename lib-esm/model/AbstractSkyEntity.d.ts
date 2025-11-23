@@ -8,6 +8,7 @@ type GL = WebGLRenderingContext | WebGL2RenderingContext;
 export interface SkyEntityDrawInput {
     fovDeg?: number;
     camera: Camera;
+    pMatrix: ReadonlyMat4;
 }
 export declare abstract class AbstractSkyEntity {
     refreshMe: boolean;

@@ -24,7 +24,7 @@ declare class RayPickingUtils {
      * Compute intersection with a single model (defaults to the Healpix grid).
      * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
      */
-    static getIntersectionPointWithSingleModel(mouseX: number, mouseY: number, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext, camera: Camera): number[];
+    static getIntersectionPointWithSingleModel(mouseX: number, mouseY: number, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext, camera: Camera, pMatrix: ReadonlyMat4): number[];
 }
 export default RayPickingUtils;
 //# sourceMappingURL=RayPickingUtils.d.ts.map

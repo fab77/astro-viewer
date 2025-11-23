@@ -21,11 +21,13 @@ class AncestorTile {
     vertexIndexBuffer;
     _tileBuffer;
     _hipsShaderProgram;
-    constructor(tileno, order, hips, tileBuffer, hipsShaderProgram) {
+    _webgl;
+    constructor(tileno, order, hips, tileBuffer, hipsShaderProgram, webgl) {
         this._hipsShaderProgram = hipsShaderProgram;
         this._tileBuffer = tileBuffer;
         this._hips = hips;
         this._tileno = tileno;
+        this._webgl = webgl;
         this._format = hips.format;
         this._baseurl = hips.baseURL;
         this._isGalacticHips = hips.isGalacticHips;
@@ -51,7 +53,7 @@ class AncestorTile {
     imageLoaded() {
         this.textureLoaded();
         this.initModelBuffer();
-        const gl = global.gl;
+        const gl = this._webgl;
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
@@ -60,7 +62,7 @@ class AncestorTile {
     textureLoaded() {
         // hipsShaderProgram.enableProgram()
         this._hipsShaderProgram.enableProgram();
-        const gl = global.gl;
+        const gl = this._webgl;
         this._texture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -76,7 +78,7 @@ class AncestorTile {
         }
     }
     initModelBuffer() {
-        const gl = global.gl;
+        const gl = this._webgl;
         this.vertexPosition = [];
         this.vertexPositionBuffer = [];
         this.vertexIndices = new Uint16Array();
@@ -118,7 +120,6 @@ class AncestorTile {
     }
     // Version that uses getPointsForXyfNoStep (kept for reference; not used in this class)
     setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        const gl = global.gl;
         this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
         const step = 1 / (1 << orderjump);
         let p = 0;
@@ -150,13 +151,13 @@ class AncestorTile {
                 p++;
             }
         }
-        this.vertexPositionBuffer[qidx] = global.gl.createBuffer();
-        global.gl.bindBuffer(global.gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-        global.gl.bufferData(global.gl.ARRAY_BUFFER, this.vertexPosition[qidx], global.gl.STATIC_DRAW);
+        this.vertexPositionBuffer[qidx] = this._webgl.createBuffer();
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexPosition[qidx], this._webgl.STATIC_DRAW);
     }
     // Version used by the original JS, collecting _pixels via xyf2nest + getBoundaries
     setupPositionAndTexture4Quadrant(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        const gl = global.gl;
+        const gl = this._webgl;
         this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
         const step = 1 / (1 << orderjump);
         let p = 0;
@@ -205,7 +206,7 @@ class AncestorTile {
         }
         // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
         this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        const gl = global.gl;
+        const gl = this._webgl;
         gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
         gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
         // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)

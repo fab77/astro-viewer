@@ -12,8 +12,8 @@ import GridTextHelper from './GridTextHelper.js';
 import { HealpixGrid } from './HealpixGrid.js';
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 // import healpixGridSingleton from './HealpixGridSingleton.js';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
-import Camera from '../../Camera.js';
+// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+// import Camera from '../../Camera.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -259,6 +259,9 @@ export class EquatorialGrid extends AbstractSkyEntity {
 		if (!camera) return
 		const vMatrix = camera.getCameraMatrix()
 
+		const pMatrix = input.pMatrix
+		if (!pMatrix) return
+
 		if (!vMatrix) return
 		if (this._thetaArray.length === 0) return;
 
@@ -270,8 +273,8 @@ export class EquatorialGrid extends AbstractSkyEntity {
 			return;
 		}
 
-		const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-		// this.enableShader(mMatrix, pMatrix);
+		// const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+		
 		this.enableShader(mMatrix, pMatrix, vMatrix);
 
 		// Draw Dec rings
@@ -295,7 +298,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
 		}
 
 		// Label layout (HTML overlay)
-		const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this._healpixGrid, this._webgl, camera);
+		const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this._healpixGrid, this._webgl, camera, pMatrix);
 
 		// MVP = P * V * M
 		const mvMatrix = mat4.create();

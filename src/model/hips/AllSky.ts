@@ -113,15 +113,13 @@ export default class AllSky {
   }
 
   private initModelBuffer(): void {
-    const gl = (global as any).gl as WebGL2RenderingContext
-
-    const hpx = (global as any).getHealpix(this._order)
-    this._maxTiles = hpx.getNPix()
+    const gl = this._webgl
 
     const orderjump = 1
     const tgtHpxOrder = this._order + orderjump
-    const healpix = (global as any).getHealpix(this._order)
-    const tgtHealpix = (global as any).getHealpix(tgtHpxOrder)
+    const healpix = global.getHealpix(this._order)
+    this._maxTiles = healpix.getNPix()
+    const tgtHealpix = global.getHealpix(tgtHpxOrder)
 
     this._numFacesXTile = 4 ** orderjump // used in gl.draw
     this._numFaces = this._numFacesXTile * this._maxTiles

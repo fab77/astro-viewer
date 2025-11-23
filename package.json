@@ -47,7 +47,7 @@
     "clean": "shx rm -rf dist lib-esm",
     "dev": "npm run clean && tsc && webpack --mode=development --watch --progress; cp dist/* webtest/",
     "prod": "npm run clean && tsc && webpack --mode=production && npm run web",
-    "web": "cp dist/* public/javascripts/; cp -R src/html/javascripts/ public/javascripts/; cp -R src/html/css/ public/css/; cp src/html/index.html public/",
+    "web": "cp dist/* public/javascripts/; cp -R src/html/javascripts/ public/javascripts/; cp -R src/html/css/ public/css/; cp src/html/*.html public/",
     "start-server": "npx http-server public",
     "all": "npm run clean; npm run prod; npm run start-server"
   },

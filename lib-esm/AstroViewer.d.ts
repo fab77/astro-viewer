@@ -10,6 +10,7 @@ export declare class AstroViewer {
     private canvas;
     private webgl;
     private rafId;
+    private webglContextList;
     run(): number;
     createCatalogue(catalogueName: string, catalogueDescription: string, providerUrl: string, metadataManager: MetadataManager): CatalogueGL;
     showCatalogue(catalogue: CatalogueGL): void;

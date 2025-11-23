@@ -16,6 +16,7 @@ export interface SkyEntityDrawInput {
   fovDeg?: number
   // cameraMatrix?: Float32Array
   camera: Camera
+  pMatrix: ReadonlyMat4
 }
 
 export abstract class AbstractSkyEntity {

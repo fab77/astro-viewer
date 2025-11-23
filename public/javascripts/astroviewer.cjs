@@ -52,1418 +52,6 @@ __webpack_require__.d(__webpack_exports__, {
   Point: () => (/* reexport */ Point)
 });
 
-;// ./node_modules/healpixjs/lib-esm/Constants.js
-class Constants {
-}
-//	static halfpi = Math.PI/2.;
-Constants.halfpi = 1.5707963267948966;
-Constants.inv_halfpi = 2. / Math.PI;
-/** The Constant twopi. */
-Constants.twopi = 2 * Math.PI;
-Constants.inv_twopi = 1. / (2 * Math.PI);
-//# sourceMappingURL=Constants.js.map
-;// ./node_modules/healpixjs/lib-esm/Pointing.js
-
-class Pointing {
-    /**
-     *
-     * @param {*} vec3 Vec3.js
-     * @param {*} mirror
-     * @param {*} in_theta radians
-     * @param {*} in_phi radians
-     */
-    constructor(vec3, mirror, in_theta, in_phi) {
-        if (vec3 != null) {
-            this.theta = Hploc.atan2(Math.sqrt(vec3.x * vec3.x + vec3.y * vec3.y), vec3.z);
-            if (mirror) {
-                this.phi = -Hploc.atan2(vec3.y, vec3.x);
-            }
-            else {
-                this.phi = Hploc.atan2(vec3.y, vec3.x);
-            }
-            if (this.phi < 0.0) {
-                this.phi = this.phi + 2 * Math.PI;
-            }
-            if (this.phi >= 2 * Math.PI) {
-                this.phi = this.phi - 2 * Math.PI;
-            }
-        }
-        else {
-            this.theta = in_theta;
-            this.phi = in_phi;
-        }
-    }
-}
-//# sourceMappingURL=Pointing.js.map
-;// ./node_modules/healpixjs/lib-esm/Zphi.js
-class Zphi {
-    /** Creation from individual components */
-    constructor(z_, phi_) {
-        this.z = z_;
-        this.phi = phi_;
-    }
-    ;
-}
-//# sourceMappingURL=Zphi.js.map
-;// ./node_modules/healpixjs/lib-esm/Hploc.js
-
-
-
-class Hploc {
-    constructor(ptg) {
-        Hploc.PI4_A = 0.7853981554508209228515625;
-        Hploc.PI4_B = 0.794662735614792836713604629039764404296875e-8;
-        Hploc.PI4_C = 0.306161699786838294306516483068750264552437361480769e-16;
-        Hploc.M_1_PI = 0.3183098861837906715377675267450287;
-        if (ptg) {
-            this.sth = 0.0;
-            this.have_sth = false;
-            this.z = Hploc.cos(ptg.theta);
-            this._phi = ptg.phi;
-            if (Math.abs(this.z) > 0.99) {
-                this.sth = Hploc.sin(ptg.theta);
-                this.have_sth = true;
-            }
-        }
-    }
-    setZ(z) {
-        this.z = z;
-    }
-    ;
-    get phi() {
-        return this._phi;
-    }
-    ;
-    set phi(phi) {
-        this._phi = phi;
-    }
-    ;
-    setSth(sth) {
-        this.sth = sth;
-    }
-    ;
-    toPointing(mirror) {
-        const st = this.have_sth ? this.sth : Math.sqrt((1.0 - this.z) * (1.0 + this.z));
-        return new Pointing(null, false, Hploc.atan2(st, this.z), this._phi);
-    }
-    toVec3() {
-        var st = this.have_sth ? this.sth : Math.sqrt((1.0 - this.z) * (1.0 + this.z));
-        var vector = new Vec3(st * Hploc.cos(this.phi), st * Hploc.sin(this.phi), this.z);
-        // var vector = new Vec3(st*Math.cos(this.phi),st*Math.sin(this.phi),this.z);
-        return vector;
-    }
-    ;
-    toZphi() {
-        return new Zphi(this.z, this.phi);
-    }
-    static sin(d) {
-        let u = d * Hploc.M_1_PI;
-        let q = Math.floor(u < 0 ? u - 0.5 : u + 0.5);
-        let x = 4.0 * q;
-        d -= x * Hploc.PI4_A;
-        d -= x * Hploc.PI4_B;
-        d -= x * Hploc.PI4_C;
-        if ((q & 1) != 0) {
-            d = -d;
-        }
-        return this.sincoshelper(d);
-    }
-    ;
-    static cos(d) {
-        //		let u = d * Hploc.M_1_PI - 0.5;
-        let u = d * Hploc.M_1_PI - 0.5;
-        //		u -= 0.5;
-        let q = 1 + 2 * Math.floor(u < 0 ? u - 0.5 : u + 0.5);
-        let x = 2.0 * q;
-        let t = x * Hploc.PI4_A;
-        d = d - t;
-        d -= x * Hploc.PI4_B;
-        d -= x * Hploc.PI4_C;
-        if ((q & 2) == 0) {
-            d = -d;
-        }
-        return Hploc.sincoshelper(d);
-    }
-    ;
-    static sincoshelper(d) {
-        let s = d * d;
-        let u = -7.97255955009037868891952e-18;
-        u = u * s + 2.81009972710863200091251e-15;
-        u = u * s - 7.64712219118158833288484e-13;
-        u = u * s + 1.60590430605664501629054e-10;
-        u = u * s - 2.50521083763502045810755e-08;
-        u = u * s + 2.75573192239198747630416e-06;
-        u = u * s - 0.000198412698412696162806809;
-        u = u * s + 0.00833333333333332974823815;
-        u = u * s - 0.166666666666666657414808;
-        return s * u * d + d;
-    }
-    ;
-    /** This method calculates the arc sine of x in radians. The return
-    value is in the range [-pi/2, pi/2]. The results may have
-    maximum error of 3 ulps. */
-    static asin(d) {
-        return Hploc.mulsign(Hploc.atan2k(Math.abs(d), Math.sqrt((1 + d) * (1 - d))), d);
-    }
-    ;
-    /** This method calculates the arc cosine of x in radians. The
-        return value is in the range [0, pi]. The results may have
-        maximum error of 3 ulps. */
-    static acos(d) {
-        return Hploc.mulsign(Hploc.atan2k(Math.sqrt((1 + d) * (1 - d)), Math.abs(d)), d) + (d < 0 ? Math.PI : 0);
-    }
-    ;
-    static mulsign(x, y) {
-        let sign = Hploc.copySign(1, y);
-        return sign * x;
-    }
-    ;
-    static copySign(magnitude, sign) {
-        return sign < 0 ? -Math.abs(magnitude) : Math.abs(magnitude);
-        // let finalsign = 1;
-        // if (Object.is(finalsign , -0)){
-        // 	sign = -1;
-        // }else if (Object.is(finalsign , 0)){
-        // 	sign = 1;
-        // }else {
-        // 	sign = Math.sign(finalsign);
-        // }
-        // return finalsign * magnitude;
-    }
-    static atanhelper(s) {
-        let t = s * s;
-        let u = -1.88796008463073496563746e-05;
-        u = u * t + (0.000209850076645816976906797);
-        u = u * t + (-0.00110611831486672482563471);
-        u = u * t + (0.00370026744188713119232403);
-        u = u * t + (-0.00889896195887655491740809);
-        u = u * t + (0.016599329773529201970117);
-        u = u * t + (-0.0254517624932312641616861);
-        u = u * t + (0.0337852580001353069993897);
-        u = u * t + (-0.0407629191276836500001934);
-        u = u * t + (0.0466667150077840625632675);
-        u = u * t + (-0.0523674852303482457616113);
-        u = u * t + (0.0587666392926673580854313);
-        u = u * t + (-0.0666573579361080525984562);
-        u = u * t + (0.0769219538311769618355029);
-        u = u * t + (-0.090908995008245008229153);
-        u = u * t + (0.111111105648261418443745);
-        u = u * t + (-0.14285714266771329383765);
-        u = u * t + (0.199999999996591265594148);
-        u = u * t + (-0.333333333333311110369124);
-        return u * t * s + s;
-    }
-    ;
-    static atan2k(y, x) {
-        let q = 0.;
-        if (x < 0) {
-            x = -x;
-            q = -2.;
-        }
-        if (y > x) {
-            let t = x;
-            x = y;
-            y = -t;
-            q += 1.;
-        }
-        return Hploc.atanhelper(y / x) + q * (Math.PI / 2);
-    }
-    ;
-    /** This method calculates the arc tangent of y/x in radians, using
-    the signs of the two arguments to determine the quadrant of the
-    result. The results may have maximum error of 2 ulps. */
-    static atan2(y, x) {
-        let r = Hploc.atan2k(Math.abs(y), x);
-        r = Hploc.mulsign(r, x);
-        if (Hploc.isinf(x) || x == 0) {
-            r = Math.PI / 2 - (Hploc.isinf(x) ? (Hploc.copySign(1, x) * (Math.PI / 2)) : 0);
-        }
-        if (Hploc.isinf(y)) {
-            r = Math.PI / 2 - (Hploc.isinf(x) ? (Hploc.copySign(1, x) * (Math.PI * 1 / 4)) : 0);
-        }
-        if (y == 0) {
-            r = (Hploc.copySign(1, x) == -1 ? Math.PI : 0);
-        }
-        return Hploc.isnan(x) || Hploc.isnan(y) ? NaN : Hploc.mulsign(r, y);
-    }
-    ;
-    /** Checks if the argument is a NaN or not. */
-    static isnan(d) {
-        return d != d;
-    }
-    ;
-    /** Checks if the argument is either positive or negative infinity. */
-    static isinf(d) {
-        return Math.abs(d) === +Infinity;
-    }
-    ;
-}
-Hploc.PI4_A = 0.7853981554508209228515625;
-Hploc.PI4_B = 0.794662735614792836713604629039764404296875e-8;
-Hploc.PI4_C = 0.306161699786838294306516483068750264552437361480769e-16;
-Hploc.M_1_PI = 0.3183098861837906715377675267450287;
-//# sourceMappingURL=Hploc.js.map
-;// ./node_modules/healpixjs/lib-esm/Vec3.js
-/**
- * Partial porting to Javascript of Vec3.java from Healpix3.30
- */
-
-
-class Vec3 {
-    constructor(in_x, in_y, in_z) {
-        if (in_x instanceof Pointing) {
-            let ptg = in_x;
-            let sth = Hploc.sin(ptg.theta);
-            this.x = sth * Hploc.cos(ptg.phi);
-            this.y = sth * Hploc.sin(ptg.phi);
-            this.z = Hploc.cos(ptg.theta);
-        }
-        else {
-            this.x = in_x;
-            this.y = in_y;
-            this.z = in_z;
-        }
-    }
-    getX() {
-        return this.x;
-    }
-    ;
-    getY() {
-        return this.y;
-    }
-    ;
-    getZ() {
-        return this.z;
-    }
-    ;
-    /** Scale the vector by a given factor
-    @param n the scale factor */
-    scale(n) {
-        this.x *= n;
-        this.y *= n;
-        this.z *= n;
-    }
-    ;
-    /** Vector cross product.
-    @param v another vector
-    @return the vector cross product between this vector and {@code v} */
-    cross(v) {
-        return new Vec3(this.y * v.z - v.y * this.z, this.z * v.x - v.z * this.x, this.x * v.y - v.x * this.y);
-    }
-    ;
-    /** Vector addition
-        * @param v the vector to be added
-        * @return addition result */
-    add(v) {
-        return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z);
-    }
-    ;
-    /** Normalize the vector */
-    normalize() {
-        let d = 1. / this.length();
-        this.x *= d;
-        this.y *= d;
-        this.z *= d;
-    }
-    ;
-    /** Return normalized vector */
-    norm() {
-        let d = 1. / this.length();
-        return new Vec3(this.x * d, this.y * d, this.z * d);
-    }
-    ;
-    /** Vector length
-    @return the length of the vector. */
-    length() {
-        return Math.sqrt(this.lengthSquared());
-    }
-    ;
-    /** Squared vector length
-        @return the squared length of the vector. */
-    lengthSquared() {
-        return this.x * this.x + this.y * this.y + this.z * this.z;
-    }
-    ;
-    /** Computes the dot product of the this vector and {@code v1}.
-     * @param v1 another vector
-     * @return dot product */
-    dot(v1) {
-        return this.x * v1.x + this.y * v1.y + this.z * v1.z;
-    }
-    ;
-    /** Vector subtraction
-     * @param v the vector to be subtracted
-     * @return subtraction result */
-    sub(v) {
-        return new Vec3(this.x - v.x, this.y - v.y, this.z - v.z);
-    }
-    ;
-    /** Angle between two vectors.
-    @param v1 another vector
-    @return the angle in radians between this vector and {@code v1};
-      constrained to the range [0,PI]. */
-    angle(v1) {
-        return Hploc.atan2(this.cross(v1).length(), this.dot(v1));
-    }
-    /** Invert the signs of all components */
-    flip() {
-        this.x *= -1.0;
-        this.y *= -1.0;
-        this.z *= -1.0;
-    }
-    static pointing2Vec3(pointing) {
-        let sth = Hploc.sin(pointing.theta);
-        let x = sth * Hploc.cos(pointing.phi);
-        let y = sth * Hploc.sin(pointing.phi);
-        let z = Hploc.cos(pointing.theta);
-        return new Vec3(x, y, z);
-    }
-    ;
-}
-//# sourceMappingURL=Vec3.js.map
-;// ./node_modules/healpixjs/lib-esm/CircleFinder.js
-
-class CircleFinder {
-    /**
-     * @param point: Vec3
-     */
-    constructor(point) {
-        let np = point.length;
-        //HealpixUtils.check(np>=2,"too few points");
-        if (!(np >= 2)) {
-            console.log("too few points");
-            return;
-        }
-        this.center = point[0].add(point[1]);
-        this.center.normalize();
-        this.cosrad = point[0].dot(this.center);
-        for (let i = 2; i < np; ++i) {
-            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
-                this.getCircle(point, i);
-            }
-        }
-    }
-    ;
-    /**
-     * @parm point: Vec3
-     * @param q: int
-     */
-    getCircle(point, q) {
-        this.center = point[0].add(point[q]);
-        this.center.normalize();
-        this.cosrad = point[0].dot(this.center);
-        for (let i = 1; i < q; ++i) {
-            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
-                this.getCircle2(point, i, q);
-            }
-        }
-    }
-    ;
-    /**
-     * @parm point: Vec3
-     * @param q1: int
-     * @param q2: int
-     */
-    getCircle2(point, q1, q2) {
-        this.center = point[q1].add(point[q2]);
-        this.center.normalize();
-        this.cosrad = point[q1].dot(this.center);
-        for (let i = 0; i < q1; ++i) {
-            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
-                this.center = (point[q1].sub(point[i])).cross(point[q2].sub(point[i]));
-                this.center.normalize();
-                this.cosrad = point[i].dot(this.center);
-                if (this.cosrad < 0) {
-                    this.center.flip();
-                    this.cosrad = -this.cosrad;
-                }
-            }
-        }
-    }
-    ;
-    getCenter() {
-        return new Vec3(this.center.x, this.center.y, this.center.z);
-    }
-    getCosrad() {
-        return this.cosrad;
-    }
-    ;
-}
-//# sourceMappingURL=CircleFinder.js.map
-;// ./node_modules/healpixjs/lib-esm/Fxyf.js
-/**
- * Partial porting to Javascript of Fxyf.java from Healpix3.30
- */
-
-class Fxyf {
-    constructor(x, y, f) {
-        this.fx = x;
-        this.fy = y;
-        this.face = f;
-        // coordinate of the lowest corner of each face
-        this.jrll = new Uint8Array([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
-        this.jpll = new Uint8Array([1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7]);
-        this.halfpi = Math.PI / 2.;
-    }
-    toHploc() {
-        let loc = new Hploc();
-        let jr = this.jrll[this.face] - this.fx - this.fy;
-        let nr;
-        if (jr < 1) {
-            nr = jr;
-            let tmp = nr * nr / 3.;
-            loc.z = 1 - tmp;
-            if (loc.z > 0.99) {
-                loc.sth = Math.sqrt(tmp * (2.0 - tmp));
-                loc.have_sth = true;
-            }
-        }
-        else if (jr > 3) {
-            nr = 4 - jr;
-            let tmp = nr * nr / 3.;
-            loc.z = tmp - 1;
-            if (loc.z < -0.99) {
-                loc.sth = Math.sqrt(tmp * (2.0 - tmp));
-                loc.have_sth = true;
-            }
-        }
-        else {
-            nr = 1;
-            loc.z = (2 - jr) * 2.0 / 3.;
-        }
-        let tmp = this.jpll[this.face] * nr + this.fx - this.fy;
-        if (tmp < 0) {
-            tmp += 8;
-        }
-        if (tmp >= 8) {
-            tmp -= 8;
-        }
-        loc.phi = (nr < 1e-15) ? 0 : (0.5 * this.halfpi * tmp) / nr;
-        return loc;
-    }
-    ;
-    toVec3() {
-        return this.toHploc().toVec3();
-    }
-    ;
-}
-//# sourceMappingURL=Fxyf.js.map
-;// ./node_modules/healpixjs/lib-esm/pstack.js
-class pstack {
-    /** Creation from individual components */
-    constructor(sz) {
-        this.p = new Array(sz);
-        this.o = new Int32Array(sz);
-        this.s = 0;
-        this.m = 0;
-    }
-    ;
-    /**
-     * @param p long
-     * @param o int
-     */
-    push(p_, o_) {
-        this.p[this.s] = p_;
-        this.o[this.s] = o_;
-        ++this.s;
-    }
-    ;
-    pop() {
-        --this.s;
-    }
-    ;
-    popToMark() {
-        this.s = this.m;
-    }
-    ;
-    size() {
-        return this.s;
-    }
-    ;
-    mark() {
-        this.m = this.s;
-    }
-    ;
-    otop() {
-        return this.o[this.s - 1];
-    }
-    ;
-    ptop() {
-        return this.p[this.s - 1];
-    }
-    ;
-}
-//# sourceMappingURL=pstack.js.map
-;// ./node_modules/healpixjs/lib-esm/RangeSet.js
-class RangeSet {
-    /**
-     * @param int cap: initial capacity
-     */
-    constructor(cap) {
-        if (cap < 0)
-            console.error("capacity must be positive");
-        this.r = new Int32Array(cap << 1);
-        this.sz = 0;
-    }
-    ;
-    /** Append a single-value range to the object.
-    @param val value to append */
-    append(val) {
-        this.append1(val, val + 1);
-    }
-    ;
-    /** Append a range to the object.
-   @param a first long in range
-   @param b one-after-last long in range */
-    append1(a, b) {
-        if (a >= b)
-            return;
-        if ((this.sz > 0) && (a <= this.r[this.sz - 1])) {
-            if (a < this.r[this.sz - 2])
-                console.error("bad append operation");
-            if (b > this.r[this.sz - 1])
-                this.r[this.sz - 1] = b;
-            return;
-        }
-        // this.ensureCapacity(this.sz+2);
-        let cap = this.sz + 2;
-        if (this.r.length < cap) {
-            let newsize = Math.max(2 * this.r.length, cap);
-            let rnew = new Int32Array(newsize);
-            rnew.set(this.r);
-            this.r = rnew;
-        }
-        this.r[this.sz] = a;
-        this.r[this.sz + 1] = b;
-        this.sz += 2;
-    }
-    ;
-    /** Make sure the object can hold at least the given number of entries.
-     * @param cap int
-     * */
-    ensureCapacity(cap) {
-        if (this.r.length < cap)
-            this.resize(Math.max(2 * this.r.length, cap));
-    }
-    ;
-    /**
-     * @param newsize int
-     */
-    resize(newsize) {
-        if (newsize < this.sz)
-            console.error("requested array size too small");
-        if (newsize == this.r.length)
-            return;
-        let rnew = new Int32Array(newsize);
-        let sliced = this.r.slice(0, this.sz + 1);
-        //		this.arrayCopy(this.r, 0, rnew, 0, this.sz);
-        this.r = sliced;
-    }
-    ;
-}
-//# sourceMappingURL=RangeSet.js.map
-;// ./node_modules/healpixjs/lib-esm/Xyf.js
-/**
- * Partial porting to Javascript of Xyf.java from Healpix3.30
- */
-class Xyf {
-    constructor(x, y, f) {
-        this.ix = x;
-        this.iy = y;
-        this.face = f;
-    }
-}
-//# sourceMappingURL=Xyf.js.map
-;// ./node_modules/healpixjs/lib-esm/Healpix.js
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Partial porting to Javascript of HealpixBase.java from Healpix3.30
- */
-// import Fxyf from './Fxyf.js';
-// import Hploc from './Hploc.js';
-// import Xyf from './Xyf.js';
-// import Vec3 from './Vec3.js';
-// import Pointing from './Pointing.js';
-// import CircleFinder from './CircleFinder.js';
-// import Zphi from './Zphi.js';
-// import pstack from './pstack.js';
-// import Constants from './Constants.js';
-// import RangeSet from './RangeSet.js';
-class Healpix {
-    constructor(nside_in) {
-        this.order_max = 29;
-        this.inv_halfpi = 2.0 / Math.PI;
-        this.twothird = 2.0 / 3.;
-        // console.log("twothird "+this.twothird);
-        // this.ns_max=1L<<order_max;
-        this.ns_max = Math.pow(2, this.order_max);
-        this.ctab = new Uint16Array([
-            0, 1, 256, 257, 2, 3, 258, 259, 512, 513, 768, 769, 514, 515, 770, 771, 4, 5, 260, 261, 6, 7, 262,
-            263, 516, 517, 772, 773, 518, 519, 774, 775, 1024, 1025, 1280, 1281, 1026, 1027, 1282, 1283,
-            1536, 1537, 1792, 1793, 1538, 1539, 1794, 1795, 1028, 1029, 1284, 1285, 1030, 1031, 1286,
-            1287, 1540, 1541, 1796, 1797, 1542, 1543, 1798, 1799, 8, 9, 264, 265, 10, 11, 266, 267, 520,
-            521, 776, 777, 522, 523, 778, 779, 12, 13, 268, 269, 14, 15, 270, 271, 524, 525, 780, 781, 526,
-            527, 782, 783, 1032, 1033, 1288, 1289, 1034, 1035, 1290, 1291, 1544, 1545, 1800, 1801, 1546,
-            1547, 1802, 1803, 1036, 1037, 1292, 1293, 1038, 1039, 1294, 1295, 1548, 1549, 1804, 1805,
-            1550, 1551, 1806, 1807, 2048, 2049, 2304, 2305, 2050, 2051, 2306, 2307, 2560, 2561, 2816,
-            2817, 2562, 2563, 2818, 2819, 2052, 2053, 2308, 2309, 2054, 2055, 2310, 2311, 2564, 2565,
-            2820, 2821, 2566, 2567, 2822, 2823, 3072, 3073, 3328, 3329, 3074, 3075, 3330, 3331, 3584,
-            3585, 3840, 3841, 3586, 3587, 3842, 3843, 3076, 3077, 3332, 3333, 3078, 3079, 3334, 3335,
-            3588, 3589, 3844, 3845, 3590, 3591, 3846, 3847, 2056, 2057, 2312, 2313, 2058, 2059, 2314,
-            2315, 2568, 2569, 2824, 2825, 2570, 2571, 2826, 2827, 2060, 2061, 2316, 2317, 2062, 2063,
-            2318, 2319, 2572, 2573, 2828, 2829, 2574, 2575, 2830, 2831, 3080, 3081, 3336, 3337, 3082,
-            3083, 3338, 3339, 3592, 3593, 3848, 3849, 3594, 3595, 3850, 3851, 3084, 3085, 3340, 3341,
-            3086, 3087, 3342, 3343, 3596, 3597, 3852, 3853, 3598, 3599, 3854, 3855
-        ]);
-        this.utab = new Uint16Array([0, 1, 4, 5, 16, 17, 20, 21, 64, 65, 68, 69, 80, 81, 84, 85, 256, 257, 260, 261, 272, 273, 276, 277,
-            320, 321, 324, 325, 336, 337, 340, 341, 1024, 1025, 1028, 1029, 1040, 1041, 1044, 1045, 1088,
-            1089, 1092, 1093, 1104, 1105, 1108, 1109, 1280, 1281, 1284, 1285, 1296, 1297, 1300, 1301,
-            1344, 1345, 1348, 1349, 1360, 1361, 1364, 1365, 4096, 4097, 4100, 4101, 4112, 4113, 4116,
-            4117, 4160, 4161, 4164, 4165, 4176, 4177, 4180, 4181, 4352, 4353, 4356, 4357, 4368, 4369,
-            4372, 4373, 4416, 4417, 4420, 4421, 4432, 4433, 4436, 4437, 5120, 5121, 5124, 5125, 5136,
-            5137, 5140, 5141, 5184, 5185, 5188, 5189, 5200, 5201, 5204, 5205, 5376, 5377, 5380, 5381,
-            5392, 5393, 5396, 5397, 5440, 5441, 5444, 5445, 5456, 5457, 5460, 5461, 16384, 16385, 16388,
-            16389, 16400, 16401, 16404, 16405, 16448, 16449, 16452, 16453, 16464, 16465, 16468, 16469,
-            16640, 16641, 16644, 16645, 16656, 16657, 16660, 16661, 16704, 16705, 16708, 16709, 16720,
-            16721, 16724, 16725, 17408, 17409, 17412, 17413, 17424, 17425, 17428, 17429, 17472, 17473,
-            17476, 17477, 17488, 17489, 17492, 17493, 17664, 17665, 17668, 17669, 17680, 17681, 17684,
-            17685, 17728, 17729, 17732, 17733, 17744, 17745, 17748, 17749, 20480, 20481, 20484, 20485,
-            20496, 20497, 20500, 20501, 20544, 20545, 20548, 20549, 20560, 20561, 20564, 20565, 20736,
-            20737, 20740, 20741, 20752, 20753, 20756, 20757, 20800, 20801, 20804, 20805, 20816, 20817,
-            20820, 20821, 21504, 21505, 21508, 21509, 21520, 21521, 21524, 21525, 21568, 21569, 21572,
-            21573, 21584, 21585, 21588, 21589, 21760, 21761, 21764, 21765, 21776, 21777, 21780, 21781,
-            21824, 21825, 21828, 21829, 21840, 21841, 21844, 21845]);
-        this.jrll = new Int16Array([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
-        this.jpll = new Int16Array([1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7]);
-        this.xoffset = new Int16Array([-1, -1, 0, 1, 1, 1, 0, -1]);
-        this.yoffset = new Int16Array([0, 1, 1, 1, 0, -1, -1, -1]);
-        this.facearray = [
-            new Int16Array([8, 9, 10, 11, -1, -1, -1, -1, 10, 11, 8, 9]),
-            new Int16Array([5, 6, 7, 4, 8, 9, 10, 11, 9, 10, 11, 8]),
-            new Int16Array([-1, -1, -1, -1, 5, 6, 7, 4, -1, -1, -1, -1]),
-            new Int16Array([4, 5, 6, 7, 11, 8, 9, 10, 11, 8, 9, 10]),
-            new Int16Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
-            new Int16Array([1, 2, 3, 0, 0, 1, 2, 3, 5, 6, 7, 4]),
-            new Int16Array([-1, -1, -1, -1, 7, 4, 5, 6, -1, -1, -1, -1]),
-            new Int16Array([3, 0, 1, 2, 3, 0, 1, 2, 4, 5, 6, 7]),
-            new Int16Array([2, 3, 0, 1, -1, -1, -1, -1, 0, 1, 2, 3]) // N
-        ];
-        // questo forse deve essere un UInt8Array. Viene usato da neighbours
-        this.swaparray = [
-            new Int16Array([0, 0, 3]),
-            new Int16Array([0, 0, 6]),
-            new Int16Array([0, 0, 0]),
-            new Int16Array([0, 0, 5]),
-            new Int16Array([0, 0, 0]),
-            new Int16Array([5, 0, 0]),
-            new Int16Array([0, 0, 0]),
-            new Int16Array([6, 0, 0]),
-            new Int16Array([3, 0, 0]) // N
-        ];
-        if (nside_in <= this.ns_max && nside_in > 0) {
-            this.nside = nside_in;
-            this.npface = this.nside * this.nside;
-            this.npix = 12 * this.npface;
-            this.order = this.nside2order(this.nside);
-            this.nl2 = 2 * this.nside;
-            this.nl3 = 3 * this.nside;
-            this.nl4 = 4 * this.nside;
-            this.fact2 = 4.0 / this.npix;
-            this.fact1 = (this.nside << 1) * this.fact2;
-            this.ncap = 2 * this.nside * (this.nside - 1); // pixels in each polar cap
-            // console.log("order: "+this.order);
-            // console.log("nside: "+this.nside);
-        }
-        this.bn = [];
-        this.mpr = [];
-        this.cmpr = [];
-        this.smpr = [];
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // Uncaught RangeError: Maximum call stack size exceeded
-        // MOVED TO computeBn()
-        //        for (let i=0; i <= this.order_max; ++i) {
-        //        	this.bn[i]=new Healpix(1<<i);
-        //        	this.mpr[i]=bn[i].maxPixrad();
-        //        	this.cmpr[i]=Math.cos(mpr[i]);
-        //        	this.smpr[i]=Math.sin(mpr[i]);
-        //        }
-    }
-    computeBn() {
-        for (let i = 0; i <= this.order_max; ++i) {
-            this.bn[i] = new Healpix(1 << i);
-            this.mpr[i] = this.bn[i].maxPixrad();
-            this.cmpr[i] = Hploc.cos(this.mpr[i]);
-            this.smpr[i] = Hploc.sin(this.mpr[i]);
-        }
-    }
-    getNPix() {
-        return this.npix;
-    }
-    ;
-    getBoundaries(pix) {
-        let points = new Array();
-        let xyf = this.nest2xyf(pix);
-        let dc = 0.5 / this.nside;
-        let xc = (xyf.ix + 0.5) / this.nside;
-        let yc = (xyf.iy + 0.5) / this.nside;
-        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
-        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
-        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
-        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
-        return points;
-    }
-    ;
-    /** Returns a set of points along the boundary of the given pixel.
-     * Step 1 gives 4 points on the corners. The first point corresponds
-     * to the northernmost corner, the subsequent points follow the pixel
-     * boundary through west, south and east corners.
-     *
-     * @param pix pixel index number
-     * @param step the number of returned points is 4*step
-     * @return {@link Vec3} for each point
-     */
-    getBoundariesWithStep(pix, step) {
-        // var points = new Array(); 
-        let points = new Array();
-        let xyf = this.nest2xyf(pix);
-        let dc = 0.5 / this.nside;
-        let xc = (xyf.ix + 0.5) / this.nside;
-        let yc = (xyf.iy + 0.5) / this.nside;
-        let d = 1.0 / (this.nside * step);
-        for (let i = 0; i < step; i++) {
-            points[i] = new Fxyf(xc + dc - i * d, yc + dc, xyf.face).toVec3();
-            points[i + step] = new Fxyf(xc - dc, yc + dc - i * d, xyf.face).toVec3();
-            points[i + 2 * step] = new Fxyf(xc - dc + i * d, yc - dc, xyf.face).toVec3();
-            points[i + 3 * step] = new Fxyf(xc + dc, yc - dc + i * d, xyf.face).toVec3();
-        }
-        return points;
-    }
-    ;
-    getPointsForXyfNoStep(x, y, face) {
-        // let nside = Math.pow(2, this.order);
-        let points = new Array();
-        let xyf = new Xyf(x, y, face);
-        let dc = 0.5 / this.nside;
-        let xc = (xyf.ix + 0.5) / this.nside;
-        let yc = (xyf.iy + 0.5) / this.nside;
-        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
-        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
-        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
-        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
-        return points;
-    }
-    getPointsForXyf(x, y, step, face) {
-        let nside = step * Math.pow(2, this.order);
-        let points = new Array();
-        let xyf = new Xyf(x, y, face);
-        let dc = 0.5 / nside;
-        let xc = (xyf.ix + 0.5) / nside;
-        let yc = (xyf.iy + 0.5) / nside;
-        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
-        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
-        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
-        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
-        return points;
-    }
-    /** Returns the neighboring pixels of ipix.
-    This method works in both RING and NEST schemes, but is
-    considerably faster in the NEST scheme.
-    @param ipix the requested pixel number.
-    @return array with indices of the neighboring pixels.
-      The returned array contains (in this order)
-      the pixel numbers of the SW, W, NW, N, NE, E, SE and S neighbor
-      of ipix. If a neighbor does not exist (this can only happen
-      for the W, N, E and S neighbors), its entry is set to -1. */
-    neighbours(ipix) {
-        let result = new Int32Array(8);
-        let xyf = this.nest2xyf(ipix);
-        let ix = xyf.ix;
-        let iy = xyf.iy;
-        let face_num = xyf.face;
-        var nsm1 = this.nside - 1;
-        if ((ix > 0) && (ix < nsm1) && (iy > 0) && (iy < nsm1)) {
-            let fpix = Math.floor(face_num << (2 * this.order));
-            let px0 = this.spread_bits(ix);
-            let py0 = this.spread_bits(iy) << 1;
-            let pxp = this.spread_bits(ix + 1);
-            let pyp = this.spread_bits(iy + 1) << 1;
-            let pxm = this.spread_bits(ix - 1);
-            let pym = this.spread_bits(iy - 1) << 1;
-            result[0] = fpix + pxm + py0;
-            result[1] = fpix + pxm + pyp;
-            result[2] = fpix + px0 + pyp;
-            result[3] = fpix + pxp + pyp;
-            result[4] = fpix + pxp + py0;
-            result[5] = fpix + pxp + pym;
-            result[6] = fpix + px0 + pym;
-            result[7] = fpix + pxm + pym;
-        }
-        else {
-            for (let i = 0; i < 8; ++i) {
-                let x = ix + this.xoffset[i];
-                let y = iy + this.yoffset[i];
-                let nbnum = 4;
-                if (x < 0) {
-                    x += this.nside;
-                    nbnum -= 1;
-                }
-                else if (x >= this.nside) {
-                    x -= this.nside;
-                    nbnum += 1;
-                }
-                if (y < 0) {
-                    y += this.nside;
-                    nbnum -= 3;
-                }
-                else if (y >= this.nside) {
-                    y -= this.nside;
-                    nbnum += 3;
-                }
-                let f = this.facearray[nbnum][face_num];
-                if (f >= 0) {
-                    let bits = this.swaparray[nbnum][face_num >>> 2];
-                    if ((bits & 1) > 0) {
-                        x = Math.floor(this.nside - x - 1);
-                    }
-                    if ((bits & 2) > 0) {
-                        y = Math.floor(this.nside - y - 1);
-                    }
-                    if ((bits & 4) > 0) {
-                        let tint = x;
-                        x = y;
-                        y = tint;
-                    }
-                    result[i] = this.xyf2nest(x, y, f);
-                }
-                else {
-                    result[i] = -1;
-                }
-            }
-        }
-        return result;
-    }
-    ;
-    nside2order(nside) {
-        return ((nside & (nside - 1)) != 0) ? -1 : Math.log2(nside);
-    }
-    ;
-    nest2xyf(ipix) {
-        let pix = Math.floor(ipix & (this.npface - 1));
-        let xyf = new Xyf(this.compress_bits(pix), this.compress_bits(pix >> 1), Math.floor((ipix >> (2 * this.order))));
-        return xyf;
-    }
-    ;
-    xyf2nest(ix, iy, face_num) {
-        return Math.floor(face_num << (2 * this.order))
-            + this.spread_bits(ix) + (this.spread_bits(iy) << 1);
-    }
-    ;
-    loc2pix(hploc) {
-        let z = hploc.z;
-        let phi = hploc.phi;
-        let za = Math.abs(z);
-        let tt = this.fmodulo((phi * this.inv_halfpi), 4.0); // in [0,4)
-        let pixNo;
-        if (za <= this.twothird) { // Equatorial region
-            let temp1 = this.nside * (0.5 + tt);
-            let temp2 = this.nside * (z * 0.75);
-            let jp = Math.floor(temp1 - temp2); // index of ascending edge line
-            let jm = Math.floor(temp1 + temp2); // index of descending edge line
-            let ifp = Math.floor(jp >>> this.order); // in {0,4}
-            let ifm = Math.floor(jm >>> this.order);
-            let face_num = Math.floor((ifp == ifm) ? (ifp | 4) : ((ifp < ifm) ? ifp : (ifm + 8)));
-            let ix = Math.floor(jm & (this.nside - 1));
-            let iy = Math.floor(this.nside - (jp & (this.nside - 1)) - 1);
-            pixNo = this.xyf2nest(ix, iy, face_num);
-        }
-        else { // polar region, za > 2/3
-            let ntt = Math.min(3, Math.floor(tt));
-            let tp = tt - ntt;
-            let tmp = ((za < 0.99) || (!hploc.have_sth)) ?
-                this.nside * Math.sqrt(3 * (1 - za)) :
-                this.nside * hploc.sth / Math.sqrt((1.0 + za) / 3.);
-            let jp = Math.floor(tp * tmp); // increasing edge line index
-            let jm = Math.floor((1.0 - tp) * tmp); // decreasing edge line index
-            if (jp >= this.nside) {
-                jp = this.nside - 1; // for points too close to the boundary
-            }
-            if (jm >= this.nside) {
-                jm = this.nside - 1;
-            }
-            if (z >= 0) {
-                pixNo = this.xyf2nest(Math.floor(this.nside - jm - 1), Math.floor(this.nside - jp - 1), ntt);
-            }
-            else {
-                pixNo = this.xyf2nest(Math.floor(jp), Math.floor(jm), ntt + 8);
-            }
-        }
-        return pixNo;
-    }
-    ;
-    /** Returns the normalized 3-vector corresponding to the center of the
-    supplied pixel.
-    @param pix long the requested pixel number.
-    @return the pixel's center coordinates. */
-    pix2vec(pix) {
-        return this.pix2loc(pix).toVec3();
-    }
-    ;
-    /** Returns the Zphi corresponding to the center of the supplied pixel.
-     @param pix the requested pixel number.
-     @return the pixel's center coordinates. */
-    pix2zphi(pix) {
-        return this.pix2loc(pix).toZphi();
-    }
-    pix2ang(pix, mirror) {
-        return this.pix2loc(pix).toPointing(mirror);
-    }
-    /**
-     * @param pix long
-     * @return Hploc
-     */
-    pix2loc(pix) {
-        let loc = new Hploc(undefined);
-        let xyf = this.nest2xyf(pix);
-        let jr = ((this.jrll[xyf.face]) << this.order) - xyf.ix - xyf.iy - 1;
-        let nr;
-        if (jr < this.nside) {
-            nr = jr;
-            let tmp = (nr * nr) * this.fact2;
-            loc.z = 1 - tmp;
-            if (loc.z > 0.99) {
-                loc.sth = Math.sqrt(tmp * (2. - tmp));
-                loc.have_sth = true;
-            }
-        }
-        else if (jr > this.nl3) {
-            nr = this.nl4 - jr;
-            let tmp = (nr * nr) * this.fact2;
-            loc.z = tmp - 1;
-            if (loc.z < -0.99) {
-                loc.sth = Math.sqrt(tmp * (2. - tmp));
-                loc.have_sth = true;
-            }
-        }
-        else {
-            nr = this.nside;
-            loc.z = (this.nl2 - jr) * this.fact1;
-        }
-        let tmp = (this.jpll[xyf.face]) * nr + xyf.ix - xyf.iy;
-        //      	assert(tmp<8*nr); // must not happen
-        if (tmp < 0) {
-            tmp += 8 * nr;
-        }
-        loc.phi = (nr == this.nside) ? 0.75 * Constants.halfpi * tmp * this.fact1 : (0.5 * Constants.halfpi * tmp) / nr;
-        // loc.setPhi((nr == this.nside) ? 0.75 * Constants.halfpi * tmp * this.fact1 : (0.5 * Constants.halfpi * tmp)/nr);
-        return loc;
-    }
-    ;
-    za2vec(z, a) {
-        const sin_theta = Math.sqrt(1 - z * z);
-        const X = sin_theta * Math.cos(a);
-        const Y = sin_theta * Math.sin(a);
-        return new Vec3(X, Y, z);
-    }
-    ang2vec(theta, phi) {
-        const z = Math.cos(theta);
-        return this.za2vec(z, phi);
-    }
-    vec2ang(v) {
-        const { z, a } = this.vec2za(v.getX(), v.getY(), v.getZ());
-        return { theta: Math.acos(z), phi: a };
-    }
-    vec2za(X, Y, z) {
-        const r2 = X * X + Y * Y;
-        if (r2 == 0)
-            return { z: z < 0 ? -1 : 1, a: 0 };
-        else {
-            const PI2 = Math.PI / 2;
-            const a = (Math.atan2(Y, X) + PI2) % PI2;
-            z /= Math.sqrt(z * z + r2);
-            return { z, a };
-        }
-    }
-    ang2pix(ptg, mirror) {
-        return this.loc2pix(new Hploc(ptg));
-    }
-    ;
-    fmodulo(v1, v2) {
-        if (v1 >= 0) {
-            return (v1 < v2) ? v1 : v1 % v2;
-        }
-        var tmp = v1 % v2 + v2;
-        return (tmp === v2) ? 0.0 : tmp;
-    }
-    ;
-    compress_bits(v) {
-        var raw = Math.floor((v & 0x5555)) | Math.floor(((v & 0x55550000) >>> 15));
-        var compressed = this.ctab[raw & 0xff] | (this.ctab[raw >>> 8] << 4);
-        return compressed;
-    }
-    ;
-    spread_bits(v) {
-        return Math.floor(this.utab[v & 0xff]) | Math.floor((this.utab[(v >>> 8) & 0xff] << 16))
-            | Math.floor((this.utab[(v >>> 16) & 0xff] << 32)) | Math.floor((this.utab[(v >>> 24) & 0xff] << 48));
-    }
-    ;
-    /**
-     * Returns a range set of pixels that overlap with the convex polygon
-     * defined by the {@code vertex} array.
-     * <p>
-     * This method is more efficient in the RING scheme.
-     * <p>
-     * This method may return some pixels which don't overlap with the polygon
-     * at all. The higher {@code fact} is chosen, the fewer false positives are
-     * returned, at the cost of increased run time.
-     *
-     * @param vertex
-     *            an array containing the vertices of the requested convex
-     *            polygon.
-     * @param fact
-     *            The overlapping test will be done at the resolution
-     *            {@code fact*nside}. For NESTED ordering, {@code fact} must be
-     *            a power of 2, else it can be any positive integer. A typical
-     *            choice would be 4.
-     * @return the requested set of pixel number ranges
-     */
-    queryPolygonInclusive(vertex, fact) {
-        let inclusive = (fact != 0);
-        let nv = vertex.length;
-        //        let ncirc = inclusive ? nv+1 : nv;
-        if (!(nv >= 3)) {
-            console.log("not enough vertices in polygon");
-            return;
-        }
-        let vv = new Array();
-        for (let i = 0; i < nv; ++i) {
-            vv[i] = Vec3.pointing2Vec3(vertex[i]);
-        }
-        let normal = new Array();
-        let flip = 0;
-        let index = 0;
-        let back = false;
-        while (index < vv.length) {
-            let first = vv[index];
-            let medium = null;
-            let last = null;
-            if (index == vv.length - 1) {
-                last = vv[1];
-                medium = vv[0];
-            }
-            else if (index == vv.length - 2) {
-                last = vv[0];
-                medium = vv[index + 1];
-            }
-            else {
-                medium = vv[index + 1];
-                last = vv[index + 2];
-            }
-            normal[index] = first.cross(medium).norm();
-            let hnd = normal[index].dot(last);
-            if (index == 0) {
-                flip = (hnd < 0.) ? -1 : 1;
-                let tmp = new Pointing(first); // TODO not used
-                back = false;
-            }
-            else {
-                let flipThnd = flip * hnd;
-                if (flipThnd < 0) {
-                    let tmp = new Pointing(medium);
-                    vv.splice(index + 1, 1);
-                    normal.splice(index, 1);
-                    back = true;
-                    index -= 1;
-                    continue;
-                }
-                else {
-                    let tmp = new Pointing(first);
-                    back = false;
-                }
-            }
-            normal[index].scale(flip);
-            index += 1;
-        }
-        nv = vv.length;
-        let ncirc = inclusive ? nv + 1 : nv;
-        let rad = new Array(ncirc);
-        rad = rad.fill(Constants.halfpi);
-        //        rad = rad.fill(1.5707963267948966);
-        //        let p = "1.5707963267948966";
-        //        rad = rad.fill(parseFloat(p));
-        if (inclusive) {
-            let cf = new CircleFinder(vv);
-            normal[nv] = cf.getCenter();
-            rad[nv] = Hploc.acos(cf.getCosrad());
-        }
-        return this.queryMultiDisc(normal, rad, fact);
-    }
-    ;
-    /**
-     * For NEST schema only
-     *
-     * @param normal:
-     *            Vec3[]
-     * @param rad:
-     *            Float32Array
-     * @param fact:
-     *            The overlapping test will be done at the resolution
-     *            {@code fact*nside}. For NESTED ordering, {@code fact} must be
-     *            a power of 2, else it can be any positive integer. A typical
-     *            choice would be 4.
-     * @return RangeSet the requested set of pixel number ranges
-     */
-    queryMultiDisc(norm, rad, fact) {
-        this.computeBn();
-        let inclusive = (fact != 0);
-        let nv = norm.length;
-        // HealpixUtils.check(nv==rad.lengt0,"inconsistent input arrays");
-        if (!(nv == rad.length)) {
-            console.error("inconsistent input arrays");
-            return;
-        }
-        let res = new RangeSet(4 << 1);
-        // Removed code for Scheme.RING
-        let oplus = 0;
-        if (inclusive) {
-            if (!(Math.pow(2, this.order_max - this.order) >= fact)) {
-                console.error("invalid oversampling factor");
-            }
-            if (!((fact & (fact - 1)) == 0)) {
-                console.error("oversampling factor must be a power of 2");
-            }
-            oplus = this.ilog2(fact);
-        }
-        let omax = this.order + oplus; // the order up to which we test
-        // TODO: ignore all disks with radius>=pi
-        //        let crlimit = new Float32Array[omax+1][nv][3];
-        let crlimit = new Array(omax + 1);
-        let o;
-        let i;
-        for (o = 0; o <= omax; ++o) { // prepare data at the required orders
-            crlimit[o] = new Array(nv);
-            let dr = this.bn[o].maxPixrad(); // safety distance
-            for (i = 0; i < nv; ++i) {
-                crlimit[o][i] = new Float64Array(3);
-                crlimit[o][i][0] = (rad[i] + dr > Math.PI) ? -1 : Hploc.cos(rad[i] + dr);
-                crlimit[o][i][1] = (o == 0) ? Hploc.cos(rad[i]) : crlimit[0][i][1];
-                crlimit[o][i][2] = (rad[i] - dr < 0.) ? 1. : Hploc.cos(rad[i] - dr);
-            }
-        }
-        let stk = new pstack(12 + 3 * omax);
-        for (let i = 0; i < 12; i++) { // insert the 12 base pixels in reverse
-            // order
-            stk.push(11 - i, 0);
-        }
-        while (stk.size() > 0) { // as long as there are pixels on the stack
-            // pop current pixel number and order from the stack
-            let pix = stk.ptop();
-            let o = stk.otop();
-            stk.pop();
-            let pv = this.bn[o].pix2vec(pix);
-            let zone = 3;
-            for (let i = 0; (i < nv) && (zone > 0); ++i) {
-                let crad = pv.dot(norm[i]);
-                for (let iz = 0; iz < zone; ++iz) {
-                    if (crad < crlimit[o][i][iz]) {
-                        zone = iz;
-                    }
-                }
-            }
-            if (zone > 0) {
-                this.check_pixel(o, omax, zone, res, pix, stk, inclusive);
-            }
-        }
-        return res;
-    }
-    ;
-    /** Integer base 2 logarithm.
-    @param arg
-    @return the largest integer {@code n} that fulfills {@code 2^n<=arg}.
-    For negative arguments and zero, 0 is returned. */
-    ilog2(arg) {
-        let max = Math.max(arg, 1);
-        return 31 - Math.clz32(max);
-    }
-    ;
-    /** Computes the cosine of the angular distance between two z, phi positions
-      on the unit sphere. */
-    cosdist_zphi(z1, phi1, z2, phi2) {
-        return z1 * z2 + Hploc.cos(phi1 - phi2) * Math.sqrt((1.0 - z1 * z1) * (1.0 - z2 * z2));
-    }
-    /**
-     * @param int o
-     * @param int omax
-     * @param int zone
-     * @param RangeSet pixset
-     * @param long pix
-     * @param pstack stk
-     * @param boolean inclusive
-     */
-    check_pixel(o, omax, zone, pixset, pix, stk, inclusive) {
-        if (zone == 0)
-            return;
-        if (o < this.order) {
-            if (zone >= 3) { // output all subpixels
-                let sdist = 2 * (this.order - o); // the "bit-shift distance" between map orders
-                pixset.append1(pix << sdist, ((pix + 1) << sdist));
-            }
-            else { // (zone>=1)
-                for (let i = 0; i < 4; ++i) {
-                    stk.push(4 * pix + 3 - i, o + 1); // add children
-                }
-            }
-        }
-        else if (o > this.order) { // this implies that inclusive==true
-            if (zone >= 2) { // pixel center in shape
-                pixset.append(pix >>> (2 * (o - this.order))); // output the parent pixel at order
-                stk.popToMark(); // unwind the stack
-            }
-            else { // (zone>=1): pixel center in safety range
-                if (o < omax) { // check sublevels
-                    for (let i = 0; i < 4; ++i) { // add children in reverse order
-                        stk.push(4 * pix + 3 - i, o + 1); // add children
-                    }
-                }
-                else { // at resolution limit
-                    pixset.append(pix >>> (2 * (o - this.order))); // output the parent pixel at order
-                    stk.popToMark(); // unwind the stack
-                }
-            }
-        }
-        else { // o==order
-            if (zone >= 2) {
-                pixset.append(pix);
-            }
-            else if (inclusive) { // and (zone>=1)
-                if (this.order < omax) { // check sublevels
-                    stk.mark(); // remember current stack position
-                    for (let i = 0; i < 4; ++i) { // add children in reverse order
-                        stk.push(4 * pix + 3 - i, o + 1); // add children
-                    }
-                }
-                else { // at resolution limit
-                    pixset.append(pix); // output the pixel
-                }
-            }
-        }
-    }
-    /** Returns the maximum angular distance between a pixel center and its
-    corners.
-    @return maximum angular distance between a pixel center and its
-      corners. */
-    maxPixrad() {
-        let zphia = new Zphi(2. / 3., Math.PI / this.nl4);
-        let xyz1 = this.convertZphi2xyz(zphia);
-        let va = new Vec3(xyz1[0], xyz1[1], xyz1[2]);
-        let t1 = 1. - 1. / this.nside;
-        t1 *= t1;
-        let zphib = new Zphi(1 - t1 / 3, 0);
-        let xyz2 = this.convertZphi2xyz(zphib);
-        let vb = new Vec3(xyz2[0], xyz2[1], xyz2[2]);
-        return va.angle(vb);
-    }
-    ;
-    /**
-     * this is a workaround replacing the Vec3(Zphi) constructor.
-     */
-    convertZphi2xyz(zphi) {
-        let sth = Math.sqrt((1.0 - zphi.z) * (1.0 + zphi.z));
-        let x = sth * Hploc.cos(zphi.phi);
-        let y = sth * Hploc.sin(zphi.phi);
-        let z = zphi.z;
-        return [x, y, z];
-    }
-    ;
-    /** Returns a range set of pixels which overlap with a given disk. <p>
-      This method is more efficient in the RING scheme. <p>
-      This method may return some pixels which don't overlap with
-      the polygon at all. The higher {@code fact} is chosen, the fewer false
-      positives are returned, at the cost of increased run time.
-      @param ptg the angular coordinates of the disk center
-      @param radius the radius (in radians) of the disk
-      @param fact The overlapping test will be done at the resolution
-        {@code fact*nside}. For NESTED ordering, {@code fact} must be a power
-        of 2, else it can be any positive integer. A typical choice would be 4.
-      @return the requested set of pixel number ranges  */
-    queryDiscInclusive(ptg, radius, fact) {
-        this.computeBn();
-        let inclusive = (fact != 0);
-        let pixset = new RangeSet();
-        if (radius >= Math.PI) { // disk covers the whole sphere
-            pixset.append1(0, this.npix);
-            return pixset;
-        }
-        let oplus = 0;
-        if (inclusive) {
-            // HealpixUtils.check ((1L<<order_max)>=fact,"invalid oversampling factor");
-            if (!((fact & (fact - 1)) == 0)) {
-                console.error("oversampling factor must be a power of 2");
-            }
-            oplus = this.ilog2(fact);
-        }
-        let omax = Math.min(this.order_max, this.order + oplus); // the order up to which we test
-        let vptg = Vec3.pointing2Vec3(ptg);
-        let crpdr = new Array(omax + 1);
-        let crmdr = new Array(omax + 1);
-        let cosrad = Hploc.cos(radius);
-        let sinrad = Hploc.sin(radius);
-        for (let o = 0; o <= omax; o++) { // prepare data at the required orders
-            let dr = this.mpr[o]; // safety distance
-            let cdr = this.cmpr[o];
-            let sdr = this.smpr[o];
-            crpdr[o] = (radius + dr > Math.PI) ? -1. : cosrad * cdr - sinrad * sdr;
-            crmdr[o] = (radius - dr < 0.) ? 1. : cosrad * cdr + sinrad * sdr;
-        }
-        let stk = new pstack(12 + 3 * omax);
-        for (let i = 0; i < 12; i++) { // insert the 12 base pixels in reverse order
-            stk.push(11 - i, 0);
-        }
-        while (stk.size() > 0) { // as long as there are pixels on the stack
-            // pop current pixel number and order from the stack
-            let pix = stk.ptop();
-            let curro = stk.otop();
-            stk.pop();
-            let pos = this.bn[curro].pix2zphi(pix);
-            // cosine of angular distance between pixel center and disk center
-            let cangdist = this.cosdist_zphi(vptg.z, ptg.phi, pos.z, pos.phi);
-            if (cangdist > crpdr[curro]) {
-                let zone = (cangdist < cosrad) ? 1 : ((cangdist <= crmdr[curro]) ? 2 : 3);
-                this.check_pixel(curro, omax, zone, pixset, pix, stk, inclusive);
-            }
-        }
-        return pixset;
-    }
-}
-//# sourceMappingURL=Healpix.js.map
-;// ./node_modules/healpixjs/lib-esm/index.js
-
-
-
-
-
-
-
-
-
-
-
-//# sourceMappingURL=index.js.map
 ;// ./src/Config.ts
 const hipsNodes = (/* unused pure expression or super */ null && ([
     "https://skies.esac.esa.int/",
@@ -1495,67 +83,6 @@ const bootSetup = {
     debug: false,
     insideView: false,
 };
-
-;// ./src/Global.ts
-
-
-
-class Global {
-    // --- cached / runtime state ---
-    // private _camera: Camera | null;
-    // private _gl: GL | null;
-    _healpix;
-    // --- config/state flags ---
-    _selectionnside;
-    // private _healpix4footprints: boolean;
-    _useCORSProxy;
-    _corsProxyUrl;
-    _maxDecimals;
-    _debug;
-    _insideSphere;
-    _version;
-    constructor() {
-        this._useCORSProxy = bootSetup.useCORSProxy;
-        this._corsProxyUrl = bootSetup.corsProxyUrl;
-        this._maxDecimals = bootSetup.maxDecimals;
-        this._debug = bootSetup.debug;
-        this._insideSphere = bootSetup.insideView;
-        this._version = bootSetup.version;
-        // this._camera = null;
-        // this._gl = null;
-        this._healpix = {};
-        this._selectionnside = 32;
-        // this._healpix4footprints = false;
-    }
-    init() {
-        console.log('Global.init()');
-    }
-    // --- getters/setters ---
-    get version() { return this._version; }
-    set corsProxyUrl(url) { this._corsProxyUrl = url; }
-    get corsProxyUrl() { return this._corsProxyUrl; }
-    get useCORSProxy() { return this._useCORSProxy; }
-    set useCORSProxy(enabled) { this._useCORSProxy = enabled; }
-    get debug() { return this._debug; }
-    getHealpix(order) {
-        if (this._healpix[order] === undefined) {
-            // order is HEALPix "order" ⇒ nside = 2^order
-            this._healpix[order] = new Healpix(Math.pow(2, order));
-        }
-        return this._healpix[order];
-    }
-    get MAX_DECIMALS() { return this._maxDecimals; }
-    // get camera(): Camera | null { return this._camera; }
-    // set camera(in_camera: Camera | null) { this._camera = in_camera; }
-    // get gl(): 
-    // GL | null { return this._gl; }
-    // set gl(in_gl: GL | null) { this._gl = in_gl; }
-    set insideSphere(v) { this._insideSphere = v; }
-    get insideSphere() { return this._insideSphere; }
-    get nsideForSelection() { return this._selectionnside; }
-}
-const global = new Global();
-/* harmony default export */ const src_Global = (global);
 
 ;// ./node_modules/gl-matrix/esm/common.js
 /**
@@ -4461,6 +2988,1471 @@ function decDegToDMS(decDeg) {
     return { d, m, s };
 }
 
+;// ./node_modules/healpixjs/lib-esm/Constants.js
+class Constants {
+}
+//	static halfpi = Math.PI/2.;
+Constants.halfpi = 1.5707963267948966;
+Constants.inv_halfpi = 2. / Math.PI;
+/** The Constant twopi. */
+Constants.twopi = 2 * Math.PI;
+Constants.inv_twopi = 1. / (2 * Math.PI);
+//# sourceMappingURL=Constants.js.map
+;// ./node_modules/healpixjs/lib-esm/Pointing.js
+
+class Pointing {
+    /**
+     *
+     * @param {*} vec3 Vec3.js
+     * @param {*} mirror
+     * @param {*} in_theta radians
+     * @param {*} in_phi radians
+     */
+    constructor(vec3, mirror, in_theta, in_phi) {
+        if (vec3 != null) {
+            this.theta = Hploc.atan2(Math.sqrt(vec3.x * vec3.x + vec3.y * vec3.y), vec3.z);
+            if (mirror) {
+                this.phi = -Hploc.atan2(vec3.y, vec3.x);
+            }
+            else {
+                this.phi = Hploc.atan2(vec3.y, vec3.x);
+            }
+            if (this.phi < 0.0) {
+                this.phi = this.phi + 2 * Math.PI;
+            }
+            if (this.phi >= 2 * Math.PI) {
+                this.phi = this.phi - 2 * Math.PI;
+            }
+        }
+        else {
+            this.theta = in_theta;
+            this.phi = in_phi;
+        }
+    }
+}
+//# sourceMappingURL=Pointing.js.map
+;// ./node_modules/healpixjs/lib-esm/Zphi.js
+class Zphi {
+    /** Creation from individual components */
+    constructor(z_, phi_) {
+        this.z = z_;
+        this.phi = phi_;
+    }
+    ;
+}
+//# sourceMappingURL=Zphi.js.map
+;// ./node_modules/healpixjs/lib-esm/Hploc.js
+
+
+
+class Hploc {
+    constructor(ptg) {
+        Hploc.PI4_A = 0.7853981554508209228515625;
+        Hploc.PI4_B = 0.794662735614792836713604629039764404296875e-8;
+        Hploc.PI4_C = 0.306161699786838294306516483068750264552437361480769e-16;
+        Hploc.M_1_PI = 0.3183098861837906715377675267450287;
+        if (ptg) {
+            this.sth = 0.0;
+            this.have_sth = false;
+            this.z = Hploc.cos(ptg.theta);
+            this._phi = ptg.phi;
+            if (Math.abs(this.z) > 0.99) {
+                this.sth = Hploc.sin(ptg.theta);
+                this.have_sth = true;
+            }
+        }
+    }
+    setZ(z) {
+        this.z = z;
+    }
+    ;
+    get phi() {
+        return this._phi;
+    }
+    ;
+    set phi(phi) {
+        this._phi = phi;
+    }
+    ;
+    setSth(sth) {
+        this.sth = sth;
+    }
+    ;
+    toPointing(mirror) {
+        const st = this.have_sth ? this.sth : Math.sqrt((1.0 - this.z) * (1.0 + this.z));
+        return new Pointing(null, false, Hploc.atan2(st, this.z), this._phi);
+    }
+    toVec3() {
+        var st = this.have_sth ? this.sth : Math.sqrt((1.0 - this.z) * (1.0 + this.z));
+        var vector = new Vec3(st * Hploc.cos(this.phi), st * Hploc.sin(this.phi), this.z);
+        // var vector = new Vec3(st*Math.cos(this.phi),st*Math.sin(this.phi),this.z);
+        return vector;
+    }
+    ;
+    toZphi() {
+        return new Zphi(this.z, this.phi);
+    }
+    static sin(d) {
+        let u = d * Hploc.M_1_PI;
+        let q = Math.floor(u < 0 ? u - 0.5 : u + 0.5);
+        let x = 4.0 * q;
+        d -= x * Hploc.PI4_A;
+        d -= x * Hploc.PI4_B;
+        d -= x * Hploc.PI4_C;
+        if ((q & 1) != 0) {
+            d = -d;
+        }
+        return this.sincoshelper(d);
+    }
+    ;
+    static cos(d) {
+        //		let u = d * Hploc.M_1_PI - 0.5;
+        let u = d * Hploc.M_1_PI - 0.5;
+        //		u -= 0.5;
+        let q = 1 + 2 * Math.floor(u < 0 ? u - 0.5 : u + 0.5);
+        let x = 2.0 * q;
+        let t = x * Hploc.PI4_A;
+        d = d - t;
+        d -= x * Hploc.PI4_B;
+        d -= x * Hploc.PI4_C;
+        if ((q & 2) == 0) {
+            d = -d;
+        }
+        return Hploc.sincoshelper(d);
+    }
+    ;
+    static sincoshelper(d) {
+        let s = d * d;
+        let u = -7.97255955009037868891952e-18;
+        u = u * s + 2.81009972710863200091251e-15;
+        u = u * s - 7.64712219118158833288484e-13;
+        u = u * s + 1.60590430605664501629054e-10;
+        u = u * s - 2.50521083763502045810755e-08;
+        u = u * s + 2.75573192239198747630416e-06;
+        u = u * s - 0.000198412698412696162806809;
+        u = u * s + 0.00833333333333332974823815;
+        u = u * s - 0.166666666666666657414808;
+        return s * u * d + d;
+    }
+    ;
+    /** This method calculates the arc sine of x in radians. The return
+    value is in the range [-pi/2, pi/2]. The results may have
+    maximum error of 3 ulps. */
+    static asin(d) {
+        return Hploc.mulsign(Hploc.atan2k(Math.abs(d), Math.sqrt((1 + d) * (1 - d))), d);
+    }
+    ;
+    /** This method calculates the arc cosine of x in radians. The
+        return value is in the range [0, pi]. The results may have
+        maximum error of 3 ulps. */
+    static acos(d) {
+        return Hploc.mulsign(Hploc.atan2k(Math.sqrt((1 + d) * (1 - d)), Math.abs(d)), d) + (d < 0 ? Math.PI : 0);
+    }
+    ;
+    static mulsign(x, y) {
+        let sign = Hploc.copySign(1, y);
+        return sign * x;
+    }
+    ;
+    static copySign(magnitude, sign) {
+        return sign < 0 ? -Math.abs(magnitude) : Math.abs(magnitude);
+        // let finalsign = 1;
+        // if (Object.is(finalsign , -0)){
+        // 	sign = -1;
+        // }else if (Object.is(finalsign , 0)){
+        // 	sign = 1;
+        // }else {
+        // 	sign = Math.sign(finalsign);
+        // }
+        // return finalsign * magnitude;
+    }
+    static atanhelper(s) {
+        let t = s * s;
+        let u = -1.88796008463073496563746e-05;
+        u = u * t + (0.000209850076645816976906797);
+        u = u * t + (-0.00110611831486672482563471);
+        u = u * t + (0.00370026744188713119232403);
+        u = u * t + (-0.00889896195887655491740809);
+        u = u * t + (0.016599329773529201970117);
+        u = u * t + (-0.0254517624932312641616861);
+        u = u * t + (0.0337852580001353069993897);
+        u = u * t + (-0.0407629191276836500001934);
+        u = u * t + (0.0466667150077840625632675);
+        u = u * t + (-0.0523674852303482457616113);
+        u = u * t + (0.0587666392926673580854313);
+        u = u * t + (-0.0666573579361080525984562);
+        u = u * t + (0.0769219538311769618355029);
+        u = u * t + (-0.090908995008245008229153);
+        u = u * t + (0.111111105648261418443745);
+        u = u * t + (-0.14285714266771329383765);
+        u = u * t + (0.199999999996591265594148);
+        u = u * t + (-0.333333333333311110369124);
+        return u * t * s + s;
+    }
+    ;
+    static atan2k(y, x) {
+        let q = 0.;
+        if (x < 0) {
+            x = -x;
+            q = -2.;
+        }
+        if (y > x) {
+            let t = x;
+            x = y;
+            y = -t;
+            q += 1.;
+        }
+        return Hploc.atanhelper(y / x) + q * (Math.PI / 2);
+    }
+    ;
+    /** This method calculates the arc tangent of y/x in radians, using
+    the signs of the two arguments to determine the quadrant of the
+    result. The results may have maximum error of 2 ulps. */
+    static atan2(y, x) {
+        let r = Hploc.atan2k(Math.abs(y), x);
+        r = Hploc.mulsign(r, x);
+        if (Hploc.isinf(x) || x == 0) {
+            r = Math.PI / 2 - (Hploc.isinf(x) ? (Hploc.copySign(1, x) * (Math.PI / 2)) : 0);
+        }
+        if (Hploc.isinf(y)) {
+            r = Math.PI / 2 - (Hploc.isinf(x) ? (Hploc.copySign(1, x) * (Math.PI * 1 / 4)) : 0);
+        }
+        if (y == 0) {
+            r = (Hploc.copySign(1, x) == -1 ? Math.PI : 0);
+        }
+        return Hploc.isnan(x) || Hploc.isnan(y) ? NaN : Hploc.mulsign(r, y);
+    }
+    ;
+    /** Checks if the argument is a NaN or not. */
+    static isnan(d) {
+        return d != d;
+    }
+    ;
+    /** Checks if the argument is either positive or negative infinity. */
+    static isinf(d) {
+        return Math.abs(d) === +Infinity;
+    }
+    ;
+}
+Hploc.PI4_A = 0.7853981554508209228515625;
+Hploc.PI4_B = 0.794662735614792836713604629039764404296875e-8;
+Hploc.PI4_C = 0.306161699786838294306516483068750264552437361480769e-16;
+Hploc.M_1_PI = 0.3183098861837906715377675267450287;
+//# sourceMappingURL=Hploc.js.map
+;// ./node_modules/healpixjs/lib-esm/Vec3.js
+/**
+ * Partial porting to Javascript of Vec3.java from Healpix3.30
+ */
+
+
+class Vec3 {
+    constructor(in_x, in_y, in_z) {
+        if (in_x instanceof Pointing) {
+            let ptg = in_x;
+            let sth = Hploc.sin(ptg.theta);
+            this.x = sth * Hploc.cos(ptg.phi);
+            this.y = sth * Hploc.sin(ptg.phi);
+            this.z = Hploc.cos(ptg.theta);
+        }
+        else {
+            this.x = in_x;
+            this.y = in_y;
+            this.z = in_z;
+        }
+    }
+    getX() {
+        return this.x;
+    }
+    ;
+    getY() {
+        return this.y;
+    }
+    ;
+    getZ() {
+        return this.z;
+    }
+    ;
+    /** Scale the vector by a given factor
+    @param n the scale factor */
+    scale(n) {
+        this.x *= n;
+        this.y *= n;
+        this.z *= n;
+    }
+    ;
+    /** Vector cross product.
+    @param v another vector
+    @return the vector cross product between this vector and {@code v} */
+    cross(v) {
+        return new Vec3(this.y * v.z - v.y * this.z, this.z * v.x - v.z * this.x, this.x * v.y - v.x * this.y);
+    }
+    ;
+    /** Vector addition
+        * @param v the vector to be added
+        * @return addition result */
+    add(v) {
+        return new Vec3(this.x + v.x, this.y + v.y, this.z + v.z);
+    }
+    ;
+    /** Normalize the vector */
+    normalize() {
+        let d = 1. / this.length();
+        this.x *= d;
+        this.y *= d;
+        this.z *= d;
+    }
+    ;
+    /** Return normalized vector */
+    norm() {
+        let d = 1. / this.length();
+        return new Vec3(this.x * d, this.y * d, this.z * d);
+    }
+    ;
+    /** Vector length
+    @return the length of the vector. */
+    length() {
+        return Math.sqrt(this.lengthSquared());
+    }
+    ;
+    /** Squared vector length
+        @return the squared length of the vector. */
+    lengthSquared() {
+        return this.x * this.x + this.y * this.y + this.z * this.z;
+    }
+    ;
+    /** Computes the dot product of the this vector and {@code v1}.
+     * @param v1 another vector
+     * @return dot product */
+    dot(v1) {
+        return this.x * v1.x + this.y * v1.y + this.z * v1.z;
+    }
+    ;
+    /** Vector subtraction
+     * @param v the vector to be subtracted
+     * @return subtraction result */
+    sub(v) {
+        return new Vec3(this.x - v.x, this.y - v.y, this.z - v.z);
+    }
+    ;
+    /** Angle between two vectors.
+    @param v1 another vector
+    @return the angle in radians between this vector and {@code v1};
+      constrained to the range [0,PI]. */
+    angle(v1) {
+        return Hploc.atan2(this.cross(v1).length(), this.dot(v1));
+    }
+    /** Invert the signs of all components */
+    flip() {
+        this.x *= -1.0;
+        this.y *= -1.0;
+        this.z *= -1.0;
+    }
+    static pointing2Vec3(pointing) {
+        let sth = Hploc.sin(pointing.theta);
+        let x = sth * Hploc.cos(pointing.phi);
+        let y = sth * Hploc.sin(pointing.phi);
+        let z = Hploc.cos(pointing.theta);
+        return new Vec3(x, y, z);
+    }
+    ;
+}
+//# sourceMappingURL=Vec3.js.map
+;// ./node_modules/healpixjs/lib-esm/CircleFinder.js
+
+class CircleFinder {
+    /**
+     * @param point: Vec3
+     */
+    constructor(point) {
+        let np = point.length;
+        //HealpixUtils.check(np>=2,"too few points");
+        if (!(np >= 2)) {
+            console.log("too few points");
+            return;
+        }
+        this.center = point[0].add(point[1]);
+        this.center.normalize();
+        this.cosrad = point[0].dot(this.center);
+        for (let i = 2; i < np; ++i) {
+            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
+                this.getCircle(point, i);
+            }
+        }
+    }
+    ;
+    /**
+     * @parm point: Vec3
+     * @param q: int
+     */
+    getCircle(point, q) {
+        this.center = point[0].add(point[q]);
+        this.center.normalize();
+        this.cosrad = point[0].dot(this.center);
+        for (let i = 1; i < q; ++i) {
+            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
+                this.getCircle2(point, i, q);
+            }
+        }
+    }
+    ;
+    /**
+     * @parm point: Vec3
+     * @param q1: int
+     * @param q2: int
+     */
+    getCircle2(point, q1, q2) {
+        this.center = point[q1].add(point[q2]);
+        this.center.normalize();
+        this.cosrad = point[q1].dot(this.center);
+        for (let i = 0; i < q1; ++i) {
+            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
+                this.center = (point[q1].sub(point[i])).cross(point[q2].sub(point[i]));
+                this.center.normalize();
+                this.cosrad = point[i].dot(this.center);
+                if (this.cosrad < 0) {
+                    this.center.flip();
+                    this.cosrad = -this.cosrad;
+                }
+            }
+        }
+    }
+    ;
+    getCenter() {
+        return new Vec3(this.center.x, this.center.y, this.center.z);
+    }
+    getCosrad() {
+        return this.cosrad;
+    }
+    ;
+}
+//# sourceMappingURL=CircleFinder.js.map
+;// ./node_modules/healpixjs/lib-esm/Fxyf.js
+/**
+ * Partial porting to Javascript of Fxyf.java from Healpix3.30
+ */
+
+class Fxyf {
+    constructor(x, y, f) {
+        this.fx = x;
+        this.fy = y;
+        this.face = f;
+        // coordinate of the lowest corner of each face
+        this.jrll = new Uint8Array([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
+        this.jpll = new Uint8Array([1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7]);
+        this.halfpi = Math.PI / 2.;
+    }
+    toHploc() {
+        let loc = new Hploc();
+        let jr = this.jrll[this.face] - this.fx - this.fy;
+        let nr;
+        if (jr < 1) {
+            nr = jr;
+            let tmp = nr * nr / 3.;
+            loc.z = 1 - tmp;
+            if (loc.z > 0.99) {
+                loc.sth = Math.sqrt(tmp * (2.0 - tmp));
+                loc.have_sth = true;
+            }
+        }
+        else if (jr > 3) {
+            nr = 4 - jr;
+            let tmp = nr * nr / 3.;
+            loc.z = tmp - 1;
+            if (loc.z < -0.99) {
+                loc.sth = Math.sqrt(tmp * (2.0 - tmp));
+                loc.have_sth = true;
+            }
+        }
+        else {
+            nr = 1;
+            loc.z = (2 - jr) * 2.0 / 3.;
+        }
+        let tmp = this.jpll[this.face] * nr + this.fx - this.fy;
+        if (tmp < 0) {
+            tmp += 8;
+        }
+        if (tmp >= 8) {
+            tmp -= 8;
+        }
+        loc.phi = (nr < 1e-15) ? 0 : (0.5 * this.halfpi * tmp) / nr;
+        return loc;
+    }
+    ;
+    toVec3() {
+        return this.toHploc().toVec3();
+    }
+    ;
+}
+//# sourceMappingURL=Fxyf.js.map
+;// ./node_modules/healpixjs/lib-esm/pstack.js
+class pstack {
+    /** Creation from individual components */
+    constructor(sz) {
+        this.p = new Array(sz);
+        this.o = new Int32Array(sz);
+        this.s = 0;
+        this.m = 0;
+    }
+    ;
+    /**
+     * @param p long
+     * @param o int
+     */
+    push(p_, o_) {
+        this.p[this.s] = p_;
+        this.o[this.s] = o_;
+        ++this.s;
+    }
+    ;
+    pop() {
+        --this.s;
+    }
+    ;
+    popToMark() {
+        this.s = this.m;
+    }
+    ;
+    size() {
+        return this.s;
+    }
+    ;
+    mark() {
+        this.m = this.s;
+    }
+    ;
+    otop() {
+        return this.o[this.s - 1];
+    }
+    ;
+    ptop() {
+        return this.p[this.s - 1];
+    }
+    ;
+}
+//# sourceMappingURL=pstack.js.map
+;// ./node_modules/healpixjs/lib-esm/RangeSet.js
+class RangeSet {
+    /**
+     * @param int cap: initial capacity
+     */
+    constructor(cap) {
+        if (cap < 0)
+            console.error("capacity must be positive");
+        this.r = new Int32Array(cap << 1);
+        this.sz = 0;
+    }
+    ;
+    /** Append a single-value range to the object.
+    @param val value to append */
+    append(val) {
+        this.append1(val, val + 1);
+    }
+    ;
+    /** Append a range to the object.
+   @param a first long in range
+   @param b one-after-last long in range */
+    append1(a, b) {
+        if (a >= b)
+            return;
+        if ((this.sz > 0) && (a <= this.r[this.sz - 1])) {
+            if (a < this.r[this.sz - 2])
+                console.error("bad append operation");
+            if (b > this.r[this.sz - 1])
+                this.r[this.sz - 1] = b;
+            return;
+        }
+        // this.ensureCapacity(this.sz+2);
+        let cap = this.sz + 2;
+        if (this.r.length < cap) {
+            let newsize = Math.max(2 * this.r.length, cap);
+            let rnew = new Int32Array(newsize);
+            rnew.set(this.r);
+            this.r = rnew;
+        }
+        this.r[this.sz] = a;
+        this.r[this.sz + 1] = b;
+        this.sz += 2;
+    }
+    ;
+    /** Make sure the object can hold at least the given number of entries.
+     * @param cap int
+     * */
+    ensureCapacity(cap) {
+        if (this.r.length < cap)
+            this.resize(Math.max(2 * this.r.length, cap));
+    }
+    ;
+    /**
+     * @param newsize int
+     */
+    resize(newsize) {
+        if (newsize < this.sz)
+            console.error("requested array size too small");
+        if (newsize == this.r.length)
+            return;
+        let rnew = new Int32Array(newsize);
+        let sliced = this.r.slice(0, this.sz + 1);
+        //		this.arrayCopy(this.r, 0, rnew, 0, this.sz);
+        this.r = sliced;
+    }
+    ;
+}
+//# sourceMappingURL=RangeSet.js.map
+;// ./node_modules/healpixjs/lib-esm/Xyf.js
+/**
+ * Partial porting to Javascript of Xyf.java from Healpix3.30
+ */
+class Xyf {
+    constructor(x, y, f) {
+        this.ix = x;
+        this.iy = y;
+        this.face = f;
+    }
+}
+//# sourceMappingURL=Xyf.js.map
+;// ./node_modules/healpixjs/lib-esm/Healpix.js
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Partial porting to Javascript of HealpixBase.java from Healpix3.30
+ */
+// import Fxyf from './Fxyf.js';
+// import Hploc from './Hploc.js';
+// import Xyf from './Xyf.js';
+// import Vec3 from './Vec3.js';
+// import Pointing from './Pointing.js';
+// import CircleFinder from './CircleFinder.js';
+// import Zphi from './Zphi.js';
+// import pstack from './pstack.js';
+// import Constants from './Constants.js';
+// import RangeSet from './RangeSet.js';
+class Healpix {
+    constructor(nside_in) {
+        this.order_max = 29;
+        this.inv_halfpi = 2.0 / Math.PI;
+        this.twothird = 2.0 / 3.;
+        // console.log("twothird "+this.twothird);
+        // this.ns_max=1L<<order_max;
+        this.ns_max = Math.pow(2, this.order_max);
+        this.ctab = new Uint16Array([
+            0, 1, 256, 257, 2, 3, 258, 259, 512, 513, 768, 769, 514, 515, 770, 771, 4, 5, 260, 261, 6, 7, 262,
+            263, 516, 517, 772, 773, 518, 519, 774, 775, 1024, 1025, 1280, 1281, 1026, 1027, 1282, 1283,
+            1536, 1537, 1792, 1793, 1538, 1539, 1794, 1795, 1028, 1029, 1284, 1285, 1030, 1031, 1286,
+            1287, 1540, 1541, 1796, 1797, 1542, 1543, 1798, 1799, 8, 9, 264, 265, 10, 11, 266, 267, 520,
+            521, 776, 777, 522, 523, 778, 779, 12, 13, 268, 269, 14, 15, 270, 271, 524, 525, 780, 781, 526,
+            527, 782, 783, 1032, 1033, 1288, 1289, 1034, 1035, 1290, 1291, 1544, 1545, 1800, 1801, 1546,
+            1547, 1802, 1803, 1036, 1037, 1292, 1293, 1038, 1039, 1294, 1295, 1548, 1549, 1804, 1805,
+            1550, 1551, 1806, 1807, 2048, 2049, 2304, 2305, 2050, 2051, 2306, 2307, 2560, 2561, 2816,
+            2817, 2562, 2563, 2818, 2819, 2052, 2053, 2308, 2309, 2054, 2055, 2310, 2311, 2564, 2565,
+            2820, 2821, 2566, 2567, 2822, 2823, 3072, 3073, 3328, 3329, 3074, 3075, 3330, 3331, 3584,
+            3585, 3840, 3841, 3586, 3587, 3842, 3843, 3076, 3077, 3332, 3333, 3078, 3079, 3334, 3335,
+            3588, 3589, 3844, 3845, 3590, 3591, 3846, 3847, 2056, 2057, 2312, 2313, 2058, 2059, 2314,
+            2315, 2568, 2569, 2824, 2825, 2570, 2571, 2826, 2827, 2060, 2061, 2316, 2317, 2062, 2063,
+            2318, 2319, 2572, 2573, 2828, 2829, 2574, 2575, 2830, 2831, 3080, 3081, 3336, 3337, 3082,
+            3083, 3338, 3339, 3592, 3593, 3848, 3849, 3594, 3595, 3850, 3851, 3084, 3085, 3340, 3341,
+            3086, 3087, 3342, 3343, 3596, 3597, 3852, 3853, 3598, 3599, 3854, 3855
+        ]);
+        this.utab = new Uint16Array([0, 1, 4, 5, 16, 17, 20, 21, 64, 65, 68, 69, 80, 81, 84, 85, 256, 257, 260, 261, 272, 273, 276, 277,
+            320, 321, 324, 325, 336, 337, 340, 341, 1024, 1025, 1028, 1029, 1040, 1041, 1044, 1045, 1088,
+            1089, 1092, 1093, 1104, 1105, 1108, 1109, 1280, 1281, 1284, 1285, 1296, 1297, 1300, 1301,
+            1344, 1345, 1348, 1349, 1360, 1361, 1364, 1365, 4096, 4097, 4100, 4101, 4112, 4113, 4116,
+            4117, 4160, 4161, 4164, 4165, 4176, 4177, 4180, 4181, 4352, 4353, 4356, 4357, 4368, 4369,
+            4372, 4373, 4416, 4417, 4420, 4421, 4432, 4433, 4436, 4437, 5120, 5121, 5124, 5125, 5136,
+            5137, 5140, 5141, 5184, 5185, 5188, 5189, 5200, 5201, 5204, 5205, 5376, 5377, 5380, 5381,
+            5392, 5393, 5396, 5397, 5440, 5441, 5444, 5445, 5456, 5457, 5460, 5461, 16384, 16385, 16388,
+            16389, 16400, 16401, 16404, 16405, 16448, 16449, 16452, 16453, 16464, 16465, 16468, 16469,
+            16640, 16641, 16644, 16645, 16656, 16657, 16660, 16661, 16704, 16705, 16708, 16709, 16720,
+            16721, 16724, 16725, 17408, 17409, 17412, 17413, 17424, 17425, 17428, 17429, 17472, 17473,
+            17476, 17477, 17488, 17489, 17492, 17493, 17664, 17665, 17668, 17669, 17680, 17681, 17684,
+            17685, 17728, 17729, 17732, 17733, 17744, 17745, 17748, 17749, 20480, 20481, 20484, 20485,
+            20496, 20497, 20500, 20501, 20544, 20545, 20548, 20549, 20560, 20561, 20564, 20565, 20736,
+            20737, 20740, 20741, 20752, 20753, 20756, 20757, 20800, 20801, 20804, 20805, 20816, 20817,
+            20820, 20821, 21504, 21505, 21508, 21509, 21520, 21521, 21524, 21525, 21568, 21569, 21572,
+            21573, 21584, 21585, 21588, 21589, 21760, 21761, 21764, 21765, 21776, 21777, 21780, 21781,
+            21824, 21825, 21828, 21829, 21840, 21841, 21844, 21845]);
+        this.jrll = new Int16Array([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
+        this.jpll = new Int16Array([1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7]);
+        this.xoffset = new Int16Array([-1, -1, 0, 1, 1, 1, 0, -1]);
+        this.yoffset = new Int16Array([0, 1, 1, 1, 0, -1, -1, -1]);
+        this.facearray = [
+            new Int16Array([8, 9, 10, 11, -1, -1, -1, -1, 10, 11, 8, 9]),
+            new Int16Array([5, 6, 7, 4, 8, 9, 10, 11, 9, 10, 11, 8]),
+            new Int16Array([-1, -1, -1, -1, 5, 6, 7, 4, -1, -1, -1, -1]),
+            new Int16Array([4, 5, 6, 7, 11, 8, 9, 10, 11, 8, 9, 10]),
+            new Int16Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
+            new Int16Array([1, 2, 3, 0, 0, 1, 2, 3, 5, 6, 7, 4]),
+            new Int16Array([-1, -1, -1, -1, 7, 4, 5, 6, -1, -1, -1, -1]),
+            new Int16Array([3, 0, 1, 2, 3, 0, 1, 2, 4, 5, 6, 7]),
+            new Int16Array([2, 3, 0, 1, -1, -1, -1, -1, 0, 1, 2, 3]) // N
+        ];
+        // questo forse deve essere un UInt8Array. Viene usato da neighbours
+        this.swaparray = [
+            new Int16Array([0, 0, 3]),
+            new Int16Array([0, 0, 6]),
+            new Int16Array([0, 0, 0]),
+            new Int16Array([0, 0, 5]),
+            new Int16Array([0, 0, 0]),
+            new Int16Array([5, 0, 0]),
+            new Int16Array([0, 0, 0]),
+            new Int16Array([6, 0, 0]),
+            new Int16Array([3, 0, 0]) // N
+        ];
+        if (nside_in <= this.ns_max && nside_in > 0) {
+            this.nside = nside_in;
+            this.npface = this.nside * this.nside;
+            this.npix = 12 * this.npface;
+            this.order = this.nside2order(this.nside);
+            this.nl2 = 2 * this.nside;
+            this.nl3 = 3 * this.nside;
+            this.nl4 = 4 * this.nside;
+            this.fact2 = 4.0 / this.npix;
+            this.fact1 = (this.nside << 1) * this.fact2;
+            this.ncap = 2 * this.nside * (this.nside - 1); // pixels in each polar cap
+            // console.log("order: "+this.order);
+            // console.log("nside: "+this.nside);
+        }
+        this.bn = [];
+        this.mpr = [];
+        this.cmpr = [];
+        this.smpr = [];
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // Uncaught RangeError: Maximum call stack size exceeded
+        // MOVED TO computeBn()
+        //        for (let i=0; i <= this.order_max; ++i) {
+        //        	this.bn[i]=new Healpix(1<<i);
+        //        	this.mpr[i]=bn[i].maxPixrad();
+        //        	this.cmpr[i]=Math.cos(mpr[i]);
+        //        	this.smpr[i]=Math.sin(mpr[i]);
+        //        }
+    }
+    computeBn() {
+        for (let i = 0; i <= this.order_max; ++i) {
+            this.bn[i] = new Healpix(1 << i);
+            this.mpr[i] = this.bn[i].maxPixrad();
+            this.cmpr[i] = Hploc.cos(this.mpr[i]);
+            this.smpr[i] = Hploc.sin(this.mpr[i]);
+        }
+    }
+    getNPix() {
+        return this.npix;
+    }
+    ;
+    getBoundaries(pix) {
+        let points = new Array();
+        let xyf = this.nest2xyf(pix);
+        let dc = 0.5 / this.nside;
+        let xc = (xyf.ix + 0.5) / this.nside;
+        let yc = (xyf.iy + 0.5) / this.nside;
+        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
+        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
+        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
+        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
+        return points;
+    }
+    ;
+    /** Returns a set of points along the boundary of the given pixel.
+     * Step 1 gives 4 points on the corners. The first point corresponds
+     * to the northernmost corner, the subsequent points follow the pixel
+     * boundary through west, south and east corners.
+     *
+     * @param pix pixel index number
+     * @param step the number of returned points is 4*step
+     * @return {@link Vec3} for each point
+     */
+    getBoundariesWithStep(pix, step) {
+        // var points = new Array(); 
+        let points = new Array();
+        let xyf = this.nest2xyf(pix);
+        let dc = 0.5 / this.nside;
+        let xc = (xyf.ix + 0.5) / this.nside;
+        let yc = (xyf.iy + 0.5) / this.nside;
+        let d = 1.0 / (this.nside * step);
+        for (let i = 0; i < step; i++) {
+            points[i] = new Fxyf(xc + dc - i * d, yc + dc, xyf.face).toVec3();
+            points[i + step] = new Fxyf(xc - dc, yc + dc - i * d, xyf.face).toVec3();
+            points[i + 2 * step] = new Fxyf(xc - dc + i * d, yc - dc, xyf.face).toVec3();
+            points[i + 3 * step] = new Fxyf(xc + dc, yc - dc + i * d, xyf.face).toVec3();
+        }
+        return points;
+    }
+    ;
+    getPointsForXyfNoStep(x, y, face) {
+        // let nside = Math.pow(2, this.order);
+        let points = new Array();
+        let xyf = new Xyf(x, y, face);
+        let dc = 0.5 / this.nside;
+        let xc = (xyf.ix + 0.5) / this.nside;
+        let yc = (xyf.iy + 0.5) / this.nside;
+        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
+        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
+        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
+        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
+        return points;
+    }
+    getPointsForXyf(x, y, step, face) {
+        let nside = step * Math.pow(2, this.order);
+        let points = new Array();
+        let xyf = new Xyf(x, y, face);
+        let dc = 0.5 / nside;
+        let xc = (xyf.ix + 0.5) / nside;
+        let yc = (xyf.iy + 0.5) / nside;
+        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
+        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
+        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
+        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
+        return points;
+    }
+    /** Returns the neighboring pixels of ipix.
+    This method works in both RING and NEST schemes, but is
+    considerably faster in the NEST scheme.
+    @param ipix the requested pixel number.
+    @return array with indices of the neighboring pixels.
+      The returned array contains (in this order)
+      the pixel numbers of the SW, W, NW, N, NE, E, SE and S neighbor
+      of ipix. If a neighbor does not exist (this can only happen
+      for the W, N, E and S neighbors), its entry is set to -1. */
+    neighbours(ipix) {
+        let result = new Int32Array(8);
+        let xyf = this.nest2xyf(ipix);
+        let ix = xyf.ix;
+        let iy = xyf.iy;
+        let face_num = xyf.face;
+        var nsm1 = this.nside - 1;
+        if ((ix > 0) && (ix < nsm1) && (iy > 0) && (iy < nsm1)) {
+            let fpix = Math.floor(face_num << (2 * this.order));
+            let px0 = this.spread_bits(ix);
+            let py0 = this.spread_bits(iy) << 1;
+            let pxp = this.spread_bits(ix + 1);
+            let pyp = this.spread_bits(iy + 1) << 1;
+            let pxm = this.spread_bits(ix - 1);
+            let pym = this.spread_bits(iy - 1) << 1;
+            result[0] = fpix + pxm + py0;
+            result[1] = fpix + pxm + pyp;
+            result[2] = fpix + px0 + pyp;
+            result[3] = fpix + pxp + pyp;
+            result[4] = fpix + pxp + py0;
+            result[5] = fpix + pxp + pym;
+            result[6] = fpix + px0 + pym;
+            result[7] = fpix + pxm + pym;
+        }
+        else {
+            for (let i = 0; i < 8; ++i) {
+                let x = ix + this.xoffset[i];
+                let y = iy + this.yoffset[i];
+                let nbnum = 4;
+                if (x < 0) {
+                    x += this.nside;
+                    nbnum -= 1;
+                }
+                else if (x >= this.nside) {
+                    x -= this.nside;
+                    nbnum += 1;
+                }
+                if (y < 0) {
+                    y += this.nside;
+                    nbnum -= 3;
+                }
+                else if (y >= this.nside) {
+                    y -= this.nside;
+                    nbnum += 3;
+                }
+                let f = this.facearray[nbnum][face_num];
+                if (f >= 0) {
+                    let bits = this.swaparray[nbnum][face_num >>> 2];
+                    if ((bits & 1) > 0) {
+                        x = Math.floor(this.nside - x - 1);
+                    }
+                    if ((bits & 2) > 0) {
+                        y = Math.floor(this.nside - y - 1);
+                    }
+                    if ((bits & 4) > 0) {
+                        let tint = x;
+                        x = y;
+                        y = tint;
+                    }
+                    result[i] = this.xyf2nest(x, y, f);
+                }
+                else {
+                    result[i] = -1;
+                }
+            }
+        }
+        return result;
+    }
+    ;
+    nside2order(nside) {
+        return ((nside & (nside - 1)) != 0) ? -1 : Math.log2(nside);
+    }
+    ;
+    nest2xyf(ipix) {
+        let pix = Math.floor(ipix & (this.npface - 1));
+        let xyf = new Xyf(this.compress_bits(pix), this.compress_bits(pix >> 1), Math.floor((ipix >> (2 * this.order))));
+        return xyf;
+    }
+    ;
+    xyf2nest(ix, iy, face_num) {
+        return Math.floor(face_num << (2 * this.order))
+            + this.spread_bits(ix) + (this.spread_bits(iy) << 1);
+    }
+    ;
+    loc2pix(hploc) {
+        let z = hploc.z;
+        let phi = hploc.phi;
+        let za = Math.abs(z);
+        let tt = this.fmodulo((phi * this.inv_halfpi), 4.0); // in [0,4)
+        let pixNo;
+        if (za <= this.twothird) { // Equatorial region
+            let temp1 = this.nside * (0.5 + tt);
+            let temp2 = this.nside * (z * 0.75);
+            let jp = Math.floor(temp1 - temp2); // index of ascending edge line
+            let jm = Math.floor(temp1 + temp2); // index of descending edge line
+            let ifp = Math.floor(jp >>> this.order); // in {0,4}
+            let ifm = Math.floor(jm >>> this.order);
+            let face_num = Math.floor((ifp == ifm) ? (ifp | 4) : ((ifp < ifm) ? ifp : (ifm + 8)));
+            let ix = Math.floor(jm & (this.nside - 1));
+            let iy = Math.floor(this.nside - (jp & (this.nside - 1)) - 1);
+            pixNo = this.xyf2nest(ix, iy, face_num);
+        }
+        else { // polar region, za > 2/3
+            let ntt = Math.min(3, Math.floor(tt));
+            let tp = tt - ntt;
+            let tmp = ((za < 0.99) || (!hploc.have_sth)) ?
+                this.nside * Math.sqrt(3 * (1 - za)) :
+                this.nside * hploc.sth / Math.sqrt((1.0 + za) / 3.);
+            let jp = Math.floor(tp * tmp); // increasing edge line index
+            let jm = Math.floor((1.0 - tp) * tmp); // decreasing edge line index
+            if (jp >= this.nside) {
+                jp = this.nside - 1; // for points too close to the boundary
+            }
+            if (jm >= this.nside) {
+                jm = this.nside - 1;
+            }
+            if (z >= 0) {
+                pixNo = this.xyf2nest(Math.floor(this.nside - jm - 1), Math.floor(this.nside - jp - 1), ntt);
+            }
+            else {
+                pixNo = this.xyf2nest(Math.floor(jp), Math.floor(jm), ntt + 8);
+            }
+        }
+        return pixNo;
+    }
+    ;
+    /** Returns the normalized 3-vector corresponding to the center of the
+    supplied pixel.
+    @param pix long the requested pixel number.
+    @return the pixel's center coordinates. */
+    pix2vec(pix) {
+        return this.pix2loc(pix).toVec3();
+    }
+    ;
+    /** Returns the Zphi corresponding to the center of the supplied pixel.
+     @param pix the requested pixel number.
+     @return the pixel's center coordinates. */
+    pix2zphi(pix) {
+        return this.pix2loc(pix).toZphi();
+    }
+    pix2ang(pix, mirror) {
+        return this.pix2loc(pix).toPointing(mirror);
+    }
+    /**
+     * @param pix long
+     * @return Hploc
+     */
+    pix2loc(pix) {
+        let loc = new Hploc(undefined);
+        let xyf = this.nest2xyf(pix);
+        let jr = ((this.jrll[xyf.face]) << this.order) - xyf.ix - xyf.iy - 1;
+        let nr;
+        if (jr < this.nside) {
+            nr = jr;
+            let tmp = (nr * nr) * this.fact2;
+            loc.z = 1 - tmp;
+            if (loc.z > 0.99) {
+                loc.sth = Math.sqrt(tmp * (2. - tmp));
+                loc.have_sth = true;
+            }
+        }
+        else if (jr > this.nl3) {
+            nr = this.nl4 - jr;
+            let tmp = (nr * nr) * this.fact2;
+            loc.z = tmp - 1;
+            if (loc.z < -0.99) {
+                loc.sth = Math.sqrt(tmp * (2. - tmp));
+                loc.have_sth = true;
+            }
+        }
+        else {
+            nr = this.nside;
+            loc.z = (this.nl2 - jr) * this.fact1;
+        }
+        let tmp = (this.jpll[xyf.face]) * nr + xyf.ix - xyf.iy;
+        //      	assert(tmp<8*nr); // must not happen
+        if (tmp < 0) {
+            tmp += 8 * nr;
+        }
+        loc.phi = (nr == this.nside) ? 0.75 * Constants.halfpi * tmp * this.fact1 : (0.5 * Constants.halfpi * tmp) / nr;
+        // loc.setPhi((nr == this.nside) ? 0.75 * Constants.halfpi * tmp * this.fact1 : (0.5 * Constants.halfpi * tmp)/nr);
+        return loc;
+    }
+    ;
+    za2vec(z, a) {
+        const sin_theta = Math.sqrt(1 - z * z);
+        const X = sin_theta * Math.cos(a);
+        const Y = sin_theta * Math.sin(a);
+        return new Vec3(X, Y, z);
+    }
+    ang2vec(theta, phi) {
+        const z = Math.cos(theta);
+        return this.za2vec(z, phi);
+    }
+    vec2ang(v) {
+        const { z, a } = this.vec2za(v.getX(), v.getY(), v.getZ());
+        return { theta: Math.acos(z), phi: a };
+    }
+    vec2za(X, Y, z) {
+        const r2 = X * X + Y * Y;
+        if (r2 == 0)
+            return { z: z < 0 ? -1 : 1, a: 0 };
+        else {
+            const PI2 = Math.PI / 2;
+            const a = (Math.atan2(Y, X) + PI2) % PI2;
+            z /= Math.sqrt(z * z + r2);
+            return { z, a };
+        }
+    }
+    ang2pix(ptg, mirror) {
+        return this.loc2pix(new Hploc(ptg));
+    }
+    ;
+    fmodulo(v1, v2) {
+        if (v1 >= 0) {
+            return (v1 < v2) ? v1 : v1 % v2;
+        }
+        var tmp = v1 % v2 + v2;
+        return (tmp === v2) ? 0.0 : tmp;
+    }
+    ;
+    compress_bits(v) {
+        var raw = Math.floor((v & 0x5555)) | Math.floor(((v & 0x55550000) >>> 15));
+        var compressed = this.ctab[raw & 0xff] | (this.ctab[raw >>> 8] << 4);
+        return compressed;
+    }
+    ;
+    spread_bits(v) {
+        return Math.floor(this.utab[v & 0xff]) | Math.floor((this.utab[(v >>> 8) & 0xff] << 16))
+            | Math.floor((this.utab[(v >>> 16) & 0xff] << 32)) | Math.floor((this.utab[(v >>> 24) & 0xff] << 48));
+    }
+    ;
+    /**
+     * Returns a range set of pixels that overlap with the convex polygon
+     * defined by the {@code vertex} array.
+     * <p>
+     * This method is more efficient in the RING scheme.
+     * <p>
+     * This method may return some pixels which don't overlap with the polygon
+     * at all. The higher {@code fact} is chosen, the fewer false positives are
+     * returned, at the cost of increased run time.
+     *
+     * @param vertex
+     *            an array containing the vertices of the requested convex
+     *            polygon.
+     * @param fact
+     *            The overlapping test will be done at the resolution
+     *            {@code fact*nside}. For NESTED ordering, {@code fact} must be
+     *            a power of 2, else it can be any positive integer. A typical
+     *            choice would be 4.
+     * @return the requested set of pixel number ranges
+     */
+    queryPolygonInclusive(vertex, fact) {
+        let inclusive = (fact != 0);
+        let nv = vertex.length;
+        //        let ncirc = inclusive ? nv+1 : nv;
+        if (!(nv >= 3)) {
+            console.log("not enough vertices in polygon");
+            return;
+        }
+        let vv = new Array();
+        for (let i = 0; i < nv; ++i) {
+            vv[i] = Vec3.pointing2Vec3(vertex[i]);
+        }
+        let normal = new Array();
+        let flip = 0;
+        let index = 0;
+        let back = false;
+        while (index < vv.length) {
+            let first = vv[index];
+            let medium = null;
+            let last = null;
+            if (index == vv.length - 1) {
+                last = vv[1];
+                medium = vv[0];
+            }
+            else if (index == vv.length - 2) {
+                last = vv[0];
+                medium = vv[index + 1];
+            }
+            else {
+                medium = vv[index + 1];
+                last = vv[index + 2];
+            }
+            normal[index] = first.cross(medium).norm();
+            let hnd = normal[index].dot(last);
+            if (index == 0) {
+                flip = (hnd < 0.) ? -1 : 1;
+                let tmp = new Pointing(first); // TODO not used
+                back = false;
+            }
+            else {
+                let flipThnd = flip * hnd;
+                if (flipThnd < 0) {
+                    let tmp = new Pointing(medium);
+                    vv.splice(index + 1, 1);
+                    normal.splice(index, 1);
+                    back = true;
+                    index -= 1;
+                    continue;
+                }
+                else {
+                    let tmp = new Pointing(first);
+                    back = false;
+                }
+            }
+            normal[index].scale(flip);
+            index += 1;
+        }
+        nv = vv.length;
+        let ncirc = inclusive ? nv + 1 : nv;
+        let rad = new Array(ncirc);
+        rad = rad.fill(Constants.halfpi);
+        //        rad = rad.fill(1.5707963267948966);
+        //        let p = "1.5707963267948966";
+        //        rad = rad.fill(parseFloat(p));
+        if (inclusive) {
+            let cf = new CircleFinder(vv);
+            normal[nv] = cf.getCenter();
+            rad[nv] = Hploc.acos(cf.getCosrad());
+        }
+        return this.queryMultiDisc(normal, rad, fact);
+    }
+    ;
+    /**
+     * For NEST schema only
+     *
+     * @param normal:
+     *            Vec3[]
+     * @param rad:
+     *            Float32Array
+     * @param fact:
+     *            The overlapping test will be done at the resolution
+     *            {@code fact*nside}. For NESTED ordering, {@code fact} must be
+     *            a power of 2, else it can be any positive integer. A typical
+     *            choice would be 4.
+     * @return RangeSet the requested set of pixel number ranges
+     */
+    queryMultiDisc(norm, rad, fact) {
+        this.computeBn();
+        let inclusive = (fact != 0);
+        let nv = norm.length;
+        // HealpixUtils.check(nv==rad.lengt0,"inconsistent input arrays");
+        if (!(nv == rad.length)) {
+            console.error("inconsistent input arrays");
+            return;
+        }
+        let res = new RangeSet(4 << 1);
+        // Removed code for Scheme.RING
+        let oplus = 0;
+        if (inclusive) {
+            if (!(Math.pow(2, this.order_max - this.order) >= fact)) {
+                console.error("invalid oversampling factor");
+            }
+            if (!((fact & (fact - 1)) == 0)) {
+                console.error("oversampling factor must be a power of 2");
+            }
+            oplus = this.ilog2(fact);
+        }
+        let omax = this.order + oplus; // the order up to which we test
+        // TODO: ignore all disks with radius>=pi
+        //        let crlimit = new Float32Array[omax+1][nv][3];
+        let crlimit = new Array(omax + 1);
+        let o;
+        let i;
+        for (o = 0; o <= omax; ++o) { // prepare data at the required orders
+            crlimit[o] = new Array(nv);
+            let dr = this.bn[o].maxPixrad(); // safety distance
+            for (i = 0; i < nv; ++i) {
+                crlimit[o][i] = new Float64Array(3);
+                crlimit[o][i][0] = (rad[i] + dr > Math.PI) ? -1 : Hploc.cos(rad[i] + dr);
+                crlimit[o][i][1] = (o == 0) ? Hploc.cos(rad[i]) : crlimit[0][i][1];
+                crlimit[o][i][2] = (rad[i] - dr < 0.) ? 1. : Hploc.cos(rad[i] - dr);
+            }
+        }
+        let stk = new pstack(12 + 3 * omax);
+        for (let i = 0; i < 12; i++) { // insert the 12 base pixels in reverse
+            // order
+            stk.push(11 - i, 0);
+        }
+        while (stk.size() > 0) { // as long as there are pixels on the stack
+            // pop current pixel number and order from the stack
+            let pix = stk.ptop();
+            let o = stk.otop();
+            stk.pop();
+            let pv = this.bn[o].pix2vec(pix);
+            let zone = 3;
+            for (let i = 0; (i < nv) && (zone > 0); ++i) {
+                let crad = pv.dot(norm[i]);
+                for (let iz = 0; iz < zone; ++iz) {
+                    if (crad < crlimit[o][i][iz]) {
+                        zone = iz;
+                    }
+                }
+            }
+            if (zone > 0) {
+                this.check_pixel(o, omax, zone, res, pix, stk, inclusive);
+            }
+        }
+        return res;
+    }
+    ;
+    /** Integer base 2 logarithm.
+    @param arg
+    @return the largest integer {@code n} that fulfills {@code 2^n<=arg}.
+    For negative arguments and zero, 0 is returned. */
+    ilog2(arg) {
+        let max = Math.max(arg, 1);
+        return 31 - Math.clz32(max);
+    }
+    ;
+    /** Computes the cosine of the angular distance between two z, phi positions
+      on the unit sphere. */
+    cosdist_zphi(z1, phi1, z2, phi2) {
+        return z1 * z2 + Hploc.cos(phi1 - phi2) * Math.sqrt((1.0 - z1 * z1) * (1.0 - z2 * z2));
+    }
+    /**
+     * @param int o
+     * @param int omax
+     * @param int zone
+     * @param RangeSet pixset
+     * @param long pix
+     * @param pstack stk
+     * @param boolean inclusive
+     */
+    check_pixel(o, omax, zone, pixset, pix, stk, inclusive) {
+        if (zone == 0)
+            return;
+        if (o < this.order) {
+            if (zone >= 3) { // output all subpixels
+                let sdist = 2 * (this.order - o); // the "bit-shift distance" between map orders
+                pixset.append1(pix << sdist, ((pix + 1) << sdist));
+            }
+            else { // (zone>=1)
+                for (let i = 0; i < 4; ++i) {
+                    stk.push(4 * pix + 3 - i, o + 1); // add children
+                }
+            }
+        }
+        else if (o > this.order) { // this implies that inclusive==true
+            if (zone >= 2) { // pixel center in shape
+                pixset.append(pix >>> (2 * (o - this.order))); // output the parent pixel at order
+                stk.popToMark(); // unwind the stack
+            }
+            else { // (zone>=1): pixel center in safety range
+                if (o < omax) { // check sublevels
+                    for (let i = 0; i < 4; ++i) { // add children in reverse order
+                        stk.push(4 * pix + 3 - i, o + 1); // add children
+                    }
+                }
+                else { // at resolution limit
+                    pixset.append(pix >>> (2 * (o - this.order))); // output the parent pixel at order
+                    stk.popToMark(); // unwind the stack
+                }
+            }
+        }
+        else { // o==order
+            if (zone >= 2) {
+                pixset.append(pix);
+            }
+            else if (inclusive) { // and (zone>=1)
+                if (this.order < omax) { // check sublevels
+                    stk.mark(); // remember current stack position
+                    for (let i = 0; i < 4; ++i) { // add children in reverse order
+                        stk.push(4 * pix + 3 - i, o + 1); // add children
+                    }
+                }
+                else { // at resolution limit
+                    pixset.append(pix); // output the pixel
+                }
+            }
+        }
+    }
+    /** Returns the maximum angular distance between a pixel center and its
+    corners.
+    @return maximum angular distance between a pixel center and its
+      corners. */
+    maxPixrad() {
+        let zphia = new Zphi(2. / 3., Math.PI / this.nl4);
+        let xyz1 = this.convertZphi2xyz(zphia);
+        let va = new Vec3(xyz1[0], xyz1[1], xyz1[2]);
+        let t1 = 1. - 1. / this.nside;
+        t1 *= t1;
+        let zphib = new Zphi(1 - t1 / 3, 0);
+        let xyz2 = this.convertZphi2xyz(zphib);
+        let vb = new Vec3(xyz2[0], xyz2[1], xyz2[2]);
+        return va.angle(vb);
+    }
+    ;
+    /**
+     * this is a workaround replacing the Vec3(Zphi) constructor.
+     */
+    convertZphi2xyz(zphi) {
+        let sth = Math.sqrt((1.0 - zphi.z) * (1.0 + zphi.z));
+        let x = sth * Hploc.cos(zphi.phi);
+        let y = sth * Hploc.sin(zphi.phi);
+        let z = zphi.z;
+        return [x, y, z];
+    }
+    ;
+    /** Returns a range set of pixels which overlap with a given disk. <p>
+      This method is more efficient in the RING scheme. <p>
+      This method may return some pixels which don't overlap with
+      the polygon at all. The higher {@code fact} is chosen, the fewer false
+      positives are returned, at the cost of increased run time.
+      @param ptg the angular coordinates of the disk center
+      @param radius the radius (in radians) of the disk
+      @param fact The overlapping test will be done at the resolution
+        {@code fact*nside}. For NESTED ordering, {@code fact} must be a power
+        of 2, else it can be any positive integer. A typical choice would be 4.
+      @return the requested set of pixel number ranges  */
+    queryDiscInclusive(ptg, radius, fact) {
+        this.computeBn();
+        let inclusive = (fact != 0);
+        let pixset = new RangeSet();
+        if (radius >= Math.PI) { // disk covers the whole sphere
+            pixset.append1(0, this.npix);
+            return pixset;
+        }
+        let oplus = 0;
+        if (inclusive) {
+            // HealpixUtils.check ((1L<<order_max)>=fact,"invalid oversampling factor");
+            if (!((fact & (fact - 1)) == 0)) {
+                console.error("oversampling factor must be a power of 2");
+            }
+            oplus = this.ilog2(fact);
+        }
+        let omax = Math.min(this.order_max, this.order + oplus); // the order up to which we test
+        let vptg = Vec3.pointing2Vec3(ptg);
+        let crpdr = new Array(omax + 1);
+        let crmdr = new Array(omax + 1);
+        let cosrad = Hploc.cos(radius);
+        let sinrad = Hploc.sin(radius);
+        for (let o = 0; o <= omax; o++) { // prepare data at the required orders
+            let dr = this.mpr[o]; // safety distance
+            let cdr = this.cmpr[o];
+            let sdr = this.smpr[o];
+            crpdr[o] = (radius + dr > Math.PI) ? -1. : cosrad * cdr - sinrad * sdr;
+            crmdr[o] = (radius - dr < 0.) ? 1. : cosrad * cdr + sinrad * sdr;
+        }
+        let stk = new pstack(12 + 3 * omax);
+        for (let i = 0; i < 12; i++) { // insert the 12 base pixels in reverse order
+            stk.push(11 - i, 0);
+        }
+        while (stk.size() > 0) { // as long as there are pixels on the stack
+            // pop current pixel number and order from the stack
+            let pix = stk.ptop();
+            let curro = stk.otop();
+            stk.pop();
+            let pos = this.bn[curro].pix2zphi(pix);
+            // cosine of angular distance between pixel center and disk center
+            let cangdist = this.cosdist_zphi(vptg.z, ptg.phi, pos.z, pos.phi);
+            if (cangdist > crpdr[curro]) {
+                let zone = (cangdist < cosrad) ? 1 : ((cangdist <= crmdr[curro]) ? 2 : 3);
+                this.check_pixel(curro, omax, zone, pixset, pix, stk, inclusive);
+            }
+        }
+        return pixset;
+    }
+}
+//# sourceMappingURL=Healpix.js.map
+;// ./node_modules/healpixjs/lib-esm/index.js
+
+
+
+
+
+
+
+
+
+
+
+//# sourceMappingURL=index.js.map
+;// ./src/Global.ts
+
+
+
+class Global {
+    // --- cached / runtime state ---
+    // private _camera: Camera | null;
+    // private _gl: GL | null;
+    _healpix;
+    // --- config/state flags ---
+    _selectionnside;
+    // private _healpix4footprints: boolean;
+    _useCORSProxy;
+    _corsProxyUrl;
+    _maxDecimals;
+    _debug;
+    _insideSphere;
+    _version;
+    constructor() {
+        this._useCORSProxy = bootSetup.useCORSProxy;
+        this._corsProxyUrl = bootSetup.corsProxyUrl;
+        this._maxDecimals = bootSetup.maxDecimals;
+        this._debug = bootSetup.debug;
+        this._insideSphere = bootSetup.insideView;
+        this._version = bootSetup.version;
+        this._healpix = {};
+        this._selectionnside = 32;
+    }
+    init() {
+        console.log('Global.init()');
+    }
+    // --- getters/setters ---
+    get version() { return this._version; }
+    set corsProxyUrl(url) { this._corsProxyUrl = url; }
+    get corsProxyUrl() { return this._corsProxyUrl; }
+    get useCORSProxy() { return this._useCORSProxy; }
+    set useCORSProxy(enabled) { this._useCORSProxy = enabled; }
+    get debug() { return this._debug; }
+    getHealpix(order) {
+        if (this._healpix[order] === undefined) {
+            // order is HEALPix "order" ⇒ nside = 2^order
+            this._healpix[order] = new Healpix(Math.pow(2, order));
+        }
+        return this._healpix[order];
+    }
+    get MAX_DECIMALS() { return this._maxDecimals; }
+    set insideSphere(v) { this._insideSphere = v; }
+    get insideSphere() { return this._insideSphere; }
+    get nsideForSelection() { return this._selectionnside; }
+}
+const global = new Global();
+/* harmony default export */ const src_Global = (global);
+
 ;// ./src/Camera.ts
 /**
  * @author Fabrizio Giordano (Fab)
@@ -4709,45 +4701,10 @@ class Camera {
 }
 /* harmony default export */ const src_Camera = (Camera);
 
-;// ./src/utils/ComputePerspectiveMatrix.ts
-
-class ComputePerspectiveMatrixSingleton {
-    _pMatrix = null;
-    _aspectRatio = 1;
-    get pMatrix() {
-        return this._pMatrix;
-    }
-    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
-        this._aspectRatio = canvas.width / canvas.height;
-        const p = mat4_create();
-        let farPlane;
-        if (insideSphere) {
-            // Inside the sphere: cap slightly beyond radius
-            farPlane = 1.1;
-        }
-        else {
-            const camMat = camera.getCameraMatrix();
-            const distCamera = -Number(camMat[14]); // camera z translation
-            const r = 1; // HiPS sphere radius (inject real value if available)
-            // Guard against negative due to rounding/logic
-            const c2 = Math.sqrt(Math.max(distCamera ** 2 - r ** 2, 0));
-            const beta = Math.atan2(c2, r);
-            const cf = c2 * Math.sin(beta);
-            farPlane = cf > 0 ? cf : r;
-        }
-        perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
-        this._pMatrix = p;
-        return p;
-    }
-}
-const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton();
-/* harmony default export */ const ComputePerspectiveMatrix = (computePerspectiveMatrixSingleton);
-
 ;// ./src/utils/RayPickingUtils.ts
 /**
  * @author Fabrizio Giordano (Fab)
  */
-
 
 
 class RayPickingUtils {
@@ -4844,21 +4801,11 @@ class RayPickingUtils {
      * Compute intersection with a single model (defaults to the Healpix grid).
      * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
      */
-    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera) {
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        // const camera = global.camera;
+    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera, pMatrix) {
         const vMatrix = camera.getCameraMatrix();
-        const canvas = webgl.canvas;
-        console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`);
-        // if (!camera) {
-        //   throw new Error("Camera is not initialized.");
-        // }
-        // const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+        // const canvas = webgl.canvas as HTMLCanvasElement
+        // console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`)
         const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
-        // const t = RayPickingUtils.raySphere(
-        //   camera.getCameraPosition() as ReadonlyVec3,
-        //   rayWorld, healpixGrid
-        // );
         const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
         let intersectionModelPoint = [];
         if (t >= 0) {
@@ -7294,11 +7241,13 @@ class AncestorTile {
     vertexIndexBuffer;
     _tileBuffer;
     _hipsShaderProgram;
-    constructor(tileno, order, hips, tileBuffer, hipsShaderProgram) {
+    _webgl;
+    constructor(tileno, order, hips, tileBuffer, hipsShaderProgram, webgl) {
         this._hipsShaderProgram = hipsShaderProgram;
         this._tileBuffer = tileBuffer;
         this._hips = hips;
         this._tileno = tileno;
+        this._webgl = webgl;
         this._format = hips.format;
         this._baseurl = hips.baseURL;
         this._isGalacticHips = hips.isGalacticHips;
@@ -7324,7 +7273,7 @@ class AncestorTile {
     imageLoaded() {
         this.textureLoaded();
         this.initModelBuffer();
-        const gl = src_Global.gl;
+        const gl = this._webgl;
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
@@ -7333,7 +7282,7 @@ class AncestorTile {
     textureLoaded() {
         // hipsShaderProgram.enableProgram()
         this._hipsShaderProgram.enableProgram();
-        const gl = src_Global.gl;
+        const gl = this._webgl;
         this._texture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
@@ -7349,7 +7298,7 @@ class AncestorTile {
         }
     }
     initModelBuffer() {
-        const gl = src_Global.gl;
+        const gl = this._webgl;
         this.vertexPosition = [];
         this.vertexPositionBuffer = [];
         this.vertexIndices = new Uint16Array();
@@ -7391,7 +7340,6 @@ class AncestorTile {
     }
     // Version that uses getPointsForXyfNoStep (kept for reference; not used in this class)
     setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        const gl = src_Global.gl;
         this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
         const step = 1 / (1 << orderjump);
         let p = 0;
@@ -7423,13 +7371,13 @@ class AncestorTile {
                 p++;
             }
         }
-        this.vertexPositionBuffer[qidx] = src_Global.gl.createBuffer();
-        src_Global.gl.bindBuffer(src_Global.gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-        src_Global.gl.bufferData(src_Global.gl.ARRAY_BUFFER, this.vertexPosition[qidx], src_Global.gl.STATIC_DRAW);
+        this.vertexPositionBuffer[qidx] = this._webgl.createBuffer();
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexPosition[qidx], this._webgl.STATIC_DRAW);
     }
     // Version used by the original JS, collecting _pixels via xyf2nest + getBoundaries
     setupPositionAndTexture4Quadrant(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        const gl = src_Global.gl;
+        const gl = this._webgl;
         this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
         const step = 1 / (1 << orderjump);
         let p = 0;
@@ -7478,7 +7426,7 @@ class AncestorTile {
         }
         // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
         this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        const gl = src_Global.gl;
+        const gl = this._webgl;
         gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
         gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
         // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
@@ -7611,12 +7559,11 @@ class AllSky {
             gl.generateMipmap(gl.TEXTURE_2D);
     }
     initModelBuffer() {
-        const gl = src_Global.gl;
-        const hpx = src_Global.getHealpix(this._order);
-        this._maxTiles = hpx.getNPix();
+        const gl = this._webgl;
         const orderjump = 1;
         const tgtHpxOrder = this._order + orderjump;
         const healpix = src_Global.getHealpix(this._order);
+        this._maxTiles = healpix.getNPix();
         const tgtHealpix = src_Global.getHealpix(tgtHpxOrder);
         this._numFacesXTile = 4 ** orderjump; // used in gl.draw
         this._numFaces = this._numFacesXTile * this._maxTiles;
@@ -7776,7 +7723,6 @@ class AllSky {
 // import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 
 
-
 class HiPS extends AbstractSkyEntity {
     _ancestorTiles;
     _allSkyTile;
@@ -7825,7 +7771,7 @@ class HiPS extends AbstractSkyEntity {
         }
         else {
             for (let t = 0; t < 12; t++) {
-                this._ancestorTiles.push(new hips_AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram));
+                this._ancestorTiles.push(new hips_AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl));
             }
         }
     }
@@ -7915,16 +7861,14 @@ class HiPS extends AbstractSkyEntity {
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
     draw(input) {
-        // const cameraMatrix = input.cameraMatrix
-        // const camera = input.camera
         const vMatrix = input.camera.getCameraMatrix();
-        // if (!global.camera || global.camera.getCameraMatrix() === undefined) return
         if (!vMatrix)
             return;
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
         this.refresh();
-        // const vMatrix = global.camera.getCameraMatrix() as Float32Array
-        // const vMatrix = cameraMatrix
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
         const mMatrix = this.getModelMatrix();
         if (this._allSky && this._allSkyTile) {
             if (this.isGalacticHips) {
@@ -7958,6 +7902,43 @@ class HiPS extends AbstractSkyEntity {
     }
 }
 /* harmony default export */ const hips_HiPS = (HiPS);
+
+;// ./src/utils/PerspectiveMatrixManager.ts
+
+class PerspectiveMatrixManager {
+    _pMatrix;
+    _aspectRatio = 1;
+    constructor(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
+        this._pMatrix = this.computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane, insideSphere);
+    }
+    get pMatrix() {
+        return this._pMatrix;
+    }
+    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
+        this._aspectRatio = canvas.width / canvas.height;
+        const p = mat4_create();
+        let farPlane;
+        if (insideSphere) {
+            // Inside the sphere: cap slightly beyond radius
+            farPlane = 1.1;
+        }
+        else {
+            const camMat = camera.getCameraMatrix();
+            const distCamera = -Number(camMat[14]); // camera z translation
+            const r = 1; // HiPS sphere radius (inject real value if available)
+            // Guard against negative due to rounding/logic
+            const c2 = Math.sqrt(Math.max(distCamera ** 2 - r ** 2, 0));
+            const beta = Math.atan2(c2, r);
+            const cf = c2 * Math.sin(beta);
+            farPlane = cf > 0 ? cf : r;
+        }
+        perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
+        this._pMatrix = p;
+        return p;
+    }
+}
+// const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton();
+// export default computePerspectiveMatrixSingleton;
 
 ;// ./src/utils/CoordsType.ts
 /**
@@ -7995,7 +7976,7 @@ class Point {
         this._xyz = [0, 0, 0];
         this._raDecDeg = [0, 0];
         // Prefer config value if present, fallback to 12
-        const MAX_DECIMALS = src_Global.MAX_DECIMALS ?? src_Global.maxDecimals ?? 12;
+        const MAX_DECIMALS = src_Global.MAX_DECIMALS ?? 12;
         if (in_type === CoordsType.CARTESIAN) {
             const { x, y, z } = in_options;
             this._x = Number(x.toFixed(MAX_DECIMALS));
@@ -8115,7 +8096,6 @@ class Point {
 
 
 
-
 class FoVUtils {
     /**
      * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
@@ -8130,17 +8110,17 @@ class FoVUtils {
      */
     static getFoVPolygon(
     // _pMatrix: ReadonlyMat4 | null,
-    camera, canvas, model, healpixGrid, webgl) {
+    camera, canvas, model, healpixGrid, webgl, pMatrix) {
         // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
         //   _pMatrix) as ReadonlyMat4;
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4 
         const vMatrix = camera.getCameraMatrix();
         const mMatrix = model.getModelMatrix();
         const canvasWidth = canvas.clientWidth;
         const canvasHeight = canvas.clientHeight;
         let points = [];
         // First check: does the sphere cover the whole screen?
-        const intersectionWithModel = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera);
+        const intersectionWithModel = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
         if (intersectionWithModel.length > 0) {
             // Fully covered → grab corners + midpoints (CASE C)
             const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
@@ -8155,8 +8135,8 @@ class FoVUtils {
             const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
             const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
             const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
-            const intersectionTopMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera);
-            const intersectionRightMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera);
+            const intersectionTopMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera, pMatrix);
+            const intersectionRightMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera, pMatrix);
             // CASE A: zoomed out, hemisphere fully visible
             if (intersectionTopMiddle.length === 0 &&
                 intersectionRightMiddle.length === 0) {
@@ -8212,14 +8192,14 @@ class FoVUtils {
     static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
-        const topLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera);
-        const middleTop = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera);
-        const topRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera);
-        const middleRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera);
-        const bottomRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera);
-        const middleBottom = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera);
-        const bottomLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera);
-        const middleLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera);
+        const topLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
+        const middleTop = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera, pMatrix);
+        const topRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera, pMatrix);
+        const middleRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera, pMatrix);
+        const bottomRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera, pMatrix);
+        const middleBottom = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera, pMatrix);
+        const bottomLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera, pMatrix);
+        const middleLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera, pMatrix);
         const out = [];
         const pushIf = (ip) => {
             if (ip.length > 0) {
@@ -8237,10 +8217,10 @@ class FoVUtils {
         return out;
     }
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas, healpixGrid, webgl, camera) {
+    static getCenterJ2000(canvas, healpixGrid, webgl, camera, pMatrix) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
-        const center = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera);
+        const center = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera, pMatrix);
         if (center.length <= 0)
             throw Error(`Central point is null`);
         return new Point({ x: center[0], y: center[1], z: center[2] }, CoordsType.CARTESIAN);
@@ -9121,7 +9101,6 @@ class GridTextHelper {
 
 
 
-
 class FoV {
     fovXDeg = 180;
     fovYDeg = 180;
@@ -9132,7 +9111,7 @@ class FoV {
         this._webgl = webgl;
     }
     /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere, healpixGridSingleton, camera) {
+    getFoV(insideSphere, healpixGridSingleton, camera, pMatrix) {
         // const gl = webgl
         const gl = this._webgl;
         if (!gl || !gl.canvas) {
@@ -9143,17 +9122,12 @@ class FoV {
             return this;
         }
         // horizontal FoV: ray through (centerY)
-        // const x = this.computeAngle(0, gl.canvas.height / 2, insideSphere)
-        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera);
+        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
+        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix);
         this.fovXDeg = xFoVComputed.angleDeg;
-        // this.xDistance = xFoVComputed.distance
-        // this.xAngleRatio = this.fovXDeg / this.xDistance
         // vertical FoV: ray through (centerX)
-        // this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere)
-        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera);
+        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix);
         this.fovYDeg = yFoVComputed.angleDeg;
-        // this.yDistance = yFoVComputed.distance
-        // this.yAngleRatio = this.fovYDeg / this.yDistance
         this._minFoV = this.minFoV;
         this.ratio = this.computeRatio(camera);
         return this;
@@ -9191,9 +9165,8 @@ class FoV {
         return distance;
     }
     /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera) {
-        // const camera = global.camera
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera, pMatrix) {
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix
         if (!pMatrix) {
             // Handle the error or assign a default value
             console.warn('FoV: projection matrix is null');
@@ -10201,7 +10174,7 @@ class VisibleTilesManager {
         return this._healpixGrid.visibleorder;
     }
     // computeVisiblePixels(): void {
-    computeVisiblePixels(order, webgl, camera) {
+    computeVisiblePixels(order, webgl, camera, pMatrix) {
         if (!this.initialised)
             return;
         // let order = healpixGridSingleton.visibleorder;
@@ -10231,7 +10204,7 @@ class VisibleTilesManager {
             // Sample a grid of screen points, project to the sphere, then to galactic
             for (let i = 0; i <= maxX; i += maxX / 30) {
                 for (let j = 0; j <= maxY; j += maxY / 30) {
-                    const hit = utils_RayPickingUtils.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl, camera);
+                    const hit = utils_RayPickingUtils.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl, camera, pMatrix);
                     if (hit.length > 0) {
                         // Equatorial -> Galactic (use _galacticMatrix)
                         const galVec = vec4_create();
@@ -10321,7 +10294,7 @@ class VisibleTilesManager {
 
 // import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 // import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
-
+// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 
 
 
@@ -10385,8 +10358,8 @@ class HealpixGrid extends AbstractSkyEntity {
     get INITIAL_ThetaRad() {
         return HealpixGrid.INITIAL_ThetaRad;
     }
-    refreshFoV(camera) {
-        return this.fovObj.getFoV(src_Global.insideSphere, this, camera);
+    refreshFoV(camera, pMatrix) {
+        return this.fovObj.getFoV(src_Global.insideSphere, this, camera, pMatrix);
     }
     getFoV() {
         return this.fovObj;
@@ -10501,8 +10474,8 @@ class HealpixGrid extends AbstractSkyEntity {
     // updateTiles(pixels: number[], order: number) {
     //   return (this as any)._tileBuffer.updateTiles(pixels, order);
     // }
-    refresh(camera) {
-        this.refreshFoV(camera);
+    refresh(camera, pMatrix) {
+        this.refreshFoV(camera, pMatrix);
         const fov = this.getMinFoV();
         // expose to global (legacy)
         // (global as any).hipsFoV = fov;
@@ -10549,7 +10522,10 @@ class HealpixGrid extends AbstractSkyEntity {
         if (!camera)
             return;
         const vMatrix = camera.getCameraMatrix();
-        this.refresh(camera);
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refresh(camera, pMatrix);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();
@@ -10560,7 +10536,7 @@ class HealpixGrid extends AbstractSkyEntity {
         const pixels = visibleTiles.pixels;
         const order = visibleTiles.order;
         this.initBuffers(pixels, order);
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
         this.enableShader(mMatrix, pMatrix, vMatrix);
         // Upload positions
         gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
@@ -10580,7 +10556,7 @@ class HealpixGrid extends AbstractSkyEntity {
         let mvpMatrix = mat4_create();
         mvpMatrix = mat4_multiply(mvpMatrix, pMatrix, mvMatrix);
         // FIX: pass model & pMatrix to match FoVUtils TS signature
-        const center = FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl, camera);
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl, camera, pMatrix);
         const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
         for (let p = 0; p < pixels.length; p++) {
             const pixCenter = src_Global.getHealpix(this._visibleorder).pix2vec(pixels[p]);
@@ -10621,8 +10597,6 @@ class HealpixGrid extends AbstractSkyEntity {
 
 
 
-
-// import healpixGridSingleton from './HealpixGridSingleton.js';
 
 /** Equatorial grid rendered as RA/Dec great-circle line loops */
 class EquatorialGrid extends AbstractSkyEntity {
@@ -10822,6 +10796,9 @@ class EquatorialGrid extends AbstractSkyEntity {
         if (!camera)
             return;
         const vMatrix = camera.getCameraMatrix();
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
         if (!vMatrix)
             return;
         if (this._thetaArray.length === 0)
@@ -10832,8 +10809,7 @@ class EquatorialGrid extends AbstractSkyEntity {
             this.gridText.resetDivSets();
             return;
         }
-        const pMatrix = ComputePerspectiveMatrix.pMatrix;
-        // this.enableShader(mMatrix, pMatrix);
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
         this.enableShader(mMatrix, pMatrix, vMatrix);
         // Draw Dec rings
         for (let i = 0; i < this._phiArray.length; i++) {
@@ -10852,7 +10828,7 @@ class EquatorialGrid extends AbstractSkyEntity {
             super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
         }
         // Label layout (HTML overlay)
-        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera);
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera, pMatrix);
         // MVP = P * V * M
         const mvMatrix = mat4_create();
         // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
@@ -10938,6 +10914,7 @@ class EquatorialGrid extends AbstractSkyEntity {
  */
 class AstroSphere {
     _camera;
+    _perspectiveMatrixManager;
     centralPoinCoords;
     mousePointCoords;
     canvas;
@@ -10968,7 +10945,9 @@ class AstroSphere {
         src_Global.insideSphere = bootSetup.insideSphere;
         this.initCamera();
         this._healpixGrid = new HealpixGrid(this._webgl);
-        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        this._perspectiveMatrixManager = new PerspectiveMatrixManager(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        // computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere)
         this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
         // equatorialGridSingleton.init(healpixGridSingleton.getMinFoV())
         this._equatorialGrid.init(this._healpixGrid.getMinFoV());
@@ -10976,7 +10955,7 @@ class AstroSphere {
         this.startup = true;
         this.addEventListeners(canvas);
         // this.fov = healpixGridSingleton.refreshFoV()
-        this.fov = this._healpixGrid.refreshFoV(this._camera);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
     }
     initCamera() {
         if (bootSetup.insideSphere) {
@@ -11074,7 +11053,7 @@ class AstroSphere {
             }
             else {
                 // 🔥 Use canvas-local coords for picking
-                const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera);
+                const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
                 if (mousePoint && mousePoint.length > 0) {
                     this.mouseHelper.update(mousePoint);
                     this.updateLastMousePoint();
@@ -11092,7 +11071,8 @@ class AstroSphere {
                     fovDeg: this.fov.minFoV,
                     position: this._camera.getCameraPosition(),
                     vMatrix: this._camera.getCameraMatrix(),
-                    pMatrix: ComputePerspectiveMatrix.pMatrix,
+                    // pMatrix: computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+                    pMatrix: this._perspectiveMatrixManager.pMatrix,
                     timestamp: performance.now(),
                     // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
                     centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
@@ -11128,7 +11108,7 @@ class AstroSphere {
     getPhiThetaDeg(canvas) {
         const maxX = canvas.width;
         const maxY = canvas.height;
-        const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera);
+        const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         return cartesianToSpherical(pickerPoint);
     }
     activateHiPS(hipsDescriptor) {
@@ -11173,7 +11153,7 @@ class AstroSphere {
         if (this.healpixGrid == null)
             throw new Error(`healpixGrid is ${this.healpixGrid}`);
         // return FoVUtils.getFoVPolygon(this.camera, this.canvas, healpixGridSingleton)
-        return FoVUtils.getFoVPolygon(this._camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl);
+        return FoVUtils.getFoVPolygon(this._camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl, this._perspectiveMatrixManager.pMatrix);
     }
     changeFoV(deg) {
         // const distance = healpixGridSingleton.getFoV().computeDistanceFromAngle(deg)
@@ -11181,7 +11161,7 @@ class AstroSphere {
         // this.camera.moveAlongView(distance)
         this._camera.translate(distance);
         // healpixGridSingleton.refreshFoV()
-        this._healpixGrid.refreshFoV(this._camera);
+        this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
     }
     changeFoV2(deg) {
         // throw new Error("not Implemented")
@@ -11194,7 +11174,7 @@ class AstroSphere {
         const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
         this._camera.setCameraPosition(newPos);
         // Recompute projection after moving the camera
-        ComputePerspectiveMatrix.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
     }
     getInsideSphere() {
         return src_Global.insideSphere;
@@ -11222,7 +11202,7 @@ class AstroSphere {
         // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
         // global.gl.getExtension('OES_element_index_uint')
         // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
-        ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
         let cameraRotated = false;
         let THETA = 0;
         let PHI = 0;
@@ -11237,15 +11217,17 @@ class AstroSphere {
                 this._camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
                 // this.fov = healpixGridSingleton.refreshFoV()
-                this.fov = this._healpixGrid.refreshFoV(this._camera);
+                this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
                 if (this.prevFov != this.fov.minFoV) {
                     const detail = {
                         fovDeg: this.fov.minFoV,
                         position: this._camera.getCameraPosition(),
                         vMatrix: this._camera.getCameraMatrix(),
-                        pMatrix: ComputePerspectiveMatrix.pMatrix,
+                        // pMatrix: computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+                        pMatrix: this._perspectiveMatrixManager.pMatrix,
                         timestamp: performance.now(),
-                        centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera),
+                        // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera),
+                        centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix),
                         mouseHoverPoint: this.mousePointCoords
                     };
                     this.canvas.dispatchEvent(new CustomEvent('cameraChanged', { detail, bubbles: false, composed: false }));
@@ -11261,7 +11243,7 @@ class AstroSphere {
             this.inertiaX *= 0.95;
             this.inertiaY *= 0.95;
             this._camera.rotate(PHI, THETA);
-            ComputePerspectiveMatrix.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
+            this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
         }
         else {
             this.inertiaY = 0;
@@ -11278,12 +11260,12 @@ class AstroSphere {
         // global.gl.enable(global.gl.CULL_FACE)
         // global.gl.cullFace(global.insideSphere ? global.gl.BACK : global.gl.FRONT)
         // global.gl.blendFunc(global.gl.SRC_ALPHA, global.gl.ONE_MINUS_SRC_ALPHA)
-        this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl, this._camera);
+        this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         // DRAW HiPS
         const skyEntityDrawInput = {
             fovDeg: this._healpixGrid.getMinFoV(),
-            // cameraMatrix: this.camera.getCameraMatrix() as Float32Array}
-            camera: this._camera
+            camera: this._camera,
+            pMatrix: this._perspectiveMatrixManager.pMatrix
         };
         this.activeHiPS.draw(skyEntityDrawInput);
         this._healpixGrid.draw(skyEntityDrawInput);
@@ -11307,12 +11289,12 @@ class AstroSphere {
         }
         this.activeCatalogues.forEach(cat => {
             if (this.activeHiPS) {
-                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix());
+                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.activeFootprintSets.forEach(fst => {
             if (this.activeHiPS) {
-                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix());
+                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
     }
@@ -11817,7 +11799,6 @@ class MetadataManager {
 // import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 
 
-
 // import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 
 // import { TapMetadata } from '../tap/TapMetadata.js';
@@ -12184,27 +12165,23 @@ class CatalogueGL {
                 }
             }
         }
-        // session.updateHoveredSources(this, sourcesHovered);
         return hoveredIndexes;
     }
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
-    draw(in_mMatrix, in_mouseHelper, cameraMatrix) {
+    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
         if (!this.isVisible)
             return;
         if (!this._ready)
             return;
-        if (!cameraMatrix)
+        if (!vMatrix)
             return;
-        // if (!global.camera) return
         if (!this._bufferInitialised)
             this.initBuffer();
         if (!this._webgl)
             return;
-        this._catalogueShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, cameraMatrix
-        // global.camera.getCameraMatrix() as Float32Array
-        );
+        this._catalogueShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
         this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
         // positions
         this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.position, 3, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
@@ -12219,7 +12196,6 @@ class CatalogueGL {
         this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.brightness, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
         this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.brightness);
         // color
-        // const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
         const rgb = colorHex2RGB(this._shapeColor);
         if (this._catalogueShaderProgram.locations.color) {
             this._webgl.uniform4f(this._catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
@@ -12266,16 +12242,21 @@ class CatalogueGL {
 // export default CatalogueGL;
 
 ;// ./src/AstroViewer.ts
+// import global from './Global.js'
 
 
 
 
-
+// & {
+//   viewportWidth: number
+//   viewportHeight: number
+// }
 class AstroViewer {
     astroSphere;
     canvas;
     webgl;
     rafId = null;
+    webglContextList = new Map();
     // API
     run() {
         return this.tick();
@@ -12399,20 +12380,12 @@ class AstroViewer {
         this.astroSphere.toggleInsideSphere();
     }
     // Internal
-    // constructor(canvasDomId: string) {
-    //   this.init(canvasDomId)
-    // }
     constructor(canvasEl) {
         this.init(canvasEl);
+        this.webglContextList = new Map();
     }
-    // private init(canvasDomId: string): void {
     init(canvasEl) {
         console.log('init webgl');
-        // const c = document.getElementById(canvasDomId)
-        // if (!(c instanceof HTMLCanvasElement)) {
-        //   throw new Error(`Element with id ${canvasDomId} is not a canvas.`)
-        // }
-        // this.canvas = c
         this.canvas = canvasEl;
         const gl = this.canvas.getContext('webgl2', { alpha: false });
         if (!gl) {
@@ -12421,8 +12394,8 @@ class AstroViewer {
         }
         // Extend with custom fields used elsewhere
         this.webgl = gl;
-        this.webgl.viewportWidth = this.canvas.width;
-        this.webgl.viewportHeight = this.canvas.height;
+        // this.webgl.viewportWidth = this.canvas.width
+        // this.webgl.viewportHeight = this.canvas.height
         try {
             // 1/255 = 0.00392156862
             this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
@@ -12431,7 +12404,7 @@ class AstroViewer {
             console.log('Error instantiating WebGL context');
         }
         this.initListeners();
-        src_Global.gl = this.webgl;
+        // ; (global as any).gl = this.webgl
         this.astroSphere = new src_AstroSphere(this.canvas, this.webgl);
     }
     initListeners() {
@@ -12445,8 +12418,8 @@ class AstroViewer {
             if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
                 this.canvas.width = newWidth;
                 this.canvas.height = newHeight;
-                this.webgl.viewportWidth = this.canvas.width;
-                this.webgl.viewportHeight = this.canvas.height;
+                // this.webgl.viewportWidth = this.canvas.width
+                // this.webgl.viewportHeight = this.canvas.height
                 this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
             }
         };
@@ -12460,8 +12433,8 @@ class AstroViewer {
         };
         const handleContextRestored = (_event) => {
             console.log('[handleContextRestored]');
-            this.webgl.viewportWidth = this.canvas.width;
-            this.webgl.viewportHeight = this.canvas.height;
+            // this.webgl.viewportWidth = this.canvas.width
+            // this.webgl.viewportHeight = this.canvas.height
             this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
             this.webgl.enable(this.webgl.DEPTH_TEST);
             this.rafId = requestAnimationFrame(() => this.tick());
@@ -12473,8 +12446,6 @@ class AstroViewer {
             });
             // Osserva il canvas o il suo parent (a tua scelta)
             ro.observe(this.canvas);
-            // Se preferisci il contenitore:
-            // if (this.canvas.parentElement) ro.observe(this.canvas.parentElement);
         }
         window.addEventListener('resize', resizeCanvas);
         this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
@@ -12785,7 +12756,7 @@ class FootprintShaderProgram {
 
 // import global from '../../Global.js'
 
-
+// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 // import { TapRepo } from '../tap/TapRepo.js'
 // import {TapMetadataList} from '../tap/TapMetadataList.js'
 // import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
@@ -13162,21 +13133,24 @@ class FootprintSetGL {
     changeColor(color) {
         this._shapeColor = color;
     }
-    draw(in_mMatrix, in_mouseHelper, cameraMatrix) {
+    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
         if (!this.isVisible)
             return;
         if (!this._ready)
             return;
-        if (!cameraMatrix)
+        if (!vMatrix)
             return;
         // if (!global.camera) return
         if (!this._bufferInitialised)
             this.initBuffer();
         if (!this._webgl)
             return;
-        this._footprintShaderProgram.enableShaders(ComputePerspectiveMatrix.pMatrix, in_mMatrix, cameraMatrix
-        // global.camera.getCameraMatrix() as Float32Array
-        );
+        this._footprintShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
+        // this._footprintShaderProgram.enableShaders(
+        //   computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+        //   in_mMatrix,
+        //   vMatrix
+        // )
         if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
             this.checkSelection(in_mouseHelper);
         }

@@ -1,7 +1,10 @@
 import { mat4 } from "gl-matrix";
-class ComputePerspectiveMatrixSingleton {
-    _pMatrix = null;
+export class PerspectiveMatrixManager {
+    _pMatrix;
     _aspectRatio = 1;
+    constructor(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
+        this._pMatrix = this.computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane, insideSphere);
+    }
     get pMatrix() {
         return this._pMatrix;
     }
@@ -28,6 +31,6 @@ class ComputePerspectiveMatrixSingleton {
         return p;
     }
 }
-const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton();
-export default computePerspectiveMatrixSingleton;
-//# sourceMappingURL=ComputePerspectiveMatrix.js.map
+// const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton();
+// export default computePerspectiveMatrixSingleton;
+//# sourceMappingURL=PerspectiveMatrixManager.js.map

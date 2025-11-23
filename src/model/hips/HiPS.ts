@@ -12,7 +12,7 @@ import AncestorTile from './AncestorTile.js'
 import AllSky from './AllSky.js'
 // import global from '../../Global.js'
 import {HiPSDescriptor} from './HiPSDescriptor.js'
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
+// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 import { HealpixGrid } from '../grid/HealpixGrid.js'
 import { ReadonlyMat4 } from 'gl-matrix'
 
@@ -85,7 +85,7 @@ class HiPS extends AbstractSkyEntity {
       this._allSkyTile = new AllSky(this, this._webgl, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram)
     } else {
       for (let t = 0; t < 12; t++) {
-        this._ancestorTiles.push(new AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram))
+        this._ancestorTiles.push(new AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl))
       }
     }
   }
@@ -180,17 +180,15 @@ class HiPS extends AbstractSkyEntity {
 
   draw(input: SkyEntityDrawInput): void {
     
-    // const cameraMatrix = input.cameraMatrix
-    // const camera = input.camera
     const vMatrix = input.camera.getCameraMatrix() as Float32Array
-
-    // if (!global.camera || global.camera.getCameraMatrix() === undefined) return
     if (!vMatrix) return
+
+    const pMatrix = input.pMatrix
+    if (!pMatrix) return
+
     this.refresh()
     
-    // const vMatrix = global.camera.getCameraMatrix() as Float32Array
-    // const vMatrix = cameraMatrix
-    const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
+    // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
     const mMatrix = this.getModelMatrix() as Float32Array
 
     if (this._allSky && this._allSkyTile) {
@@ -200,7 +198,7 @@ class HiPS extends AbstractSkyEntity {
           this._healpixGrid.visibleTilesManager.galAncestorsMap,
           // visibleTilesManager.galVisibleTilesByOrder.order,
           // visibleTilesManager.galAncestorsMap,
-          pMatrix,
+          pMatrix as Float32Array,
           vMatrix,
           mMatrix,
           this.colorMapIdx
@@ -211,7 +209,7 @@ class HiPS extends AbstractSkyEntity {
           this._healpixGrid.visibleTilesManager.ancestorsMap,
           // visibleTilesManager.visibleTilesByOrder.order,
           // visibleTilesManager.ancestorsMap,
-          pMatrix,
+          pMatrix as Float32Array,
           vMatrix,
           mMatrix,
           this.colorMapIdx
@@ -233,7 +231,7 @@ class HiPS extends AbstractSkyEntity {
       // : visibleTilesManager.ancestorsMap
 
     this._ancestorTiles.forEach((ancestor) => {
-      ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx)
+      ancestor.draw(order, map, pMatrix as Float32Array, vMatrix, mMatrix, this.colorMapIdx)
     })
   }
 }

@@ -7,11 +7,10 @@
  * - Keeps original “insideSphere ? 360 - angle : angle” behavior
  */
 
-import { vec3, mat4 } from 'gl-matrix'
-import global from '../Global.js'
+import { vec3, mat4, ReadonlyMat4 } from 'gl-matrix'
 import RayPickingUtils from '../utils/RayPickingUtils.js'
 import { radToDeg } from '../utils/Utils.js'
-import computePerspectiveMatrixSingleton from '../utils/ComputePerspectiveMatrix.js'
+// import computePerspectiveMatrixSingleton from '../utils/ComputePerspectiveMatrix.js'
 import { HealpixGrid } from './grid/HealpixGrid.js'
 import Camera from '../Camera.js'
 // import healpixGridSingleton from './grid/HealpixGridSingleton.js'
@@ -37,7 +36,8 @@ export class FoV {
   }
 
   /** Recomputes FoV for current camera + projection */
-  public getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGrid, camera: Camera): FoV {
+  public getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGrid, 
+    camera: Camera, pMatrix: ReadonlyMat4): FoV {
     // const gl = webgl
     const gl = this._webgl
 
@@ -50,20 +50,14 @@ export class FoV {
     }
 
     // horizontal FoV: ray through (centerY)
-    // const x = this.computeAngle(0, gl.canvas.height / 2, insideSphere)
-    const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
+    // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
+    const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix)
     this.fovXDeg = xFoVComputed.angleDeg
-    // this.xDistance = xFoVComputed.distance
-    // this.xAngleRatio = this.fovXDeg / this.xDistance
 
 
     // vertical FoV: ray through (centerX)
-    // this.fovYDeg = this.computeAngle(gl.canvas.width / 2, 0, insideSphere)
-    const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera)
+    const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix)
     this.fovYDeg = yFoVComputed.angleDeg
-    // this.yDistance = yFoVComputed.distance
-    // this.yAngleRatio = this.fovYDeg / this.yDistance
-
     this._minFoV = this.minFoV
     this.ratio = this.computeRatio(camera)
     return this
@@ -111,9 +105,10 @@ export class FoV {
     canvasX: number, canvasY: number,
     insideSphere: boolean,
     healpixGridSingleton: HealpixGrid,
-    camera: Camera): FoVComputed {
-    // const camera = global.camera
-    const pMatrix = computePerspectiveMatrixSingleton.pMatrix
+    camera: Camera,
+    pMatrix: ReadonlyMat4): FoVComputed {
+
+    // const pMatrix = computePerspectiveMatrixSingleton.pMatrix
     if (!pMatrix) {
       // Handle the error or assign a default value
       console.warn('FoV: projection matrix is null')

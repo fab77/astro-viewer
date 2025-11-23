@@ -26,6 +26,7 @@ export type CameraChangedDetail = {
  */
 declare class AstroSphere {
     private _camera;
+    private _perspectiveMatrixManager;
     private centralPoinCoords;
     private mousePointCoords;
     private canvas;

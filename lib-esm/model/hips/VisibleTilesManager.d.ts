@@ -1,4 +1,5 @@
 import { TileBuffer } from './TileBuffer.js';
+import { ReadonlyMat4 } from 'gl-matrix';
 import { HealpixGrid } from '../grid/HealpixGrid.js';
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 import Camera from '../../Camera.js';
@@ -23,7 +24,7 @@ export declare class VisibleTilesManager {
     get tileBuffer(): TileBuffer;
     init(insideSphere: boolean): void;
     getVisibleOrder(): number;
-    computeVisiblePixels(order: number, webgl: WebGL2RenderingContext, camera: Camera): void;
+    computeVisiblePixels(order: number, webgl: WebGL2RenderingContext, camera: Camera, pMatrix: ReadonlyMat4): void;
     get visibleTilesByOrder(): VisibleTiles;
     get ancestorsMap(): Map<number, number[]>;
     get galVisibleTilesByOrder(): VisibleTiles;

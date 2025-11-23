@@ -9,7 +9,6 @@ import ColorMaps from '../ColorMaps.js';
 // import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import AncestorTile from './AncestorTile.js';
 import AllSky from './AllSky.js';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 class HiPS extends AbstractSkyEntity {
     _ancestorTiles;
     _allSkyTile;
@@ -58,7 +57,7 @@ class HiPS extends AbstractSkyEntity {
         }
         else {
             for (let t = 0; t < 12; t++) {
-                this._ancestorTiles.push(new AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram));
+                this._ancestorTiles.push(new AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl));
             }
         }
     }
@@ -148,16 +147,14 @@ class HiPS extends AbstractSkyEntity {
         this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
     draw(input) {
-        // const cameraMatrix = input.cameraMatrix
-        // const camera = input.camera
         const vMatrix = input.camera.getCameraMatrix();
-        // if (!global.camera || global.camera.getCameraMatrix() === undefined) return
         if (!vMatrix)
             return;
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
         this.refresh();
-        // const vMatrix = global.camera.getCameraMatrix() as Float32Array
-        // const vMatrix = cameraMatrix
-        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
         const mMatrix = this.getModelMatrix();
         if (this._allSky && this._allSkyTile) {
             if (this.isGalacticHips) {

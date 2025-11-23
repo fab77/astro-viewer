@@ -9,8 +9,6 @@ import { FoVUtils } from '../../utils/FoVUtils.js';
 import GridTextHelper from './GridTextHelper.js';
 import { HealpixGrid } from './HealpixGrid.js';
 import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
-// import healpixGridSingleton from './HealpixGridSingleton.js';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 /** Equatorial grid rendered as RA/Dec great-circle line loops */
 export class EquatorialGrid extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
@@ -209,6 +207,9 @@ export class EquatorialGrid extends AbstractSkyEntity {
         if (!camera)
             return;
         const vMatrix = camera.getCameraMatrix();
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
         if (!vMatrix)
             return;
         if (this._thetaArray.length === 0)
@@ -219,8 +220,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
             this.gridText.resetDivSets();
             return;
         }
-        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-        // this.enableShader(mMatrix, pMatrix);
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
         this.enableShader(mMatrix, pMatrix, vMatrix);
         // Draw Dec rings
         for (let i = 0; i < this._phiArray.length; i++) {
@@ -239,7 +239,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
             super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
         }
         // Label layout (HTML overlay)
-        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera);
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera, pMatrix);
         // MVP = P * V * M
         const mvMatrix = mat4.create();
         // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);

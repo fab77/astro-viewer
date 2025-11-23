@@ -5,7 +5,6 @@ import { Point } from '../Point.js';
 // import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { CoordsType } from '../..//utils/CoordsType.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 // import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 import { CatalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 // import { TapMetadata } from '../tap/TapMetadata.js';
@@ -372,27 +371,23 @@ export class CatalogueGL {
                 }
             }
         }
-        // session.updateHoveredSources(this, sourcesHovered);
         return hoveredIndexes;
     }
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */
-    draw(in_mMatrix, in_mouseHelper, cameraMatrix) {
+    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
         if (!this.isVisible)
             return;
         if (!this._ready)
             return;
-        if (!cameraMatrix)
+        if (!vMatrix)
             return;
-        // if (!global.camera) return
         if (!this._bufferInitialised)
             this.initBuffer();
         if (!this._webgl)
             return;
-        this._catalogueShaderProgram.enableShaders(computePerspectiveMatrixSingleton.pMatrix, in_mMatrix, cameraMatrix
-        // global.camera.getCameraMatrix() as Float32Array
-        );
+        this._catalogueShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
         this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
         // positions
         this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.position, 3, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
@@ -407,7 +402,6 @@ export class CatalogueGL {
         this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.brightness, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
         this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.brightness);
         // color
-        // const rgb = colorHex2RGB(this.catalogueProps.shapeColor);
         const rgb = colorHex2RGB(this._shapeColor);
         if (this._catalogueShaderProgram.locations.color) {
             this._webgl.uniform4f(this._catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);

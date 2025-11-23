@@ -1,13 +1,18 @@
-import global from './Global.js';
+// import global from './Global.js'
 import AstroSphere from './AstroSphere.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { bootSetup } from './Config.js';
+// & {
+//   viewportWidth: number
+//   viewportHeight: number
+// }
 export class AstroViewer {
     astroSphere;
     canvas;
     webgl;
     rafId = null;
+    webglContextList = new Map();
     // API
     run() {
         return this.tick();
@@ -131,20 +136,12 @@ export class AstroViewer {
         this.astroSphere.toggleInsideSphere();
     }
     // Internal
-    // constructor(canvasDomId: string) {
-    //   this.init(canvasDomId)
-    // }
     constructor(canvasEl) {
         this.init(canvasEl);
+        this.webglContextList = new Map();
     }
-    // private init(canvasDomId: string): void {
     init(canvasEl) {
         console.log('init webgl');
-        // const c = document.getElementById(canvasDomId)
-        // if (!(c instanceof HTMLCanvasElement)) {
-        //   throw new Error(`Element with id ${canvasDomId} is not a canvas.`)
-        // }
-        // this.canvas = c
         this.canvas = canvasEl;
         const gl = this.canvas.getContext('webgl2', { alpha: false });
         if (!gl) {
@@ -153,8 +150,8 @@ export class AstroViewer {
         }
         // Extend with custom fields used elsewhere
         this.webgl = gl;
-        this.webgl.viewportWidth = this.canvas.width;
-        this.webgl.viewportHeight = this.canvas.height;
+        // this.webgl.viewportWidth = this.canvas.width
+        // this.webgl.viewportHeight = this.canvas.height
         try {
             // 1/255 = 0.00392156862
             this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
@@ -163,7 +160,7 @@ export class AstroViewer {
             console.log('Error instantiating WebGL context');
         }
         this.initListeners();
-        global.gl = this.webgl;
+        // ; (global as any).gl = this.webgl
         this.astroSphere = new AstroSphere(this.canvas, this.webgl);
     }
     initListeners() {
@@ -177,8 +174,8 @@ export class AstroViewer {
             if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
                 this.canvas.width = newWidth;
                 this.canvas.height = newHeight;
-                this.webgl.viewportWidth = this.canvas.width;
-                this.webgl.viewportHeight = this.canvas.height;
+                // this.webgl.viewportWidth = this.canvas.width
+                // this.webgl.viewportHeight = this.canvas.height
                 this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
             }
         };
@@ -192,8 +189,8 @@ export class AstroViewer {
         };
         const handleContextRestored = (_event) => {
             console.log('[handleContextRestored]');
-            this.webgl.viewportWidth = this.canvas.width;
-            this.webgl.viewportHeight = this.canvas.height;
+            // this.webgl.viewportWidth = this.canvas.width
+            // this.webgl.viewportHeight = this.canvas.height
             this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
             this.webgl.enable(this.webgl.DEPTH_TEST);
             this.rafId = requestAnimationFrame(() => this.tick());
@@ -205,8 +202,6 @@ export class AstroViewer {
             });
             // Osserva il canvas o il suo parent (a tua scelta)
             ro.observe(this.canvas);
-            // Se preferisci il contenitore:
-            // if (this.canvas.parentElement) ro.observe(this.canvas.parentElement);
         }
         window.addEventListener('resize', resizeCanvas);
         this.canvas.addEventListener('webglcontextlost', handleContextLost, false);

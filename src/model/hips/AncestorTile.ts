@@ -44,13 +44,15 @@ class AncestorTile {
   private vertexIndexBuffer!: WebGLBuffer
   private _tileBuffer: TileBuffer
   private _hipsShaderProgram: HiPSShaderProgram
+  private _webgl: WebGL2RenderingContext
 
-  constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, hipsShaderProgram: HiPSShaderProgram) {
+  constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, hipsShaderProgram: HiPSShaderProgram, webgl: WebGL2RenderingContext) {
 
     this._hipsShaderProgram = hipsShaderProgram
     this._tileBuffer = tileBuffer
     this._hips = hips
     this._tileno = tileno
+    this._webgl = webgl
 
     this._format = hips.format
     this._baseurl = hips.baseURL
@@ -84,7 +86,7 @@ class AncestorTile {
     this.textureLoaded()
     this.initModelBuffer()
 
-    const gl = (global as any).gl as WebGL2RenderingContext
+    const gl = this._webgl
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.bindTexture(gl.TEXTURE_2D, this._texture)
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image)
@@ -96,7 +98,7 @@ class AncestorTile {
     // hipsShaderProgram.enableProgram()
     this._hipsShaderProgram.enableProgram()
 
-    const gl = (global as any).gl as WebGL2RenderingContext
+    const gl = this._webgl
     this._texture = gl.createTexture()
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
@@ -116,14 +118,14 @@ class AncestorTile {
   }
 
   private initModelBuffer(): void {
-    const gl = (global as any).gl as WebGL2RenderingContext
+    const gl = this._webgl
     this.vertexPosition = []
     this.vertexPositionBuffer = []
     this.vertexIndices = new Uint16Array()
     // this.vertexIndexBuffer created later
 
     const reforder = fovHelper.getRefOrder(this._order)
-    const orighealpix = (global as any).getHealpix(this._order) as HealpixLike
+    const orighealpix = global.getHealpix(this._order) as HealpixLike
     const origxyf = orighealpix.nest2xyf(this._tileno)
 
     const orderjump = reforder - this._order
@@ -133,7 +135,7 @@ class AncestorTile {
     const dymin = origxyf.iy << orderjump
     const dymax = (origxyf.iy << orderjump) + (1 << orderjump)
 
-    const healpix = (global as any).getHealpix(reforder) as HealpixLike
+    const healpix = global.getHealpix(reforder) as HealpixLike
 
     this._pixels = []
 
@@ -179,7 +181,6 @@ class AncestorTile {
     orderjump: number,
     origxyf: Xyf
   ): void {
-    const gl = (global as any).gl as WebGL2RenderingContext
     this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin))
 
     const step = 1 / (1 << orderjump)
@@ -218,12 +219,12 @@ class AncestorTile {
       }
     }
 
-    this.vertexPositionBuffer[qidx] = (global as any).gl.createBuffer()
-    ;(global as any).gl.bindBuffer((global as any).gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx])
-    ;(global as any).gl.bufferData(
-      (global as any).gl.ARRAY_BUFFER,
+    this.vertexPositionBuffer[qidx] = this._webgl.createBuffer()
+    this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx])
+    this._webgl.bufferData(
+      this._webgl.ARRAY_BUFFER,
       this.vertexPosition[qidx],
-      (global as any).gl.STATIC_DRAW
+      this._webgl.STATIC_DRAW
     )
   }
 
@@ -238,7 +239,7 @@ class AncestorTile {
     orderjump: number,
     origxyf: Xyf
   ): void {
-    const gl = (global as any).gl as WebGL2RenderingContext
+    const gl = this._webgl
     this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin))
 
     const step = 1 / (1 << orderjump)
@@ -304,7 +305,7 @@ class AncestorTile {
     // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
     this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
 
-    const gl = (global as any).gl as WebGL2RenderingContext
+    const gl = this._webgl
     gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
     gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
     // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)

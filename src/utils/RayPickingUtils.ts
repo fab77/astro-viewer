@@ -4,8 +4,8 @@
 "use strict";
 
 import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
-import global from "../Global.js";
-import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix.js";
+// import global from "../Global.js";
+// import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix.js";
 // import healpixGridSingleton from "../model/grid/HealpixGridSingleton.js";
 import { HealpixGrid } from "../model/grid/HealpixGrid.js";
 import Camera from "../Camera.js";
@@ -139,25 +139,16 @@ class RayPickingUtils {
     mouseX: number, mouseY: number,
     healpixGrid: HealpixGrid,
     webgl: WebGL2RenderingContext,
-    camera: Camera): number[] {
+    camera: Camera,
+    pMatrix: ReadonlyMat4): number[] {
     
-    const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-    // const camera = global.camera;
     const vMatrix = camera.getCameraMatrix();
 
-    const canvas = webgl.canvas as HTMLCanvasElement
-    console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`)
-    // if (!camera) {
-    //   throw new Error("Camera is not initialized.");
-    // }
-
-    // const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl);
+    // const canvas = webgl.canvas as HTMLCanvasElement
+    // console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`)
+    
     const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
 
-    // const t = RayPickingUtils.raySphere(
-    //   camera.getCameraPosition() as ReadonlyVec3,
-    //   rayWorld, healpixGrid
-    // );
     const t = RayPickingUtils.raySphere(
       camera.getCameraPosition() as ReadonlyVec3,
       rayWorld, healpixGrid

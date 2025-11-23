@@ -3,7 +3,7 @@ import { Pointing, Vec3, Healpix } from 'healpixjs';
 import RayPickingUtils from '../../utils/RayPickingUtils.js';
 // import { newTileBuffer } from './TileBuffer.js';
 import { TileBuffer } from './TileBuffer.js';
-import { vec4, mat4 } from 'gl-matrix';
+import { vec4, mat4, ReadonlyMat4 } from 'gl-matrix';
 // import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
 // import {HealpixGridSingleton} from '../grid/HealpixGridSingleton.js';
 import { bootSetup } from '../../Config.js';
@@ -83,7 +83,7 @@ export class VisibleTilesManager {
 
 
   // computeVisiblePixels(): void {
-  computeVisiblePixels(order: number, webgl: WebGL2RenderingContext, camera: Camera): void {
+  computeVisiblePixels(order: number, webgl: WebGL2RenderingContext, camera: Camera, pMatrix: ReadonlyMat4): void {
     if (!this.initialised) return;
 
     // let order = healpixGridSingleton.visibleorder;
@@ -118,7 +118,7 @@ export class VisibleTilesManager {
         for (let j = 0; j <= maxY; j += maxY / 30) {
           const hit = RayPickingUtils.getIntersectionPointWithSingleModel(
             i,
-            j, this._healpixGrid, this._webgl, camera
+            j, this._healpixGrid, this._webgl, camera, pMatrix
           );
 
           if (hit.length > 0) {

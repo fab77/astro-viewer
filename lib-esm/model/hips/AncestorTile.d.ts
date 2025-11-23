@@ -21,7 +21,8 @@ declare class AncestorTile {
     private vertexIndexBuffer;
     private _tileBuffer;
     private _hipsShaderProgram;
-    constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, hipsShaderProgram: HiPSShaderProgram);
+    private _webgl;
+    constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, hipsShaderProgram: HiPSShaderProgram, webgl: WebGL2RenderingContext);
     destroyIntervals(): void;
     private initImage;
     private imageLoaded;

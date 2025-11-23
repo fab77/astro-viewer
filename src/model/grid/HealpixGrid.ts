@@ -18,7 +18,7 @@ import GeomUtils from '../../utils/GeomUtils.js';
 import GridTextHelper from './GridTextHelper.js';
 // import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 // import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { bootSetup } from '../../Config.js';
@@ -117,8 +117,8 @@ export class HealpixGrid extends AbstractSkyEntity {
     return HealpixGrid.INITIAL_ThetaRad
   }
 
-  refreshFoV(camera: Camera) {
-    return this.fovObj.getFoV(global.insideSphere, this, camera) ;
+  refreshFoV(camera: Camera, pMatrix: ReadonlyMat4) {
+    return this.fovObj.getFoV(global.insideSphere, this, camera, pMatrix) ;
   }
 
   getFoV(): FoV {
@@ -271,9 +271,9 @@ export class HealpixGrid extends AbstractSkyEntity {
   // }
 
 
-  private refresh(camera: Camera): void {
+  private refresh(camera: Camera, pMatrix: ReadonlyMat4): void {
 
-    this.refreshFoV(camera);
+    this.refreshFoV(camera, pMatrix);
     const fov = this.getMinFoV();
     // expose to global (legacy)
     // (global as any).hipsFoV = fov;
@@ -329,7 +329,10 @@ export class HealpixGrid extends AbstractSkyEntity {
     if (!camera ) return
     const vMatrix = camera.getCameraMatrix()
 
-    this.refresh(camera);
+    const pMatrix = input.pMatrix
+    if (!pMatrix ) return
+    
+    this.refresh(camera, pMatrix);
 
     if (!this.showGrid) {
 
@@ -346,7 +349,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     this.initBuffers(pixels, order);
 
     
-    const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+    // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
     this.enableShader(mMatrix, pMatrix, vMatrix);
 
     // Upload positions
@@ -386,7 +389,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     mvpMatrix = mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
 
     // FIX: pass model & pMatrix to match FoVUtils TS signature
-    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this, this._webgl, camera);
+    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this, this._webgl, camera, pMatrix);
 
     const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
 

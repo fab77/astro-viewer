@@ -1,7 +1,7 @@
 import Footprint from './Footprint.js';
 // import global from '../../Global.js'
 import { colorHex2RGB } from '../../utils/Utils.js';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 // import { TapRepo } from '../tap/TapRepo.js'
 // import {TapMetadataList} from '../tap/TapMetadataList.js'
 // import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
@@ -378,21 +378,24 @@ export class FootprintSetGL {
     changeColor(color) {
         this._shapeColor = color;
     }
-    draw(in_mMatrix, in_mouseHelper, cameraMatrix) {
+    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
         if (!this.isVisible)
             return;
         if (!this._ready)
             return;
-        if (!cameraMatrix)
+        if (!vMatrix)
             return;
         // if (!global.camera) return
         if (!this._bufferInitialised)
             this.initBuffer();
         if (!this._webgl)
             return;
-        this._footprintShaderProgram.enableShaders(computePerspectiveMatrixSingleton.pMatrix, in_mMatrix, cameraMatrix
-        // global.camera.getCameraMatrix() as Float32Array
-        );
+        this._footprintShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
+        // this._footprintShaderProgram.enableShaders(
+        //   computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+        //   in_mMatrix,
+        //   vMatrix
+        // )
         if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
             this.checkSelection(in_mouseHelper);
         }

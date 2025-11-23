@@ -19,14 +19,14 @@ export declare class FoVUtils {
      * Compute the FoV polygon as a list of Points (clockwise).
      * Uses ray picking + frustum planes against a unit sphere.
      */
-    static getFoVPolygon(camera: Camera, canvas: HTMLCanvasElement, model: AbstractSkyEntity, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext): Point[];
+    static getFoVPolygon(camera: Camera, canvas: HTMLCanvasElement, model: AbstractSkyEntity, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext, pMatrix: ReadonlyMat4): Point[];
     /**
      * Ray pick against 8 key screen positions (corners + midpoints).
      * Returns Points in clockwise order starting from top-left.
      */
     static getScreenCornersIntersection(pMatrix: ReadonlyMat4, camera: Camera, canvas: HTMLCanvasElement, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext): Point[];
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas: HTMLCanvasElement, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext, camera: Camera): Point;
+    static getCenterJ2000(canvas: HTMLCanvasElement, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext, camera: Camera, pMatrix: ReadonlyMat4): Point;
     /** Middle point on the unit sphere along the arc between two 3D points. */
     static computeMiddlePoint(p1: Point, p2: Point): Point[];
     /**

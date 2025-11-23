@@ -24,13 +24,9 @@ async function bootstrap() {
   try {
     loadPersisted();
 
-    // const canvasEl2 = document.getElementById("astrocanvas2");
-    // const AC2 = new astroviewer.AstroViewer(canvasEl2);
-    
-
     const canvasEl = document.getElementById("astrocanvas");
     const AC = new astroviewer.AstroViewer(canvasEl);
-    window.AstroAPI = state.AstroAPI = AC;
+    window.AstroAPI = state.AstroAPI = AC;  
     window.TAP = state.TAP;
 
     // Initialize grid toggle checkboxes from API
@@ -67,7 +63,6 @@ async function bootstrap() {
     await loadHiPS(defaultHiPS.trim());
 
     AC.run();
-    // AC2.run();
 
     wireUI();
     renderCatalogueManager();
