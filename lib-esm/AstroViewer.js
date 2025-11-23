@@ -86,7 +86,16 @@ export class AstroViewer {
         const desc = new HiPSDescriptor(propsText, hipsUrl);
         this.activateHiPS(desc);
     }
-    // GOTOs and COORDS
+    // Camera: GOTOs and COORDS
+    setCameraPosition(pos) {
+        this.astroSphere.setCameraPosition(pos);
+    }
+    setCameraMatrix(viewMatrix) {
+        this.astroSphere.setCameraMatrix(viewMatrix);
+    }
+    applyFullCameraState(detail) {
+        this.astroSphere.applyFullCameraState(detail);
+    }
     goTo(raDeg, decDeg) {
         this.astroSphere.goTo(raDeg, decDeg);
     }

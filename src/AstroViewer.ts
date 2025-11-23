@@ -4,7 +4,7 @@ import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { FoV } from './model/FoV.js'
 import { Point } from './model/Point.js'
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
-import type { PointCoordinates } from './AstroSphere.js'
+import type { CameraChangedDetail, PointCoordinates } from './AstroSphere.js'
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
 import { bootSetup } from './Config.js'
 import { MetadataManager } from './model/MetadataManager.js'
@@ -120,7 +120,19 @@ export class AstroViewer {
     this.activateHiPS(desc);
   }
 
-  // GOTOs and COORDS
+  // Camera: GOTOs and COORDS
+  setCameraPosition(pos: [number, number, number]){
+    this.astroSphere.setCameraPosition(pos)
+  }
+
+  setCameraMatrix(viewMatrix: Float32Array){
+    this.astroSphere.setCameraMatrix(viewMatrix)
+  }
+
+  applyFullCameraState(detail: CameraChangedDetail) {
+    this.astroSphere.applyFullCameraState(detail)
+  }
+
   goTo(raDeg: number, decDeg: number): void {
     this.astroSphere.goTo(raDeg, decDeg)
   }

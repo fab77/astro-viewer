@@ -46,6 +46,7 @@ declare class Camera implements CameraLike {
     refreshFoV(currentFoV: number): void;
     getCameraMatrix(): mat4;
     getCameraPosition(): Vec3Tuple;
+    setCameraMatrix(viewMatrix: Float32Array<ArrayBufferLike>): void;
     setCameraPosition(position: [number, number, number]): void;
     getCameraAngle(): SphericalCoords;
 }

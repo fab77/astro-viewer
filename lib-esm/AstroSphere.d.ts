@@ -53,6 +53,7 @@ declare class AstroSphere {
     private updateLastMousePoint;
     getCentralPointCoordinates(): PointCoordinates | undefined;
     getLastMousePointCoordinates(): PointCoordinates | undefined;
+    private _rotating;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
@@ -69,7 +70,12 @@ declare class AstroSphere {
     changeFoV3(deg: number): void;
     getInsideSphere(): boolean;
     toggleInsideSphere(): void;
+    setCameraPosition(pos: [number, number, number]): void;
+    setCameraMatrix(viewMatrix: Float32Array): void;
+    applyFullCameraState(detail: CameraChangedDetail): void;
     private prevFov;
+    private prevCentralRaDeg;
+    private prevCentralDecDeg;
     draw(canvas: HTMLCanvasElement): void;
 }
 export default AstroSphere;

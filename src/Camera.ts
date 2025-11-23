@@ -18,6 +18,7 @@ interface CameraLike {
 }
 
 class Camera implements CameraLike {
+  
   private insideSphere = false;
 
   private cam_pos: vec3 = vec3.create();  // camera position
@@ -281,7 +282,11 @@ class Camera implements CameraLike {
   //     mat4.invert(this.vMatrix, inv)
   //   }
   // }
-
+  setCameraMatrix(viewMatrix: Float32Array<ArrayBufferLike>) {
+    this.vMatrix = viewMatrix
+  }
+  
+  
   setCameraPosition(position: [number, number, number]): void {
 
     

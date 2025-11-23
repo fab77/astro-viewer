@@ -225,6 +225,9 @@ class Camera {
     //     mat4.invert(this.vMatrix, inv)
     //   }
     // }
+    setCameraMatrix(viewMatrix) {
+        this.vMatrix = viewMatrix;
+    }
     setCameraPosition(position) {
         // Update authoritative position
         this.cam_pos = vec3.fromValues(position[0], position[1], position[2]);
