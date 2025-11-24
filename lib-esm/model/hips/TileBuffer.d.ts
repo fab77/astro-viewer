@@ -1,5 +1,5 @@
 import Tile from './Tile.js';
-import HiPS from './HiPS.js';
+import { HiPS } from './HiPS.js';
 import { VisibleTilesManager } from './VisibleTilesManager.js';
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 export declare class TileBuffer {

@@ -8,7 +8,7 @@ import global from './Global.js';
 import MouseHelper from './utils/MouseHelper.js';
 import { cartesianToSpherical, sphericalToAstroDeg, raDegToHMS, decDegToDMS, } from './utils/Utils.js';
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
-import HiPS from './model/hips/HiPS.js';
+import { HiPS } from './model/hips/HiPS.js';
 import { PerspectiveMatrixManager } from './utils/PerspectiveMatrixManager.js';
 import { Point } from './model/Point.js';
 import { FoVUtils } from './utils/FoVUtils.js';
@@ -35,7 +35,7 @@ class AstroSphere {
     inertiaX = 0.0;
     inertiaY = 0.0;
     zoomInertia = 0.0;
-    activeHiPS = null;
+    _activeHiPS = null;
     startup = true;
     // private insideSphere: boolean
     fov;
@@ -232,7 +232,7 @@ class AstroSphere {
         return cartesianToSpherical(pickerPoint);
     }
     activateHiPS(hipsDescriptor) {
-        this.activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
+        this._activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
     }
     // Catalogue section
     async showCatalogue(cat) {
@@ -264,7 +264,7 @@ class AstroSphere {
     }
     // End Footprint section
     goTo(raDeg, decDeg) {
-        console.log(`AstroSphere.goTo goto(${raDeg}, ${decDeg})`);
+        // console.log(`AstroSphere.goTo goto(${raDeg}, ${decDeg})`)
         this._camera.goTo(raDeg, decDeg);
     }
     getFoV() {
@@ -310,25 +310,23 @@ class AstroSphere {
     }
     // 👉 set completo camera (pos + orientamento)
     applyFullCameraState(detail) {
-        console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`);
+        // console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
         this._camera = detail.camera;
         this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg);
         // this._healpixGrid.setModelMatrix(detail.mMatrix)  
         // this.setCameraPosition(detail.position);
         this.setCameraMatrix(detail.vMatrix);
-        // aggiorna FoV
-        // this.fov = this._healpixGrid.refreshFoV(
-        //   this._camera,
-        //   this._perspectiveMatrixManager.pMatrix
-        // );
     }
     prevFov = 0;
     prevCentralRaDeg = null;
     prevCentralDecDeg = null;
+    get activeHiPS() {
+        return this._activeHiPS;
+    }
     draw(canvas) {
         if (!this._webgl)
             return;
-        if (!this.activeHiPS)
+        if (!this._activeHiPS)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -431,7 +429,7 @@ class AstroSphere {
             camera: this._camera,
             pMatrix: this._perspectiveMatrixManager.pMatrix
         };
-        this.activeHiPS.draw(skyEntityDrawInput);
+        this._activeHiPS.draw(skyEntityDrawInput);
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
         this._webgl.enable(this._webgl.DEPTH_TEST);
@@ -451,13 +449,13 @@ class AstroSphere {
             });
         }
         this.activeCatalogues.forEach(cat => {
-            if (this.activeHiPS) {
-                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            if (this._activeHiPS) {
+                cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.activeFootprintSets.forEach(fst => {
-            if (this.activeHiPS) {
-                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            if (this._activeHiPS) {
+                fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
     }

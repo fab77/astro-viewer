@@ -1,4 +1,4 @@
-type ColorMapName = 'grayscale' | 'native' | 'planck' | 'cmb' | 'rainbow' | 'eosb' | 'cubehelix' | 'hot' | 'gray';
+export type ColorMapName = 'grayscale' | 'native' | 'planck' | 'cmb' | 'rainbow' | 'eosb' | 'cubehelix' | 'hot' | 'gray';
 export interface ColorMap {
     name: ColorMapName;
     r: number[];

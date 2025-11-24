@@ -5,7 +5,7 @@ import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import global from '../../Global.js'
 // import { newTileBuffer } from './TileBuffer.js'
 import { TileBuffer } from './TileBuffer.js'
-import HiPS from './HiPS.js'
+import {HiPS} from './HiPS.js'
 
 
 export default class AllSky {

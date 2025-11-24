@@ -1,6 +1,6 @@
 // TileBuffer.ts
 import Tile from './Tile.js' // adjust if your file is named differently
-import HiPS from './HiPS.js'
+import {HiPS} from './HiPS.js'
 import { VisibleTilesManager } from './VisibleTilesManager.js'
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 

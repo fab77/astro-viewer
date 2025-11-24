@@ -3,6 +3,7 @@ import AstroSphere from './AstroSphere.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { bootSetup } from './Config.js';
+import ColorMaps from './model/ColorMaps.js';
 // & {
 //   viewportWidth: number
 //   viewportHeight: number
@@ -86,6 +87,13 @@ export class AstroViewer {
         const desc = new HiPSDescriptor(propsText, hipsUrl);
         this.activateHiPS(desc);
     }
+    changeColorMap(hips, colorMapName) {
+        const colorMap = ColorMaps[colorMapName];
+        hips.changeColorMap(colorMap);
+    }
+    getActiveHiPS() {
+        return this.astroSphere.activeHiPS;
+    }
     // Camera: GOTOs and COORDS
     setCamera(camera) {
         this.astroSphere.setCamera(camera);
@@ -97,11 +105,11 @@ export class AstroViewer {
         this.astroSphere.setCameraMatrix(viewMatrix);
     }
     applyFullCameraState(detail) {
-        console.log(`AstroViewer.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`);
+        // console.log(`AstroViewer.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
         this.astroSphere.applyFullCameraState(detail);
     }
     goTo(raDeg, decDeg) {
-        console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`);
+        // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
         this.astroSphere.goTo(raDeg, decDeg);
     }
     getCenterCoordinates() {

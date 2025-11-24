@@ -1,6 +1,6 @@
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 import { TileBuffer } from './TileBuffer.js';
-import HiPS from './HiPS.js';
+import { HiPS } from './HiPS.js';
 declare class AncestorTile {
     private _hips;
     private _tileno;

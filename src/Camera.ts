@@ -60,14 +60,14 @@ class Camera implements CameraLike {
 
   goTo(raDeg: number, decDeg: number): void {
     // eslint-disable-next-line no-console
-    console.log(`Camera.goto ${raDeg} ${decDeg}`);
+    // console.log(`Camera.goto ${raDeg} ${decDeg}`);
     // mirror RA
     const mirroredRA = 360 - raDeg;
     this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
   }
 
   private goToPhiTheta(ptDeg: SphericalCoords): void {
-    console.log(`Camera.goToPhiTheta ${ptDeg.phi} ${ptDeg.theta}`);
+    // console.log(`Camera.goToPhiTheta ${ptDeg.phi} ${ptDeg.theta}`);
     const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
 
     let cameraMatrix = mat4.create();

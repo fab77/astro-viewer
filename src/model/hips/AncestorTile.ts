@@ -6,7 +6,7 @@ import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 // import { newTileBuffer } from './TileBuffer.js'
 import { TileBuffer } from './TileBuffer.js'
 import { fovHelper } from './FoVHelper.js'
-import HiPS from './HiPS.js'
+import {HiPS} from './HiPS.js'
 
 interface Vec3 { x: number; y: number; z: number }
 interface Xyf { ix: number; iy: number; face: number }

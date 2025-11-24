@@ -9,7 +9,7 @@ import ColorMaps from '../ColorMaps.js';
 // import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import AncestorTile from './AncestorTile.js';
 import AllSky from './AllSky.js';
-class HiPS extends AbstractSkyEntity {
+export class HiPS extends AbstractSkyEntity {
     _ancestorTiles;
     _allSkyTile;
     _format;
@@ -187,5 +187,4 @@ class HiPS extends AbstractSkyEntity {
         });
     }
 }
-export default HiPS;
 //# sourceMappingURL=HiPS.js.map

@@ -10,5 +10,6 @@ export { MetadataColumn, ColumnType } from './model/MetadataColumn.js';
 export { Point } from './model/Point.js';
 export { FoVUtils } from './utils/FoVUtils.js';
 export { CoordsType } from './utils/CoordsType.js';
+export { HiPS } from './model/hips/HiPS.js';
 console.log('astroviewer UMD loaded');
 //# sourceMappingURL=index.js.map

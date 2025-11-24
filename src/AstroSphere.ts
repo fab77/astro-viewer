@@ -20,7 +20,7 @@ import {
 
 
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
-import HiPS from './model/hips/HiPS.js'
+import {HiPS} from './model/hips/HiPS.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { PerspectiveMatrixManager } from './utils/PerspectiveMatrixManager.js'
 import { FoV } from './model/FoV.js'
@@ -82,7 +82,7 @@ class AstroSphere {
   private inertiaY = 0.0
   private zoomInertia = 0.0
 
-  private activeHiPS: HiPS | null = null
+  private _activeHiPS: HiPS | null = null
 
   private startup = true
 
@@ -338,7 +338,7 @@ class AstroSphere {
 
   activateHiPS(hipsDescriptor: HiPSDescriptor) {
 
-    this.activeHiPS = new HiPS(
+    this._activeHiPS = new HiPS(
       1,
       [0.0, 0.0, 0.0],
       0,
@@ -383,7 +383,7 @@ class AstroSphere {
 
 
   goTo(raDeg: number, decDeg: number): void {
-    console.log(`AstroSphere.goTo goto(${raDeg}, ${decDeg})`)
+    // console.log(`AstroSphere.goTo goto(${raDeg}, ${decDeg})`)
     this._camera.goTo(raDeg, decDeg)
   }
 
@@ -459,7 +459,7 @@ class AstroSphere {
 
   // 👉 set completo camera (pos + orientamento)
   public applyFullCameraState(detail: CameraChangedDetail) {
-    console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
+    // console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
     
     this._camera = detail.camera
     this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
@@ -468,13 +468,7 @@ class AstroSphere {
     // this.setCameraPosition(detail.position);
     this.setCameraMatrix(detail.vMatrix);
     
-    
 
-    // aggiorna FoV
-    // this.fov = this._healpixGrid.refreshFoV(
-    //   this._camera,
-    //   this._perspectiveMatrixManager.pMatrix
-    // );
   }
 
 
@@ -482,11 +476,14 @@ class AstroSphere {
   private prevCentralRaDeg: number | null = null;
   private prevCentralDecDeg: number | null = null;
 
+  get activeHiPS(): HiPS | null {
+    return this._activeHiPS
+  }
 
   draw(canvas: HTMLCanvasElement) {
 
     if (!this._webgl) return
-    if (!this.activeHiPS) return
+    if (!this._activeHiPS) return
 
     if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0) return
     if ((this._healpixGrid as any).fovObj === undefined) return
@@ -617,7 +614,7 @@ class AstroSphere {
       camera: this._camera,
       pMatrix: this._perspectiveMatrixManager.pMatrix
     }
-    this.activeHiPS.draw(skyEntityDrawInput)
+    this._activeHiPS.draw(skyEntityDrawInput)
 
     this._healpixGrid.draw(skyEntityDrawInput)
     this._equatorialGrid.draw(skyEntityDrawInput)
@@ -642,13 +639,13 @@ class AstroSphere {
 
 
     this.activeCatalogues.forEach(cat => {
-      if (this.activeHiPS) {
-        cat.draw(this.activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
+      if (this._activeHiPS) {
+        cat.draw(this._activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }
     })
     this.activeFootprintSets.forEach(fst => {
-      if (this.activeHiPS) {
-        fst.draw(this.activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
+      if (this._activeHiPS) {
+        fst.draw(this._activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }
     })
 

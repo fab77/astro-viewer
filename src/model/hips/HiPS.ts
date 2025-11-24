@@ -17,7 +17,7 @@ import { HealpixGrid } from '../grid/HealpixGrid.js'
 import { ReadonlyMat4 } from 'gl-matrix'
 
 
-class HiPS extends AbstractSkyEntity {
+export class HiPS extends AbstractSkyEntity {
   
   private _ancestorTiles: AncestorTile[]
   private _allSkyTile: AllSky | null
@@ -236,4 +236,4 @@ class HiPS extends AbstractSkyEntity {
   }
 }
 
-export default HiPS
+// export default HiPS

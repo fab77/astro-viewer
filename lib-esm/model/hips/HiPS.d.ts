@@ -5,7 +5,7 @@ import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import { ColorMap } from '../ColorMaps.js';
 import { HiPSDescriptor } from './HiPSDescriptor.js';
 import { HealpixGrid } from '../grid/HealpixGrid.js';
-declare class HiPS extends AbstractSkyEntity {
+export declare class HiPS extends AbstractSkyEntity {
     private _ancestorTiles;
     private _allSkyTile;
     private _format;
@@ -40,5 +40,4 @@ declare class HiPS extends AbstractSkyEntity {
     private refresh;
     draw(input: SkyEntityDrawInput): void;
 }
-export default HiPS;
 //# sourceMappingURL=HiPS.d.ts.map

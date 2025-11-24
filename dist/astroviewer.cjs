@@ -46,6 +46,7 @@ __webpack_require__.d(__webpack_exports__, {
   FoV: () => (/* reexport */ FoV),
   FoVUtils: () => (/* reexport */ FoVUtils),
   FootprintSetGL: () => (/* reexport */ FootprintSetGL),
+  HiPS: () => (/* reexport */ HiPS),
   HiPSDescriptor: () => (/* reexport */ HiPSDescriptor),
   MetadataColumn: () => (/* reexport */ MetadataColumn),
   MetadataManager: () => (/* reexport */ MetadataManager),
@@ -4492,13 +4493,13 @@ class Camera {
     }
     goTo(raDeg, decDeg) {
         // eslint-disable-next-line no-console
-        console.log(`Camera.goto ${raDeg} ${decDeg}`);
+        // console.log(`Camera.goto ${raDeg} ${decDeg}`);
         // mirror RA
         const mirroredRA = 360 - raDeg;
         this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
     }
     goToPhiTheta(ptDeg) {
-        console.log(`Camera.goToPhiTheta ${ptDeg.phi} ${ptDeg.theta}`);
+        // console.log(`Camera.goToPhiTheta ${ptDeg.phi} ${ptDeg.theta}`);
         const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
         let cameraMatrix = mat4_create();
         cameraMatrix = translate(cameraMatrix, cameraMatrix, fromValues(xyz[0], xyz[1], xyz[2]));
@@ -7894,7 +7895,6 @@ class HiPS extends AbstractSkyEntity {
         });
     }
 }
-/* harmony default export */ const hips_HiPS = (HiPS);
 
 ;// ./src/utils/PerspectiveMatrixManager.ts
 
@@ -10920,7 +10920,7 @@ class AstroSphere {
     inertiaX = 0.0;
     inertiaY = 0.0;
     zoomInertia = 0.0;
-    activeHiPS = null;
+    _activeHiPS = null;
     startup = true;
     // private insideSphere: boolean
     fov;
@@ -11117,7 +11117,7 @@ class AstroSphere {
         return cartesianToSpherical(pickerPoint);
     }
     activateHiPS(hipsDescriptor) {
-        this.activeHiPS = new hips_HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
+        this._activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
     }
     // Catalogue section
     async showCatalogue(cat) {
@@ -11149,7 +11149,7 @@ class AstroSphere {
     }
     // End Footprint section
     goTo(raDeg, decDeg) {
-        console.log(`AstroSphere.goTo goto(${raDeg}, ${decDeg})`);
+        // console.log(`AstroSphere.goTo goto(${raDeg}, ${decDeg})`)
         this._camera.goTo(raDeg, decDeg);
     }
     getFoV() {
@@ -11195,25 +11195,23 @@ class AstroSphere {
     }
     // 👉 set completo camera (pos + orientamento)
     applyFullCameraState(detail) {
-        console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`);
+        // console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
         this._camera = detail.camera;
         this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg);
         // this._healpixGrid.setModelMatrix(detail.mMatrix)  
         // this.setCameraPosition(detail.position);
         this.setCameraMatrix(detail.vMatrix);
-        // aggiorna FoV
-        // this.fov = this._healpixGrid.refreshFoV(
-        //   this._camera,
-        //   this._perspectiveMatrixManager.pMatrix
-        // );
     }
     prevFov = 0;
     prevCentralRaDeg = null;
     prevCentralDecDeg = null;
+    get activeHiPS() {
+        return this._activeHiPS;
+    }
     draw(canvas) {
         if (!this._webgl)
             return;
-        if (!this.activeHiPS)
+        if (!this._activeHiPS)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -11316,7 +11314,7 @@ class AstroSphere {
             camera: this._camera,
             pMatrix: this._perspectiveMatrixManager.pMatrix
         };
-        this.activeHiPS.draw(skyEntityDrawInput);
+        this._activeHiPS.draw(skyEntityDrawInput);
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
         this._webgl.enable(this._webgl.DEPTH_TEST);
@@ -11336,13 +11334,13 @@ class AstroSphere {
             });
         }
         this.activeCatalogues.forEach(cat => {
-            if (this.activeHiPS) {
-                cat.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            if (this._activeHiPS) {
+                cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.activeFootprintSets.forEach(fst => {
-            if (this.activeHiPS) {
-                fst.draw(this.activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            if (this._activeHiPS) {
+                fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
     }
@@ -12295,6 +12293,7 @@ class CatalogueGL {
 
 
 
+
 // & {
 //   viewportWidth: number
 //   viewportHeight: number
@@ -12378,6 +12377,13 @@ class AstroViewer {
         const desc = new HiPSDescriptor(propsText, hipsUrl);
         this.activateHiPS(desc);
     }
+    changeColorMap(hips, colorMapName) {
+        const colorMap = model_ColorMaps[colorMapName];
+        hips.changeColorMap(colorMap);
+    }
+    getActiveHiPS() {
+        return this.astroSphere.activeHiPS;
+    }
     // Camera: GOTOs and COORDS
     setCamera(camera) {
         this.astroSphere.setCamera(camera);
@@ -12389,11 +12395,11 @@ class AstroViewer {
         this.astroSphere.setCameraMatrix(viewMatrix);
     }
     applyFullCameraState(detail) {
-        console.log(`AstroViewer.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`);
+        // console.log(`AstroViewer.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
         this.astroSphere.applyFullCameraState(detail);
     }
     goTo(raDeg, decDeg) {
-        console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`);
+        // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
         this.astroSphere.goTo(raDeg, decDeg);
     }
     getCenterCoordinates() {
@@ -13275,6 +13281,7 @@ class FootprintSetGL {
 
 // export {TapMetadata as TapMetadata} from './model/tap/TapMetadata.js'
 // export {TapMetadataList} from './model/tap/TapMetadataList.js'
+
 
 
 

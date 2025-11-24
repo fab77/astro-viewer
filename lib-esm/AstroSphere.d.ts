@@ -1,5 +1,6 @@
 import Camera from './Camera.js';
 import { AstroCoords, HMS, SphericalCoords, DMS } from './utils/Utils.js';
+import { HiPS } from './model/hips/HiPS.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { FoV } from './model/FoV.js';
 import { Point } from './model/Point.js';
@@ -42,7 +43,7 @@ declare class AstroSphere {
     private inertiaX;
     private inertiaY;
     private zoomInertia;
-    private activeHiPS;
+    private _activeHiPS;
     private startup;
     private fov;
     private activeCatalogues;
@@ -80,6 +81,7 @@ declare class AstroSphere {
     private prevFov;
     private prevCentralRaDeg;
     private prevCentralDecDeg;
+    get activeHiPS(): HiPS | null;
     draw(canvas: HTMLCanvasElement): void;
 }
 export default AstroSphere;

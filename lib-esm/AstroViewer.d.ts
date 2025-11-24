@@ -7,6 +7,8 @@ import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/Footp
 import { MetadataManager } from './model/MetadataManager.js';
 import Camera from './Camera.js';
 import { ReadonlyMat4 } from 'gl-matrix';
+import { ColorMapName } from './model/ColorMaps.js';
+import { HiPS } from './model/hips/HiPS.js';
 export declare class AstroViewer {
     private astroSphere;
     private canvas;
@@ -31,6 +33,8 @@ export declare class AstroViewer {
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     loadHiPS(baseUrl: string): Promise<void>;
+    changeColorMap(hips: HiPS, colorMapName: ColorMapName): void;
+    getActiveHiPS(): HiPS | null;
     setCamera(camera: Camera): void;
     setCameraPosition(pos: [number, number, number]): void;
     setCameraMatrix(viewMatrix: Float32Array): void;

@@ -1,4 +1,4 @@
-type ColorMapName =
+export type ColorMapName =
   | 'grayscale'
   | 'native'
   | 'planck'
