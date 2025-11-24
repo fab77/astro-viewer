@@ -1,19 +1,13 @@
-// AstroSphere.ts
 import { bootSetup } from './Config.js';
 import Camera from './Camera.js';
 import RayPickingUtils from './utils/RayPickingUtils.js';
 import global from './Global.js';
-// import { visibleTilesManager } from './model/hips/VisibleTilesManager.js'
-// import { VisibleTilesManager } from './model/hips/VisibleTilesManager.js'
 import MouseHelper from './utils/MouseHelper.js';
 import { cartesianToSpherical, sphericalToAstroDeg, raDegToHMS, decDegToDMS, } from './utils/Utils.js';
-// import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 import { HiPS } from './model/hips/HiPS.js';
 import { PerspectiveMatrixManager } from './utils/PerspectiveMatrixManager.js';
 import { Point } from './model/Point.js';
 import { FoVUtils } from './utils/FoVUtils.js';
-// import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
-// import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { CoordsType } from './utils/CoordsType.js';

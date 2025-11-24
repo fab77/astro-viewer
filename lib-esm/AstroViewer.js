@@ -85,7 +85,8 @@ export class AstroViewer {
             throw new Error(`HTTP ${resp.status} fetching properties`);
         const propsText = await resp.text();
         const desc = new HiPSDescriptor(propsText, hipsUrl);
-        this.activateHiPS(desc);
+        this.astroSphere.activateHiPS(desc);
+        // this.activateHiPS(desc);
     }
     changeColorMap(hips, colorMapName) {
         const colorMap = ColorMaps[colorMapName];

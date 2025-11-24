@@ -115,13 +115,15 @@ export class AstroViewer {
     this.astroSphere.activateHiPS(hipsDescriptor)
   }
 
-  async loadHiPS(baseUrl: string): Promise<void> {
+  async loadHiPS(baseUrl: string): Promise<string> {
     const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
     const resp = await fetch(hipsUrl + 'properties');
     if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching properties`);
     const propsText = await resp.text();
     const desc = new HiPSDescriptor(propsText, hipsUrl);
-    this.activateHiPS(desc);
+    this.astroSphere.activateHiPS(desc)
+    return desc.surveyName
+    // this.activateHiPS(desc);
   }
 
   changeColorMap(hips: HiPS, colorMapName: ColorMapName) {

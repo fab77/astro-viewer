@@ -17,7 +17,7 @@ export declare abstract class AbstractSkyEntity {
     xRad: number;
     yRad: number;
     prevFoV: number;
-    name: string;
+    _name: string;
     center: vec3;
     radius: number;
     isGalacticHips: boolean;
@@ -33,6 +33,7 @@ export declare abstract class AbstractSkyEntity {
     protected _webgl: WebGL2RenderingContext;
     protected _hipsShaderProgram: HiPSShaderProgram;
     constructor(in_radius: number, in_position: ReadonlyVec3, in_xRad: number, in_yRad: number, in_name: string, webgl: WebGL2RenderingContext, isGalacticHips?: boolean);
+    get name(): string;
     get hipsShaderProgram(): HiPSShaderProgram;
     get webgl(): WebGL2RenderingContext;
     /** GL setup and initial model transform */

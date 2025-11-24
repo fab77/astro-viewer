@@ -6427,7 +6427,7 @@ class AbstractSkyEntity {
     xRad;
     yRad;
     prevFoV = this.fovX_deg;
-    name;
+    _name;
     // public insideSphere: boolean = bootSetup.insideSphere
     // Picking/sphere
     center;
@@ -6453,7 +6453,7 @@ class AbstractSkyEntity {
         this._webgl = webgl;
         this.xRad = in_xRad;
         this.yRad = in_yRad;
-        this.name = in_name;
+        this._name = in_name;
         this.center = clone(in_position);
         this.radius = in_radius;
         // this.insideSphere = global.insideSphere
@@ -6464,6 +6464,9 @@ class AbstractSkyEntity {
         // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
         // this._visibleTilesManager = new VisibleTilesManager()
         this._hipsShaderProgram = new HiPSShaderProgram(this._webgl);
+    }
+    get name() {
+        return this._name;
     }
     get hipsShaderProgram() {
         return this._hipsShaderProgram;
@@ -10883,22 +10886,16 @@ class EquatorialGrid extends AbstractSkyEntity {
 // export default equatorialGridSingleton;
 
 ;// ./src/AstroSphere.ts
-// AstroSphere.ts
 
 
 
 
-// import { visibleTilesManager } from './model/hips/VisibleTilesManager.js'
-// import { VisibleTilesManager } from './model/hips/VisibleTilesManager.js'
-
-
-// import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 
 
 
 
-// import queryFootprintSetByFov from './services/queryFootprintSetByFov.js'
-// import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
+
+
 
 
 
@@ -12375,7 +12372,8 @@ class AstroViewer {
             throw new Error(`HTTP ${resp.status} fetching properties`);
         const propsText = await resp.text();
         const desc = new HiPSDescriptor(propsText, hipsUrl);
-        this.activateHiPS(desc);
+        this.astroSphere.activateHiPS(desc);
+        // this.activateHiPS(desc);
     }
     changeColorMap(hips, colorMapName) {
         const colorMap = model_ColorMaps[colorMapName];

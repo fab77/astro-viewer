@@ -12,7 +12,7 @@ export class AbstractSkyEntity {
     xRad;
     yRad;
     prevFoV = this.fovX_deg;
-    name;
+    _name;
     // public insideSphere: boolean = bootSetup.insideSphere
     // Picking/sphere
     center;
@@ -38,7 +38,7 @@ export class AbstractSkyEntity {
         this._webgl = webgl;
         this.xRad = in_xRad;
         this.yRad = in_yRad;
-        this.name = in_name;
+        this._name = in_name;
         this.center = vec3.clone(in_position);
         this.radius = in_radius;
         // this.insideSphere = global.insideSphere
@@ -49,6 +49,9 @@ export class AbstractSkyEntity {
         // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
         // this._visibleTilesManager = new VisibleTilesManager()
         this._hipsShaderProgram = new HiPSShaderProgram(this._webgl);
+    }
+    get name() {
+        return this._name;
     }
     get hipsShaderProgram() {
         return this._hipsShaderProgram;
