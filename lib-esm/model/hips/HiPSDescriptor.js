@@ -12,8 +12,10 @@ export class HiPSDescriptor {
     _emMin;
     _emMax;
     _isGalctic = false;
+    _propertiesRawText;
     constructor(hipsproperties, hipsurl) {
         this._hipsurl = hipsurl;
+        this._propertiesRawText = hipsproperties;
         const lines = hipsproperties.split(/\r\n|\n/);
         for (const raw of lines) {
             const line = raw.trim();
@@ -78,6 +80,9 @@ export class HiPSDescriptor {
         return line.slice(idx + 1).trim();
     }
     // --- Getters ---
+    get propertiesRawText() {
+        return this._propertiesRawText;
+    }
     get surveyName() {
         return this._hipsName;
     }

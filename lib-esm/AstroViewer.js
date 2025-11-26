@@ -86,6 +86,7 @@ export class AstroViewer {
         const propsText = await resp.text();
         const desc = new HiPSDescriptor(propsText, hipsUrl);
         this.astroSphere.activateHiPS(desc);
+        return desc.surveyName;
         // this.activateHiPS(desc);
     }
     changeColorMap(hips, colorMapName) {

@@ -20,10 +20,12 @@ export class HiPSDescriptor {
   private _emMin: number | undefined
   private _emMax: number | undefined
   private _isGalctic: boolean = false
+  private _propertiesRawText: string
 
   constructor(hipsproperties: string, hipsurl: string) {
     this._hipsurl = hipsurl
 
+    this._propertiesRawText = hipsproperties
     const lines = hipsproperties.split(/\r\n|\n/)
     for (const raw of lines) {
       const line = raw.trim()
@@ -88,6 +90,10 @@ export class HiPSDescriptor {
   }
 
   // --- Getters ---
+  get propertiesRawText(){
+    return this._propertiesRawText
+  }
+
   get surveyName(): string {
     return this._hipsName
   }

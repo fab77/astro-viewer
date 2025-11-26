@@ -32,7 +32,7 @@ export declare class AstroViewer {
     getHoveredFootprints(): HoveredFootprintDetail[];
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
-    loadHiPS(baseUrl: string): Promise<void>;
+    loadHiPS(baseUrl: string): Promise<string>;
     changeColorMap(hips: HiPS, colorMapName: ColorMapName): void;
     getActiveHiPS(): HiPS | null;
     setCamera(camera: Camera): void;
