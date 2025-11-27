@@ -35,6 +35,8 @@ type Locations = {
 
 // export default class HiPSShaderProgram {
 export class HiPSShaderProgram {
+  private _colorMapBlockIndex: number | null = null;
+
   private _shaderProgram: WebGLProgram | undefined
   private _vertexShader!: WebGLShader
   private _fragmentShader!: WebGLShader
@@ -130,7 +132,7 @@ export class HiPSShaderProgram {
   enableProgram(): void {
     // (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
     (this._webgl as GL).useProgram(this.shaderProgram as WebGLProgram)
-    
+
   }
 
   setGrayscaleShader(): void {
@@ -152,39 +154,63 @@ export class HiPSShaderProgram {
   setColorMapShader(): void {
     // const gl = global.gl as GL
     const gl = this._webgl as GL
+
+    // Swap fragment shader
     gl.detachShader(this.shaderProgram as WebGLProgram, this._fragmentShader)
     const fragmentShaderStr = ShaderManager.hipsColorMapFS()
     this.changeFSShader(fragmentShaderStr)
 
-    // UBO discovery
-    const blockIndex = gl.getUniformBlockIndex(this.shaderProgram as WebGLProgram, 'colormap')
-    const blockSize = gl.getActiveUniformBlockParameter(
+    // UBO discovery for the "colormap" block
+    const blockIndex = gl.getUniformBlockIndex(
       this.shaderProgram as WebGLProgram,
-      blockIndex,
-      gl.UNIFORM_BLOCK_DATA_SIZE
-    ) as number
+      'colormap'
+    )
+
+    // INVALID_INDEX == 0xFFFFFFFF in WebGL2
+    if (blockIndex === gl.INVALID_INDEX) {
+      console.warn(
+        'HiPSShaderProgram: uniform block "colormap" not found in hipsColorMapFS()'
+      );
+      this._colorMapBlockIndex = null;
+      this._UBO_colorMapBuffer = null;
+      return;   // do NOT proceed with UBO setup
+    }
+    this._colorMapBlockIndex = blockIndex;
+
+
+    // const blockSize = gl.getActiveUniformBlockParameter(
+    //   this.shaderProgram as WebGLProgram,
+    //   blockIndex,
+    //   gl.UNIFORM_BLOCK_DATA_SIZE
+    // ) as number
 
     const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'] as const
+
     const uboVariableIndices = gl.getUniformIndices(
       this.shaderProgram as WebGLProgram,
       uboVariableNames as unknown as string[]
     ) as number[]
+
     const uboVariableOffsets = gl.getActiveUniforms(
       this.shaderProgram as WebGLProgram,
       uboVariableIndices,
       gl.UNIFORM_OFFSET
     ) as number[]
 
-    this._UBO_colorMapBuffer = gl.createBuffer()
-    gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer)
+    // Create buffer only once
+    if (!this._UBO_colorMapBuffer) {
+      this._UBO_colorMapBuffer = gl.createBuffer()
+      gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer)
 
-    // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
-    const BYTES = 12288
-    gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW)
-    gl.bindBuffer(gl.UNIFORM_BUFFER, null)
+      // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
+      const BYTES = 12288; // 3 * 4096
+      gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.UNIFORM_BUFFER, null)
 
-    gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer)
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer)
+    }
 
+    // Store offsets
     uboVariableNames.forEach((name, index) => {
       this._UBO_colorMapVariableInfo[name] = {
         index: uboVariableIndices[index],
@@ -246,6 +272,18 @@ export class HiPSShaderProgram {
       this.gl_uniforms.colormapIdx
     )
 
+
+    // NEW
+    // if (this.locations.clorMapIdx) {
+    gl.uniform1i(this.locations.clorMapIdx, colorMapIdx);
+    // }
+
+    // Make sampler explicit: we always use TEXTURE0 in your draw code
+    if (this.locations.sampler) {
+      gl.uniform1i(this.locations.sampler, 0);
+    }
+    // END NEW
+
     this.locations.vertexPositionAttribute = gl.getAttribLocation(
       this.shaderProgram as WebGLProgram,
       this.gl_attributes.vertex_pos
@@ -255,31 +293,69 @@ export class HiPSShaderProgram {
       this.gl_attributes.text_coords
     )
 
-    if (colorMapIdx >= 2) {
-      const index = gl.getUniformBlockIndex(this.shaderProgram as WebGLProgram, 'colormap')
-      gl.uniformBlockBinding(this.shaderProgram as WebGLProgram, index, 0)
-      gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer)
+    if (colorMapIdx >= 2 && this._UBO_colorMapBuffer && this._colorMapBlockIndex !== null) {
+      gl.uniformBlockBinding(
+        this.shaderProgram as WebGLProgram,
+        this._colorMapBlockIndex,
+        0
+      );
+      gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
 
-      let currentColorMap: { r: Float32Array; g: Float32Array; b: Float32Array } | undefined
-      if (colorMapIdx === 2) currentColorMap = colorMap.PLANCK
-      else if (colorMapIdx === 3) currentColorMap = colorMap.CMB
-      else if (colorMapIdx === 4) currentColorMap = colorMap.RAINBOW
-      else if (colorMapIdx === 5) currentColorMap = colorMap.EOSB
-      else if (colorMapIdx === 6) currentColorMap = colorMap.CUBEHELIX
+      let currentColorMap:
+        | { r: Float32Array; g: Float32Array; b: Float32Array }
+        | undefined;
+
+      if (colorMapIdx === 2) currentColorMap = colorMap.PLANCK;
+      else if (colorMapIdx === 3) currentColorMap = colorMap.CMB;
+      else if (colorMapIdx === 4) currentColorMap = colorMap.RAINBOW;
+      else if (colorMapIdx === 5) currentColorMap = colorMap.EOSB;
+      else if (colorMapIdx === 6) currentColorMap = colorMap.CUBEHELIX;
 
       if (currentColorMap) {
-        // Offsets match std140 padded arrays (0, 4096, 8192)
-        gl.bufferSubData(gl.UNIFORM_BUFFER, 0, currentColorMap.r, 0)
-        gl.bufferSubData(gl.UNIFORM_BUFFER, 4096, currentColorMap.g, 0)
-        gl.bufferSubData(gl.UNIFORM_BUFFER, 8192, currentColorMap.b, 0)
+        const info = this._UBO_colorMapVariableInfo;
+
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0);
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0);
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0);
       }
-      gl.bindBuffer(gl.UNIFORM_BUFFER, null)
+
+      gl.bindBuffer(gl.UNIFORM_BUFFER, null);
     }
 
-    gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix)
-    gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix)
-    gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix)
+    //   if (colorMapIdx >= 2) {
+    //     const index = gl.getUniformBlockIndex(this.shaderProgram as WebGLProgram, 'colormap')
+    //     gl.uniformBlockBinding(this.shaderProgram as WebGLProgram, index, 0)
+    //     gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer)
+
+    //     let currentColorMap: { r: Float32Array; g: Float32Array; b: Float32Array } | undefined
+    //     if (colorMapIdx === 2) currentColorMap = colorMap.PLANCK
+    //     else if (colorMapIdx === 3) currentColorMap = colorMap.CMB
+    //     else if (colorMapIdx === 4) currentColorMap = colorMap.RAINBOW
+    //     else if (colorMapIdx === 5) currentColorMap = colorMap.EOSB
+    //     else if (colorMapIdx === 6) currentColorMap = colorMap.CUBEHELIX
+
+    //     if (currentColorMap) {
+    //       // Offsets match std140 padded arrays (0, 4096, 8192)
+    //       // gl.bufferSubData(gl.UNIFORM_BUFFER, 0, currentColorMap.r, 0)
+    //       // gl.bufferSubData(gl.UNIFORM_BUFFER, 4096, currentColorMap.g, 0)
+    //       // gl.bufferSubData(gl.UNIFORM_BUFFER, 8192, currentColorMap.b, 0)
+
+    //       // NEW
+    //       const info = this._UBO_colorMapVariableInfo;
+    //       if (currentColorMap) {
+    //         gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0)
+    //         gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0)
+    //         gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0)
+    //       }
+    //       // END NEW
+    //     }
+    //     gl.bindBuffer(gl.UNIFORM_BUFFER, null)
+    //   }
+
+      gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix)
+      gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix)
+      gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix)
+    }
   }
-}
 
 // export const hipsShaderProgram = new HiPSShaderProgram()

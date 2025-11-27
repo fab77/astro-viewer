@@ -73,7 +73,7 @@ class AncestorTile {
     this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`
 
     this._image = new Image()
-    // this._image.onload = () => this.imageLoaded()
+    this._image.onload = () => this.imageLoaded()
     this._image.onerror = () => {
       console.error('File not found? %s', this._texurl)
     }
@@ -294,7 +294,7 @@ class AncestorTile {
     if (!this._ready) return false
 
 
-    this._image.onload = () => this.imageLoaded()
+    // this._image.onload = () => this.imageLoaded()
 
     
     let quadrantsToDraw: Set<number> = new Set([0, 1, 2, 3])
@@ -365,7 +365,8 @@ class AncestorTile {
           ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
           : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips)
         
-        childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+        // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+        childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram)
         if ((childTile as any)._ready) {
           quadrantsToDraw.delete((childTile as any)._tileno - (this._tileno << 2))
         }

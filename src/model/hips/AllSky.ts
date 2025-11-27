@@ -1,9 +1,7 @@
 'use strict'
 
-// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import global from '../../Global.js'
-// import { newTileBuffer } from './TileBuffer.js'
 import { TileBuffer } from './TileBuffer.js'
 import {HiPS} from './HiPS.js'
 
@@ -323,20 +321,12 @@ export default class AllSky {
     gl.vertexAttribPointer(
       // hipsShaderProgram.locations.vertexPositionAttribute,
       this._hipsShaderProgram.locations.vertexPositionAttribute,
-      3,
-      gl.FLOAT,
-      false,
-      5 * 4,
-      0
+      3, gl.FLOAT, false, 5 * 4, 0
     )
     gl.vertexAttribPointer(
       // hipsShaderProgram.locations.textureCoordAttribute,
       this._hipsShaderProgram.locations.textureCoordAttribute,
-      2,
-      gl.FLOAT,
-      false,
-      5 * 4,
-      3 * 4
+      2, gl.FLOAT, false, 5 * 4, 3 * 4
     )
 
     for (let t = 0; t < this._maxTiles; t++) {
@@ -381,7 +371,8 @@ export default class AllSky {
       //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
       //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
 
-      childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+      // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+      childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram)
       if (childTile.getReadyState()) {
         allSkyTiles2Skip.push(tileno)
       }

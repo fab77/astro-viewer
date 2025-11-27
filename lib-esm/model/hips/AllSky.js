@@ -220,7 +220,8 @@ export default class AllSky {
             // const childTile = this._isGalacticHips
             //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
             //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
-            childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
+            // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+            childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram);
             if (childTile.getReadyState()) {
                 allSkyTiles2Skip.push(tileno);
             }

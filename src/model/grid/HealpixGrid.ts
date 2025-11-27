@@ -16,13 +16,9 @@ import {Point} from '../Point.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import GeomUtils from '../../utils/GeomUtils.js';
 import GridTextHelper from './GridTextHelper.js';
-// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
-// import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
-// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { bootSetup } from '../../Config.js';
-// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 import Camera from '../../Camera.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;

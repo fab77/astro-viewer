@@ -1,9 +1,6 @@
 // Tile.ts
 import global from '../../Global.js'
-// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
-// import { newTileBuffer } from './TileBuffer.js'
 import { TileBuffer } from './TileBuffer.js'
-// import { visibleTilesManager } from './VisibleTilesManager.js'
 import { fovHelper } from './FoVHelper.js'
 import {HiPS} from './HiPS.js'
 import { VisibleTilesManager } from './VisibleTilesManager.js'
@@ -60,15 +57,16 @@ export default class Tile {
   public opacity = 1.0
   private _webgl: WebGL2RenderingContext
   private _visibleTileManager: VisibleTilesManager
-  private _hipsShaderProgram
+  // private _hipsShaderProgram
 
   constructor(tileno: number, order: number,
     hips: HiPS, tileBuffer: TileBuffer,
     webgl: WebGL2RenderingContext,
     visibleTileManager: VisibleTilesManager,
-  hipsShaderProgram: HiPSShaderProgram) {
+  // hipsShaderProgram: HiPSShaderProgram
+) {
 
-    this._hipsShaderProgram = hipsShaderProgram
+    // this._hipsShaderProgram = hipsShaderProgram
     this._visibleTileManager = visibleTileManager
     this._webgl = webgl
     this._tileBuffer = tileBuffer
@@ -117,7 +115,7 @@ export default class Tile {
 
     this._image.onload = () => this.imageLoaded()
     this._image.onerror = () => {
-      console.error('File not found?', this._texurl)
+      // console.error('File not found?', this._texurl)
       this._ready = false
       this._abort = true
       this.destroyIntervals()
@@ -129,27 +127,31 @@ export default class Tile {
 
   private imageLoaded(): void {
 
-    this.textureLoaded()
-    this.initModelBuffer()
-
-    const gl = this._webgl as WebGL2RenderingContext
-    gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
-    gl.bindTexture(gl.TEXTURE_2D, this._texture!)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image)
-
-    this._textureLoaded = true
-    if (this._textureLoaded) this._ready = true
+    // this.textureLoaded()
+    // this.initModelBuffer()
+    // this._textureLoaded = true
+    this._ready = true
   }
 
-  private textureLoaded(): void {
+  // private textureLoaded(): void {
+  private textureLoaded(hipsShaderProgram: HiPSShaderProgram): void {
+    
+    
+    // this._hipsShaderProgram.enableProgram()
+    hipsShaderProgram.enableProgram()
     const gl = this._webgl as WebGL2RenderingContext
-    this._hipsShaderProgram.enableProgram()
-    // hipsShaderProgram.enableProgram()
-
     this._texture = gl.createTexture()!
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
     gl.bindTexture(gl.TEXTURE_2D, this._texture)
+
+    if (!gl.isTexture(this._texture)) {
+      console.log('error in texture')
+    }
+
+    gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
+    gl.bindTexture(gl.TEXTURE_2D, this._texture!)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image)
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
@@ -157,12 +159,14 @@ export default class Tile {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
     // FIX: use the sampler location we fetched in enableShaders()
-    gl.uniform1i((this._hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
+    // gl.uniform1i((this._hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
     // gl.uniform1i((hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
 
     if (!gl.isTexture(this._texture)) {
       console.warn('Texture creation failed')
     }
+    this.initModelBuffer()
+    this._textureLoaded = true
   }
 
   private initModelBuffer(): void {
@@ -363,30 +367,35 @@ export default class Tile {
     pMatrix: Mat4,
     vMatrix: Mat4,
     mMatrix: Mat4,
-    colorMapIdx: number
+    colorMapIdx: number,
+    hipsShaderProgram: HiPSShaderProgram
   ): void {
     if (!this._ready || this._abort) return
+    
+    if (!this._textureLoaded) {
+      this.textureLoaded(hipsShaderProgram)
+    }
 
     let quadrantsToDraw = new Set<number>([0, 1, 2, 3])
     if (visibleOrder > this._order && this._order < this._maxorder) {
-      const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+      // const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+      const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram)
       if (kids) quadrantsToDraw = kids
     }
-
     const gl = this._webgl as WebGL2RenderingContext
-    // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
-    this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
-
+    hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+    // this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+    
     // Enable attributes (these locations are retrieved in enableShaders)
-    gl.enableVertexAttribArray((this._hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
-    gl.enableVertexAttribArray((this._hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
-    // gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
-    // gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
+    // gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+    // gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
+    gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
+    gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
 
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.bindTexture(gl.TEXTURE_2D, this._texture!)
-    gl.uniform1f((this._hipsShaderProgram.locations as ShaderLocations).textureAlpha, this.opacity)
-    // gl.uniform1f((hipsShaderProgram.locations as ShaderLocations).textureAlpha, this.opacity)
+    // gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity)
+    gl.uniform1f((hipsShaderProgram.locations as ShaderLocations).textureAlpha, this.opacity)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer!)
     const elemno = this.vertexIndices.length
@@ -396,23 +405,23 @@ export default class Tile {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx])
 
       gl.vertexAttribPointer(
-        (this._hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute,
-        // (hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute,
+        // this._hipsShaderProgram.locations.vertexPositionAttribute,
+        (hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute,
         3, gl.FLOAT, false, 5 * 4, 0
       )
       gl.vertexAttribPointer(
-        (this._hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute,
-        // (hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute,
+        // this._hipsShaderProgram.locations.textureCoordAttribute,
+        (hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute,
         2, gl.FLOAT, false, 5 * 4, 3 * 4
       )
 
       gl.drawElements(gl.TRIANGLES, elemno, indexType, 0)
     })
 
-    gl.disableVertexAttribArray((this._hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
-    gl.disableVertexAttribArray((this._hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
-    // gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
-    // gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
+    // gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+    // gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
+    gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
+    gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
   }
 
   private drawChildren(
@@ -421,7 +430,8 @@ export default class Tile {
     pMatrix: Mat4,
     vMatrix: Mat4,
     mMatrix: Mat4,
-    colorMapIdx: number
+    colorMapIdx: number,
+    hipsShaderProgram: HiPSShaderProgram
   ): Set<number> | undefined {
     const quadrantsToDraw = new Set<number>([0, 1, 2, 3])
     const childrenOrder = this._order + 1
@@ -438,8 +448,9 @@ export default class Tile {
         //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
         //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
 
-        childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
-        if ((childTile as any)._ready) {
+        // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+        childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram)
+        if (childTile._ready) {
           quadrantsToDraw.delete(childTileNo - (this._tileno << 2))
         }
       }

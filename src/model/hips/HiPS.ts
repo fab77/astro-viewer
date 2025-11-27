@@ -122,6 +122,8 @@ export class HiPS extends AbstractSkyEntity {
    * 6 -> cubehelix
    */
   changeColorMap(colorMap: ColorMap): void {
+    console.log('HiPS.changeColorMap -> shaderProgram', super.hipsShaderProgram.shaderProgram);
+
     this.colorMap = colorMap
     switch (colorMap.name) {
       case 'grayscale':

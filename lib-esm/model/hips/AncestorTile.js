@@ -42,7 +42,7 @@ class AncestorTile {
         const dirnumber = Math.floor(this._tileno / 10000) * 10000;
         this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
         this._image = new Image();
-        // this._image.onload = () => this.imageLoaded()
+        this._image.onload = () => this.imageLoaded();
         this._image.onerror = () => {
             console.error('File not found? %s', this._texurl);
         };
@@ -196,7 +196,7 @@ class AncestorTile {
     draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
         if (!this._ready)
             return false;
-        this._image.onload = () => this.imageLoaded();
+        // this._image.onload = () => this.imageLoaded()
         let quadrantsToDraw = new Set([0, 1, 2, 3]);
         if (visibleOrder > this._order) {
             const q = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
@@ -234,7 +234,8 @@ class AncestorTile {
                 const childTile = this._isGalacticHips
                     ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
                     : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
-                childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
+                // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+                childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram);
                 if (childTile._ready) {
                     quadrantsToDraw.delete(childTile._tileno - (this._tileno << 2));
                 }

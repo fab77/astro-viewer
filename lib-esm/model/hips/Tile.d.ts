@@ -29,8 +29,7 @@ export default class Tile {
     opacity: number;
     private _webgl;
     private _visibleTileManager;
-    private _hipsShaderProgram;
-    constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, webgl: WebGL2RenderingContext, visibleTileManager: VisibleTilesManager, hipsShaderProgram: HiPSShaderProgram);
+    constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, webgl: WebGL2RenderingContext, visibleTileManager: VisibleTilesManager);
     destroyIntervals(): void;
     getReadyState(): boolean;
     get cacheTime0(): number | undefined;
@@ -45,7 +44,7 @@ export default class Tile {
     get inView(): boolean;
     private moveToCache;
     amIStillInFoV(): void;
-    draw(visibleOrder: number, visibleTilesMap: Map<number, number[]>, pMatrix: Mat4, vMatrix: Mat4, mMatrix: Mat4, colorMapIdx: number): void;
+    draw(visibleOrder: number, visibleTilesMap: Map<number, number[]>, pMatrix: Mat4, vMatrix: Mat4, mMatrix: Mat4, colorMapIdx: number, hipsShaderProgram: HiPSShaderProgram): void;
     private drawChildren;
 }
 export {};

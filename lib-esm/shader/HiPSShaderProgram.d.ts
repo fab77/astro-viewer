@@ -24,6 +24,7 @@ type Locations = {
     textureCoordAttribute: number;
 };
 export declare class HiPSShaderProgram {
+    private _colorMapBlockIndex;
     private _shaderProgram;
     private _vertexShader;
     private _fragmentShader;

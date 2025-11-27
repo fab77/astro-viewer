@@ -6231,6 +6231,7 @@ const colorMap = new ColorMap();
 
 // export default class HiPSShaderProgram {
 class HiPSShaderProgram {
+    _colorMapBlockIndex = null;
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
@@ -6330,22 +6331,39 @@ class HiPSShaderProgram {
     setColorMapShader() {
         // const gl = global.gl as GL
         const gl = this._webgl;
+        // Swap fragment shader
         gl.detachShader(this.shaderProgram, this._fragmentShader);
         const fragmentShaderStr = ShaderManager.hipsColorMapFS();
         this.changeFSShader(fragmentShaderStr);
-        // UBO discovery
+        // UBO discovery for the "colormap" block
         const blockIndex = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
-        const blockSize = gl.getActiveUniformBlockParameter(this.shaderProgram, blockIndex, gl.UNIFORM_BLOCK_DATA_SIZE);
+        // INVALID_INDEX == 0xFFFFFFFF in WebGL2
+        if (blockIndex === gl.INVALID_INDEX) {
+            console.warn('HiPSShaderProgram: uniform block "colormap" not found in hipsColorMapFS()');
+            this._colorMapBlockIndex = null;
+            this._UBO_colorMapBuffer = null;
+            return; // do NOT proceed with UBO setup
+        }
+        this._colorMapBlockIndex = blockIndex;
+        // const blockSize = gl.getActiveUniformBlockParameter(
+        //   this.shaderProgram as WebGLProgram,
+        //   blockIndex,
+        //   gl.UNIFORM_BLOCK_DATA_SIZE
+        // ) as number
         const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'];
         const uboVariableIndices = gl.getUniformIndices(this.shaderProgram, uboVariableNames);
         const uboVariableOffsets = gl.getActiveUniforms(this.shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
-        this._UBO_colorMapBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
-        // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
-        const BYTES = 12288;
-        gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW);
-        gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-        gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer);
+        // Create buffer only once
+        if (!this._UBO_colorMapBuffer) {
+            this._UBO_colorMapBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
+            // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
+            const BYTES = 12288; // 3 * 4096
+            gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+            gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer);
+        }
+        // Store offsets
         uboVariableNames.forEach((name, index) => {
             this._UBO_colorMapVariableInfo[name] = {
                 index: uboVariableIndices[index],
@@ -6380,8 +6398,40 @@ class HiPSShaderProgram {
         this.locations.sampler = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.sampler);
         this.locations.textureAlpha = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.factor);
         this.locations.clorMapIdx = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.colormapIdx);
+        // NEW
+        // if (this.locations.clorMapIdx) {
+        gl.uniform1i(this.locations.clorMapIdx, colorMapIdx);
+        // }
+        // Make sampler explicit: we always use TEXTURE0 in your draw code
+        if (this.locations.sampler) {
+            gl.uniform1i(this.locations.sampler, 0);
+        }
+        // END NEW
         this.locations.vertexPositionAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
         this.locations.textureCoordAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.text_coords);
+        // if (colorMapIdx >= 2 && this._UBO_colorMapBuffer && this._colorMapBlockIndex !== null) {
+        //   gl.uniformBlockBinding(
+        //     this.shaderProgram as WebGLProgram,
+        //     this._colorMapBlockIndex,
+        //     0
+        //   );
+        //   gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
+        //   let currentColorMap:
+        //     | { r: Float32Array; g: Float32Array; b: Float32Array }
+        //     | undefined;
+        //   if (colorMapIdx === 2) currentColorMap = colorMap.PLANCK;
+        //   else if (colorMapIdx === 3) currentColorMap = colorMap.CMB;
+        //   else if (colorMapIdx === 4) currentColorMap = colorMap.RAINBOW;
+        //   else if (colorMapIdx === 5) currentColorMap = colorMap.EOSB;
+        //   else if (colorMapIdx === 6) currentColorMap = colorMap.CUBEHELIX;
+        //   if (currentColorMap) {
+        //     const info = this._UBO_colorMapVariableInfo;
+        //     gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0);
+        //     gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0);
+        //     gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0);
+        //   }
+        //   gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+        // }
         if (colorMapIdx >= 2) {
             const index = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
             gl.uniformBlockBinding(this.shaderProgram, index, 0);
@@ -6399,9 +6449,17 @@ class HiPSShaderProgram {
                 currentColorMap = colorMap.CUBEHELIX;
             if (currentColorMap) {
                 // Offsets match std140 padded arrays (0, 4096, 8192)
-                gl.bufferSubData(gl.UNIFORM_BUFFER, 0, currentColorMap.r, 0);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, 4096, currentColorMap.g, 0);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, 8192, currentColorMap.b, 0);
+                // gl.bufferSubData(gl.UNIFORM_BUFFER, 0, currentColorMap.r, 0)
+                // gl.bufferSubData(gl.UNIFORM_BUFFER, 4096, currentColorMap.g, 0)
+                // gl.bufferSubData(gl.UNIFORM_BUFFER, 8192, currentColorMap.b, 0)
+                // NEW
+                const info = this._UBO_colorMapVariableInfo;
+                if (currentColorMap) {
+                    gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0);
+                    gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0);
+                    gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0);
+                }
+                // END NEW
             }
             gl.bindBuffer(gl.UNIFORM_BUFFER, null);
         }
@@ -7273,7 +7331,7 @@ class AncestorTile {
         const dirnumber = Math.floor(this._tileno / 10000) * 10000;
         this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
         this._image = new Image();
-        // this._image.onload = () => this.imageLoaded()
+        this._image.onload = () => this.imageLoaded();
         this._image.onerror = () => {
             console.error('File not found? %s', this._texurl);
         };
@@ -7427,7 +7485,7 @@ class AncestorTile {
     draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
         if (!this._ready)
             return false;
-        this._image.onload = () => this.imageLoaded();
+        // this._image.onload = () => this.imageLoaded()
         let quadrantsToDraw = new Set([0, 1, 2, 3]);
         if (visibleOrder > this._order) {
             const q = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
@@ -7805,6 +7863,7 @@ class HiPS extends AbstractSkyEntity {
      * 6 -> cubehelix
      */
     changeColorMap(colorMap) {
+        console.log('HiPS.changeColorMap -> shaderProgram', super.hipsShaderProgram.shaderProgram);
         this.colorMap = colorMap;
         switch (colorMap.name) {
             case 'grayscale':
@@ -9704,7 +9763,7 @@ class Tile {
         this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
         this._image.onload = () => this.imageLoaded();
         this._image.onerror = () => {
-            console.error('File not found?', this._texurl);
+            // console.error('File not found?', this._texurl)
             this._ready = false;
             this._abort = true;
             this.destroyIntervals();
@@ -9713,34 +9772,37 @@ class Tile {
         this._image.src = this._texurl;
     }
     imageLoaded() {
-        this.textureLoaded();
-        this.initModelBuffer();
-        const gl = this._webgl;
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
-        this._textureLoaded = true;
-        if (this._textureLoaded)
-            this._ready = true;
+        // this.textureLoaded()
+        // this.initModelBuffer()
+        // this._textureLoaded = true
+        this._ready = true;
     }
     textureLoaded() {
-        const gl = this._webgl;
         this._hipsShaderProgram.enableProgram();
         // hipsShaderProgram.enableProgram()
+        const gl = this._webgl;
         this._texture = gl.createTexture();
         gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        if (!gl.isTexture(this._texture)) {
+            console.log('error in texture');
+        }
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         // FIX: use the sampler location we fetched in enableShaders()
-        gl.uniform1i(this._hipsShaderProgram.locations.sampler, this._hipsShaderIndex);
+        // gl.uniform1i((this._hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
         // gl.uniform1i((hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
         if (!gl.isTexture(this._texture)) {
             console.warn('Texture creation failed');
         }
+        this.initModelBuffer();
+        this._textureLoaded = true;
     }
     initModelBuffer() {
         const gl = this._webgl;
@@ -9912,6 +9974,9 @@ class Tile {
     draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
         if (!this._ready || this._abort)
             return;
+        if (!this._textureLoaded) {
+            this.textureLoaded();
+        }
         let quadrantsToDraw = new Set([0, 1, 2, 3]);
         if (visibleOrder > this._order && this._order < this._maxorder) {
             const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
@@ -10288,9 +10353,6 @@ class VisibleTilesManager {
 
 
 
-// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
-// import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
-// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 
 
 
