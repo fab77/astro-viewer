@@ -1,5 +1,6 @@
+// HiPSShaderProgram.ts
 import ShaderManager from './ShaderManager.js';
-import { colorMap } from '../model/hips/ColorMap.js';
+import { ColorMaps } from '../model/ColorMaps.js';
 // export default class HiPSShaderProgram {
 export class HiPSShaderProgram {
     _colorMapBlockIndex = null;
@@ -184,16 +185,55 @@ export class HiPSShaderProgram {
             gl.uniformBlockBinding(this.shaderProgram, this._colorMapBlockIndex, 0);
             gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
             let currentColorMap;
-            if (colorMapIdx === 2)
-                currentColorMap = colorMap.PLANCK;
-            else if (colorMapIdx === 3)
-                currentColorMap = colorMap.CMB;
-            else if (colorMapIdx === 4)
-                currentColorMap = colorMap.RAINBOW;
-            else if (colorMapIdx === 5)
-                currentColorMap = colorMap.EOSB;
-            else if (colorMapIdx === 6)
-                currentColorMap = colorMap.CUBEHELIX;
+            if (colorMapIdx === 2) {
+                currentColorMap = {
+                    r: ColorMaps.planck.r,
+                    g: ColorMaps.planck.g,
+                    b: ColorMaps.planck.b,
+                };
+            }
+            else if (colorMapIdx === 3) {
+                currentColorMap = {
+                    r: ColorMaps.cmb.r,
+                    g: ColorMaps.cmb.g,
+                    b: ColorMaps.cmb.b,
+                };
+            }
+            else if (colorMapIdx === 4) {
+                currentColorMap = {
+                    r: ColorMaps.rainbow.r,
+                    g: ColorMaps.rainbow.g,
+                    b: ColorMaps.rainbow.b,
+                };
+            }
+            else if (colorMapIdx === 5) {
+                currentColorMap = {
+                    r: ColorMaps.eosb.r,
+                    g: ColorMaps.eosb.g,
+                    b: ColorMaps.eosb.b,
+                };
+            }
+            else if (colorMapIdx === 6) {
+                currentColorMap = {
+                    r: ColorMaps.cubehelix.r,
+                    g: ColorMaps.cubehelix.g,
+                    b: ColorMaps.cubehelix.b,
+                };
+            }
+            else if (colorMapIdx === 7) {
+                currentColorMap = {
+                    r: ColorMaps.hot.r,
+                    g: ColorMaps.hot.g,
+                    b: ColorMaps.hot.b,
+                };
+            }
+            else if (colorMapIdx === 8) {
+                currentColorMap = {
+                    r: ColorMaps.gray.r,
+                    g: ColorMaps.gray.g,
+                    b: ColorMaps.gray.b,
+                };
+            }
             if (currentColorMap) {
                 const info = this._UBO_colorMapVariableInfo;
                 gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0);
@@ -202,36 +242,9 @@ export class HiPSShaderProgram {
             }
             gl.bindBuffer(gl.UNIFORM_BUFFER, null);
         }
-        //   if (colorMapIdx >= 2) {
-        //     const index = gl.getUniformBlockIndex(this.shaderProgram as WebGLProgram, 'colormap')
-        //     gl.uniformBlockBinding(this.shaderProgram as WebGLProgram, index, 0)
-        //     gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer)
-        //     let currentColorMap: { r: Float32Array; g: Float32Array; b: Float32Array } | undefined
-        //     if (colorMapIdx === 2) currentColorMap = colorMap.PLANCK
-        //     else if (colorMapIdx === 3) currentColorMap = colorMap.CMB
-        //     else if (colorMapIdx === 4) currentColorMap = colorMap.RAINBOW
-        //     else if (colorMapIdx === 5) currentColorMap = colorMap.EOSB
-        //     else if (colorMapIdx === 6) currentColorMap = colorMap.CUBEHELIX
-        //     if (currentColorMap) {
-        //       // Offsets match std140 padded arrays (0, 4096, 8192)
-        //       // gl.bufferSubData(gl.UNIFORM_BUFFER, 0, currentColorMap.r, 0)
-        //       // gl.bufferSubData(gl.UNIFORM_BUFFER, 4096, currentColorMap.g, 0)
-        //       // gl.bufferSubData(gl.UNIFORM_BUFFER, 8192, currentColorMap.b, 0)
-        //       // NEW
-        //       const info = this._UBO_colorMapVariableInfo;
-        //       if (currentColorMap) {
-        //         gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0)
-        //         gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0)
-        //         gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0)
-        //       }
-        //       // END NEW
-        //     }
-        //     gl.bindBuffer(gl.UNIFORM_BUFFER, null)
-        //   }
         gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
         gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
         gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
     }
 }
-// export const hipsShaderProgram = new HiPSShaderProgram()
 //# sourceMappingURL=HiPSShaderProgram.js.map

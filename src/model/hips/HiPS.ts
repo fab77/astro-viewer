@@ -156,6 +156,16 @@ export class HiPS extends AbstractSkyEntity {
         super.hipsShaderProgram.setColorMapShader()
         // hipsShaderProgram.setColorMapShader()
         break
+      case 'hot':
+        this.colorMapIdx = 7
+        super.hipsShaderProgram.setColorMapShader()
+        // hipsShaderProgram.setColorMapShader()
+        break
+      case 'gray':
+        this.colorMapIdx = 8
+        super.hipsShaderProgram.setColorMapShader()
+        // hipsShaderProgram.setColorMapShader()
+        break
       default:
         this.colorMapIdx = 0
         super.hipsShaderProgram.setNativeShader()

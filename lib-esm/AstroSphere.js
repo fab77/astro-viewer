@@ -11,6 +11,7 @@ import { FoVUtils } from './utils/FoVUtils.js';
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { CoordsType } from './utils/CoordsType.js';
+import ColorMaps from './model/ColorMaps.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -36,6 +37,7 @@ class AstroSphere {
     activeCatalogues = [];
     activeFootprintSets = [];
     _webgl;
+    _selectedColorMap;
     // private _tileBuffer: TileBuffer
     constructor(canvas, webgl) {
         console.log('[AstroSphere] new instance for canvas', canvas.id);
@@ -44,6 +46,9 @@ class AstroSphere {
         this._webgl = webgl;
         this.mouseHelper = new MouseHelper();
         this.canvas = canvas;
+        // this._selectedColorMap = ColorMaps['native']
+        const nativeColorMap = 'native';
+        this._selectedColorMap = ColorMaps[nativeColorMap];
         global.insideSphere = bootSetup.insideSphere;
         this.initCamera();
         this._healpixGrid = new HealpixGrid(this._webgl);
@@ -189,7 +194,8 @@ class AstroSphere {
                     timestamp: performance.now(),
                     // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
                     centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
-                    mouseHoverPoint: this.mousePointCoords
+                    mouseHoverPoint: this.mousePointCoords,
+                    colorMap: this._selectedColorMap
                 };
                 if (this._rotating) {
                     this.canvas.dispatchEvent(new CustomEvent('cameraChanged', {
@@ -310,6 +316,13 @@ class AstroSphere {
         // this._healpixGrid.setModelMatrix(detail.mMatrix)  
         // this.setCameraPosition(detail.position);
         this.setCameraMatrix(detail.vMatrix);
+        this._activeHiPS?.changeColorMap(detail.colorMap);
+    }
+    changeColorMap(cm) {
+        if (!this._activeHiPS)
+            return;
+        this._selectedColorMap = cm;
+        this._activeHiPS?.changeColorMap(cm);
     }
     prevFov = 0;
     prevCentralRaDeg = null;
@@ -355,7 +368,8 @@ class AstroSphere {
                         timestamp: performance.now(),
                         // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix),
                         centralPoint: new Point({ raDeg: this.centralPoinCoords.astroDeg.ra, decDeg: this.centralPoinCoords.astroDeg.dec }, CoordsType.ASTRO),
-                        mouseHoverPoint: this.mousePointCoords
+                        mouseHoverPoint: this.mousePointCoords,
+                        colorMap: this._selectedColorMap
                     };
                     this.canvas.dispatchEvent(new CustomEvent('cameraChanged', { detail, bubbles: false, composed: false }));
                     this.prevFov = this.fov.minFoV;
@@ -400,6 +414,7 @@ class AstroSphere {
                     timestamp: performance.now(),
                     centralPoint: new Point({ raDeg: centralRaDeg, decDeg: centralDecDeg }, CoordsType.ASTRO),
                     mouseHoverPoint: this.mousePointCoords,
+                    colorMap: this._selectedColorMap
                 };
                 this.canvas.dispatchEvent(new CustomEvent('cameraChanged', {
                     detail,

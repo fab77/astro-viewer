@@ -33,7 +33,7 @@ export declare class AstroViewer {
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     loadHiPS(baseUrl: string): Promise<string>;
-    changeColorMap(hips: HiPS, colorMapName: ColorMapName): void;
+    changeColorMap(colorMapName: ColorMapName): void;
     getActiveHiPS(): HiPS | null;
     setCamera(camera: Camera): void;
     setCameraPosition(pos: [number, number, number]): void;

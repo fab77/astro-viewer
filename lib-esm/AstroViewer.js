@@ -89,9 +89,11 @@ export class AstroViewer {
         return desc.surveyName;
         // this.activateHiPS(desc);
     }
-    changeColorMap(hips, colorMapName) {
+    // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
+    changeColorMap(colorMapName) {
         const colorMap = ColorMaps[colorMapName];
-        hips.changeColorMap(colorMap);
+        // hips.changeColorMap(colorMap)
+        this.astroSphere.changeColorMap(colorMap);
     }
     getActiveHiPS() {
         return this.astroSphere.activeHiPS;

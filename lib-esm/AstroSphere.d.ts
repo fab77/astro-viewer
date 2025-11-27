@@ -8,6 +8,7 @@ import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
+import { ColorMap } from './model/ColorMaps.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -15,6 +16,7 @@ export type PointCoordinates = {
     sphericalDeg: SphericalCoords;
 };
 export type CameraChangedDetail = {
+    colorMap: ColorMap;
     fovDeg: number;
     position: [number, number, number];
     vMatrix: Float32Array;
@@ -49,6 +51,7 @@ declare class AstroSphere {
     private activeCatalogues;
     private activeFootprintSets;
     private _webgl;
+    private _selectedColorMap;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private initCamera;
     setCamera(camera: Camera): void;
@@ -78,6 +81,7 @@ declare class AstroSphere {
     setCameraPosition(pos: [number, number, number]): void;
     setCameraMatrix(viewMatrix: Float32Array): void;
     applyFullCameraState(detail: CameraChangedDetail): void;
+    changeColorMap(cm: ColorMap): void;
     private prevFov;
     private prevCentralRaDeg;
     private prevCentralDecDeg;

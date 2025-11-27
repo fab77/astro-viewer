@@ -126,9 +126,11 @@ export class AstroViewer {
     // this.activateHiPS(desc);
   }
 
-  changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
+  // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
+  changeColorMap(colorMapName: ColorMapName) {
     const colorMap = ColorMaps[colorMapName]
-    hips.changeColorMap(colorMap)
+    // hips.changeColorMap(colorMap)
+    this.astroSphere.changeColorMap(colorMap)
   }
 
   getActiveHiPS(): HiPS | null {

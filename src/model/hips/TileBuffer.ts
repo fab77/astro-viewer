@@ -88,7 +88,8 @@ export class TileBuffer {
         this._cachedTiles.delete(tileKey)
         tile.resetCacheTime0()
       } else {
-        const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+        // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+        const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager)
         this._tiles.set(tileKey, tile)
       }
     }
@@ -106,7 +107,8 @@ export class TileBuffer {
         this._galCachedTiles.delete(tileKey)
         tile.resetCacheTime0()
       } else {
-        const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+        // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+        const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager)
         this._galTiles.set(tileKey, tile)
       }
     }

@@ -16,7 +16,7 @@ import {
 } from './utils/Utils.js'
 
 
-import {HiPS} from './model/hips/HiPS.js'
+import { HiPS } from './model/hips/HiPS.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { PerspectiveMatrixManager } from './utils/PerspectiveMatrixManager.js'
 import { FoV } from './model/FoV.js'
@@ -29,6 +29,7 @@ import { EquatorialGrid } from './model/grid/EquatorialGrid.js'
 import { HealpixGrid } from './model/grid/HealpixGrid.js'
 import { SkyEntityDrawInput } from './model/AbstractSkyEntity.js'
 import { CoordsType } from './utils/CoordsType.js'
+import ColorMaps, { ColorMapName,  ColorMap } from './model/ColorMaps.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -38,6 +39,7 @@ export type PointCoordinates = {
 }
 
 export type CameraChangedDetail = {
+  colorMap: ColorMap
   fovDeg: number;
   position: [number, number, number];
   vMatrix: Float32Array;
@@ -84,6 +86,7 @@ class AstroSphere {
   private activeCatalogues: CatalogueGL[] = []
   private activeFootprintSets: FootprintSetGL[] = []
   private _webgl: WebGL2RenderingContext
+  private _selectedColorMap: any
   // private _tileBuffer: TileBuffer
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
@@ -93,6 +96,10 @@ class AstroSphere {
     this._webgl = webgl
     this.mouseHelper = new MouseHelper()
     this.canvas = canvas
+
+    // this._selectedColorMap = ColorMaps['native']
+    const nativeColorMap: ColorMapName = 'native'
+    this._selectedColorMap = ColorMaps[nativeColorMap]
 
     global.insideSphere = bootSetup.insideSphere
 
@@ -123,7 +130,7 @@ class AstroSphere {
     // global.camera = this.camera
   }
 
-  setCamera(camera: Camera){
+  setCamera(camera: Camera) {
     this._camera = camera
   }
 
@@ -276,7 +283,8 @@ class AstroSphere {
           timestamp: performance.now(),
           // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
           centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
-          mouseHoverPoint: this.mousePointCoords
+          mouseHoverPoint: this.mousePointCoords,
+          colorMap: this._selectedColorMap
         };
 
         if (this._rotating) {
@@ -452,17 +460,21 @@ class AstroSphere {
   // 👉 set completo camera (pos + orientamento)
   public applyFullCameraState(detail: CameraChangedDetail) {
     // console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
-    
+
     this._camera = detail.camera
     this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
-    
+
     // this._healpixGrid.setModelMatrix(detail.mMatrix)  
     // this.setCameraPosition(detail.position);
     this.setCameraMatrix(detail.vMatrix);
-    
-
+    this._activeHiPS?.changeColorMap(detail.colorMap)
   }
 
+  changeColorMap(cm: ColorMap) {
+    if (!this._activeHiPS) return
+    this._selectedColorMap = cm
+    this._activeHiPS?.changeColorMap(cm)
+  }
 
   private prevFov: number = 0
   private prevCentralRaDeg: number | null = null;
@@ -505,7 +517,7 @@ class AstroSphere {
           if (!this.centralPoinCoords) {
             this.centralPoinCoords = this.updateCentralPoint()
           }
-          
+
 
           const detail: CameraChangedDetail = {
             fovDeg: this.fov.minFoV,
@@ -517,7 +529,8 @@ class AstroSphere {
             timestamp: performance.now(),
             // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix),
             centralPoint: new Point({ raDeg: this.centralPoinCoords.astroDeg.ra, decDeg: this.centralPoinCoords.astroDeg.dec }, CoordsType.ASTRO),
-            mouseHoverPoint: this.mousePointCoords
+            mouseHoverPoint: this.mousePointCoords,
+            colorMap: this._selectedColorMap
           };
 
           this.canvas.dispatchEvent(new CustomEvent<CameraChangedDetail>(
@@ -575,6 +588,7 @@ class AstroSphere {
             CoordsType.ASTRO
           ),
           mouseHoverPoint: this.mousePointCoords,
+          colorMap: this._selectedColorMap
         };
 
         this.canvas.dispatchEvent(
