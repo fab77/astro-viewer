@@ -29,7 +29,7 @@ import { EquatorialGrid } from './model/grid/EquatorialGrid.js'
 import { HealpixGrid } from './model/grid/HealpixGrid.js'
 import { SkyEntityDrawInput } from './model/AbstractSkyEntity.js'
 import { CoordsType } from './utils/CoordsType.js'
-import ColorMaps, { ColorMapName,  ColorMap } from './model/ColorMaps.js'
+import ColorMaps, { ColorMapName, ColorMap } from './model/ColorMaps.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -80,24 +80,20 @@ class AstroSphere {
 
   private startup = true
 
-  // private insideSphere: boolean
   private fov: FoV
 
   private activeCatalogues: CatalogueGL[] = []
   private activeFootprintSets: FootprintSetGL[] = []
   private _webgl: WebGL2RenderingContext
   private _selectedColorMap: any
-  // private _tileBuffer: TileBuffer
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     console.log('[AstroSphere] new instance for canvas', canvas.id);
     // Keep global GL context (as in original JS)
-    // global.gl = webgl
     this._webgl = webgl
     this.mouseHelper = new MouseHelper()
     this.canvas = canvas
 
-    // this._selectedColorMap = ColorMaps['native']
     const nativeColorMap: ColorMapName = 'native'
     this._selectedColorMap = ColorMaps[nativeColorMap]
 
@@ -108,16 +104,13 @@ class AstroSphere {
     this._healpixGrid = new HealpixGrid(this._webgl)
     this._perspectiveMatrixManager = new PerspectiveMatrixManager(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere)
     this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere)
-    // computePerspectiveMatrixSingleton.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere)
 
     this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid)
-    // equatorialGridSingleton.init(healpixGridSingleton.getMinFoV())
     this._equatorialGrid.init(this._healpixGrid.getMinFoV())
 
     this.updateCentralPoint()
     this.startup = true
     this.addEventListeners(canvas)
-    // this.fov = healpixGridSingleton.refreshFoV()
     this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix)
   }
 
@@ -127,7 +120,6 @@ class AstroSphere {
     } else {
       this._camera = new Camera([0.0, 0.0, 4.0], false)
     }
-    // global.camera = this.camera
   }
 
   setCamera(camera: Camera) {
@@ -194,8 +186,7 @@ class AstroSphere {
     const handleMouseDown = (event: PointerEvent) => {
       canvas.setPointerCapture(event.pointerId)
       this.mouseDown = true
-      // this.lastMouseX = event.clientX
-      // this.lastMouseY = event.clientY
+
       const rect = canvas.getBoundingClientRect();
       this.lastMouseX = event.clientX - rect.left;  // locale al canvas
       this.lastMouseY = event.clientY - rect.top;   // locale al canvas
@@ -209,8 +200,7 @@ class AstroSphere {
       canvas.releasePointerCapture(event.pointerId)
       this.mouseDown = false
       document.body.style.cursor = 'auto'
-      // this.lastMouseX = event.clientX
-      // this.lastMouseY = event.clientY
+
       const rect = canvas.getBoundingClientRect();
       this.lastMouseX = event.clientX - rect.left;
       this.lastMouseY = event.clientY - rect.top;
@@ -223,8 +213,6 @@ class AstroSphere {
       const localX = event.clientX - rect.left;
       const localY = event.clientY - rect.top;
 
-      // const newX = event.clientX;
-      // const newY = event.clientY;
       const newX = localX;
       const newY = localY;
 
@@ -246,7 +234,7 @@ class AstroSphere {
         this.updateCentralPoint();
         hit = true;
       } else {
-        // 🔥 Use canvas-local coords for picking
+        // Use canvas-local coords for picking
         const mousePoint = RayPickingUtils.getIntersectionPointWithSingleModel(
           localX,
           localY,
@@ -261,6 +249,7 @@ class AstroSphere {
 
           this.updateLastMousePoint();
           hit = true;
+          console.log("hit")
         }
       }
 
@@ -271,8 +260,8 @@ class AstroSphere {
 
       const centralradeg = this.centralPoinCoords?.astroDeg.ra
       const centraldecdeg = this.centralPoinCoords?.astroDeg.dec
-      // if (hit && centraldecdeg && centralradeg) {
-      if (this._rotating && centraldecdeg && centralradeg) {
+      // if (this._rotating && centraldecdeg && centralradeg) {
+      if (centraldecdeg !== undefined && centralradeg !== undefined) {
         const detail: CameraChangedDetail = {
           fovDeg: this.fov.minFoV,
           position: this._camera.getCameraPosition(),
@@ -281,21 +270,20 @@ class AstroSphere {
           mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
           camera: this._camera,
           timestamp: performance.now(),
-          // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl),
           centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
           mouseHoverPoint: this.mousePointCoords,
           colorMap: this._selectedColorMap
         };
 
-        if (this._rotating) {
-          this.canvas.dispatchEvent(
-            new CustomEvent<CameraChangedDetail>('cameraChanged', {
-              detail,
-              bubbles: false,
-              composed: false
-            })
-          );
-        }
+        // if (this._rotating) {
+        this.canvas.dispatchEvent(
+          new CustomEvent<CameraChangedDetail>('camera-changed', {
+            detail,
+            // bubbles: false, composed: false
+            bubbles: true, composed: true,
+          })
+        );
+        // }
 
       }
 
@@ -383,7 +371,6 @@ class AstroSphere {
 
 
   goTo(raDeg: number, decDeg: number): void {
-    // console.log(`AstroSphere.goTo goto(${raDeg}, ${decDeg})`)
     this._camera.goTo(raDeg, decDeg)
   }
 
@@ -432,7 +419,7 @@ class AstroSphere {
   }
 
 
-  // 👉 imposta posizione camera
+  // imposta posizione camera
   public setCameraPosition(pos: [number, number, number]) {
     this._camera.setCameraPosition(pos);
     this._perspectiveMatrixManager.computePerspectiveMatrix(
@@ -444,7 +431,7 @@ class AstroSphere {
     );
   }
 
-  // 👉 imposta orientamento camera tramite view matrix
+  // imposta orientamento camera tramite view matrix
   public setCameraMatrix(viewMatrix: Float32Array) {
     this._camera.setCameraMatrix(viewMatrix);
 
@@ -457,17 +444,37 @@ class AstroSphere {
     );
   }
 
-  // 👉 set completo camera (pos + orientamento)
-  public applyFullCameraState(detail: CameraChangedDetail) {
-    // console.log(`AstroSphere.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
+  // set completo camera (pos + orientamento)
+  public applyFullCameraState(detail: CameraChangedDetail, applyColor: boolean) {
 
     this._camera = detail.camera
     this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
 
-    // this._healpixGrid.setModelMatrix(detail.mMatrix)  
-    // this.setCameraPosition(detail.position);
     this.setCameraMatrix(detail.vMatrix);
-    this._activeHiPS?.changeColorMap(detail.colorMap)
+    if (applyColor) {
+      this._activeHiPS?.changeColorMap(detail.colorMap)
+    }
+  }
+
+  public getCurrentStatus(): CameraChangedDetail | null {
+    const centralradeg = this.centralPoinCoords?.astroDeg.ra
+    const centraldecdeg = this.centralPoinCoords?.astroDeg.dec
+    if (this._rotating && centraldecdeg && centralradeg) {
+      const detail: CameraChangedDetail = {
+        fovDeg: this.fov.minFoV,
+        position: this._camera.getCameraPosition(),
+        vMatrix: this._camera.getCameraMatrix() as Float32Array,
+        pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
+        mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
+        camera: this._camera,
+        timestamp: performance.now(),
+        centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
+        mouseHoverPoint: this.mousePointCoords,
+        colorMap: this._selectedColorMap
+      };
+      return detail
+    }
+    return null
   }
 
   changeColorMap(cm: ColorMap) {
@@ -527,15 +534,15 @@ class AstroSphere {
             mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
             camera: this._camera,
             timestamp: performance.now(),
-            // centralPoint: FoVUtils.getCenterJ2000(this.canvas, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix),
             centralPoint: new Point({ raDeg: this.centralPoinCoords.astroDeg.ra, decDeg: this.centralPoinCoords.astroDeg.dec }, CoordsType.ASTRO),
             mouseHoverPoint: this.mousePointCoords,
             colorMap: this._selectedColorMap
           };
 
           this.canvas.dispatchEvent(new CustomEvent<CameraChangedDetail>(
-            'cameraChanged',
-            { detail, bubbles: false, composed: false }
+            'camera-changed',
+            // { detail, bubbles: false, composed: false }
+            { detail, bubbles: true, composed: true }
           ));
           this.prevFov = this.fov.minFoV
         }
@@ -558,7 +565,7 @@ class AstroSphere {
       this._rotating = false
     }
 
-    // 🔥 Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
+    // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
     if (cameraRotated) {
       // Ricalcola il punto centrale
       const center = this.updateCentralPoint()
@@ -592,10 +599,10 @@ class AstroSphere {
         };
 
         this.canvas.dispatchEvent(
-          new CustomEvent<CameraChangedDetail>('cameraChanged', {
+          new CustomEvent<CameraChangedDetail>('camera-changed', {
             detail,
-            bubbles: false,
-            composed: false,
+            // bubbles: false, composed: false,
+            bubbles: true, composed: true,
           })
         );
 

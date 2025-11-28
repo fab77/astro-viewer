@@ -150,9 +150,12 @@ export class AstroViewer {
     this.astroSphere.setCameraMatrix(viewMatrix)
   }
 
-  applyFullCameraState(detail: CameraChangedDetail) {
-    // console.log(`AstroViewer.applyFullCameraState goto(${detail.centralPoint.raDeg}, ${detail.centralPoint.decDeg})`)
-    this.astroSphere.applyFullCameraState(detail)
+  restoreAstroViewerState(detail: CameraChangedDetail, applyColorMap: boolean) {
+    this.astroSphere.applyFullCameraState(detail, applyColorMap)
+  }
+
+  getCurrentAstroViewerStatus(): CameraChangedDetail | null{
+    return this.astroSphere.getCurrentStatus()
   }
 
   goTo(raDeg: number, decDeg: number): void {

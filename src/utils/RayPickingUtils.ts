@@ -28,54 +28,94 @@ class RayPickingUtils {
    * @returns World-space direction (normalized) as a vec3
    */
   static getRayFromMouse(
-    mouseX: number,
-    mouseY: number,
-    pMatrix: ReadonlyMat4,
-    webgl: WebGL2RenderingContext,
-    vMatrix: ReadonlyMat4
-  ): vec3 {
-    // if (!global.camera) {
-    //   throw new Error("Camera is not initialized.");
-    // }
-    // const vMatrix = global.camera.getCameraMatrix() as ReadonlyMat4;
+  mouseX: number,
+  mouseY: number,
+  pMatrix: ReadonlyMat4,
+  webgl: WebGL2RenderingContext,
+  vMatrix: ReadonlyMat4
+): vec3 {
+  const gl = webgl as GL;
+  const canvas = gl.canvas as HTMLCanvasElement;
+  const rect = canvas.getBoundingClientRect();
 
-    const gl = webgl as GL;
-    const rect = (gl.canvas as HTMLCanvasElement).getBoundingClientRect();
+  // mouseX / mouseY are already local to the canvas (CSS pixels)
+  const canvasMX = mouseX;
+  const canvasMY = mouseY;
 
-    // const canvasMX = mouseX - rect.left;
-    // const canvasMY = mouseY - rect.top;
-    const canvasMX = mouseX
-    const canvasMY = mouseY
+  // Use rect.width / rect.height (CSS) for NDC
+  const x = (2.0 * canvasMX) / rect.width - 1.0;
+  const y = 1.0 - (2.0 * canvasMY) / rect.height;
+  const z = -1.0;
 
-    // viewport → NDC
-    // const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).clientWidth - 1.0;
-    // const y = 1.0 - (2.0 * canvasMY) / (gl.canvas as HTMLCanvasElement).clientHeight;
-    const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).width - 1.0;
-    const y = 1.0 - (2.0 * canvasMY) / (gl.canvas as HTMLCanvasElement).height;
-    const z = -1.0;
+  const rayClip: [number, number, number, number] = [x, y, z, 1.0];
 
-    // NDC → clip
-    const rayClip: [number, number, number, number] = [x, y, z, 1.0];
+  const pInv = mat4.create();
+  mat4.invert(pInv, pMatrix);
+  const rayEye4: [number, number, number, number] = [0, 0, 0, 0];
+  RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
 
-    // clip → eye
-    const pInv = mat4.create();
-    mat4.invert(pInv, pMatrix);
-    const rayEye4: [number, number, number, number] = [0, 0, 0, 0];
-    RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+  // direction in eye space
+  const rayEye: [number, number, number, number] = [rayEye4[0], rayEye4[1], -1.0, 0.0];
 
-    // direction in eye space (z = -1, w = 0)
-    const rayEye: [number, number, number, number] = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+  const vInv = mat4.create();
+  mat4.invert(vInv, vMatrix);
+  const rayWorld4: [number, number, number, number] = [0, 0, 0, 0];
+  RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
 
-    // eye → world
-    const vInv = mat4.create();
-    mat4.invert(vInv, vMatrix);
-    const rayWorld4: [number, number, number, number] = [0, 0, 0, 0];
-    RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+  const rayWorld = vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+  vec3.normalize(rayWorld, rayWorld);
+  return rayWorld;
+}
 
-    const rayWorld = vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
-    vec3.normalize(rayWorld, rayWorld);
-    return rayWorld;
-  }
+  // static getRayFromMouse(
+  //   mouseX: number,
+  //   mouseY: number,
+  //   pMatrix: ReadonlyMat4,
+  //   webgl: WebGL2RenderingContext,
+  //   vMatrix: ReadonlyMat4
+  // ): vec3 {
+  //   // if (!global.camera) {
+  //   //   throw new Error("Camera is not initialized.");
+  //   // }
+  //   // const vMatrix = global.camera.getCameraMatrix() as ReadonlyMat4;
+
+  //   const gl = webgl as GL;
+  //   const rect = (gl.canvas as HTMLCanvasElement).getBoundingClientRect();
+
+  //   // const canvasMX = mouseX - rect.left;
+  //   // const canvasMY = mouseY - rect.top;
+  //   const canvasMX = mouseX
+  //   const canvasMY = mouseY
+
+  //   // viewport → NDC
+  //   // const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).clientWidth - 1.0;
+  //   // const y = 1.0 - (2.0 * canvasMY) / (gl.canvas as HTMLCanvasElement).clientHeight;
+  //   const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).width - 1.0;
+  //   const y = 1.0 - (2.0 * canvasMY) / (gl.canvas as HTMLCanvasElement).height;
+  //   const z = -1.0;
+
+  //   // NDC → clip
+  //   const rayClip: [number, number, number, number] = [x, y, z, 1.0];
+
+  //   // clip → eye
+  //   const pInv = mat4.create();
+  //   mat4.invert(pInv, pMatrix);
+  //   const rayEye4: [number, number, number, number] = [0, 0, 0, 0];
+  //   RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+
+  //   // direction in eye space (z = -1, w = 0)
+  //   const rayEye: [number, number, number, number] = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+
+  //   // eye → world
+  //   const vInv = mat4.create();
+  //   mat4.invert(vInv, vMatrix);
+  //   const rayWorld4: [number, number, number, number] = [0, 0, 0, 0];
+  //   RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+
+  //   const rayWorld = vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+  //   vec3.normalize(rayWorld, rayWorld);
+  //   return rayWorld;
+  // }
 
   /** a*b (4x4 * vec4) → vec4 (in `out`) */
   private static mat4MultiplyVec4(

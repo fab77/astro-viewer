@@ -38,7 +38,8 @@ export declare class AstroViewer {
     setCamera(camera: Camera): void;
     setCameraPosition(pos: [number, number, number]): void;
     setCameraMatrix(viewMatrix: Float32Array): void;
-    applyFullCameraState(detail: CameraChangedDetail): void;
+    restoreAstroViewerState(detail: CameraChangedDetail, applyColorMap: boolean): void;
+    getCurrentAstroViewerStatus(): CameraChangedDetail | null;
     goTo(raDeg: number, decDeg: number): void;
     getCenterCoordinates(): PointCoordinates | undefined;
     getCoordinatesFromMouse(): PointCoordinates | undefined;

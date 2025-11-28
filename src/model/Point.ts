@@ -14,10 +14,10 @@ import {
 import {CoordsType} from '../utils/CoordsType.js';
 import global from '../Global.js';
 
-type CartesianOpts = { x: number; y: number; z: number };
-type AstroOpts = { raDeg: number; decDeg: number };
-type SphericalOpts = { phiDeg: number; thetaDeg: number };
-type PointInitOpts = CartesianOpts | AstroOpts | SphericalOpts;
+export type CartesianOpts = { x: number; y: number; z: number };
+export type AstroOpts = { raDeg: number; decDeg: number };
+export type SphericalOpts = { phiDeg: number; thetaDeg: number };
+export type PointInitOpts = CartesianOpts | AstroOpts | SphericalOpts;
 
 export class Point {
   private _x!: number;

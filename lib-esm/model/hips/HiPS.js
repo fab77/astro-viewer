@@ -100,45 +100,54 @@ export class HiPS extends AbstractSkyEntity {
             case 'grayscale':
                 this.colorMapIdx = 1;
                 // hipsShaderProgram.setGrayscaleShader()
+                this.colorMap = ColorMaps['grayscale'];
                 super.hipsShaderProgram.setGrayscaleShader();
                 break;
             case 'planck':
                 this.colorMapIdx = 2;
+                this.colorMap = ColorMaps['planck'];
                 // hipsShaderProgram.setColorMapShader()
                 super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'cmb':
                 this.colorMapIdx = 3;
+                this.colorMap = ColorMaps['cmb'];
                 // hipsShaderProgram.setColorMapShader()
                 super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'rainbow':
                 this.colorMapIdx = 4;
+                this.colorMap = ColorMaps['rainbow'];
                 // hipsShaderProgram.setColorMapShader()
                 super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'eosb':
                 this.colorMapIdx = 5;
+                this.colorMap = ColorMaps['eosb'];
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
             case 'cubehelix':
                 this.colorMapIdx = 6;
+                this.colorMap = ColorMaps['cubehelix'];
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
             case 'hot':
                 this.colorMapIdx = 7;
+                this.colorMap = ColorMaps['hot'];
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
             case 'gray':
                 this.colorMapIdx = 8;
+                this.colorMap = ColorMaps['gray'];
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
             default:
                 this.colorMapIdx = 0;
+                this.colorMap = ColorMaps['native'];
                 super.hipsShaderProgram.setNativeShader();
             // hipsShaderProgram.setNativeShader()
         }

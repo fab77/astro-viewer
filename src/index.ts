@@ -10,7 +10,7 @@ export { CatalogueGL } from './model/catalogues/CatalogueGL.js'
 // export {TapMetadataList} from './model/tap/TapMetadataList.js'
 export { MetadataManager } from './model/MetadataManager.js'
 export { MetadataColumn, ColumnType } from './model/MetadataColumn.js'
-export { Point } from './model/Point.js'
+export { Point, SphericalOpts, AstroOpts, PointInitOpts, CartesianOpts } from './model/Point.js'
 export { FoVUtils } from './utils/FoVUtils.js'
 export { CoordsType } from './utils/CoordsType.js'
 export { ColorMapName } from './model/ColorMaps.js';
