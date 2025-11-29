@@ -16,6 +16,9 @@ export class PerspectiveMatrixManager {
   get pMatrix(): ReadonlyMat4 {
     return this._pMatrix;
   }
+  set pMatrix(pMatrix:Float32Array) {
+    this._pMatrix = pMatrix;
+  }
 
   computePerspectiveMatrix(
     canvas: HTMLCanvasElement,
@@ -49,6 +52,3 @@ export class PerspectiveMatrixManager {
     return p;
   }
 }
-
-// const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton();
-// export default computePerspectiveMatrixSingleton;

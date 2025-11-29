@@ -8,6 +8,9 @@ export class PerspectiveMatrixManager {
     get pMatrix() {
         return this._pMatrix;
     }
+    set pMatrix(pMatrix) {
+        this._pMatrix = pMatrix;
+    }
     computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
         this._aspectRatio = canvas.width / canvas.height;
         const p = mat4.create();
@@ -31,6 +34,4 @@ export class PerspectiveMatrixManager {
         return p;
     }
 }
-// const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton();
-// export default computePerspectiveMatrixSingleton;
 //# sourceMappingURL=PerspectiveMatrixManager.js.map

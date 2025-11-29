@@ -293,14 +293,20 @@ class AstroSphere {
         this._camera.setCameraMatrix(viewMatrix);
         this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere);
     }
+    _refreshingStatus = false;
     // set completo camera (pos + orientamento)
     applyFullCameraState(detail, applyColor) {
+        this._refreshingStatus = true;
         this._camera = detail.camera;
-        this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg);
+        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
+        this._healpixGrid.setModelMatrix(detail.mMatrix);
+        this._perspectiveMatrixManager.pMatrix = detail.pMatrix;
         this.setCameraMatrix(detail.vMatrix);
+        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
         if (applyColor) {
             this._activeHiPS?.changeColorMap(detail.colorMap);
         }
+        this._refreshingStatus = false;
     }
     getCurrentStatus() {
         const centralradeg = this.centralPoinCoords?.astroDeg.ra;
@@ -335,6 +341,8 @@ class AstroSphere {
         return this._activeHiPS;
     }
     draw(canvas) {
+        if (this._refreshingStatus)
+            return;
         if (!this._webgl)
             return;
         if (!this._activeHiPS)

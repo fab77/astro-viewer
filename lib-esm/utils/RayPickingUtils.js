@@ -42,47 +42,6 @@ class RayPickingUtils {
         vec3.normalize(rayWorld, rayWorld);
         return rayWorld;
     }
-    // static getRayFromMouse(
-    //   mouseX: number,
-    //   mouseY: number,
-    //   pMatrix: ReadonlyMat4,
-    //   webgl: WebGL2RenderingContext,
-    //   vMatrix: ReadonlyMat4
-    // ): vec3 {
-    //   // if (!global.camera) {
-    //   //   throw new Error("Camera is not initialized.");
-    //   // }
-    //   // const vMatrix = global.camera.getCameraMatrix() as ReadonlyMat4;
-    //   const gl = webgl as GL;
-    //   const rect = (gl.canvas as HTMLCanvasElement).getBoundingClientRect();
-    //   // const canvasMX = mouseX - rect.left;
-    //   // const canvasMY = mouseY - rect.top;
-    //   const canvasMX = mouseX
-    //   const canvasMY = mouseY
-    //   // viewport → NDC
-    //   // const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).clientWidth - 1.0;
-    //   // const y = 1.0 - (2.0 * canvasMY) / (gl.canvas as HTMLCanvasElement).clientHeight;
-    //   const x = (2.0 * canvasMX) / (gl.canvas as HTMLCanvasElement).width - 1.0;
-    //   const y = 1.0 - (2.0 * canvasMY) / (gl.canvas as HTMLCanvasElement).height;
-    //   const z = -1.0;
-    //   // NDC → clip
-    //   const rayClip: [number, number, number, number] = [x, y, z, 1.0];
-    //   // clip → eye
-    //   const pInv = mat4.create();
-    //   mat4.invert(pInv, pMatrix);
-    //   const rayEye4: [number, number, number, number] = [0, 0, 0, 0];
-    //   RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
-    //   // direction in eye space (z = -1, w = 0)
-    //   const rayEye: [number, number, number, number] = [rayEye4[0], rayEye4[1], -1.0, 0.0];
-    //   // eye → world
-    //   const vInv = mat4.create();
-    //   mat4.invert(vInv, vMatrix);
-    //   const rayWorld4: [number, number, number, number] = [0, 0, 0, 0];
-    //   RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
-    //   const rayWorld = vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
-    //   vec3.normalize(rayWorld, rayWorld);
-    //   return rayWorld;
-    // }
     /** a*b (4x4 * vec4) → vec4 (in `out`) */
     static mat4MultiplyVec4(a, b, out) {
         const d = b[0], e = b[1], g = b[2], w = b[3];
@@ -131,8 +90,6 @@ class RayPickingUtils {
      */
     static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera, pMatrix) {
         const vMatrix = camera.getCameraMatrix();
-        // const canvas = webgl.canvas as HTMLCanvasElement
-        // console.log(`mouseX: ${mouseX} maouseY: ${mouseY} clientwidth: ${canvas.clientWidth} clientheight: ${canvas.clientHeight} width: ${canvas.width} height: ${canvas.height}`)
         const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
         const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
         let intersectionModelPoint = [];

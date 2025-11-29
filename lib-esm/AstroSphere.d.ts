@@ -80,6 +80,7 @@ declare class AstroSphere {
     toggleInsideSphere(): void;
     setCameraPosition(pos: [number, number, number]): void;
     setCameraMatrix(viewMatrix: Float32Array): void;
+    private _refreshingStatus;
     applyFullCameraState(detail: CameraChangedDetail, applyColor: boolean): void;
     getCurrentStatus(): CameraChangedDetail | null;
     changeColorMap(cm: ColorMap): void;

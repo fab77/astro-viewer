@@ -444,16 +444,23 @@ class AstroSphere {
     );
   }
 
+  private _refreshingStatus: boolean = false
   // set completo camera (pos + orientamento)
   public applyFullCameraState(detail: CameraChangedDetail, applyColor: boolean) {
 
+    this._refreshingStatus = true
     this._camera = detail.camera
-    this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
+    // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
+
+    this._healpixGrid.setModelMatrix(detail.mMatrix)
+    this._perspectiveMatrixManager.pMatrix = detail.pMatrix
 
     this.setCameraMatrix(detail.vMatrix);
+    // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
     if (applyColor) {
       this._activeHiPS?.changeColorMap(detail.colorMap)
     }
+    this._refreshingStatus = false
   }
 
   public getCurrentStatus(): CameraChangedDetail | null {
@@ -493,6 +500,7 @@ class AstroSphere {
 
   draw(canvas: HTMLCanvasElement) {
 
+    if (this._refreshingStatus) return
     if (!this._webgl) return
     if (!this._activeHiPS) return
 
