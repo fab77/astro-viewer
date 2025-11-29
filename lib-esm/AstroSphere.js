@@ -370,21 +370,22 @@ class AstroSphere {
                     if (!this.centralPoinCoords) {
                         this.centralPoinCoords = this.updateCentralPoint();
                     }
-                    const detail = {
-                        fovDeg: this.fov.minFoV,
-                        position: this._camera.getCameraPosition(),
-                        vMatrix: this._camera.getCameraMatrix(),
-                        pMatrix: this._perspectiveMatrixManager.pMatrix,
-                        mMatrix: this._healpixGrid.getModelMatrix(),
-                        camera: this._camera,
-                        timestamp: performance.now(),
-                        centralPoint: new Point({ raDeg: this.centralPoinCoords.astroDeg.ra, decDeg: this.centralPoinCoords.astroDeg.dec }, CoordsType.ASTRO),
-                        mouseHoverPoint: this.mousePointCoords,
-                        colorMap: this._selectedColorMap
-                    };
-                    this.canvas.dispatchEvent(new CustomEvent('camera-changed', 
-                    // { detail, bubbles: false, composed: false }
-                    { detail, bubbles: true, composed: true }));
+                    // const detail: CameraChangedDetail = {
+                    //   fovDeg: this.fov.minFoV,
+                    //   position: this._camera.getCameraPosition(),
+                    //   vMatrix: this._camera.getCameraMatrix() as Float32Array,
+                    //   pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
+                    //   mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
+                    //   camera: this._camera,
+                    //   timestamp: performance.now(),
+                    //   centralPoint: new Point({ raDeg: this.centralPoinCoords.astroDeg.ra, decDeg: this.centralPoinCoords.astroDeg.dec }, CoordsType.ASTRO),
+                    //   mouseHoverPoint: this.mousePointCoords,
+                    //   colorMap: this._selectedColorMap
+                    // };
+                    // this.canvas.dispatchEvent(new CustomEvent<CameraChangedDetail>(
+                    //   'camera-changed',
+                    //   { detail, bubbles: true, composed: true }
+                    // ));
                     this.prevFov = this.fov.minFoV;
                 }
             }
@@ -417,23 +418,27 @@ class AstroSphere {
             const decChanged = this.prevCentralDecDeg === null ||
                 Math.abs(centralDecDeg - this.prevCentralDecDeg) > 1e-5;
             if (raChanged || decChanged) {
-                const detail = {
-                    fovDeg: this.fov.minFoV,
-                    position: this._camera.getCameraPosition(),
-                    vMatrix: this._camera.getCameraMatrix(),
-                    pMatrix: this._perspectiveMatrixManager.pMatrix,
-                    mMatrix: this._healpixGrid.getModelMatrix(),
-                    camera: this._camera,
-                    timestamp: performance.now(),
-                    centralPoint: new Point({ raDeg: centralRaDeg, decDeg: centralDecDeg }, CoordsType.ASTRO),
-                    mouseHoverPoint: this.mousePointCoords,
-                    colorMap: this._selectedColorMap
-                };
-                this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
-                    detail,
-                    // bubbles: false, composed: false,
-                    bubbles: true, composed: true,
-                }));
+                // const detail: CameraChangedDetail = {
+                //   fovDeg: this.fov.minFoV,
+                //   position: this._camera.getCameraPosition(),
+                //   vMatrix: this._camera.getCameraMatrix() as Float32Array,
+                //   pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
+                //   mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
+                //   camera: this._camera,
+                //   timestamp: performance.now(),
+                //   centralPoint: new Point(
+                //     { raDeg: centralRaDeg, decDeg: centralDecDeg },
+                //     CoordsType.ASTRO
+                //   ),
+                //   mouseHoverPoint: this.mousePointCoords,
+                //   colorMap: this._selectedColorMap
+                // };
+                // this.canvas.dispatchEvent(
+                //   new CustomEvent<CameraChangedDetail>('camera-changed', {
+                //     detail,
+                //     bubbles: true, composed: true,
+                //   })
+                // );
                 this.prevCentralRaDeg = centralRaDeg;
                 this.prevCentralDecDeg = centralDecDeg;
             }
