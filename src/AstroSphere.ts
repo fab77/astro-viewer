@@ -249,7 +249,7 @@ class AstroSphere {
 
           this.updateLastMousePoint();
           hit = true;
-          console.log("hit")
+          // console.log("hit")
         }
       }
 

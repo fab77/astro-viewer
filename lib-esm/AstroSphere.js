@@ -160,7 +160,7 @@ class AstroSphere {
                     this.mouseHelper.update(mousePoint);
                     this.updateLastMousePoint();
                     hit = true;
-                    console.log("hit");
+                    // console.log("hit")
                 }
             }
             if (!this.centralPoinCoords) {
