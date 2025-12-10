@@ -4474,6 +4474,10 @@ class Camera {
     move = create();
     phi = 0; // accumulated yaw (radians)
     theta = 0; // accumulated pitch (radians)
+    // lock rotation around world axes
+    lockRotX = false;
+    lockRotY = false;
+    lockRotZ = false;
     constructor(in_position, in_sphere) {
         this.init(in_position, in_sphere);
     }
@@ -4492,14 +4496,11 @@ class Camera {
         this.goTo(raDeg, decDeg);
     }
     goTo(raDeg, decDeg) {
-        // eslint-disable-next-line no-console
-        // console.log(`Camera.goto ${raDeg} ${decDeg}`);
         // mirror RA
         const mirroredRA = 360 - raDeg;
         this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
     }
     goToPhiTheta(ptDeg) {
-        // console.log(`Camera.goToPhiTheta ${ptDeg.phi} ${ptDeg.theta}`);
         const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
         let cameraMatrix = mat4_create();
         cameraMatrix = translate(cameraMatrix, cameraMatrix, fromValues(xyz[0], xyz[1], xyz[2]));
@@ -4567,8 +4568,6 @@ class Camera {
             else {
                 this.cam_pos[2] += this.move[2];
             }
-            // NOTE: your original code adds move[2] twice; if that's unintended, remove this next line.
-            // this.cam_pos[2] += this.move[2];
         }
         const identity = mat4_create();
         translate(this.T, identity, this.cam_pos);
@@ -4606,54 +4605,115 @@ class Camera {
         this.refreshViewMatrix();
     }
     translate(distance) {
-        // const pos = this.getCameraPosition();
         this.cam_pos[2] = distance + 1;
-        // vec3.scale(pos, pos, distance);
         const identity = mat4_create();
         translate(this.T, identity, this.cam_pos);
         this.refreshViewMatrix();
     }
-    rotateZ(sign) {
-        const factorRad = sign * 0.01;
-        this.phi += factorRad;
-        rotate(this.R, this.R, factorRad, [0, 0, 1]);
-        this.refreshViewMatrix();
-    }
-    rotateY(sign) {
-        const factorRad = sign * 0.01;
-        this.phi += factorRad;
-        rotate(this.R, this.R, factorRad, [0, 1, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateXRadian(radian) {
-        rotate(this.R, this.R, radian, [1, 0, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateYRadian(radian) {
-        this.phi += radian;
-        rotate(this.R, this.R, radian, [0, 1, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateZRadian(radian) {
-        rotate(this.R, this.R, radian, [0, 0, 1]);
-        this.refreshViewMatrix();
-    }
     rotateX(sign) {
+        if (this.lockRotX)
+            return;
         const factorRad = sign * 0.01;
         this.theta += factorRad;
         rotate(this.R, this.R, factorRad, [1, 0, 0]);
         this.refreshViewMatrix();
     }
+    rotateY(sign) {
+        if (this.lockRotY)
+            return;
+        const factorRad = sign * 0.01;
+        this.phi += factorRad;
+        rotate(this.R, this.R, factorRad, [0, 1, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateZ(sign) {
+        if (this.lockRotZ)
+            return;
+        const factorRad = sign * 0.01;
+        // this.phi += factorRad;
+        rotate(this.R, this.R, factorRad, [0, 0, 1]);
+        this.refreshViewMatrix();
+    }
+    rotateXRadian(radian) {
+        if (this.lockRotX)
+            return;
+        rotate(this.R, this.R, radian, [1, 0, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateYRadian(radian) {
+        if (this.lockRotY)
+            return;
+        this.phi += radian;
+        rotate(this.R, this.R, radian, [0, 1, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateZRadian(radian) {
+        if (this.lockRotZ)
+            return;
+        rotate(this.R, this.R, radian, [0, 0, 1]);
+        this.refreshViewMatrix();
+    }
     rotate(phi, theta) {
+        // If Z is locked, completely disable orbit rotation
+        if (this.lockRotZ) {
+            return;
+        }
         const totRot = Math.sqrt(phi * phi + theta * theta);
         if (totRot === 0)
             return;
+        // If both X and Y rotations are locked, nothing to do
+        if (this.lockRotX && this.lockRotY) {
+            return;
+        }
         const pos = this.getCameraPosition();
         const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
         const usedRot = (totRot * (dist2Center - 1)) / 3.0;
-        rotate(this.R, this.R, -usedRot, [theta / totRot, phi / totRot, 0]);
+        // Build an axis from phi/theta, but zero components that are locked
+        let axisX = this.lockRotX ? 0 : theta;
+        let axisY = this.lockRotY ? 0 : phi;
+        const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
+        // If after locking we have no axis left, do nothing
+        if (axisLen === 0) {
+            return;
+        }
+        axisX /= axisLen;
+        axisY /= axisLen;
+        rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
         this.refreshViewMatrix();
     }
+    // rotate(phi: number, theta: number): void {
+    //   // totRot is the magnitude of the requested rotation
+    //   const totRot = Math.sqrt(phi * phi + theta * theta);
+    //   if (totRot === 0) return;
+    //   // If both X and Y rotations are locked, nothing to do
+    //   if (this.lockRotX && this.lockRotY) {
+    //     return;
+    //   }
+    //   const pos = this.getCameraPosition();
+    //   const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+    //   const usedRot = (totRot * (dist2Center - 1)) / 3.0;
+    //   // Build an axis from phi/theta, but zero components that are locked
+    //   let axisX = this.lockRotX ? 0 : theta;
+    //   let axisY = this.lockRotY ? 0 : phi;
+    //   const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
+    //   // If after locking we have no axis left, do nothing
+    //   if (axisLen === 0) {
+    //     return;
+    //   }
+    //   axisX /= axisLen;
+    //   axisY /= axisLen;
+    //   mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
+    //   this.refreshViewMatrix();
+    // }
+    // rotate(phi: number, theta: number): void {
+    //   const totRot = Math.sqrt(phi * phi + theta * theta);
+    //   if (totRot === 0) return;
+    //   const pos = this.getCameraPosition();
+    //   const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+    //   const usedRot = (totRot * (dist2Center - 1)) / 3.0;
+    //   mat4.rotate(this.R, this.R, -usedRot, [theta / totRot, phi / totRot, 0]);
+    //   this.refreshViewMatrix();
+    // }
     refreshViewMatrix() {
         const T_inverse = mat4_create();
         const R_inverse = mat4_create();
@@ -4676,13 +4736,6 @@ class Camera {
         }
         return [inv[12], inv[13], inv[14]];
     }
-    // setCameraPosition(position: Vec3Tuple) {
-    //   const inv = mat4.create();
-    //   if (mat4.invert(inv, this.vMatrix)) {
-    //     [inv[12], inv[13], inv[14]] = [position[0], position[1], position[2]]
-    //     mat4.invert(this.vMatrix, inv)
-    //   }
-    // }
     setCameraMatrix(viewMatrix) {
         this.vMatrix = viewMatrix;
     }
@@ -4703,6 +4756,25 @@ class Camera {
         console.log("[Camera::getCameraAngle]", ptDeg);
         return ptDeg;
     }
+    /**
+     * Lock/unlock rotation around world axes X, Y, Z.
+     * Passing `undefined` leaves that axis as-is.
+     */
+    setRotationLock(options) {
+        if (options.x !== undefined)
+            this.lockRotX = options.x;
+        if (options.y !== undefined)
+            this.lockRotY = options.y;
+        if (options.z !== undefined)
+            this.lockRotZ = options.z;
+    }
+    /** Convenience helpers */
+    clearRotationLock() {
+        this.lockRotX = this.lockRotY = this.lockRotZ = false;
+    }
+    isRotationLockedX() { return this.lockRotX; }
+    isRotationLockedY() { return this.lockRotY; }
+    isRotationLockedZ() { return this.lockRotZ; }
 }
 /* harmony default export */ const src_Camera = (Camera);
 
@@ -10915,11 +10987,40 @@ class AstroSphere {
             }
             event.preventDefault();
         };
+        const onKeyDown = (evt) => {
+            console.log('[AstroSphere::onKeyDown] key=', evt.key);
+            switch (evt.key) {
+                case '1':
+                    // Free camera
+                    this._camera.clearRotationLock();
+                    break;
+                case '2':
+                    // Lock X axis rotation
+                    this._camera.setRotationLock({ x: true, y: false, z: false });
+                    break;
+                case '3':
+                    // Lock Y axis rotation
+                    this._camera.setRotationLock({ x: false, y: true, z: false });
+                    break;
+                case '4':
+                    // Lock Z axis rotation
+                    this._camera.setRotationLock({ x: false, y: false, z: true });
+                    break;
+            }
+        };
+        console.log('[AstroSphere] registering pointer and wheel listeners on canvas');
         canvas.onpointerdown = handleMouseDown;
         canvas.onpointerup = handleMouseUp;
         canvas.onpointermove = handleMouseMove;
         // canvas.onwheel = handleMouseWheel
+        console.log('[AstroSphere] adding wheel event listener with passive: false');
         canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
+        console.log('[AstroSphere] registering global keydown listener on document');
+        document.addEventListener('keydown', onKeyDown, { capture: true });
+        // window.addEventListener('keydown', onKeyDown)
+        // window.addEventListener('keydown', e => console.log('[DEVTOOLS GLOBAL KEY]', e.key));
+        // window.top?.addEventListener('keydown', onKeyDown);
+        // globalThis.addEventListener('keydown', onKeyDown);
     }
     // REVIEW THIS METHOD AND MOVE IT 
     getPhiThetaDeg(canvas) {

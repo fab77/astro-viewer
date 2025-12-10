@@ -204,11 +204,40 @@ class AstroSphere {
             }
             event.preventDefault();
         };
+        const onKeyDown = (evt) => {
+            console.log('[AstroSphere::onKeyDown] key=', evt.key);
+            switch (evt.key) {
+                case '1':
+                    // Free camera
+                    this._camera.clearRotationLock();
+                    break;
+                case '2':
+                    // Lock X axis rotation
+                    this._camera.setRotationLock({ x: true, y: false, z: false });
+                    break;
+                case '3':
+                    // Lock Y axis rotation
+                    this._camera.setRotationLock({ x: false, y: true, z: false });
+                    break;
+                case '4':
+                    // Lock Z axis rotation
+                    this._camera.setRotationLock({ x: false, y: false, z: true });
+                    break;
+            }
+        };
+        console.log('[AstroSphere] registering pointer and wheel listeners on canvas');
         canvas.onpointerdown = handleMouseDown;
         canvas.onpointerup = handleMouseUp;
         canvas.onpointermove = handleMouseMove;
         // canvas.onwheel = handleMouseWheel
+        console.log('[AstroSphere] adding wheel event listener with passive: false');
         canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
+        console.log('[AstroSphere] registering global keydown listener on document');
+        document.addEventListener('keydown', onKeyDown, { capture: true });
+        // window.addEventListener('keydown', onKeyDown)
+        // window.addEventListener('keydown', e => console.log('[DEVTOOLS GLOBAL KEY]', e.key));
+        // window.top?.addEventListener('keydown', onKeyDown);
+        // globalThis.addEventListener('keydown', onKeyDown);
     }
     // REVIEW THIS METHOD AND MOVE IT 
     getPhiThetaDeg(canvas) {

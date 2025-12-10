@@ -19,6 +19,9 @@ declare class Camera implements CameraLike {
     private move;
     private phi;
     private theta;
+    private lockRotX;
+    private lockRotY;
+    private lockRotZ;
     constructor(in_position: vec3, in_sphere: boolean);
     private init;
     goTo(raDeg: number, decDeg: number): void;
@@ -35,12 +38,12 @@ declare class Camera implements CameraLike {
      */
     moveAlongView(distance: number): void;
     translate(distance: number): void;
-    rotateZ(sign: number): void;
+    rotateX(sign: number): void;
     rotateY(sign: number): void;
+    rotateZ(sign: number): void;
     rotateXRadian(radian: number): void;
     rotateYRadian(radian: number): void;
     rotateZRadian(radian: number): void;
-    rotateX(sign: number): void;
     rotate(phi: number, theta: number): void;
     private refreshViewMatrix;
     refreshFoV(currentFoV: number): void;
@@ -49,6 +52,20 @@ declare class Camera implements CameraLike {
     setCameraMatrix(viewMatrix: Float32Array<ArrayBufferLike>): void;
     setCameraPosition(position: [number, number, number]): void;
     getCameraAngle(): SphericalCoords;
+    /**
+     * Lock/unlock rotation around world axes X, Y, Z.
+     * Passing `undefined` leaves that axis as-is.
+     */
+    setRotationLock(options: {
+        x?: boolean;
+        y?: boolean;
+        z?: boolean;
+    }): void;
+    /** Convenience helpers */
+    clearRotationLock(): void;
+    isRotationLockedX(): boolean;
+    isRotationLockedY(): boolean;
+    isRotationLockedZ(): boolean;
 }
 export default Camera;
 //# sourceMappingURL=Camera.d.ts.map

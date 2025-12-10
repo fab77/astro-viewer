@@ -1,25 +1,91 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
-/******/ 	var __webpack_modules__ = ({
-
-/***/ "./node_modules/gl-matrix/esm/common.js":
-/*!**********************************************!*\
-  !*** ./node_modules/gl-matrix/esm/common.js ***!
-  \**********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
+/******/ 	// The require scope
+/******/ 	var __webpack_require__ = {};
+/******/ 	
+/************************************************************************/
+/******/ 	/* webpack/runtime/define property getters */
+/******/ 	(() => {
+/******/ 		// define getter functions for harmony exports
+/******/ 		__webpack_require__.d = (exports, definition) => {
+/******/ 			for(var key in definition) {
+/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
+/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
+/******/ 				}
+/******/ 			}
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
+/******/ 	(() => {
+/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/make namespace object */
+/******/ 	(() => {
+/******/ 		// define __esModule on exports
+/******/ 		__webpack_require__.r = (exports) => {
+/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
+/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
+/******/ 			}
+/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// ESM COMPAT FLAG
 __webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   ANGLE_ORDER: () => (/* binding */ ANGLE_ORDER),
-/* harmony export */   ARRAY_TYPE: () => (/* binding */ ARRAY_TYPE),
-/* harmony export */   EPSILON: () => (/* binding */ EPSILON),
-/* harmony export */   RANDOM: () => (/* binding */ RANDOM),
-/* harmony export */   equals: () => (/* binding */ equals),
-/* harmony export */   round: () => (/* binding */ round),
-/* harmony export */   setMatrixArrayType: () => (/* binding */ setMatrixArrayType),
-/* harmony export */   toDegree: () => (/* binding */ toDegree),
-/* harmony export */   toRadian: () => (/* binding */ toRadian)
-/* harmony export */ });
+
+// EXPORTS
+__webpack_require__.d(__webpack_exports__, {
+  AstroViewer: () => (/* reexport */ AstroViewer),
+  CatalogueGL: () => (/* reexport */ CatalogueGL),
+  ColumnType: () => (/* reexport */ ColumnType),
+  CoordsType: () => (/* reexport */ CoordsType),
+  FoV: () => (/* reexport */ FoV),
+  FoVUtils: () => (/* reexport */ FoVUtils),
+  FootprintSetGL: () => (/* reexport */ FootprintSetGL),
+  HiPS: () => (/* reexport */ HiPS),
+  HiPSDescriptor: () => (/* reexport */ HiPSDescriptor),
+  MetadataColumn: () => (/* reexport */ MetadataColumn),
+  MetadataManager: () => (/* reexport */ MetadataManager),
+  Point: () => (/* reexport */ Point)
+});
+
+;// ./src/Config.ts
+const hipsNodes = (/* unused pure expression or super */ null && ([
+    "https://skies.esac.esa.int/",
+    "https://alasky.cds.unistra.fr/",
+]));
+// If you want to re-enable multiple TAP repos, just uncomment and extend the array
+// export const tapRepos: string[] = [
+//   "https://archive.eso.org/tap_cat/",
+//   "https://archive.eso.org/tap_obs/",
+//   "https://sky.esa.int/esasky-tap/tap/",
+//   "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/argus",
+// ];
+const tapRepos = (/* unused pure expression or super */ null && ([
+    "https://sky.esa.int/esasky-tap/tap/",
+]));
+const bootSetup = {
+    insideSphere: false,
+    defaultHips: "",
+    camera_fov_deg: 34,
+    camera_fov_rad: 34 * Math.PI / 180.0,
+    camera_near_plane: 0.00001,
+    camera_far_plane: 2.5,
+    corsProxyUrl: "http://localhost:4000/",
+    useCORSProxy: false,
+    maxDecimals: 15,
+    // defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
+    defaultHipsUrl: "https://cdn.skies.esac.esa.int/DSSColor/",
+    version: "Astrobrowser v1.0.0",
+    debug: false,
+    insideView: false,
+};
+
+;// ./node_modules/gl-matrix/esm/common.js
 /**
  * Common utilities
  * @module glMatrix
@@ -85,71 +151,805 @@ function equals(a, b) {
   var tolerance = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : EPSILON;
   return Math.abs(a - b) <= tolerance * Math.max(1, Math.abs(a), Math.abs(b));
 }
+;// ./node_modules/gl-matrix/esm/vec3.js
 
-/***/ }),
 
-/***/ "./node_modules/gl-matrix/esm/mat4.js":
-/*!********************************************!*\
-  !*** ./node_modules/gl-matrix/esm/mat4.js ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+/**
+ * 3 Dimensional Vector
+ * @module vec3
+ */
 
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   add: () => (/* binding */ add),
-/* harmony export */   adjoint: () => (/* binding */ adjoint),
-/* harmony export */   clone: () => (/* binding */ clone),
-/* harmony export */   copy: () => (/* binding */ copy),
-/* harmony export */   create: () => (/* binding */ create),
-/* harmony export */   decompose: () => (/* binding */ decompose),
-/* harmony export */   determinant: () => (/* binding */ determinant),
-/* harmony export */   equals: () => (/* binding */ equals),
-/* harmony export */   exactEquals: () => (/* binding */ exactEquals),
-/* harmony export */   frob: () => (/* binding */ frob),
-/* harmony export */   fromQuat: () => (/* binding */ fromQuat),
-/* harmony export */   fromQuat2: () => (/* binding */ fromQuat2),
-/* harmony export */   fromRotation: () => (/* binding */ fromRotation),
-/* harmony export */   fromRotationTranslation: () => (/* binding */ fromRotationTranslation),
-/* harmony export */   fromRotationTranslationScale: () => (/* binding */ fromRotationTranslationScale),
-/* harmony export */   fromRotationTranslationScaleOrigin: () => (/* binding */ fromRotationTranslationScaleOrigin),
-/* harmony export */   fromScaling: () => (/* binding */ fromScaling),
-/* harmony export */   fromTranslation: () => (/* binding */ fromTranslation),
-/* harmony export */   fromValues: () => (/* binding */ fromValues),
-/* harmony export */   fromXRotation: () => (/* binding */ fromXRotation),
-/* harmony export */   fromYRotation: () => (/* binding */ fromYRotation),
-/* harmony export */   fromZRotation: () => (/* binding */ fromZRotation),
-/* harmony export */   frustum: () => (/* binding */ frustum),
-/* harmony export */   getRotation: () => (/* binding */ getRotation),
-/* harmony export */   getScaling: () => (/* binding */ getScaling),
-/* harmony export */   getTranslation: () => (/* binding */ getTranslation),
-/* harmony export */   identity: () => (/* binding */ identity),
-/* harmony export */   invert: () => (/* binding */ invert),
-/* harmony export */   lookAt: () => (/* binding */ lookAt),
-/* harmony export */   mul: () => (/* binding */ mul),
-/* harmony export */   multiply: () => (/* binding */ multiply),
-/* harmony export */   multiplyScalar: () => (/* binding */ multiplyScalar),
-/* harmony export */   multiplyScalarAndAdd: () => (/* binding */ multiplyScalarAndAdd),
-/* harmony export */   ortho: () => (/* binding */ ortho),
-/* harmony export */   orthoNO: () => (/* binding */ orthoNO),
-/* harmony export */   orthoZO: () => (/* binding */ orthoZO),
-/* harmony export */   perspective: () => (/* binding */ perspective),
-/* harmony export */   perspectiveFromFieldOfView: () => (/* binding */ perspectiveFromFieldOfView),
-/* harmony export */   perspectiveNO: () => (/* binding */ perspectiveNO),
-/* harmony export */   perspectiveZO: () => (/* binding */ perspectiveZO),
-/* harmony export */   rotate: () => (/* binding */ rotate),
-/* harmony export */   rotateX: () => (/* binding */ rotateX),
-/* harmony export */   rotateY: () => (/* binding */ rotateY),
-/* harmony export */   rotateZ: () => (/* binding */ rotateZ),
-/* harmony export */   scale: () => (/* binding */ scale),
-/* harmony export */   set: () => (/* binding */ set),
-/* harmony export */   str: () => (/* binding */ str),
-/* harmony export */   sub: () => (/* binding */ sub),
-/* harmony export */   subtract: () => (/* binding */ subtract),
-/* harmony export */   targetTo: () => (/* binding */ targetTo),
-/* harmony export */   translate: () => (/* binding */ translate),
-/* harmony export */   transpose: () => (/* binding */ transpose)
-/* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./common.js */ "./node_modules/gl-matrix/esm/common.js");
+/**
+ * Creates a new, empty vec3
+ *
+ * @returns {vec3} a new 3D vector
+ */
+function create() {
+  var out = new ARRAY_TYPE(3);
+  if (ARRAY_TYPE != Float32Array) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+  }
+  return out;
+}
+
+/**
+ * Creates a new vec3 initialized with values from an existing vector
+ *
+ * @param {ReadonlyVec3} a vector to clone
+ * @returns {vec3} a new 3D vector
+ */
+function clone(a) {
+  var out = new ARRAY_TYPE(3);
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  return out;
+}
+
+/**
+ * Calculates the length of a vec3
+ *
+ * @param {ReadonlyVec3} a vector to calculate length of
+ * @returns {Number} length of a
+ */
+function vec3_length(a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  return Math.sqrt(x * x + y * y + z * z);
+}
+
+/**
+ * Creates a new vec3 initialized with the given values
+ *
+ * @param {Number} x X component
+ * @param {Number} y Y component
+ * @param {Number} z Z component
+ * @returns {vec3} a new 3D vector
+ */
+function fromValues(x, y, z) {
+  var out = new ARRAY_TYPE(3);
+  out[0] = x;
+  out[1] = y;
+  out[2] = z;
+  return out;
+}
+
+/**
+ * Copy the values from one vec3 to another
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the source vector
+ * @returns {vec3} out
+ */
+function copy(out, a) {
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  return out;
+}
+
+/**
+ * Set the components of a vec3 to the given values
+ *
+ * @param {vec3} out the receiving vector
+ * @param {Number} x X component
+ * @param {Number} y Y component
+ * @param {Number} z Z component
+ * @returns {vec3} out
+ */
+function set(out, x, y, z) {
+  out[0] = x;
+  out[1] = y;
+  out[2] = z;
+  return out;
+}
+
+/**
+ * Adds two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+function add(out, a, b) {
+  out[0] = a[0] + b[0];
+  out[1] = a[1] + b[1];
+  out[2] = a[2] + b[2];
+  return out;
+}
+
+/**
+ * Subtracts vector b from vector a
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+function subtract(out, a, b) {
+  out[0] = a[0] - b[0];
+  out[1] = a[1] - b[1];
+  out[2] = a[2] - b[2];
+  return out;
+}
+
+/**
+ * Multiplies two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+function multiply(out, a, b) {
+  out[0] = a[0] * b[0];
+  out[1] = a[1] * b[1];
+  out[2] = a[2] * b[2];
+  return out;
+}
+
+/**
+ * Divides two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+function divide(out, a, b) {
+  out[0] = a[0] / b[0];
+  out[1] = a[1] / b[1];
+  out[2] = a[2] / b[2];
+  return out;
+}
+
+/**
+ * Math.ceil the components of a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to ceil
+ * @returns {vec3} out
+ */
+function ceil(out, a) {
+  out[0] = Math.ceil(a[0]);
+  out[1] = Math.ceil(a[1]);
+  out[2] = Math.ceil(a[2]);
+  return out;
+}
+
+/**
+ * Math.floor the components of a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to floor
+ * @returns {vec3} out
+ */
+function floor(out, a) {
+  out[0] = Math.floor(a[0]);
+  out[1] = Math.floor(a[1]);
+  out[2] = Math.floor(a[2]);
+  return out;
+}
+
+/**
+ * Returns the minimum of two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+function min(out, a, b) {
+  out[0] = Math.min(a[0], b[0]);
+  out[1] = Math.min(a[1], b[1]);
+  out[2] = Math.min(a[2], b[2]);
+  return out;
+}
+
+/**
+ * Returns the maximum of two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+function max(out, a, b) {
+  out[0] = Math.max(a[0], b[0]);
+  out[1] = Math.max(a[1], b[1]);
+  out[2] = Math.max(a[2], b[2]);
+  return out;
+}
+
+/**
+ * symmetric round the components of a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to round
+ * @returns {vec3} out
+ */
+function vec3_round(out, a) {
+  out[0] = glMatrix.round(a[0]);
+  out[1] = glMatrix.round(a[1]);
+  out[2] = glMatrix.round(a[2]);
+  return out;
+}
+
+/**
+ * Scales a vec3 by a scalar number
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the vector to scale
+ * @param {Number} b amount to scale the vector by
+ * @returns {vec3} out
+ */
+function scale(out, a, b) {
+  out[0] = a[0] * b;
+  out[1] = a[1] * b;
+  out[2] = a[2] * b;
+  return out;
+}
+
+/**
+ * Adds two vec3's after scaling the second operand by a scalar value
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @param {Number} scale the amount to scale b by before adding
+ * @returns {vec3} out
+ */
+function scaleAndAdd(out, a, b, scale) {
+  out[0] = a[0] + b[0] * scale;
+  out[1] = a[1] + b[1] * scale;
+  out[2] = a[2] + b[2] * scale;
+  return out;
+}
+
+/**
+ * Calculates the euclidian distance between two vec3's
+ *
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {Number} distance between a and b
+ */
+function distance(a, b) {
+  var x = b[0] - a[0];
+  var y = b[1] - a[1];
+  var z = b[2] - a[2];
+  return Math.sqrt(x * x + y * y + z * z);
+}
+
+/**
+ * Calculates the squared euclidian distance between two vec3's
+ *
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {Number} squared distance between a and b
+ */
+function squaredDistance(a, b) {
+  var x = b[0] - a[0];
+  var y = b[1] - a[1];
+  var z = b[2] - a[2];
+  return x * x + y * y + z * z;
+}
+
+/**
+ * Calculates the squared length of a vec3
+ *
+ * @param {ReadonlyVec3} a vector to calculate squared length of
+ * @returns {Number} squared length of a
+ */
+function squaredLength(a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  return x * x + y * y + z * z;
+}
+
+/**
+ * Negates the components of a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to negate
+ * @returns {vec3} out
+ */
+function negate(out, a) {
+  out[0] = -a[0];
+  out[1] = -a[1];
+  out[2] = -a[2];
+  return out;
+}
+
+/**
+ * Returns the inverse of the components of a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to invert
+ * @returns {vec3} out
+ */
+function inverse(out, a) {
+  out[0] = 1.0 / a[0];
+  out[1] = 1.0 / a[1];
+  out[2] = 1.0 / a[2];
+  return out;
+}
+
+/**
+ * Normalize a vec3
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a vector to normalize
+ * @returns {vec3} out
+ */
+function normalize(out, a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var len = x * x + y * y + z * z;
+  if (len > 0) {
+    //TODO: evaluate use of glm_invsqrt here?
+    len = 1 / Math.sqrt(len);
+  }
+  out[0] = a[0] * len;
+  out[1] = a[1] * len;
+  out[2] = a[2] * len;
+  return out;
+}
+
+/**
+ * Calculates the dot product of two vec3's
+ *
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {Number} dot product of a and b
+ */
+function vec3_dot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+/**
+ * Computes the cross product of two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @returns {vec3} out
+ */
+function cross(out, a, b) {
+  var ax = a[0],
+    ay = a[1],
+    az = a[2];
+  var bx = b[0],
+    by = b[1],
+    bz = b[2];
+  out[0] = ay * bz - az * by;
+  out[1] = az * bx - ax * bz;
+  out[2] = ax * by - ay * bx;
+  return out;
+}
+
+/**
+ * Performs a linear interpolation between two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec3} out
+ */
+function lerp(out, a, b, t) {
+  var ax = a[0];
+  var ay = a[1];
+  var az = a[2];
+  out[0] = ax + t * (b[0] - ax);
+  out[1] = ay + t * (b[1] - ay);
+  out[2] = az + t * (b[2] - az);
+  return out;
+}
+
+/**
+ * Performs a spherical linear interpolation between two vec3's
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec3} out
+ */
+function slerp(out, a, b, t) {
+  var angle = Math.acos(Math.min(Math.max(vec3_dot(a, b), -1), 1));
+  var sinTotal = Math.sin(angle);
+  var ratioA = Math.sin((1 - t) * angle) / sinTotal;
+  var ratioB = Math.sin(t * angle) / sinTotal;
+  out[0] = ratioA * a[0] + ratioB * b[0];
+  out[1] = ratioA * a[1] + ratioB * b[1];
+  out[2] = ratioA * a[2] + ratioB * b[2];
+  return out;
+}
+
+/**
+ * Performs a hermite interpolation with two control points
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @param {ReadonlyVec3} c the third operand
+ * @param {ReadonlyVec3} d the fourth operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec3} out
+ */
+function hermite(out, a, b, c, d, t) {
+  var factorTimes2 = t * t;
+  var factor1 = factorTimes2 * (2 * t - 3) + 1;
+  var factor2 = factorTimes2 * (t - 2) + t;
+  var factor3 = factorTimes2 * (t - 1);
+  var factor4 = factorTimes2 * (3 - 2 * t);
+  out[0] = a[0] * factor1 + b[0] * factor2 + c[0] * factor3 + d[0] * factor4;
+  out[1] = a[1] * factor1 + b[1] * factor2 + c[1] * factor3 + d[1] * factor4;
+  out[2] = a[2] * factor1 + b[2] * factor2 + c[2] * factor3 + d[2] * factor4;
+  return out;
+}
+
+/**
+ * Performs a bezier interpolation with two control points
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the first operand
+ * @param {ReadonlyVec3} b the second operand
+ * @param {ReadonlyVec3} c the third operand
+ * @param {ReadonlyVec3} d the fourth operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec3} out
+ */
+function bezier(out, a, b, c, d, t) {
+  var inverseFactor = 1 - t;
+  var inverseFactorTimesTwo = inverseFactor * inverseFactor;
+  var factorTimes2 = t * t;
+  var factor1 = inverseFactorTimesTwo * inverseFactor;
+  var factor2 = 3 * t * inverseFactorTimesTwo;
+  var factor3 = 3 * factorTimes2 * inverseFactor;
+  var factor4 = factorTimes2 * t;
+  out[0] = a[0] * factor1 + b[0] * factor2 + c[0] * factor3 + d[0] * factor4;
+  out[1] = a[1] * factor1 + b[1] * factor2 + c[1] * factor3 + d[1] * factor4;
+  out[2] = a[2] * factor1 + b[2] * factor2 + c[2] * factor3 + d[2] * factor4;
+  return out;
+}
+
+/**
+ * Generates a random vector with the given scale
+ *
+ * @param {vec3} out the receiving vector
+ * @param {Number} [scale] Length of the resulting vector. If omitted, a unit vector will be returned
+ * @returns {vec3} out
+ */
+function random(out, scale) {
+  scale = scale === undefined ? 1.0 : scale;
+  var r = glMatrix.RANDOM() * 2.0 * Math.PI;
+  var z = glMatrix.RANDOM() * 2.0 - 1.0;
+  var zScale = Math.sqrt(1.0 - z * z) * scale;
+  out[0] = Math.cos(r) * zScale;
+  out[1] = Math.sin(r) * zScale;
+  out[2] = z * scale;
+  return out;
+}
+
+/**
+ * Transforms the vec3 with a mat4.
+ * 4th vector component is implicitly '1'
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the vector to transform
+ * @param {ReadonlyMat4} m matrix to transform with
+ * @returns {vec3} out
+ */
+function transformMat4(out, a, m) {
+  var x = a[0],
+    y = a[1],
+    z = a[2];
+  var w = m[3] * x + m[7] * y + m[11] * z + m[15];
+  w = w || 1.0;
+  out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
+  out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
+  out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w;
+  return out;
+}
+
+/**
+ * Transforms the vec3 with a mat3.
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the vector to transform
+ * @param {ReadonlyMat3} m the 3x3 matrix to transform with
+ * @returns {vec3} out
+ */
+function transformMat3(out, a, m) {
+  var x = a[0],
+    y = a[1],
+    z = a[2];
+  out[0] = x * m[0] + y * m[3] + z * m[6];
+  out[1] = x * m[1] + y * m[4] + z * m[7];
+  out[2] = x * m[2] + y * m[5] + z * m[8];
+  return out;
+}
+
+/**
+ * Transforms the vec3 with a quat
+ * Can also be used for dual quaternions. (Multiply it with the real part)
+ *
+ * @param {vec3} out the receiving vector
+ * @param {ReadonlyVec3} a the vector to transform
+ * @param {ReadonlyQuat} q normalized quaternion to transform with
+ * @returns {vec3} out
+ */
+function transformQuat(out, a, q) {
+  // Fast Vector Rotation using Quaternions by Robert Eisele
+  // https://raw.org/proof/vector-rotation-using-quaternions/
+
+  var qx = q[0],
+    qy = q[1],
+    qz = q[2],
+    qw = q[3];
+  var vx = a[0],
+    vy = a[1],
+    vz = a[2];
+
+  // t = q x v
+  var tx = qy * vz - qz * vy;
+  var ty = qz * vx - qx * vz;
+  var tz = qx * vy - qy * vx;
+
+  // t = 2t
+  tx = tx + tx;
+  ty = ty + ty;
+  tz = tz + tz;
+
+  // v + w t + q x t
+  out[0] = vx + qw * tx + qy * tz - qz * ty;
+  out[1] = vy + qw * ty + qz * tx - qx * tz;
+  out[2] = vz + qw * tz + qx * ty - qy * tx;
+  return out;
+}
+
+/**
+ * Rotate a 3D vector around the x-axis
+ * @param {vec3} out The receiving vec3
+ * @param {ReadonlyVec3} a The vec3 point to rotate
+ * @param {ReadonlyVec3} b The origin of the rotation
+ * @param {Number} rad The angle of rotation in radians
+ * @returns {vec3} out
+ */
+function rotateX(out, a, b, rad) {
+  var p = [],
+    r = [];
+  //Translate point to the origin
+  p[0] = a[0] - b[0];
+  p[1] = a[1] - b[1];
+  p[2] = a[2] - b[2];
+
+  //perform rotation
+  r[0] = p[0];
+  r[1] = p[1] * Math.cos(rad) - p[2] * Math.sin(rad);
+  r[2] = p[1] * Math.sin(rad) + p[2] * Math.cos(rad);
+
+  //translate to correct position
+  out[0] = r[0] + b[0];
+  out[1] = r[1] + b[1];
+  out[2] = r[2] + b[2];
+  return out;
+}
+
+/**
+ * Rotate a 3D vector around the y-axis
+ * @param {vec3} out The receiving vec3
+ * @param {ReadonlyVec3} a The vec3 point to rotate
+ * @param {ReadonlyVec3} b The origin of the rotation
+ * @param {Number} rad The angle of rotation in radians
+ * @returns {vec3} out
+ */
+function rotateY(out, a, b, rad) {
+  var p = [],
+    r = [];
+  //Translate point to the origin
+  p[0] = a[0] - b[0];
+  p[1] = a[1] - b[1];
+  p[2] = a[2] - b[2];
+
+  //perform rotation
+  r[0] = p[2] * Math.sin(rad) + p[0] * Math.cos(rad);
+  r[1] = p[1];
+  r[2] = p[2] * Math.cos(rad) - p[0] * Math.sin(rad);
+
+  //translate to correct position
+  out[0] = r[0] + b[0];
+  out[1] = r[1] + b[1];
+  out[2] = r[2] + b[2];
+  return out;
+}
+
+/**
+ * Rotate a 3D vector around the z-axis
+ * @param {vec3} out The receiving vec3
+ * @param {ReadonlyVec3} a The vec3 point to rotate
+ * @param {ReadonlyVec3} b The origin of the rotation
+ * @param {Number} rad The angle of rotation in radians
+ * @returns {vec3} out
+ */
+function rotateZ(out, a, b, rad) {
+  var p = [],
+    r = [];
+  //Translate point to the origin
+  p[0] = a[0] - b[0];
+  p[1] = a[1] - b[1];
+  p[2] = a[2] - b[2];
+
+  //perform rotation
+  r[0] = p[0] * Math.cos(rad) - p[1] * Math.sin(rad);
+  r[1] = p[0] * Math.sin(rad) + p[1] * Math.cos(rad);
+  r[2] = p[2];
+
+  //translate to correct position
+  out[0] = r[0] + b[0];
+  out[1] = r[1] + b[1];
+  out[2] = r[2] + b[2];
+  return out;
+}
+
+/**
+ * Get the angle between two 3D vectors
+ * @param {ReadonlyVec3} a The first operand
+ * @param {ReadonlyVec3} b The second operand
+ * @returns {Number} The angle in radians
+ */
+function angle(a, b) {
+  var ax = a[0],
+    ay = a[1],
+    az = a[2],
+    bx = b[0],
+    by = b[1],
+    bz = b[2],
+    mag = Math.sqrt((ax * ax + ay * ay + az * az) * (bx * bx + by * by + bz * bz)),
+    cosine = mag && vec3_dot(a, b) / mag;
+  return Math.acos(Math.min(Math.max(cosine, -1), 1));
+}
+
+/**
+ * Set the components of a vec3 to zero
+ *
+ * @param {vec3} out the receiving vector
+ * @returns {vec3} out
+ */
+function zero(out) {
+  out[0] = 0.0;
+  out[1] = 0.0;
+  out[2] = 0.0;
+  return out;
+}
+
+/**
+ * Returns a string representation of a vector
+ *
+ * @param {ReadonlyVec3} a vector to represent as a string
+ * @returns {String} string representation of the vector
+ */
+function str(a) {
+  return "vec3(" + a[0] + ", " + a[1] + ", " + a[2] + ")";
+}
+
+/**
+ * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
+ *
+ * @param {ReadonlyVec3} a The first vector.
+ * @param {ReadonlyVec3} b The second vector.
+ * @returns {Boolean} True if the vectors are equal, false otherwise.
+ */
+function exactEquals(a, b) {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+}
+
+/**
+ * Returns whether or not the vectors have approximately the same elements in the same position.
+ *
+ * @param {ReadonlyVec3} a The first vector.
+ * @param {ReadonlyVec3} b The second vector.
+ * @returns {Boolean} True if the vectors are equal, false otherwise.
+ */
+function vec3_equals(a, b) {
+  var a0 = a[0],
+    a1 = a[1],
+    a2 = a[2];
+  var b0 = b[0],
+    b1 = b[1],
+    b2 = b[2];
+  return Math.abs(a0 - b0) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2));
+}
+
+/**
+ * Alias for {@link vec3.subtract}
+ * @function
+ */
+var sub = (/* unused pure expression or super */ null && (subtract));
+
+/**
+ * Alias for {@link vec3.multiply}
+ * @function
+ */
+var mul = (/* unused pure expression or super */ null && (multiply));
+
+/**
+ * Alias for {@link vec3.divide}
+ * @function
+ */
+var div = (/* unused pure expression or super */ null && (divide));
+
+/**
+ * Alias for {@link vec3.distance}
+ * @function
+ */
+var dist = (/* unused pure expression or super */ null && (distance));
+
+/**
+ * Alias for {@link vec3.squaredDistance}
+ * @function
+ */
+var sqrDist = (/* unused pure expression or super */ null && (squaredDistance));
+
+/**
+ * Alias for {@link vec3.length}
+ * @function
+ */
+var len = (/* unused pure expression or super */ null && (vec3_length));
+
+/**
+ * Alias for {@link vec3.squaredLength}
+ * @function
+ */
+var sqrLen = (/* unused pure expression or super */ null && (squaredLength));
+
+/**
+ * Perform some operation over an array of vec3s.
+ *
+ * @param {Array} a the array of vectors to iterate over
+ * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
+ * @param {Number} offset Number of elements to skip at the beginning of the array
+ * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
+ * @param {Function} fn Function to call for each vector in the array
+ * @param {Object} [arg] additional argument to pass to fn
+ * @returns {Array} a
+ * @function
+ */
+var forEach = function () {
+  var vec = create();
+  return function (a, stride, offset, count, fn, arg) {
+    var i, l;
+    if (!stride) {
+      stride = 3;
+    }
+    if (!offset) {
+      offset = 0;
+    }
+    if (count) {
+      l = Math.min(count * stride + offset, a.length);
+    } else {
+      l = a.length;
+    }
+    for (i = offset; i < l; i += stride) {
+      vec[0] = a[i];
+      vec[1] = a[i + 1];
+      vec[2] = a[i + 2];
+      fn(vec, vec, arg);
+      a[i] = vec[0];
+      a[i + 1] = vec[1];
+      a[i + 2] = vec[2];
+    }
+    return a;
+  };
+}();
+;// ./node_modules/gl-matrix/esm/mat4.js
 
 
 /**
@@ -162,9 +962,9 @@ __webpack_require__.r(__webpack_exports__);
  *
  * @returns {mat4} a new 4x4 matrix
  */
-function create() {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(16);
-  if (_common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE != Float32Array) {
+function mat4_create() {
+  var out = new ARRAY_TYPE(16);
+  if (ARRAY_TYPE != Float32Array) {
     out[1] = 0;
     out[2] = 0;
     out[3] = 0;
@@ -191,8 +991,8 @@ function create() {
  * @param {ReadonlyMat4} a matrix to clone
  * @returns {mat4} a new 4x4 matrix
  */
-function clone(a) {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(16);
+function mat4_clone(a) {
+  var out = new ARRAY_TYPE(16);
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -219,7 +1019,7 @@ function clone(a) {
  * @param {ReadonlyMat4} a the source matrix
  * @returns {mat4} out
  */
-function copy(out, a) {
+function mat4_copy(out, a) {
   out[0] = a[0];
   out[1] = a[1];
   out[2] = a[2];
@@ -260,8 +1060,8 @@ function copy(out, a) {
  * @param {Number} m33 Component in column 3, row 3 position (index 15)
  * @returns {mat4} A new mat4
  */
-function fromValues(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33) {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(16);
+function mat4_fromValues(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33) {
+  var out = new glMatrix.ARRAY_TYPE(16);
   out[0] = m00;
   out[1] = m01;
   out[2] = m02;
@@ -303,7 +1103,7 @@ function fromValues(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, 
  * @param {Number} m33 Component in column 3, row 3 position (index 15)
  * @returns {mat4} out
  */
-function set(out, m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33) {
+function mat4_set(out, m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31, m32, m33) {
   out[0] = m00;
   out[1] = m01;
   out[2] = m02;
@@ -561,7 +1361,7 @@ function determinant(a) {
  * @param {ReadonlyMat4} b the second operand
  * @returns {mat4} out
  */
-function multiply(out, a, b) {
+function mat4_multiply(out, a, b) {
   var a00 = a[0],
     a01 = a[1],
     a02 = a[2],
@@ -676,7 +1476,7 @@ function translate(out, a, v) {
  * @param {ReadonlyVec3} v the vec3 to scale the matrix by
  * @returns {mat4} out
  **/
-function scale(out, a, v) {
+function mat4_scale(out, a, v) {
   var x = v[0],
     y = v[1],
     z = v[2];
@@ -720,7 +1520,7 @@ function rotate(out, a, rad, axis) {
   var b00, b01, b02;
   var b10, b11, b12;
   var b20, b21, b22;
-  if (len < _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON) {
+  if (len < EPSILON) {
     return null;
   }
   len = 1 / len;
@@ -785,7 +1585,7 @@ function rotate(out, a, rad, axis) {
  * @param {Number} rad the angle to rotate the matrix by
  * @returns {mat4} out
  */
-function rotateX(out, a, rad) {
+function mat4_rotateX(out, a, rad) {
   var s = Math.sin(rad);
   var c = Math.cos(rad);
   var a10 = a[4];
@@ -828,7 +1628,7 @@ function rotateX(out, a, rad) {
  * @param {Number} rad the angle to rotate the matrix by
  * @returns {mat4} out
  */
-function rotateY(out, a, rad) {
+function mat4_rotateY(out, a, rad) {
   var s = Math.sin(rad);
   var c = Math.cos(rad);
   var a00 = a[0];
@@ -871,7 +1671,7 @@ function rotateY(out, a, rad) {
  * @param {Number} rad the angle to rotate the matrix by
  * @returns {mat4} out
  */
-function rotateZ(out, a, rad) {
+function mat4_rotateZ(out, a, rad) {
   var s = Math.sin(rad);
   var c = Math.cos(rad);
   var a00 = a[0];
@@ -986,7 +1786,7 @@ function fromRotation(out, rad, axis) {
     z = axis[2];
   var len = Math.sqrt(x * x + y * y + z * z);
   var s, c, t;
-  if (len < _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON) {
+  if (len < glMatrix.EPSILON) {
     return null;
   }
   len = 1 / len;
@@ -1182,7 +1982,7 @@ function fromRotationTranslation(out, q, v) {
  * @returns {mat4} mat4 receiving operation result
  */
 function fromQuat2(out, a) {
-  var translation = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(3);
+  var translation = new glMatrix.ARRAY_TYPE(3);
   var bx = -a[0],
     by = -a[1],
     bz = -a[2],
@@ -1258,7 +2058,7 @@ function getScaling(out, mat) {
  * @return {quat} out
  */
 function getRotation(out, mat) {
-  var scaling = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(3);
+  var scaling = new glMatrix.ARRAY_TYPE(3);
   getScaling(scaling, mat);
   var is1 = 1 / scaling[0];
   var is2 = 1 / scaling[1];
@@ -1741,7 +2541,7 @@ function orthoNO(out, left, right, bottom, top, near, far) {
  * Alias for {@link mat4.orthoNO}
  * @function
  */
-var ortho = orthoNO;
+var ortho = (/* unused pure expression or super */ null && (orthoNO));
 
 /**
  * Generates a orthogonal projection matrix with the given bounds.
@@ -1801,7 +2601,7 @@ function lookAt(out, eye, center, up) {
   var centerx = center[0];
   var centery = center[1];
   var centerz = center[2];
-  if (Math.abs(eyex - centerx) < _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON && Math.abs(eyey - centery) < _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON && Math.abs(eyez - centerz) < _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON) {
+  if (Math.abs(eyex - centerx) < glMatrix.EPSILON && Math.abs(eyey - centery) < glMatrix.EPSILON && Math.abs(eyez - centerz) < glMatrix.EPSILON) {
     return identity(out);
   }
   z0 = eyex - centerx;
@@ -1919,7 +2719,7 @@ function targetTo(out, eye, target, up) {
  * @param {ReadonlyMat4} a matrix to represent as a string
  * @returns {String} string representation of the matrix
  */
-function str(a) {
+function mat4_str(a) {
   return "mat4(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ", " + a[4] + ", " + a[5] + ", " + a[6] + ", " + a[7] + ", " + a[8] + ", " + a[9] + ", " + a[10] + ", " + a[11] + ", " + a[12] + ", " + a[13] + ", " + a[14] + ", " + a[15] + ")";
 }
 
@@ -1941,7 +2741,7 @@ function frob(a) {
  * @param {ReadonlyMat4} b the second operand
  * @returns {mat4} out
  */
-function add(out, a, b) {
+function mat4_add(out, a, b) {
   out[0] = a[0] + b[0];
   out[1] = a[1] + b[1];
   out[2] = a[2] + b[2];
@@ -1969,7 +2769,7 @@ function add(out, a, b) {
  * @param {ReadonlyMat4} b the second operand
  * @returns {mat4} out
  */
-function subtract(out, a, b) {
+function mat4_subtract(out, a, b) {
   out[0] = a[0] - b[0];
   out[1] = a[1] - b[1];
   out[2] = a[2] - b[2];
@@ -2053,7 +2853,7 @@ function multiplyScalarAndAdd(out, a, b, scale) {
  * @param {ReadonlyMat4} b The second matrix.
  * @returns {Boolean} True if the matrices are equal, false otherwise.
  */
-function exactEquals(a, b) {
+function mat4_exactEquals(a, b) {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3] && a[4] === b[4] && a[5] === b[5] && a[6] === b[6] && a[7] === b[7] && a[8] === b[8] && a[9] === b[9] && a[10] === b[10] && a[11] === b[11] && a[12] === b[12] && a[13] === b[13] && a[14] === b[14] && a[15] === b[15];
 }
 
@@ -2064,7 +2864,7 @@ function exactEquals(a, b) {
  * @param {ReadonlyMat4} b The second matrix.
  * @returns {Boolean} True if the matrices are equal, false otherwise.
  */
-function equals(a, b) {
+function mat4_equals(a, b) {
   var a0 = a[0],
     a1 = a[1],
     a2 = a[2],
@@ -2097,1688 +2897,99 @@ function equals(a, b) {
     b13 = b[13],
     b14 = b[14],
     b15 = b[15];
-  return Math.abs(a0 - b0) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3)) && Math.abs(a4 - b4) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a4), Math.abs(b4)) && Math.abs(a5 - b5) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a5), Math.abs(b5)) && Math.abs(a6 - b6) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a6), Math.abs(b6)) && Math.abs(a7 - b7) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a7), Math.abs(b7)) && Math.abs(a8 - b8) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a8), Math.abs(b8)) && Math.abs(a9 - b9) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a9), Math.abs(b9)) && Math.abs(a10 - b10) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a10), Math.abs(b10)) && Math.abs(a11 - b11) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a11), Math.abs(b11)) && Math.abs(a12 - b12) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a12), Math.abs(b12)) && Math.abs(a13 - b13) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a13), Math.abs(b13)) && Math.abs(a14 - b14) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a14), Math.abs(b14)) && Math.abs(a15 - b15) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a15), Math.abs(b15));
+  return Math.abs(a0 - b0) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3)) && Math.abs(a4 - b4) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a4), Math.abs(b4)) && Math.abs(a5 - b5) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a5), Math.abs(b5)) && Math.abs(a6 - b6) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a6), Math.abs(b6)) && Math.abs(a7 - b7) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a7), Math.abs(b7)) && Math.abs(a8 - b8) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a8), Math.abs(b8)) && Math.abs(a9 - b9) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a9), Math.abs(b9)) && Math.abs(a10 - b10) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a10), Math.abs(b10)) && Math.abs(a11 - b11) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a11), Math.abs(b11)) && Math.abs(a12 - b12) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a12), Math.abs(b12)) && Math.abs(a13 - b13) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a13), Math.abs(b13)) && Math.abs(a14 - b14) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a14), Math.abs(b14)) && Math.abs(a15 - b15) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a15), Math.abs(b15));
 }
 
 /**
  * Alias for {@link mat4.multiply}
  * @function
  */
-var mul = multiply;
+var mat4_mul = (/* unused pure expression or super */ null && (mat4_multiply));
 
 /**
  * Alias for {@link mat4.subtract}
  * @function
  */
-var sub = subtract;
-
-/***/ }),
-
-/***/ "./node_modules/gl-matrix/esm/vec3.js":
-/*!********************************************!*\
-  !*** ./node_modules/gl-matrix/esm/vec3.js ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   add: () => (/* binding */ add),
-/* harmony export */   angle: () => (/* binding */ angle),
-/* harmony export */   bezier: () => (/* binding */ bezier),
-/* harmony export */   ceil: () => (/* binding */ ceil),
-/* harmony export */   clone: () => (/* binding */ clone),
-/* harmony export */   copy: () => (/* binding */ copy),
-/* harmony export */   create: () => (/* binding */ create),
-/* harmony export */   cross: () => (/* binding */ cross),
-/* harmony export */   dist: () => (/* binding */ dist),
-/* harmony export */   distance: () => (/* binding */ distance),
-/* harmony export */   div: () => (/* binding */ div),
-/* harmony export */   divide: () => (/* binding */ divide),
-/* harmony export */   dot: () => (/* binding */ dot),
-/* harmony export */   equals: () => (/* binding */ equals),
-/* harmony export */   exactEquals: () => (/* binding */ exactEquals),
-/* harmony export */   floor: () => (/* binding */ floor),
-/* harmony export */   forEach: () => (/* binding */ forEach),
-/* harmony export */   fromValues: () => (/* binding */ fromValues),
-/* harmony export */   hermite: () => (/* binding */ hermite),
-/* harmony export */   inverse: () => (/* binding */ inverse),
-/* harmony export */   len: () => (/* binding */ len),
-/* harmony export */   length: () => (/* binding */ length),
-/* harmony export */   lerp: () => (/* binding */ lerp),
-/* harmony export */   max: () => (/* binding */ max),
-/* harmony export */   min: () => (/* binding */ min),
-/* harmony export */   mul: () => (/* binding */ mul),
-/* harmony export */   multiply: () => (/* binding */ multiply),
-/* harmony export */   negate: () => (/* binding */ negate),
-/* harmony export */   normalize: () => (/* binding */ normalize),
-/* harmony export */   random: () => (/* binding */ random),
-/* harmony export */   rotateX: () => (/* binding */ rotateX),
-/* harmony export */   rotateY: () => (/* binding */ rotateY),
-/* harmony export */   rotateZ: () => (/* binding */ rotateZ),
-/* harmony export */   round: () => (/* binding */ round),
-/* harmony export */   scale: () => (/* binding */ scale),
-/* harmony export */   scaleAndAdd: () => (/* binding */ scaleAndAdd),
-/* harmony export */   set: () => (/* binding */ set),
-/* harmony export */   slerp: () => (/* binding */ slerp),
-/* harmony export */   sqrDist: () => (/* binding */ sqrDist),
-/* harmony export */   sqrLen: () => (/* binding */ sqrLen),
-/* harmony export */   squaredDistance: () => (/* binding */ squaredDistance),
-/* harmony export */   squaredLength: () => (/* binding */ squaredLength),
-/* harmony export */   str: () => (/* binding */ str),
-/* harmony export */   sub: () => (/* binding */ sub),
-/* harmony export */   subtract: () => (/* binding */ subtract),
-/* harmony export */   transformMat3: () => (/* binding */ transformMat3),
-/* harmony export */   transformMat4: () => (/* binding */ transformMat4),
-/* harmony export */   transformQuat: () => (/* binding */ transformQuat),
-/* harmony export */   zero: () => (/* binding */ zero)
-/* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./common.js */ "./node_modules/gl-matrix/esm/common.js");
-
-
+var mat4_sub = (/* unused pure expression or super */ null && (mat4_subtract));
+;// ./src/utils/Utils.ts
 /**
- * 3 Dimensional Vector
- * @module vec3
+ * @author Fabrizio Giordano (Fab)
  */
 
-/**
- * Creates a new, empty vec3
- *
- * @returns {vec3} a new 3D vector
- */
-function create() {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(3);
-  if (_common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE != Float32Array) {
-    out[0] = 0;
-    out[1] = 0;
-    out[2] = 0;
-  }
-  return out;
-}
-
-/**
- * Creates a new vec3 initialized with values from an existing vector
- *
- * @param {ReadonlyVec3} a vector to clone
- * @returns {vec3} a new 3D vector
- */
-function clone(a) {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(3);
-  out[0] = a[0];
-  out[1] = a[1];
-  out[2] = a[2];
-  return out;
-}
-
-/**
- * Calculates the length of a vec3
- *
- * @param {ReadonlyVec3} a vector to calculate length of
- * @returns {Number} length of a
- */
-function length(a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  return Math.sqrt(x * x + y * y + z * z);
-}
-
-/**
- * Creates a new vec3 initialized with the given values
- *
- * @param {Number} x X component
- * @param {Number} y Y component
- * @param {Number} z Z component
- * @returns {vec3} a new 3D vector
- */
-function fromValues(x, y, z) {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(3);
-  out[0] = x;
-  out[1] = y;
-  out[2] = z;
-  return out;
-}
-
-/**
- * Copy the values from one vec3 to another
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the source vector
- * @returns {vec3} out
- */
-function copy(out, a) {
-  out[0] = a[0];
-  out[1] = a[1];
-  out[2] = a[2];
-  return out;
-}
-
-/**
- * Set the components of a vec3 to the given values
- *
- * @param {vec3} out the receiving vector
- * @param {Number} x X component
- * @param {Number} y Y component
- * @param {Number} z Z component
- * @returns {vec3} out
- */
-function set(out, x, y, z) {
-  out[0] = x;
-  out[1] = y;
-  out[2] = z;
-  return out;
-}
-
-/**
- * Adds two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-function add(out, a, b) {
-  out[0] = a[0] + b[0];
-  out[1] = a[1] + b[1];
-  out[2] = a[2] + b[2];
-  return out;
-}
-
-/**
- * Subtracts vector b from vector a
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-function subtract(out, a, b) {
-  out[0] = a[0] - b[0];
-  out[1] = a[1] - b[1];
-  out[2] = a[2] - b[2];
-  return out;
-}
-
-/**
- * Multiplies two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-function multiply(out, a, b) {
-  out[0] = a[0] * b[0];
-  out[1] = a[1] * b[1];
-  out[2] = a[2] * b[2];
-  return out;
-}
-
-/**
- * Divides two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-function divide(out, a, b) {
-  out[0] = a[0] / b[0];
-  out[1] = a[1] / b[1];
-  out[2] = a[2] / b[2];
-  return out;
-}
-
-/**
- * Math.ceil the components of a vec3
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to ceil
- * @returns {vec3} out
- */
-function ceil(out, a) {
-  out[0] = Math.ceil(a[0]);
-  out[1] = Math.ceil(a[1]);
-  out[2] = Math.ceil(a[2]);
-  return out;
-}
-
-/**
- * Math.floor the components of a vec3
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to floor
- * @returns {vec3} out
- */
-function floor(out, a) {
-  out[0] = Math.floor(a[0]);
-  out[1] = Math.floor(a[1]);
-  out[2] = Math.floor(a[2]);
-  return out;
-}
-
-/**
- * Returns the minimum of two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-function min(out, a, b) {
-  out[0] = Math.min(a[0], b[0]);
-  out[1] = Math.min(a[1], b[1]);
-  out[2] = Math.min(a[2], b[2]);
-  return out;
-}
-
-/**
- * Returns the maximum of two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-function max(out, a, b) {
-  out[0] = Math.max(a[0], b[0]);
-  out[1] = Math.max(a[1], b[1]);
-  out[2] = Math.max(a[2], b[2]);
-  return out;
-}
-
-/**
- * symmetric round the components of a vec3
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to round
- * @returns {vec3} out
- */
-function round(out, a) {
-  out[0] = _common_js__WEBPACK_IMPORTED_MODULE_0__.round(a[0]);
-  out[1] = _common_js__WEBPACK_IMPORTED_MODULE_0__.round(a[1]);
-  out[2] = _common_js__WEBPACK_IMPORTED_MODULE_0__.round(a[2]);
-  return out;
-}
-
-/**
- * Scales a vec3 by a scalar number
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to scale
- * @param {Number} b amount to scale the vector by
- * @returns {vec3} out
- */
-function scale(out, a, b) {
-  out[0] = a[0] * b;
-  out[1] = a[1] * b;
-  out[2] = a[2] * b;
-  return out;
-}
-
-/**
- * Adds two vec3's after scaling the second operand by a scalar value
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {Number} scale the amount to scale b by before adding
- * @returns {vec3} out
- */
-function scaleAndAdd(out, a, b, scale) {
-  out[0] = a[0] + b[0] * scale;
-  out[1] = a[1] + b[1] * scale;
-  out[2] = a[2] + b[2] * scale;
-  return out;
-}
-
-/**
- * Calculates the euclidian distance between two vec3's
- *
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {Number} distance between a and b
- */
-function distance(a, b) {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  return Math.sqrt(x * x + y * y + z * z);
-}
-
-/**
- * Calculates the squared euclidian distance between two vec3's
- *
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {Number} squared distance between a and b
- */
-function squaredDistance(a, b) {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  return x * x + y * y + z * z;
-}
-
-/**
- * Calculates the squared length of a vec3
- *
- * @param {ReadonlyVec3} a vector to calculate squared length of
- * @returns {Number} squared length of a
- */
-function squaredLength(a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  return x * x + y * y + z * z;
-}
-
-/**
- * Negates the components of a vec3
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to negate
- * @returns {vec3} out
- */
-function negate(out, a) {
-  out[0] = -a[0];
-  out[1] = -a[1];
-  out[2] = -a[2];
-  return out;
-}
-
-/**
- * Returns the inverse of the components of a vec3
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to invert
- * @returns {vec3} out
- */
-function inverse(out, a) {
-  out[0] = 1.0 / a[0];
-  out[1] = 1.0 / a[1];
-  out[2] = 1.0 / a[2];
-  return out;
-}
-
-/**
- * Normalize a vec3
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a vector to normalize
- * @returns {vec3} out
- */
-function normalize(out, a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var len = x * x + y * y + z * z;
-  if (len > 0) {
-    //TODO: evaluate use of glm_invsqrt here?
-    len = 1 / Math.sqrt(len);
-  }
-  out[0] = a[0] * len;
-  out[1] = a[1] * len;
-  out[2] = a[2] * len;
-  return out;
-}
-
-/**
- * Calculates the dot product of two vec3's
- *
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {Number} dot product of a and b
- */
-function dot(a, b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-/**
- * Computes the cross product of two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @returns {vec3} out
- */
-function cross(out, a, b) {
-  var ax = a[0],
-    ay = a[1],
-    az = a[2];
-  var bx = b[0],
-    by = b[1],
-    bz = b[2];
-  out[0] = ay * bz - az * by;
-  out[1] = az * bx - ax * bz;
-  out[2] = ax * by - ay * bx;
-  return out;
-}
-
-/**
- * Performs a linear interpolation between two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
- */
-function lerp(out, a, b, t) {
-  var ax = a[0];
-  var ay = a[1];
-  var az = a[2];
-  out[0] = ax + t * (b[0] - ax);
-  out[1] = ay + t * (b[1] - ay);
-  out[2] = az + t * (b[2] - az);
-  return out;
-}
-
-/**
- * Performs a spherical linear interpolation between two vec3's
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
- */
-function slerp(out, a, b, t) {
-  var angle = Math.acos(Math.min(Math.max(dot(a, b), -1), 1));
-  var sinTotal = Math.sin(angle);
-  var ratioA = Math.sin((1 - t) * angle) / sinTotal;
-  var ratioB = Math.sin(t * angle) / sinTotal;
-  out[0] = ratioA * a[0] + ratioB * b[0];
-  out[1] = ratioA * a[1] + ratioB * b[1];
-  out[2] = ratioA * a[2] + ratioB * b[2];
-  return out;
-}
-
-/**
- * Performs a hermite interpolation with two control points
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {ReadonlyVec3} c the third operand
- * @param {ReadonlyVec3} d the fourth operand
- * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
- */
-function hermite(out, a, b, c, d, t) {
-  var factorTimes2 = t * t;
-  var factor1 = factorTimes2 * (2 * t - 3) + 1;
-  var factor2 = factorTimes2 * (t - 2) + t;
-  var factor3 = factorTimes2 * (t - 1);
-  var factor4 = factorTimes2 * (3 - 2 * t);
-  out[0] = a[0] * factor1 + b[0] * factor2 + c[0] * factor3 + d[0] * factor4;
-  out[1] = a[1] * factor1 + b[1] * factor2 + c[1] * factor3 + d[1] * factor4;
-  out[2] = a[2] * factor1 + b[2] * factor2 + c[2] * factor3 + d[2] * factor4;
-  return out;
-}
-
-/**
- * Performs a bezier interpolation with two control points
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the first operand
- * @param {ReadonlyVec3} b the second operand
- * @param {ReadonlyVec3} c the third operand
- * @param {ReadonlyVec3} d the fourth operand
- * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec3} out
- */
-function bezier(out, a, b, c, d, t) {
-  var inverseFactor = 1 - t;
-  var inverseFactorTimesTwo = inverseFactor * inverseFactor;
-  var factorTimes2 = t * t;
-  var factor1 = inverseFactorTimesTwo * inverseFactor;
-  var factor2 = 3 * t * inverseFactorTimesTwo;
-  var factor3 = 3 * factorTimes2 * inverseFactor;
-  var factor4 = factorTimes2 * t;
-  out[0] = a[0] * factor1 + b[0] * factor2 + c[0] * factor3 + d[0] * factor4;
-  out[1] = a[1] * factor1 + b[1] * factor2 + c[1] * factor3 + d[1] * factor4;
-  out[2] = a[2] * factor1 + b[2] * factor2 + c[2] * factor3 + d[2] * factor4;
-  return out;
-}
-
-/**
- * Generates a random vector with the given scale
- *
- * @param {vec3} out the receiving vector
- * @param {Number} [scale] Length of the resulting vector. If omitted, a unit vector will be returned
- * @returns {vec3} out
- */
-function random(out, scale) {
-  scale = scale === undefined ? 1.0 : scale;
-  var r = _common_js__WEBPACK_IMPORTED_MODULE_0__.RANDOM() * 2.0 * Math.PI;
-  var z = _common_js__WEBPACK_IMPORTED_MODULE_0__.RANDOM() * 2.0 - 1.0;
-  var zScale = Math.sqrt(1.0 - z * z) * scale;
-  out[0] = Math.cos(r) * zScale;
-  out[1] = Math.sin(r) * zScale;
-  out[2] = z * scale;
-  return out;
-}
-
-/**
- * Transforms the vec3 with a mat4.
- * 4th vector component is implicitly '1'
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to transform
- * @param {ReadonlyMat4} m matrix to transform with
- * @returns {vec3} out
- */
-function transformMat4(out, a, m) {
-  var x = a[0],
-    y = a[1],
-    z = a[2];
-  var w = m[3] * x + m[7] * y + m[11] * z + m[15];
-  w = w || 1.0;
-  out[0] = (m[0] * x + m[4] * y + m[8] * z + m[12]) / w;
-  out[1] = (m[1] * x + m[5] * y + m[9] * z + m[13]) / w;
-  out[2] = (m[2] * x + m[6] * y + m[10] * z + m[14]) / w;
-  return out;
-}
-
-/**
- * Transforms the vec3 with a mat3.
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to transform
- * @param {ReadonlyMat3} m the 3x3 matrix to transform with
- * @returns {vec3} out
- */
-function transformMat3(out, a, m) {
-  var x = a[0],
-    y = a[1],
-    z = a[2];
-  out[0] = x * m[0] + y * m[3] + z * m[6];
-  out[1] = x * m[1] + y * m[4] + z * m[7];
-  out[2] = x * m[2] + y * m[5] + z * m[8];
-  return out;
-}
-
-/**
- * Transforms the vec3 with a quat
- * Can also be used for dual quaternions. (Multiply it with the real part)
- *
- * @param {vec3} out the receiving vector
- * @param {ReadonlyVec3} a the vector to transform
- * @param {ReadonlyQuat} q normalized quaternion to transform with
- * @returns {vec3} out
- */
-function transformQuat(out, a, q) {
-  // Fast Vector Rotation using Quaternions by Robert Eisele
-  // https://raw.org/proof/vector-rotation-using-quaternions/
-
-  var qx = q[0],
-    qy = q[1],
-    qz = q[2],
-    qw = q[3];
-  var vx = a[0],
-    vy = a[1],
-    vz = a[2];
-
-  // t = q x v
-  var tx = qy * vz - qz * vy;
-  var ty = qz * vx - qx * vz;
-  var tz = qx * vy - qy * vx;
-
-  // t = 2t
-  tx = tx + tx;
-  ty = ty + ty;
-  tz = tz + tz;
-
-  // v + w t + q x t
-  out[0] = vx + qw * tx + qy * tz - qz * ty;
-  out[1] = vy + qw * ty + qz * tx - qx * tz;
-  out[2] = vz + qw * tz + qx * ty - qy * tx;
-  return out;
-}
-
-/**
- * Rotate a 3D vector around the x-axis
- * @param {vec3} out The receiving vec3
- * @param {ReadonlyVec3} a The vec3 point to rotate
- * @param {ReadonlyVec3} b The origin of the rotation
- * @param {Number} rad The angle of rotation in radians
- * @returns {vec3} out
- */
-function rotateX(out, a, b, rad) {
-  var p = [],
-    r = [];
-  //Translate point to the origin
-  p[0] = a[0] - b[0];
-  p[1] = a[1] - b[1];
-  p[2] = a[2] - b[2];
-
-  //perform rotation
-  r[0] = p[0];
-  r[1] = p[1] * Math.cos(rad) - p[2] * Math.sin(rad);
-  r[2] = p[1] * Math.sin(rad) + p[2] * Math.cos(rad);
-
-  //translate to correct position
-  out[0] = r[0] + b[0];
-  out[1] = r[1] + b[1];
-  out[2] = r[2] + b[2];
-  return out;
-}
-
-/**
- * Rotate a 3D vector around the y-axis
- * @param {vec3} out The receiving vec3
- * @param {ReadonlyVec3} a The vec3 point to rotate
- * @param {ReadonlyVec3} b The origin of the rotation
- * @param {Number} rad The angle of rotation in radians
- * @returns {vec3} out
- */
-function rotateY(out, a, b, rad) {
-  var p = [],
-    r = [];
-  //Translate point to the origin
-  p[0] = a[0] - b[0];
-  p[1] = a[1] - b[1];
-  p[2] = a[2] - b[2];
-
-  //perform rotation
-  r[0] = p[2] * Math.sin(rad) + p[0] * Math.cos(rad);
-  r[1] = p[1];
-  r[2] = p[2] * Math.cos(rad) - p[0] * Math.sin(rad);
-
-  //translate to correct position
-  out[0] = r[0] + b[0];
-  out[1] = r[1] + b[1];
-  out[2] = r[2] + b[2];
-  return out;
-}
-
-/**
- * Rotate a 3D vector around the z-axis
- * @param {vec3} out The receiving vec3
- * @param {ReadonlyVec3} a The vec3 point to rotate
- * @param {ReadonlyVec3} b The origin of the rotation
- * @param {Number} rad The angle of rotation in radians
- * @returns {vec3} out
- */
-function rotateZ(out, a, b, rad) {
-  var p = [],
-    r = [];
-  //Translate point to the origin
-  p[0] = a[0] - b[0];
-  p[1] = a[1] - b[1];
-  p[2] = a[2] - b[2];
-
-  //perform rotation
-  r[0] = p[0] * Math.cos(rad) - p[1] * Math.sin(rad);
-  r[1] = p[0] * Math.sin(rad) + p[1] * Math.cos(rad);
-  r[2] = p[2];
-
-  //translate to correct position
-  out[0] = r[0] + b[0];
-  out[1] = r[1] + b[1];
-  out[2] = r[2] + b[2];
-  return out;
-}
-
-/**
- * Get the angle between two 3D vectors
- * @param {ReadonlyVec3} a The first operand
- * @param {ReadonlyVec3} b The second operand
- * @returns {Number} The angle in radians
- */
-function angle(a, b) {
-  var ax = a[0],
-    ay = a[1],
-    az = a[2],
-    bx = b[0],
-    by = b[1],
-    bz = b[2],
-    mag = Math.sqrt((ax * ax + ay * ay + az * az) * (bx * bx + by * by + bz * bz)),
-    cosine = mag && dot(a, b) / mag;
-  return Math.acos(Math.min(Math.max(cosine, -1), 1));
-}
-
-/**
- * Set the components of a vec3 to zero
- *
- * @param {vec3} out the receiving vector
- * @returns {vec3} out
- */
-function zero(out) {
-  out[0] = 0.0;
-  out[1] = 0.0;
-  out[2] = 0.0;
-  return out;
-}
-
-/**
- * Returns a string representation of a vector
- *
- * @param {ReadonlyVec3} a vector to represent as a string
- * @returns {String} string representation of the vector
- */
-function str(a) {
-  return "vec3(" + a[0] + ", " + a[1] + ", " + a[2] + ")";
-}
-
-/**
- * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
- *
- * @param {ReadonlyVec3} a The first vector.
- * @param {ReadonlyVec3} b The second vector.
- * @returns {Boolean} True if the vectors are equal, false otherwise.
- */
-function exactEquals(a, b) {
-  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
-}
-
-/**
- * Returns whether or not the vectors have approximately the same elements in the same position.
- *
- * @param {ReadonlyVec3} a The first vector.
- * @param {ReadonlyVec3} b The second vector.
- * @returns {Boolean} True if the vectors are equal, false otherwise.
- */
-function equals(a, b) {
-  var a0 = a[0],
-    a1 = a[1],
-    a2 = a[2];
-  var b0 = b[0],
-    b1 = b[1],
-    b2 = b[2];
-  return Math.abs(a0 - b0) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2));
-}
-
-/**
- * Alias for {@link vec3.subtract}
- * @function
- */
-var sub = subtract;
-
-/**
- * Alias for {@link vec3.multiply}
- * @function
- */
-var mul = multiply;
-
-/**
- * Alias for {@link vec3.divide}
- * @function
- */
-var div = divide;
-
-/**
- * Alias for {@link vec3.distance}
- * @function
- */
-var dist = distance;
-
-/**
- * Alias for {@link vec3.squaredDistance}
- * @function
- */
-var sqrDist = squaredDistance;
-
-/**
- * Alias for {@link vec3.length}
- * @function
- */
-var len = length;
-
-/**
- * Alias for {@link vec3.squaredLength}
- * @function
- */
-var sqrLen = squaredLength;
-
-/**
- * Perform some operation over an array of vec3s.
- *
- * @param {Array} a the array of vectors to iterate over
- * @param {Number} stride Number of elements between the start of each vec3. If 0 assumes tightly packed
- * @param {Number} offset Number of elements to skip at the beginning of the array
- * @param {Number} count Number of vec3s to iterate over. If 0 iterates over entire array
- * @param {Function} fn Function to call for each vector in the array
- * @param {Object} [arg] additional argument to pass to fn
- * @returns {Array} a
- * @function
- */
-var forEach = function () {
-  var vec = create();
-  return function (a, stride, offset, count, fn, arg) {
-    var i, l;
-    if (!stride) {
-      stride = 3;
+// results in degrees
+function cartesianToSpherical(xyz) {
+    const dotXYZ = vec3_dot(xyz, xyz);
+    const r = Math.sqrt(dotXYZ);
+    let theta = Math.acos(xyz[2] / r);
+    theta = radToDeg(theta);
+    // NB: in atan(y/x) is written with params switched atan2(x, y)
+    let phi = Math.atan2(xyz[1], xyz[0]);
+    phi = radToDeg(phi);
+    if (phi < 0) {
+        phi += 360;
     }
-    if (!offset) {
-      offset = 0;
+    return { phi, theta };
+}
+function colorHex2RGB(hexColor) {
+    const hex1 = hexColor.substring(1, 3);
+    const hex2 = hexColor.substring(3, 5);
+    const hex3 = hexColor.substring(5, 7);
+    const dec1 = parseInt(hex1, 16);
+    const dec2 = parseInt(hex2, 16);
+    const dec3 = parseInt(hex3, 16);
+    const rgb1 = (dec1 / 255).toFixed(2);
+    const rgb2 = (dec2 / 255).toFixed(2);
+    const rgb3 = (dec3 / 255).toFixed(2);
+    return [parseFloat(rgb1), parseFloat(rgb2), parseFloat(rgb3)];
+}
+function degToRad(degrees) {
+    return (degrees / 180) * Math.PI;
+}
+function radToDeg(radians) {
+    return (radians * 180) / Math.PI;
+}
+function sphericalToAstroDeg(phiDeg, thetaDeg) {
+    let raDeg = phiDeg;
+    if (raDeg < 0) {
+        raDeg += 360;
     }
-    if (count) {
-      l = Math.min(count * stride + offset, a.length);
-    } else {
-      l = a.length;
+    const decDeg = 90 - thetaDeg;
+    return { ra: raDeg, dec: decDeg };
+}
+function sphericalToCartesian(phiDeg, thetaDeg, r = 1) {
+    const x = r * Math.sin(degToRad(thetaDeg)) * Math.cos(degToRad(phiDeg));
+    const y = r * Math.sin(degToRad(thetaDeg)) * Math.sin(degToRad(phiDeg));
+    const z = r * Math.cos(degToRad(thetaDeg));
+    return [x, y, z];
+}
+function astroDegToSpherical(raDeg, decDeg) {
+    let phiDeg = raDeg;
+    if (phiDeg < 0) {
+        phiDeg += 360;
     }
-    for (i = offset; i < l; i += stride) {
-      vec[0] = a[i];
-      vec[1] = a[i + 1];
-      vec[2] = a[i + 2];
-      fn(vec, vec, arg);
-      a[i] = vec[0];
-      a[i + 1] = vec[1];
-      a[i + 2] = vec[2];
+    const thetaDeg = 90 - decDeg;
+    return { phi: phiDeg, theta: thetaDeg };
+}
+function raDegToHMS(raDeg) {
+    const h = Math.floor(raDeg / 15);
+    const m = Math.floor((raDeg / 15 - h) * 60);
+    const s = (raDeg / 15 - h - m / 60) * 3600;
+    return { h, m, s };
+}
+function decDegToDMS(decDeg) {
+    let sign = 1;
+    if (decDeg < 0) {
+        sign = -1;
     }
-    return a;
-  };
-}();
-
-/***/ }),
-
-/***/ "./node_modules/gl-matrix/esm/vec4.js":
-/*!********************************************!*\
-  !*** ./node_modules/gl-matrix/esm/vec4.js ***!
-  \********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   add: () => (/* binding */ add),
-/* harmony export */   ceil: () => (/* binding */ ceil),
-/* harmony export */   clone: () => (/* binding */ clone),
-/* harmony export */   copy: () => (/* binding */ copy),
-/* harmony export */   create: () => (/* binding */ create),
-/* harmony export */   cross: () => (/* binding */ cross),
-/* harmony export */   dist: () => (/* binding */ dist),
-/* harmony export */   distance: () => (/* binding */ distance),
-/* harmony export */   div: () => (/* binding */ div),
-/* harmony export */   divide: () => (/* binding */ divide),
-/* harmony export */   dot: () => (/* binding */ dot),
-/* harmony export */   equals: () => (/* binding */ equals),
-/* harmony export */   exactEquals: () => (/* binding */ exactEquals),
-/* harmony export */   floor: () => (/* binding */ floor),
-/* harmony export */   forEach: () => (/* binding */ forEach),
-/* harmony export */   fromValues: () => (/* binding */ fromValues),
-/* harmony export */   inverse: () => (/* binding */ inverse),
-/* harmony export */   len: () => (/* binding */ len),
-/* harmony export */   length: () => (/* binding */ length),
-/* harmony export */   lerp: () => (/* binding */ lerp),
-/* harmony export */   max: () => (/* binding */ max),
-/* harmony export */   min: () => (/* binding */ min),
-/* harmony export */   mul: () => (/* binding */ mul),
-/* harmony export */   multiply: () => (/* binding */ multiply),
-/* harmony export */   negate: () => (/* binding */ negate),
-/* harmony export */   normalize: () => (/* binding */ normalize),
-/* harmony export */   random: () => (/* binding */ random),
-/* harmony export */   round: () => (/* binding */ round),
-/* harmony export */   scale: () => (/* binding */ scale),
-/* harmony export */   scaleAndAdd: () => (/* binding */ scaleAndAdd),
-/* harmony export */   set: () => (/* binding */ set),
-/* harmony export */   sqrDist: () => (/* binding */ sqrDist),
-/* harmony export */   sqrLen: () => (/* binding */ sqrLen),
-/* harmony export */   squaredDistance: () => (/* binding */ squaredDistance),
-/* harmony export */   squaredLength: () => (/* binding */ squaredLength),
-/* harmony export */   str: () => (/* binding */ str),
-/* harmony export */   sub: () => (/* binding */ sub),
-/* harmony export */   subtract: () => (/* binding */ subtract),
-/* harmony export */   transformMat4: () => (/* binding */ transformMat4),
-/* harmony export */   transformQuat: () => (/* binding */ transformQuat),
-/* harmony export */   zero: () => (/* binding */ zero)
-/* harmony export */ });
-/* harmony import */ var _common_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./common.js */ "./node_modules/gl-matrix/esm/common.js");
-
-
-/**
- * 4 Dimensional Vector
- * @module vec4
- */
-
-/**
- * Creates a new, empty vec4
- *
- * @returns {vec4} a new 4D vector
- */
-function create() {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(4);
-  if (_common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE != Float32Array) {
-    out[0] = 0;
-    out[1] = 0;
-    out[2] = 0;
-    out[3] = 0;
-  }
-  return out;
+    const decDegAbs = Math.abs(decDeg);
+    let d = Math.trunc(decDegAbs);
+    const m = Math.trunc((decDegAbs - d) * 60);
+    const s = (decDegAbs - d - m / 60) * 3600;
+    d = d * sign;
+    return { d, m, s };
 }
 
-/**
- * Creates a new vec4 initialized with values from an existing vector
- *
- * @param {ReadonlyVec4} a vector to clone
- * @returns {vec4} a new 4D vector
- */
-function clone(a) {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(4);
-  out[0] = a[0];
-  out[1] = a[1];
-  out[2] = a[2];
-  out[3] = a[3];
-  return out;
-}
-
-/**
- * Creates a new vec4 initialized with the given values
- *
- * @param {Number} x X component
- * @param {Number} y Y component
- * @param {Number} z Z component
- * @param {Number} w W component
- * @returns {vec4} a new 4D vector
- */
-function fromValues(x, y, z, w) {
-  var out = new _common_js__WEBPACK_IMPORTED_MODULE_0__.ARRAY_TYPE(4);
-  out[0] = x;
-  out[1] = y;
-  out[2] = z;
-  out[3] = w;
-  return out;
-}
-
-/**
- * Copy the values from one vec4 to another
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the source vector
- * @returns {vec4} out
- */
-function copy(out, a) {
-  out[0] = a[0];
-  out[1] = a[1];
-  out[2] = a[2];
-  out[3] = a[3];
-  return out;
-}
-
-/**
- * Set the components of a vec4 to the given values
- *
- * @param {vec4} out the receiving vector
- * @param {Number} x X component
- * @param {Number} y Y component
- * @param {Number} z Z component
- * @param {Number} w W component
- * @returns {vec4} out
- */
-function set(out, x, y, z, w) {
-  out[0] = x;
-  out[1] = y;
-  out[2] = z;
-  out[3] = w;
-  return out;
-}
-
-/**
- * Adds two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function add(out, a, b) {
-  out[0] = a[0] + b[0];
-  out[1] = a[1] + b[1];
-  out[2] = a[2] + b[2];
-  out[3] = a[3] + b[3];
-  return out;
-}
-
-/**
- * Subtracts vector b from vector a
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function subtract(out, a, b) {
-  out[0] = a[0] - b[0];
-  out[1] = a[1] - b[1];
-  out[2] = a[2] - b[2];
-  out[3] = a[3] - b[3];
-  return out;
-}
-
-/**
- * Multiplies two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function multiply(out, a, b) {
-  out[0] = a[0] * b[0];
-  out[1] = a[1] * b[1];
-  out[2] = a[2] * b[2];
-  out[3] = a[3] * b[3];
-  return out;
-}
-
-/**
- * Divides two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function divide(out, a, b) {
-  out[0] = a[0] / b[0];
-  out[1] = a[1] / b[1];
-  out[2] = a[2] / b[2];
-  out[3] = a[3] / b[3];
-  return out;
-}
-
-/**
- * Math.ceil the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to ceil
- * @returns {vec4} out
- */
-function ceil(out, a) {
-  out[0] = Math.ceil(a[0]);
-  out[1] = Math.ceil(a[1]);
-  out[2] = Math.ceil(a[2]);
-  out[3] = Math.ceil(a[3]);
-  return out;
-}
-
-/**
- * Math.floor the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to floor
- * @returns {vec4} out
- */
-function floor(out, a) {
-  out[0] = Math.floor(a[0]);
-  out[1] = Math.floor(a[1]);
-  out[2] = Math.floor(a[2]);
-  out[3] = Math.floor(a[3]);
-  return out;
-}
-
-/**
- * Returns the minimum of two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function min(out, a, b) {
-  out[0] = Math.min(a[0], b[0]);
-  out[1] = Math.min(a[1], b[1]);
-  out[2] = Math.min(a[2], b[2]);
-  out[3] = Math.min(a[3], b[3]);
-  return out;
-}
-
-/**
- * Returns the maximum of two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {vec4} out
- */
-function max(out, a, b) {
-  out[0] = Math.max(a[0], b[0]);
-  out[1] = Math.max(a[1], b[1]);
-  out[2] = Math.max(a[2], b[2]);
-  out[3] = Math.max(a[3], b[3]);
-  return out;
-}
-
-/**
- * symmetric round the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to round
- * @returns {vec4} out
- */
-function round(out, a) {
-  out[0] = _common_js__WEBPACK_IMPORTED_MODULE_0__.round(a[0]);
-  out[1] = _common_js__WEBPACK_IMPORTED_MODULE_0__.round(a[1]);
-  out[2] = _common_js__WEBPACK_IMPORTED_MODULE_0__.round(a[2]);
-  out[3] = _common_js__WEBPACK_IMPORTED_MODULE_0__.round(a[3]);
-  return out;
-}
-
-/**
- * Scales a vec4 by a scalar number
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the vector to scale
- * @param {Number} b amount to scale the vector by
- * @returns {vec4} out
- */
-function scale(out, a, b) {
-  out[0] = a[0] * b;
-  out[1] = a[1] * b;
-  out[2] = a[2] * b;
-  out[3] = a[3] * b;
-  return out;
-}
-
-/**
- * Adds two vec4's after scaling the second operand by a scalar value
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @param {Number} scale the amount to scale b by before adding
- * @returns {vec4} out
- */
-function scaleAndAdd(out, a, b, scale) {
-  out[0] = a[0] + b[0] * scale;
-  out[1] = a[1] + b[1] * scale;
-  out[2] = a[2] + b[2] * scale;
-  out[3] = a[3] + b[3] * scale;
-  return out;
-}
-
-/**
- * Calculates the euclidian distance between two vec4's
- *
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {Number} distance between a and b
- */
-function distance(a, b) {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  var w = b[3] - a[3];
-  return Math.sqrt(x * x + y * y + z * z + w * w);
-}
-
-/**
- * Calculates the squared euclidian distance between two vec4's
- *
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {Number} squared distance between a and b
- */
-function squaredDistance(a, b) {
-  var x = b[0] - a[0];
-  var y = b[1] - a[1];
-  var z = b[2] - a[2];
-  var w = b[3] - a[3];
-  return x * x + y * y + z * z + w * w;
-}
-
-/**
- * Calculates the length of a vec4
- *
- * @param {ReadonlyVec4} a vector to calculate length of
- * @returns {Number} length of a
- */
-function length(a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
-  return Math.sqrt(x * x + y * y + z * z + w * w);
-}
-
-/**
- * Calculates the squared length of a vec4
- *
- * @param {ReadonlyVec4} a vector to calculate squared length of
- * @returns {Number} squared length of a
- */
-function squaredLength(a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
-  return x * x + y * y + z * z + w * w;
-}
-
-/**
- * Negates the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to negate
- * @returns {vec4} out
- */
-function negate(out, a) {
-  out[0] = -a[0];
-  out[1] = -a[1];
-  out[2] = -a[2];
-  out[3] = -a[3];
-  return out;
-}
-
-/**
- * Returns the inverse of the components of a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to invert
- * @returns {vec4} out
- */
-function inverse(out, a) {
-  out[0] = 1.0 / a[0];
-  out[1] = 1.0 / a[1];
-  out[2] = 1.0 / a[2];
-  out[3] = 1.0 / a[3];
-  return out;
-}
-
-/**
- * Normalize a vec4
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a vector to normalize
- * @returns {vec4} out
- */
-function normalize(out, a) {
-  var x = a[0];
-  var y = a[1];
-  var z = a[2];
-  var w = a[3];
-  var len = x * x + y * y + z * z + w * w;
-  if (len > 0) {
-    len = 1 / Math.sqrt(len);
-  }
-  out[0] = x * len;
-  out[1] = y * len;
-  out[2] = z * len;
-  out[3] = w * len;
-  return out;
-}
-
-/**
- * Calculates the dot product of two vec4's
- *
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @returns {Number} dot product of a and b
- */
-function dot(a, b) {
-  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-}
-
-/**
- * Returns the cross-product of three vectors in a 4-dimensional space
- *
- * @param {ReadonlyVec4} out the receiving vector
- * @param {ReadonlyVec4} u the first vector
- * @param {ReadonlyVec4} v the second vector
- * @param {ReadonlyVec4} w the third vector
- * @returns {vec4} result
- */
-function cross(out, u, v, w) {
-  var A = v[0] * w[1] - v[1] * w[0],
-    B = v[0] * w[2] - v[2] * w[0],
-    C = v[0] * w[3] - v[3] * w[0],
-    D = v[1] * w[2] - v[2] * w[1],
-    E = v[1] * w[3] - v[3] * w[1],
-    F = v[2] * w[3] - v[3] * w[2];
-  var G = u[0];
-  var H = u[1];
-  var I = u[2];
-  var J = u[3];
-  out[0] = H * F - I * E + J * D;
-  out[1] = -(G * F) + I * C - J * B;
-  out[2] = G * E - H * C + J * A;
-  out[3] = -(G * D) + H * B - I * A;
-  return out;
-}
-
-/**
- * Performs a linear interpolation between two vec4's
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the first operand
- * @param {ReadonlyVec4} b the second operand
- * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
- * @returns {vec4} out
- */
-function lerp(out, a, b, t) {
-  var ax = a[0];
-  var ay = a[1];
-  var az = a[2];
-  var aw = a[3];
-  out[0] = ax + t * (b[0] - ax);
-  out[1] = ay + t * (b[1] - ay);
-  out[2] = az + t * (b[2] - az);
-  out[3] = aw + t * (b[3] - aw);
-  return out;
-}
-
-/**
- * Generates a random vector with the given scale
- *
- * @param {vec4} out the receiving vector
- * @param {Number} [scale] Length of the resulting vector. If omitted, a unit vector will be returned
- * @returns {vec4} out
- */
-function random(out, scale) {
-  scale = scale === undefined ? 1.0 : scale;
-
-  // Marsaglia, George. Choosing a Point from the Surface of a
-  // Sphere. Ann. Math. Statist. 43 (1972), no. 2, 645--646.
-  // http://projecteuclid.org/euclid.aoms/1177692644;
-  var v1, v2, v3, v4;
-  var s1, s2;
-  var rand;
-  rand = _common_js__WEBPACK_IMPORTED_MODULE_0__.RANDOM();
-  v1 = rand * 2 - 1;
-  v2 = (4 * _common_js__WEBPACK_IMPORTED_MODULE_0__.RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
-  s1 = v1 * v1 + v2 * v2;
-  rand = _common_js__WEBPACK_IMPORTED_MODULE_0__.RANDOM();
-  v3 = rand * 2 - 1;
-  v4 = (4 * _common_js__WEBPACK_IMPORTED_MODULE_0__.RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
-  s2 = v3 * v3 + v4 * v4;
-  var d = Math.sqrt((1 - s1) / s2);
-  out[0] = scale * v1;
-  out[1] = scale * v2;
-  out[2] = scale * v3 * d;
-  out[3] = scale * v4 * d;
-  return out;
-}
-
-/**
- * Transforms the vec4 with a mat4.
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the vector to transform
- * @param {ReadonlyMat4} m matrix to transform with
- * @returns {vec4} out
- */
-function transformMat4(out, a, m) {
-  var x = a[0],
-    y = a[1],
-    z = a[2],
-    w = a[3];
-  out[0] = m[0] * x + m[4] * y + m[8] * z + m[12] * w;
-  out[1] = m[1] * x + m[5] * y + m[9] * z + m[13] * w;
-  out[2] = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
-  out[3] = m[3] * x + m[7] * y + m[11] * z + m[15] * w;
-  return out;
-}
-
-/**
- * Transforms the vec4 with a quat
- *
- * @param {vec4} out the receiving vector
- * @param {ReadonlyVec4} a the vector to transform
- * @param {ReadonlyQuat} q normalized quaternion to transform with
- * @returns {vec4} out
- */
-function transformQuat(out, a, q) {
-  // Fast Vector Rotation using Quaternions by Robert Eisele
-  // https://raw.org/proof/vector-rotation-using-quaternions/
-
-  var qx = q[0],
-    qy = q[1],
-    qz = q[2],
-    qw = q[3];
-  var vx = a[0],
-    vy = a[1],
-    vz = a[2];
-
-  // t = q x v
-  var tx = qy * vz - qz * vy;
-  var ty = qz * vx - qx * vz;
-  var tz = qx * vy - qy * vx;
-
-  // t = 2t
-  tx = tx + tx;
-  ty = ty + ty;
-  tz = tz + tz;
-
-  // v + w t + q x t
-  out[0] = vx + qw * tx + qy * tz - qz * ty;
-  out[1] = vy + qw * ty + qz * tx - qx * tz;
-  out[2] = vz + qw * tz + qx * ty - qy * tx;
-  out[3] = a[3];
-  return out;
-}
-
-/**
- * Set the components of a vec4 to zero
- *
- * @param {vec4} out the receiving vector
- * @returns {vec4} out
- */
-function zero(out) {
-  out[0] = 0.0;
-  out[1] = 0.0;
-  out[2] = 0.0;
-  out[3] = 0.0;
-  return out;
-}
-
-/**
- * Returns a string representation of a vector
- *
- * @param {ReadonlyVec4} a vector to represent as a string
- * @returns {String} string representation of the vector
- */
-function str(a) {
-  return "vec4(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ")";
-}
-
-/**
- * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
- *
- * @param {ReadonlyVec4} a The first vector.
- * @param {ReadonlyVec4} b The second vector.
- * @returns {Boolean} True if the vectors are equal, false otherwise.
- */
-function exactEquals(a, b) {
-  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
-}
-
-/**
- * Returns whether or not the vectors have approximately the same elements in the same position.
- *
- * @param {ReadonlyVec4} a The first vector.
- * @param {ReadonlyVec4} b The second vector.
- * @returns {Boolean} True if the vectors are equal, false otherwise.
- */
-function equals(a, b) {
-  var a0 = a[0],
-    a1 = a[1],
-    a2 = a[2],
-    a3 = a[3];
-  var b0 = b[0],
-    b1 = b[1],
-    b2 = b[2],
-    b3 = b[3];
-  return Math.abs(a0 - b0) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= _common_js__WEBPACK_IMPORTED_MODULE_0__.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3));
-}
-
-/**
- * Alias for {@link vec4.subtract}
- * @function
- */
-var sub = subtract;
-
-/**
- * Alias for {@link vec4.multiply}
- * @function
- */
-var mul = multiply;
-
-/**
- * Alias for {@link vec4.divide}
- * @function
- */
-var div = divide;
-
-/**
- * Alias for {@link vec4.distance}
- * @function
- */
-var dist = distance;
-
-/**
- * Alias for {@link vec4.squaredDistance}
- * @function
- */
-var sqrDist = squaredDistance;
-
-/**
- * Alias for {@link vec4.length}
- * @function
- */
-var len = length;
-
-/**
- * Alias for {@link vec4.squaredLength}
- * @function
- */
-var sqrLen = squaredLength;
-
-/**
- * Perform some operation over an array of vec4s.
- *
- * @param {Array} a the array of vectors to iterate over
- * @param {Number} stride Number of elements between the start of each vec4. If 0 assumes tightly packed
- * @param {Number} offset Number of elements to skip at the beginning of the array
- * @param {Number} count Number of vec4s to iterate over. If 0 iterates over entire array
- * @param {Function} fn Function to call for each vector in the array
- * @param {Object} [arg] additional argument to pass to fn
- * @returns {Array} a
- * @function
- */
-var forEach = function () {
-  var vec = create();
-  return function (a, stride, offset, count, fn, arg) {
-    var i, l;
-    if (!stride) {
-      stride = 4;
-    }
-    if (!offset) {
-      offset = 0;
-    }
-    if (count) {
-      l = Math.min(count * stride + offset, a.length);
-    } else {
-      l = a.length;
-    }
-    for (i = offset; i < l; i += stride) {
-      vec[0] = a[i];
-      vec[1] = a[i + 1];
-      vec[2] = a[i + 2];
-      vec[3] = a[i + 3];
-      fn(vec, vec, arg);
-      a[i] = vec[0];
-      a[i + 1] = vec[1];
-      a[i + 2] = vec[2];
-      a[i + 3] = vec[3];
-    }
-    return a;
-  };
-}();
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/CircleFinder.js":
-/*!********************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/CircleFinder.js ***!
-  \********************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   CircleFinder: () => (/* binding */ CircleFinder)
-/* harmony export */ });
-/* harmony import */ var _Vec3_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Vec3.js */ "./node_modules/healpixjs/lib-esm/Vec3.js");
-
-class CircleFinder {
-    /**
-     * @param point: Vec3
-     */
-    constructor(point) {
-        let np = point.length;
-        //HealpixUtils.check(np>=2,"too few points");
-        if (!(np >= 2)) {
-            console.log("too few points");
-            return;
-        }
-        this.center = point[0].add(point[1]);
-        this.center.normalize();
-        this.cosrad = point[0].dot(this.center);
-        for (let i = 2; i < np; ++i) {
-            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
-                this.getCircle(point, i);
-            }
-        }
-    }
-    ;
-    /**
-     * @parm point: Vec3
-     * @param q: int
-     */
-    getCircle(point, q) {
-        this.center = point[0].add(point[q]);
-        this.center.normalize();
-        this.cosrad = point[0].dot(this.center);
-        for (let i = 1; i < q; ++i) {
-            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
-                this.getCircle2(point, i, q);
-            }
-        }
-    }
-    ;
-    /**
-     * @parm point: Vec3
-     * @param q1: int
-     * @param q2: int
-     */
-    getCircle2(point, q1, q2) {
-        this.center = point[q1].add(point[q2]);
-        this.center.normalize();
-        this.cosrad = point[q1].dot(this.center);
-        for (let i = 0; i < q1; ++i) {
-            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
-                this.center = (point[q1].sub(point[i])).cross(point[q2].sub(point[i]));
-                this.center.normalize();
-                this.cosrad = point[i].dot(this.center);
-                if (this.cosrad < 0) {
-                    this.center.flip();
-                    this.cosrad = -this.cosrad;
-                }
-            }
-        }
-    }
-    ;
-    getCenter() {
-        return new _Vec3_js__WEBPACK_IMPORTED_MODULE_0__.Vec3(this.center.x, this.center.y, this.center.z);
-    }
-    getCosrad() {
-        return this.cosrad;
-    }
-    ;
-}
-//# sourceMappingURL=CircleFinder.js.map
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/Constants.js":
-/*!*****************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/Constants.js ***!
-  \*****************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Constants: () => (/* binding */ Constants)
-/* harmony export */ });
+;// ./node_modules/healpixjs/lib-esm/Constants.js
 class Constants {
 }
 //	static halfpi = Math.PI/2.;
@@ -3788,892 +2999,50 @@ Constants.inv_halfpi = 2. / Math.PI;
 Constants.twopi = 2 * Math.PI;
 Constants.inv_twopi = 1. / (2 * Math.PI);
 //# sourceMappingURL=Constants.js.map
+;// ./node_modules/healpixjs/lib-esm/Pointing.js
 
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/Fxyf.js":
-/*!************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/Fxyf.js ***!
-  \************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Fxyf: () => (/* binding */ Fxyf)
-/* harmony export */ });
-/* harmony import */ var _Hploc_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Hploc.js */ "./node_modules/healpixjs/lib-esm/Hploc.js");
-/**
- * Partial porting to Javascript of Fxyf.java from Healpix3.30
- */
-
-class Fxyf {
-    constructor(x, y, f) {
-        this.fx = x;
-        this.fy = y;
-        this.face = f;
-        // coordinate of the lowest corner of each face
-        this.jrll = new Uint8Array([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
-        this.jpll = new Uint8Array([1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7]);
-        this.halfpi = Math.PI / 2.;
-    }
-    toHploc() {
-        let loc = new _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc();
-        let jr = this.jrll[this.face] - this.fx - this.fy;
-        let nr;
-        if (jr < 1) {
-            nr = jr;
-            let tmp = nr * nr / 3.;
-            loc.z = 1 - tmp;
-            if (loc.z > 0.99) {
-                loc.sth = Math.sqrt(tmp * (2.0 - tmp));
-                loc.have_sth = true;
+class Pointing {
+    /**
+     *
+     * @param {*} vec3 Vec3.js
+     * @param {*} mirror
+     * @param {*} in_theta radians
+     * @param {*} in_phi radians
+     */
+    constructor(vec3, mirror, in_theta, in_phi) {
+        if (vec3 != null) {
+            this.theta = Hploc.atan2(Math.sqrt(vec3.x * vec3.x + vec3.y * vec3.y), vec3.z);
+            if (mirror) {
+                this.phi = -Hploc.atan2(vec3.y, vec3.x);
             }
-        }
-        else if (jr > 3) {
-            nr = 4 - jr;
-            let tmp = nr * nr / 3.;
-            loc.z = tmp - 1;
-            if (loc.z < -0.99) {
-                loc.sth = Math.sqrt(tmp * (2.0 - tmp));
-                loc.have_sth = true;
+            else {
+                this.phi = Hploc.atan2(vec3.y, vec3.x);
+            }
+            if (this.phi < 0.0) {
+                this.phi = this.phi + 2 * Math.PI;
+            }
+            if (this.phi >= 2 * Math.PI) {
+                this.phi = this.phi - 2 * Math.PI;
             }
         }
         else {
-            nr = 1;
-            loc.z = (2 - jr) * 2.0 / 3.;
+            this.theta = in_theta;
+            this.phi = in_phi;
         }
-        let tmp = this.jpll[this.face] * nr + this.fx - this.fy;
-        if (tmp < 0) {
-            tmp += 8;
-        }
-        if (tmp >= 8) {
-            tmp -= 8;
-        }
-        loc.phi = (nr < 1e-15) ? 0 : (0.5 * this.halfpi * tmp) / nr;
-        return loc;
     }
-    ;
-    toVec3() {
-        return this.toHploc().toVec3();
+}
+//# sourceMappingURL=Pointing.js.map
+;// ./node_modules/healpixjs/lib-esm/Zphi.js
+class Zphi {
+    /** Creation from individual components */
+    constructor(z_, phi_) {
+        this.z = z_;
+        this.phi = phi_;
     }
     ;
 }
-//# sourceMappingURL=Fxyf.js.map
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/Healpix.js":
-/*!***************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/Healpix.js ***!
-  \***************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Healpix: () => (/* binding */ Healpix)
-/* harmony export */ });
-/* harmony import */ var _CircleFinder_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./CircleFinder.js */ "./node_modules/healpixjs/lib-esm/CircleFinder.js");
-/* harmony import */ var _Constants_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Constants.js */ "./node_modules/healpixjs/lib-esm/Constants.js");
-/* harmony import */ var _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Fxyf.js */ "./node_modules/healpixjs/lib-esm/Fxyf.js");
-/* harmony import */ var _Hploc_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Hploc.js */ "./node_modules/healpixjs/lib-esm/Hploc.js");
-/* harmony import */ var _Pointing_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Pointing.js */ "./node_modules/healpixjs/lib-esm/Pointing.js");
-/* harmony import */ var _pstack_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./pstack.js */ "./node_modules/healpixjs/lib-esm/pstack.js");
-/* harmony import */ var _RangeSet_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./RangeSet.js */ "./node_modules/healpixjs/lib-esm/RangeSet.js");
-/* harmony import */ var _Vec3_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./Vec3.js */ "./node_modules/healpixjs/lib-esm/Vec3.js");
-/* harmony import */ var _Xyf_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./Xyf.js */ "./node_modules/healpixjs/lib-esm/Xyf.js");
-/* harmony import */ var _Zphi_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./Zphi.js */ "./node_modules/healpixjs/lib-esm/Zphi.js");
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Partial porting to Javascript of HealpixBase.java from Healpix3.30
- */
-// import Fxyf from './Fxyf.js';
-// import Hploc from './Hploc.js';
-// import Xyf from './Xyf.js';
-// import Vec3 from './Vec3.js';
-// import Pointing from './Pointing.js';
-// import CircleFinder from './CircleFinder.js';
-// import Zphi from './Zphi.js';
-// import pstack from './pstack.js';
-// import Constants from './Constants.js';
-// import RangeSet from './RangeSet.js';
-class Healpix {
-    constructor(nside_in) {
-        this.order_max = 29;
-        this.inv_halfpi = 2.0 / Math.PI;
-        this.twothird = 2.0 / 3.;
-        // console.log("twothird "+this.twothird);
-        // this.ns_max=1L<<order_max;
-        this.ns_max = Math.pow(2, this.order_max);
-        this.ctab = new Uint16Array([
-            0, 1, 256, 257, 2, 3, 258, 259, 512, 513, 768, 769, 514, 515, 770, 771, 4, 5, 260, 261, 6, 7, 262,
-            263, 516, 517, 772, 773, 518, 519, 774, 775, 1024, 1025, 1280, 1281, 1026, 1027, 1282, 1283,
-            1536, 1537, 1792, 1793, 1538, 1539, 1794, 1795, 1028, 1029, 1284, 1285, 1030, 1031, 1286,
-            1287, 1540, 1541, 1796, 1797, 1542, 1543, 1798, 1799, 8, 9, 264, 265, 10, 11, 266, 267, 520,
-            521, 776, 777, 522, 523, 778, 779, 12, 13, 268, 269, 14, 15, 270, 271, 524, 525, 780, 781, 526,
-            527, 782, 783, 1032, 1033, 1288, 1289, 1034, 1035, 1290, 1291, 1544, 1545, 1800, 1801, 1546,
-            1547, 1802, 1803, 1036, 1037, 1292, 1293, 1038, 1039, 1294, 1295, 1548, 1549, 1804, 1805,
-            1550, 1551, 1806, 1807, 2048, 2049, 2304, 2305, 2050, 2051, 2306, 2307, 2560, 2561, 2816,
-            2817, 2562, 2563, 2818, 2819, 2052, 2053, 2308, 2309, 2054, 2055, 2310, 2311, 2564, 2565,
-            2820, 2821, 2566, 2567, 2822, 2823, 3072, 3073, 3328, 3329, 3074, 3075, 3330, 3331, 3584,
-            3585, 3840, 3841, 3586, 3587, 3842, 3843, 3076, 3077, 3332, 3333, 3078, 3079, 3334, 3335,
-            3588, 3589, 3844, 3845, 3590, 3591, 3846, 3847, 2056, 2057, 2312, 2313, 2058, 2059, 2314,
-            2315, 2568, 2569, 2824, 2825, 2570, 2571, 2826, 2827, 2060, 2061, 2316, 2317, 2062, 2063,
-            2318, 2319, 2572, 2573, 2828, 2829, 2574, 2575, 2830, 2831, 3080, 3081, 3336, 3337, 3082,
-            3083, 3338, 3339, 3592, 3593, 3848, 3849, 3594, 3595, 3850, 3851, 3084, 3085, 3340, 3341,
-            3086, 3087, 3342, 3343, 3596, 3597, 3852, 3853, 3598, 3599, 3854, 3855
-        ]);
-        this.utab = new Uint16Array([0, 1, 4, 5, 16, 17, 20, 21, 64, 65, 68, 69, 80, 81, 84, 85, 256, 257, 260, 261, 272, 273, 276, 277,
-            320, 321, 324, 325, 336, 337, 340, 341, 1024, 1025, 1028, 1029, 1040, 1041, 1044, 1045, 1088,
-            1089, 1092, 1093, 1104, 1105, 1108, 1109, 1280, 1281, 1284, 1285, 1296, 1297, 1300, 1301,
-            1344, 1345, 1348, 1349, 1360, 1361, 1364, 1365, 4096, 4097, 4100, 4101, 4112, 4113, 4116,
-            4117, 4160, 4161, 4164, 4165, 4176, 4177, 4180, 4181, 4352, 4353, 4356, 4357, 4368, 4369,
-            4372, 4373, 4416, 4417, 4420, 4421, 4432, 4433, 4436, 4437, 5120, 5121, 5124, 5125, 5136,
-            5137, 5140, 5141, 5184, 5185, 5188, 5189, 5200, 5201, 5204, 5205, 5376, 5377, 5380, 5381,
-            5392, 5393, 5396, 5397, 5440, 5441, 5444, 5445, 5456, 5457, 5460, 5461, 16384, 16385, 16388,
-            16389, 16400, 16401, 16404, 16405, 16448, 16449, 16452, 16453, 16464, 16465, 16468, 16469,
-            16640, 16641, 16644, 16645, 16656, 16657, 16660, 16661, 16704, 16705, 16708, 16709, 16720,
-            16721, 16724, 16725, 17408, 17409, 17412, 17413, 17424, 17425, 17428, 17429, 17472, 17473,
-            17476, 17477, 17488, 17489, 17492, 17493, 17664, 17665, 17668, 17669, 17680, 17681, 17684,
-            17685, 17728, 17729, 17732, 17733, 17744, 17745, 17748, 17749, 20480, 20481, 20484, 20485,
-            20496, 20497, 20500, 20501, 20544, 20545, 20548, 20549, 20560, 20561, 20564, 20565, 20736,
-            20737, 20740, 20741, 20752, 20753, 20756, 20757, 20800, 20801, 20804, 20805, 20816, 20817,
-            20820, 20821, 21504, 21505, 21508, 21509, 21520, 21521, 21524, 21525, 21568, 21569, 21572,
-            21573, 21584, 21585, 21588, 21589, 21760, 21761, 21764, 21765, 21776, 21777, 21780, 21781,
-            21824, 21825, 21828, 21829, 21840, 21841, 21844, 21845]);
-        this.jrll = new Int16Array([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
-        this.jpll = new Int16Array([1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7]);
-        this.xoffset = new Int16Array([-1, -1, 0, 1, 1, 1, 0, -1]);
-        this.yoffset = new Int16Array([0, 1, 1, 1, 0, -1, -1, -1]);
-        this.facearray = [
-            new Int16Array([8, 9, 10, 11, -1, -1, -1, -1, 10, 11, 8, 9]),
-            new Int16Array([5, 6, 7, 4, 8, 9, 10, 11, 9, 10, 11, 8]),
-            new Int16Array([-1, -1, -1, -1, 5, 6, 7, 4, -1, -1, -1, -1]),
-            new Int16Array([4, 5, 6, 7, 11, 8, 9, 10, 11, 8, 9, 10]),
-            new Int16Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
-            new Int16Array([1, 2, 3, 0, 0, 1, 2, 3, 5, 6, 7, 4]),
-            new Int16Array([-1, -1, -1, -1, 7, 4, 5, 6, -1, -1, -1, -1]),
-            new Int16Array([3, 0, 1, 2, 3, 0, 1, 2, 4, 5, 6, 7]),
-            new Int16Array([2, 3, 0, 1, -1, -1, -1, -1, 0, 1, 2, 3]) // N
-        ];
-        // questo forse deve essere un UInt8Array. Viene usato da neighbours
-        this.swaparray = [
-            new Int16Array([0, 0, 3]),
-            new Int16Array([0, 0, 6]),
-            new Int16Array([0, 0, 0]),
-            new Int16Array([0, 0, 5]),
-            new Int16Array([0, 0, 0]),
-            new Int16Array([5, 0, 0]),
-            new Int16Array([0, 0, 0]),
-            new Int16Array([6, 0, 0]),
-            new Int16Array([3, 0, 0]) // N
-        ];
-        if (nside_in <= this.ns_max && nside_in > 0) {
-            this.nside = nside_in;
-            this.npface = this.nside * this.nside;
-            this.npix = 12 * this.npface;
-            this.order = this.nside2order(this.nside);
-            this.nl2 = 2 * this.nside;
-            this.nl3 = 3 * this.nside;
-            this.nl4 = 4 * this.nside;
-            this.fact2 = 4.0 / this.npix;
-            this.fact1 = (this.nside << 1) * this.fact2;
-            this.ncap = 2 * this.nside * (this.nside - 1); // pixels in each polar cap
-            // console.log("order: "+this.order);
-            // console.log("nside: "+this.nside);
-        }
-        this.bn = [];
-        this.mpr = [];
-        this.cmpr = [];
-        this.smpr = [];
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
-        // Uncaught RangeError: Maximum call stack size exceeded
-        // MOVED TO computeBn()
-        //        for (let i=0; i <= this.order_max; ++i) {
-        //        	this.bn[i]=new Healpix(1<<i);
-        //        	this.mpr[i]=bn[i].maxPixrad();
-        //        	this.cmpr[i]=Math.cos(mpr[i]);
-        //        	this.smpr[i]=Math.sin(mpr[i]);
-        //        }
-    }
-    computeBn() {
-        for (let i = 0; i <= this.order_max; ++i) {
-            this.bn[i] = new Healpix(1 << i);
-            this.mpr[i] = this.bn[i].maxPixrad();
-            this.cmpr[i] = _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.cos(this.mpr[i]);
-            this.smpr[i] = _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.sin(this.mpr[i]);
-        }
-    }
-    getNPix() {
-        return this.npix;
-    }
-    ;
-    getBoundaries(pix) {
-        let points = new Array();
-        let xyf = this.nest2xyf(pix);
-        let dc = 0.5 / this.nside;
-        let xc = (xyf.ix + 0.5) / this.nside;
-        let yc = (xyf.iy + 0.5) / this.nside;
-        points[0] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
-        points[1] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
-        points[2] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
-        points[3] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
-        return points;
-    }
-    ;
-    /** Returns a set of points along the boundary of the given pixel.
-     * Step 1 gives 4 points on the corners. The first point corresponds
-     * to the northernmost corner, the subsequent points follow the pixel
-     * boundary through west, south and east corners.
-     *
-     * @param pix pixel index number
-     * @param step the number of returned points is 4*step
-     * @return {@link Vec3} for each point
-     */
-    getBoundariesWithStep(pix, step) {
-        // var points = new Array(); 
-        let points = new Array();
-        let xyf = this.nest2xyf(pix);
-        let dc = 0.5 / this.nside;
-        let xc = (xyf.ix + 0.5) / this.nside;
-        let yc = (xyf.iy + 0.5) / this.nside;
-        let d = 1.0 / (this.nside * step);
-        for (let i = 0; i < step; i++) {
-            points[i] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc + dc - i * d, yc + dc, xyf.face).toVec3();
-            points[i + step] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc - dc, yc + dc - i * d, xyf.face).toVec3();
-            points[i + 2 * step] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc - dc + i * d, yc - dc, xyf.face).toVec3();
-            points[i + 3 * step] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc + dc, yc - dc + i * d, xyf.face).toVec3();
-        }
-        return points;
-    }
-    ;
-    getPointsForXyfNoStep(x, y, face) {
-        // let nside = Math.pow(2, this.order);
-        let points = new Array();
-        let xyf = new _Xyf_js__WEBPACK_IMPORTED_MODULE_8__.Xyf(x, y, face);
-        let dc = 0.5 / this.nside;
-        let xc = (xyf.ix + 0.5) / this.nside;
-        let yc = (xyf.iy + 0.5) / this.nside;
-        points[0] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
-        points[1] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
-        points[2] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
-        points[3] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
-        return points;
-    }
-    getPointsForXyf(x, y, step, face) {
-        let nside = step * Math.pow(2, this.order);
-        let points = new Array();
-        let xyf = new _Xyf_js__WEBPACK_IMPORTED_MODULE_8__.Xyf(x, y, face);
-        let dc = 0.5 / nside;
-        let xc = (xyf.ix + 0.5) / nside;
-        let yc = (xyf.iy + 0.5) / nside;
-        points[0] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
-        points[1] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
-        points[2] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
-        points[3] = new _Fxyf_js__WEBPACK_IMPORTED_MODULE_2__.Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
-        return points;
-    }
-    /** Returns the neighboring pixels of ipix.
-    This method works in both RING and NEST schemes, but is
-    considerably faster in the NEST scheme.
-    @param ipix the requested pixel number.
-    @return array with indices of the neighboring pixels.
-      The returned array contains (in this order)
-      the pixel numbers of the SW, W, NW, N, NE, E, SE and S neighbor
-      of ipix. If a neighbor does not exist (this can only happen
-      for the W, N, E and S neighbors), its entry is set to -1. */
-    neighbours(ipix) {
-        let result = new Int32Array(8);
-        let xyf = this.nest2xyf(ipix);
-        let ix = xyf.ix;
-        let iy = xyf.iy;
-        let face_num = xyf.face;
-        var nsm1 = this.nside - 1;
-        if ((ix > 0) && (ix < nsm1) && (iy > 0) && (iy < nsm1)) {
-            let fpix = Math.floor(face_num << (2 * this.order));
-            let px0 = this.spread_bits(ix);
-            let py0 = this.spread_bits(iy) << 1;
-            let pxp = this.spread_bits(ix + 1);
-            let pyp = this.spread_bits(iy + 1) << 1;
-            let pxm = this.spread_bits(ix - 1);
-            let pym = this.spread_bits(iy - 1) << 1;
-            result[0] = fpix + pxm + py0;
-            result[1] = fpix + pxm + pyp;
-            result[2] = fpix + px0 + pyp;
-            result[3] = fpix + pxp + pyp;
-            result[4] = fpix + pxp + py0;
-            result[5] = fpix + pxp + pym;
-            result[6] = fpix + px0 + pym;
-            result[7] = fpix + pxm + pym;
-        }
-        else {
-            for (let i = 0; i < 8; ++i) {
-                let x = ix + this.xoffset[i];
-                let y = iy + this.yoffset[i];
-                let nbnum = 4;
-                if (x < 0) {
-                    x += this.nside;
-                    nbnum -= 1;
-                }
-                else if (x >= this.nside) {
-                    x -= this.nside;
-                    nbnum += 1;
-                }
-                if (y < 0) {
-                    y += this.nside;
-                    nbnum -= 3;
-                }
-                else if (y >= this.nside) {
-                    y -= this.nside;
-                    nbnum += 3;
-                }
-                let f = this.facearray[nbnum][face_num];
-                if (f >= 0) {
-                    let bits = this.swaparray[nbnum][face_num >>> 2];
-                    if ((bits & 1) > 0) {
-                        x = Math.floor(this.nside - x - 1);
-                    }
-                    if ((bits & 2) > 0) {
-                        y = Math.floor(this.nside - y - 1);
-                    }
-                    if ((bits & 4) > 0) {
-                        let tint = x;
-                        x = y;
-                        y = tint;
-                    }
-                    result[i] = this.xyf2nest(x, y, f);
-                }
-                else {
-                    result[i] = -1;
-                }
-            }
-        }
-        return result;
-    }
-    ;
-    nside2order(nside) {
-        return ((nside & (nside - 1)) != 0) ? -1 : Math.log2(nside);
-    }
-    ;
-    nest2xyf(ipix) {
-        let pix = Math.floor(ipix & (this.npface - 1));
-        let xyf = new _Xyf_js__WEBPACK_IMPORTED_MODULE_8__.Xyf(this.compress_bits(pix), this.compress_bits(pix >> 1), Math.floor((ipix >> (2 * this.order))));
-        return xyf;
-    }
-    ;
-    xyf2nest(ix, iy, face_num) {
-        return Math.floor(face_num << (2 * this.order))
-            + this.spread_bits(ix) + (this.spread_bits(iy) << 1);
-    }
-    ;
-    loc2pix(hploc) {
-        let z = hploc.z;
-        let phi = hploc.phi;
-        let za = Math.abs(z);
-        let tt = this.fmodulo((phi * this.inv_halfpi), 4.0); // in [0,4)
-        let pixNo;
-        if (za <= this.twothird) { // Equatorial region
-            let temp1 = this.nside * (0.5 + tt);
-            let temp2 = this.nside * (z * 0.75);
-            let jp = Math.floor(temp1 - temp2); // index of ascending edge line
-            let jm = Math.floor(temp1 + temp2); // index of descending edge line
-            let ifp = Math.floor(jp >>> this.order); // in {0,4}
-            let ifm = Math.floor(jm >>> this.order);
-            let face_num = Math.floor((ifp == ifm) ? (ifp | 4) : ((ifp < ifm) ? ifp : (ifm + 8)));
-            let ix = Math.floor(jm & (this.nside - 1));
-            let iy = Math.floor(this.nside - (jp & (this.nside - 1)) - 1);
-            pixNo = this.xyf2nest(ix, iy, face_num);
-        }
-        else { // polar region, za > 2/3
-            let ntt = Math.min(3, Math.floor(tt));
-            let tp = tt - ntt;
-            let tmp = ((za < 0.99) || (!hploc.have_sth)) ?
-                this.nside * Math.sqrt(3 * (1 - za)) :
-                this.nside * hploc.sth / Math.sqrt((1.0 + za) / 3.);
-            let jp = Math.floor(tp * tmp); // increasing edge line index
-            let jm = Math.floor((1.0 - tp) * tmp); // decreasing edge line index
-            if (jp >= this.nside) {
-                jp = this.nside - 1; // for points too close to the boundary
-            }
-            if (jm >= this.nside) {
-                jm = this.nside - 1;
-            }
-            if (z >= 0) {
-                pixNo = this.xyf2nest(Math.floor(this.nside - jm - 1), Math.floor(this.nside - jp - 1), ntt);
-            }
-            else {
-                pixNo = this.xyf2nest(Math.floor(jp), Math.floor(jm), ntt + 8);
-            }
-        }
-        return pixNo;
-    }
-    ;
-    /** Returns the normalized 3-vector corresponding to the center of the
-    supplied pixel.
-    @param pix long the requested pixel number.
-    @return the pixel's center coordinates. */
-    pix2vec(pix) {
-        return this.pix2loc(pix).toVec3();
-    }
-    ;
-    /** Returns the Zphi corresponding to the center of the supplied pixel.
-     @param pix the requested pixel number.
-     @return the pixel's center coordinates. */
-    pix2zphi(pix) {
-        return this.pix2loc(pix).toZphi();
-    }
-    pix2ang(pix, mirror) {
-        return this.pix2loc(pix).toPointing(mirror);
-    }
-    /**
-     * @param pix long
-     * @return Hploc
-     */
-    pix2loc(pix) {
-        let loc = new _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc(undefined);
-        let xyf = this.nest2xyf(pix);
-        let jr = ((this.jrll[xyf.face]) << this.order) - xyf.ix - xyf.iy - 1;
-        let nr;
-        if (jr < this.nside) {
-            nr = jr;
-            let tmp = (nr * nr) * this.fact2;
-            loc.z = 1 - tmp;
-            if (loc.z > 0.99) {
-                loc.sth = Math.sqrt(tmp * (2. - tmp));
-                loc.have_sth = true;
-            }
-        }
-        else if (jr > this.nl3) {
-            nr = this.nl4 - jr;
-            let tmp = (nr * nr) * this.fact2;
-            loc.z = tmp - 1;
-            if (loc.z < -0.99) {
-                loc.sth = Math.sqrt(tmp * (2. - tmp));
-                loc.have_sth = true;
-            }
-        }
-        else {
-            nr = this.nside;
-            loc.z = (this.nl2 - jr) * this.fact1;
-        }
-        let tmp = (this.jpll[xyf.face]) * nr + xyf.ix - xyf.iy;
-        //      	assert(tmp<8*nr); // must not happen
-        if (tmp < 0) {
-            tmp += 8 * nr;
-        }
-        loc.phi = (nr == this.nside) ? 0.75 * _Constants_js__WEBPACK_IMPORTED_MODULE_1__.Constants.halfpi * tmp * this.fact1 : (0.5 * _Constants_js__WEBPACK_IMPORTED_MODULE_1__.Constants.halfpi * tmp) / nr;
-        // loc.setPhi((nr == this.nside) ? 0.75 * Constants.halfpi * tmp * this.fact1 : (0.5 * Constants.halfpi * tmp)/nr);
-        return loc;
-    }
-    ;
-    za2vec(z, a) {
-        const sin_theta = Math.sqrt(1 - z * z);
-        const X = sin_theta * Math.cos(a);
-        const Y = sin_theta * Math.sin(a);
-        return new _Vec3_js__WEBPACK_IMPORTED_MODULE_7__.Vec3(X, Y, z);
-    }
-    ang2vec(theta, phi) {
-        const z = Math.cos(theta);
-        return this.za2vec(z, phi);
-    }
-    vec2ang(v) {
-        const { z, a } = this.vec2za(v.getX(), v.getY(), v.getZ());
-        return { theta: Math.acos(z), phi: a };
-    }
-    vec2za(X, Y, z) {
-        const r2 = X * X + Y * Y;
-        if (r2 == 0)
-            return { z: z < 0 ? -1 : 1, a: 0 };
-        else {
-            const PI2 = Math.PI / 2;
-            const a = (Math.atan2(Y, X) + PI2) % PI2;
-            z /= Math.sqrt(z * z + r2);
-            return { z, a };
-        }
-    }
-    ang2pix(ptg, mirror) {
-        return this.loc2pix(new _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc(ptg));
-    }
-    ;
-    fmodulo(v1, v2) {
-        if (v1 >= 0) {
-            return (v1 < v2) ? v1 : v1 % v2;
-        }
-        var tmp = v1 % v2 + v2;
-        return (tmp === v2) ? 0.0 : tmp;
-    }
-    ;
-    compress_bits(v) {
-        var raw = Math.floor((v & 0x5555)) | Math.floor(((v & 0x55550000) >>> 15));
-        var compressed = this.ctab[raw & 0xff] | (this.ctab[raw >>> 8] << 4);
-        return compressed;
-    }
-    ;
-    spread_bits(v) {
-        return Math.floor(this.utab[v & 0xff]) | Math.floor((this.utab[(v >>> 8) & 0xff] << 16))
-            | Math.floor((this.utab[(v >>> 16) & 0xff] << 32)) | Math.floor((this.utab[(v >>> 24) & 0xff] << 48));
-    }
-    ;
-    /**
-     * Returns a range set of pixels that overlap with the convex polygon
-     * defined by the {@code vertex} array.
-     * <p>
-     * This method is more efficient in the RING scheme.
-     * <p>
-     * This method may return some pixels which don't overlap with the polygon
-     * at all. The higher {@code fact} is chosen, the fewer false positives are
-     * returned, at the cost of increased run time.
-     *
-     * @param vertex
-     *            an array containing the vertices of the requested convex
-     *            polygon.
-     * @param fact
-     *            The overlapping test will be done at the resolution
-     *            {@code fact*nside}. For NESTED ordering, {@code fact} must be
-     *            a power of 2, else it can be any positive integer. A typical
-     *            choice would be 4.
-     * @return the requested set of pixel number ranges
-     */
-    queryPolygonInclusive(vertex, fact) {
-        let inclusive = (fact != 0);
-        let nv = vertex.length;
-        //        let ncirc = inclusive ? nv+1 : nv;
-        if (!(nv >= 3)) {
-            console.log("not enough vertices in polygon");
-            return;
-        }
-        let vv = new Array();
-        for (let i = 0; i < nv; ++i) {
-            vv[i] = _Vec3_js__WEBPACK_IMPORTED_MODULE_7__.Vec3.pointing2Vec3(vertex[i]);
-        }
-        let normal = new Array();
-        let flip = 0;
-        let index = 0;
-        let back = false;
-        while (index < vv.length) {
-            let first = vv[index];
-            let medium = null;
-            let last = null;
-            if (index == vv.length - 1) {
-                last = vv[1];
-                medium = vv[0];
-            }
-            else if (index == vv.length - 2) {
-                last = vv[0];
-                medium = vv[index + 1];
-            }
-            else {
-                medium = vv[index + 1];
-                last = vv[index + 2];
-            }
-            normal[index] = first.cross(medium).norm();
-            let hnd = normal[index].dot(last);
-            if (index == 0) {
-                flip = (hnd < 0.) ? -1 : 1;
-                let tmp = new _Pointing_js__WEBPACK_IMPORTED_MODULE_4__.Pointing(first); // TODO not used
-                back = false;
-            }
-            else {
-                let flipThnd = flip * hnd;
-                if (flipThnd < 0) {
-                    let tmp = new _Pointing_js__WEBPACK_IMPORTED_MODULE_4__.Pointing(medium);
-                    vv.splice(index + 1, 1);
-                    normal.splice(index, 1);
-                    back = true;
-                    index -= 1;
-                    continue;
-                }
-                else {
-                    let tmp = new _Pointing_js__WEBPACK_IMPORTED_MODULE_4__.Pointing(first);
-                    back = false;
-                }
-            }
-            normal[index].scale(flip);
-            index += 1;
-        }
-        nv = vv.length;
-        let ncirc = inclusive ? nv + 1 : nv;
-        let rad = new Array(ncirc);
-        rad = rad.fill(_Constants_js__WEBPACK_IMPORTED_MODULE_1__.Constants.halfpi);
-        //        rad = rad.fill(1.5707963267948966);
-        //        let p = "1.5707963267948966";
-        //        rad = rad.fill(parseFloat(p));
-        if (inclusive) {
-            let cf = new _CircleFinder_js__WEBPACK_IMPORTED_MODULE_0__.CircleFinder(vv);
-            normal[nv] = cf.getCenter();
-            rad[nv] = _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.acos(cf.getCosrad());
-        }
-        return this.queryMultiDisc(normal, rad, fact);
-    }
-    ;
-    /**
-     * For NEST schema only
-     *
-     * @param normal:
-     *            Vec3[]
-     * @param rad:
-     *            Float32Array
-     * @param fact:
-     *            The overlapping test will be done at the resolution
-     *            {@code fact*nside}. For NESTED ordering, {@code fact} must be
-     *            a power of 2, else it can be any positive integer. A typical
-     *            choice would be 4.
-     * @return RangeSet the requested set of pixel number ranges
-     */
-    queryMultiDisc(norm, rad, fact) {
-        this.computeBn();
-        let inclusive = (fact != 0);
-        let nv = norm.length;
-        // HealpixUtils.check(nv==rad.lengt0,"inconsistent input arrays");
-        if (!(nv == rad.length)) {
-            console.error("inconsistent input arrays");
-            return;
-        }
-        let res = new _RangeSet_js__WEBPACK_IMPORTED_MODULE_6__.RangeSet(4 << 1);
-        // Removed code for Scheme.RING
-        let oplus = 0;
-        if (inclusive) {
-            if (!(Math.pow(2, this.order_max - this.order) >= fact)) {
-                console.error("invalid oversampling factor");
-            }
-            if (!((fact & (fact - 1)) == 0)) {
-                console.error("oversampling factor must be a power of 2");
-            }
-            oplus = this.ilog2(fact);
-        }
-        let omax = this.order + oplus; // the order up to which we test
-        // TODO: ignore all disks with radius>=pi
-        //        let crlimit = new Float32Array[omax+1][nv][3];
-        let crlimit = new Array(omax + 1);
-        let o;
-        let i;
-        for (o = 0; o <= omax; ++o) { // prepare data at the required orders
-            crlimit[o] = new Array(nv);
-            let dr = this.bn[o].maxPixrad(); // safety distance
-            for (i = 0; i < nv; ++i) {
-                crlimit[o][i] = new Float64Array(3);
-                crlimit[o][i][0] = (rad[i] + dr > Math.PI) ? -1 : _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.cos(rad[i] + dr);
-                crlimit[o][i][1] = (o == 0) ? _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.cos(rad[i]) : crlimit[0][i][1];
-                crlimit[o][i][2] = (rad[i] - dr < 0.) ? 1. : _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.cos(rad[i] - dr);
-            }
-        }
-        let stk = new _pstack_js__WEBPACK_IMPORTED_MODULE_5__.pstack(12 + 3 * omax);
-        for (let i = 0; i < 12; i++) { // insert the 12 base pixels in reverse
-            // order
-            stk.push(11 - i, 0);
-        }
-        while (stk.size() > 0) { // as long as there are pixels on the stack
-            // pop current pixel number and order from the stack
-            let pix = stk.ptop();
-            let o = stk.otop();
-            stk.pop();
-            let pv = this.bn[o].pix2vec(pix);
-            let zone = 3;
-            for (let i = 0; (i < nv) && (zone > 0); ++i) {
-                let crad = pv.dot(norm[i]);
-                for (let iz = 0; iz < zone; ++iz) {
-                    if (crad < crlimit[o][i][iz]) {
-                        zone = iz;
-                    }
-                }
-            }
-            if (zone > 0) {
-                this.check_pixel(o, omax, zone, res, pix, stk, inclusive);
-            }
-        }
-        return res;
-    }
-    ;
-    /** Integer base 2 logarithm.
-    @param arg
-    @return the largest integer {@code n} that fulfills {@code 2^n<=arg}.
-    For negative arguments and zero, 0 is returned. */
-    ilog2(arg) {
-        let max = Math.max(arg, 1);
-        return 31 - Math.clz32(max);
-    }
-    ;
-    /** Computes the cosine of the angular distance between two z, phi positions
-      on the unit sphere. */
-    cosdist_zphi(z1, phi1, z2, phi2) {
-        return z1 * z2 + _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.cos(phi1 - phi2) * Math.sqrt((1.0 - z1 * z1) * (1.0 - z2 * z2));
-    }
-    /**
-     * @param int o
-     * @param int omax
-     * @param int zone
-     * @param RangeSet pixset
-     * @param long pix
-     * @param pstack stk
-     * @param boolean inclusive
-     */
-    check_pixel(o, omax, zone, pixset, pix, stk, inclusive) {
-        if (zone == 0)
-            return;
-        if (o < this.order) {
-            if (zone >= 3) { // output all subpixels
-                let sdist = 2 * (this.order - o); // the "bit-shift distance" between map orders
-                pixset.append1(pix << sdist, ((pix + 1) << sdist));
-            }
-            else { // (zone>=1)
-                for (let i = 0; i < 4; ++i) {
-                    stk.push(4 * pix + 3 - i, o + 1); // add children
-                }
-            }
-        }
-        else if (o > this.order) { // this implies that inclusive==true
-            if (zone >= 2) { // pixel center in shape
-                pixset.append(pix >>> (2 * (o - this.order))); // output the parent pixel at order
-                stk.popToMark(); // unwind the stack
-            }
-            else { // (zone>=1): pixel center in safety range
-                if (o < omax) { // check sublevels
-                    for (let i = 0; i < 4; ++i) { // add children in reverse order
-                        stk.push(4 * pix + 3 - i, o + 1); // add children
-                    }
-                }
-                else { // at resolution limit
-                    pixset.append(pix >>> (2 * (o - this.order))); // output the parent pixel at order
-                    stk.popToMark(); // unwind the stack
-                }
-            }
-        }
-        else { // o==order
-            if (zone >= 2) {
-                pixset.append(pix);
-            }
-            else if (inclusive) { // and (zone>=1)
-                if (this.order < omax) { // check sublevels
-                    stk.mark(); // remember current stack position
-                    for (let i = 0; i < 4; ++i) { // add children in reverse order
-                        stk.push(4 * pix + 3 - i, o + 1); // add children
-                    }
-                }
-                else { // at resolution limit
-                    pixset.append(pix); // output the pixel
-                }
-            }
-        }
-    }
-    /** Returns the maximum angular distance between a pixel center and its
-    corners.
-    @return maximum angular distance between a pixel center and its
-      corners. */
-    maxPixrad() {
-        let zphia = new _Zphi_js__WEBPACK_IMPORTED_MODULE_9__.Zphi(2. / 3., Math.PI / this.nl4);
-        let xyz1 = this.convertZphi2xyz(zphia);
-        let va = new _Vec3_js__WEBPACK_IMPORTED_MODULE_7__.Vec3(xyz1[0], xyz1[1], xyz1[2]);
-        let t1 = 1. - 1. / this.nside;
-        t1 *= t1;
-        let zphib = new _Zphi_js__WEBPACK_IMPORTED_MODULE_9__.Zphi(1 - t1 / 3, 0);
-        let xyz2 = this.convertZphi2xyz(zphib);
-        let vb = new _Vec3_js__WEBPACK_IMPORTED_MODULE_7__.Vec3(xyz2[0], xyz2[1], xyz2[2]);
-        return va.angle(vb);
-    }
-    ;
-    /**
-     * this is a workaround replacing the Vec3(Zphi) constructor.
-     */
-    convertZphi2xyz(zphi) {
-        let sth = Math.sqrt((1.0 - zphi.z) * (1.0 + zphi.z));
-        let x = sth * _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.cos(zphi.phi);
-        let y = sth * _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.sin(zphi.phi);
-        let z = zphi.z;
-        return [x, y, z];
-    }
-    ;
-    /** Returns a range set of pixels which overlap with a given disk. <p>
-      This method is more efficient in the RING scheme. <p>
-      This method may return some pixels which don't overlap with
-      the polygon at all. The higher {@code fact} is chosen, the fewer false
-      positives are returned, at the cost of increased run time.
-      @param ptg the angular coordinates of the disk center
-      @param radius the radius (in radians) of the disk
-      @param fact The overlapping test will be done at the resolution
-        {@code fact*nside}. For NESTED ordering, {@code fact} must be a power
-        of 2, else it can be any positive integer. A typical choice would be 4.
-      @return the requested set of pixel number ranges  */
-    queryDiscInclusive(ptg, radius, fact) {
-        this.computeBn();
-        let inclusive = (fact != 0);
-        let pixset = new _RangeSet_js__WEBPACK_IMPORTED_MODULE_6__.RangeSet();
-        if (radius >= Math.PI) { // disk covers the whole sphere
-            pixset.append1(0, this.npix);
-            return pixset;
-        }
-        let oplus = 0;
-        if (inclusive) {
-            // HealpixUtils.check ((1L<<order_max)>=fact,"invalid oversampling factor");
-            if (!((fact & (fact - 1)) == 0)) {
-                console.error("oversampling factor must be a power of 2");
-            }
-            oplus = this.ilog2(fact);
-        }
-        let omax = Math.min(this.order_max, this.order + oplus); // the order up to which we test
-        let vptg = _Vec3_js__WEBPACK_IMPORTED_MODULE_7__.Vec3.pointing2Vec3(ptg);
-        let crpdr = new Array(omax + 1);
-        let crmdr = new Array(omax + 1);
-        let cosrad = _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.cos(radius);
-        let sinrad = _Hploc_js__WEBPACK_IMPORTED_MODULE_3__.Hploc.sin(radius);
-        for (let o = 0; o <= omax; o++) { // prepare data at the required orders
-            let dr = this.mpr[o]; // safety distance
-            let cdr = this.cmpr[o];
-            let sdr = this.smpr[o];
-            crpdr[o] = (radius + dr > Math.PI) ? -1. : cosrad * cdr - sinrad * sdr;
-            crmdr[o] = (radius - dr < 0.) ? 1. : cosrad * cdr + sinrad * sdr;
-        }
-        let stk = new _pstack_js__WEBPACK_IMPORTED_MODULE_5__.pstack(12 + 3 * omax);
-        for (let i = 0; i < 12; i++) { // insert the 12 base pixels in reverse order
-            stk.push(11 - i, 0);
-        }
-        while (stk.size() > 0) { // as long as there are pixels on the stack
-            // pop current pixel number and order from the stack
-            let pix = stk.ptop();
-            let curro = stk.otop();
-            stk.pop();
-            let pos = this.bn[curro].pix2zphi(pix);
-            // cosine of angular distance between pixel center and disk center
-            let cangdist = this.cosdist_zphi(vptg.z, ptg.phi, pos.z, pos.phi);
-            if (cangdist > crpdr[curro]) {
-                let zone = (cangdist < cosrad) ? 1 : ((cangdist <= crmdr[curro]) ? 2 : 3);
-                this.check_pixel(curro, omax, zone, pixset, pix, stk, inclusive);
-            }
-        }
-        return pixset;
-    }
-}
-//# sourceMappingURL=Healpix.js.map
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/Hploc.js":
-/*!*************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/Hploc.js ***!
-  \*************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Hploc: () => (/* binding */ Hploc)
-/* harmony export */ });
-/* harmony import */ var _Pointing_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Pointing.js */ "./node_modules/healpixjs/lib-esm/Pointing.js");
-/* harmony import */ var _Vec3_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Vec3.js */ "./node_modules/healpixjs/lib-esm/Vec3.js");
-/* harmony import */ var _Zphi_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Zphi.js */ "./node_modules/healpixjs/lib-esm/Zphi.js");
+//# sourceMappingURL=Zphi.js.map
+;// ./node_modules/healpixjs/lib-esm/Hploc.js
 
 
 
@@ -4712,17 +3081,17 @@ class Hploc {
     ;
     toPointing(mirror) {
         const st = this.have_sth ? this.sth : Math.sqrt((1.0 - this.z) * (1.0 + this.z));
-        return new _Pointing_js__WEBPACK_IMPORTED_MODULE_0__.Pointing(null, false, Hploc.atan2(st, this.z), this._phi);
+        return new Pointing(null, false, Hploc.atan2(st, this.z), this._phi);
     }
     toVec3() {
         var st = this.have_sth ? this.sth : Math.sqrt((1.0 - this.z) * (1.0 + this.z));
-        var vector = new _Vec3_js__WEBPACK_IMPORTED_MODULE_1__.Vec3(st * Hploc.cos(this.phi), st * Hploc.sin(this.phi), this.z);
+        var vector = new Vec3(st * Hploc.cos(this.phi), st * Hploc.sin(this.phi), this.z);
         // var vector = new Vec3(st*Math.cos(this.phi),st*Math.sin(this.phi),this.z);
         return vector;
     }
     ;
     toZphi() {
-        return new _Zphi_js__WEBPACK_IMPORTED_MODULE_2__.Zphi(this.z, this.phi);
+        return new Zphi(this.z, this.phi);
     }
     static sin(d) {
         let u = d * Hploc.M_1_PI;
@@ -4871,147 +3240,7 @@ Hploc.PI4_B = 0.794662735614792836713604629039764404296875e-8;
 Hploc.PI4_C = 0.306161699786838294306516483068750264552437361480769e-16;
 Hploc.M_1_PI = 0.3183098861837906715377675267450287;
 //# sourceMappingURL=Hploc.js.map
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/Pointing.js":
-/*!****************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/Pointing.js ***!
-  \****************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Pointing: () => (/* binding */ Pointing)
-/* harmony export */ });
-/* harmony import */ var _Hploc_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Hploc.js */ "./node_modules/healpixjs/lib-esm/Hploc.js");
-
-class Pointing {
-    /**
-     *
-     * @param {*} vec3 Vec3.js
-     * @param {*} mirror
-     * @param {*} in_theta radians
-     * @param {*} in_phi radians
-     */
-    constructor(vec3, mirror, in_theta, in_phi) {
-        if (vec3 != null) {
-            this.theta = _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.atan2(Math.sqrt(vec3.x * vec3.x + vec3.y * vec3.y), vec3.z);
-            if (mirror) {
-                this.phi = -_Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.atan2(vec3.y, vec3.x);
-            }
-            else {
-                this.phi = _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.atan2(vec3.y, vec3.x);
-            }
-            if (this.phi < 0.0) {
-                this.phi = this.phi + 2 * Math.PI;
-            }
-            if (this.phi >= 2 * Math.PI) {
-                this.phi = this.phi - 2 * Math.PI;
-            }
-        }
-        else {
-            this.theta = in_theta;
-            this.phi = in_phi;
-        }
-    }
-}
-//# sourceMappingURL=Pointing.js.map
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/RangeSet.js":
-/*!****************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/RangeSet.js ***!
-  \****************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   RangeSet: () => (/* binding */ RangeSet)
-/* harmony export */ });
-class RangeSet {
-    /**
-     * @param int cap: initial capacity
-     */
-    constructor(cap) {
-        if (cap < 0)
-            console.error("capacity must be positive");
-        this.r = new Int32Array(cap << 1);
-        this.sz = 0;
-    }
-    ;
-    /** Append a single-value range to the object.
-    @param val value to append */
-    append(val) {
-        this.append1(val, val + 1);
-    }
-    ;
-    /** Append a range to the object.
-   @param a first long in range
-   @param b one-after-last long in range */
-    append1(a, b) {
-        if (a >= b)
-            return;
-        if ((this.sz > 0) && (a <= this.r[this.sz - 1])) {
-            if (a < this.r[this.sz - 2])
-                console.error("bad append operation");
-            if (b > this.r[this.sz - 1])
-                this.r[this.sz - 1] = b;
-            return;
-        }
-        // this.ensureCapacity(this.sz+2);
-        let cap = this.sz + 2;
-        if (this.r.length < cap) {
-            let newsize = Math.max(2 * this.r.length, cap);
-            let rnew = new Int32Array(newsize);
-            rnew.set(this.r);
-            this.r = rnew;
-        }
-        this.r[this.sz] = a;
-        this.r[this.sz + 1] = b;
-        this.sz += 2;
-    }
-    ;
-    /** Make sure the object can hold at least the given number of entries.
-     * @param cap int
-     * */
-    ensureCapacity(cap) {
-        if (this.r.length < cap)
-            this.resize(Math.max(2 * this.r.length, cap));
-    }
-    ;
-    /**
-     * @param newsize int
-     */
-    resize(newsize) {
-        if (newsize < this.sz)
-            console.error("requested array size too small");
-        if (newsize == this.r.length)
-            return;
-        let rnew = new Int32Array(newsize);
-        let sliced = this.r.slice(0, this.sz + 1);
-        //		this.arrayCopy(this.r, 0, rnew, 0, this.sz);
-        this.r = sliced;
-    }
-    ;
-}
-//# sourceMappingURL=RangeSet.js.map
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/Vec3.js":
-/*!************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/Vec3.js ***!
-  \************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Vec3: () => (/* binding */ Vec3)
-/* harmony export */ });
-/* harmony import */ var _Hploc_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Hploc.js */ "./node_modules/healpixjs/lib-esm/Hploc.js");
-/* harmony import */ var _Pointing_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Pointing.js */ "./node_modules/healpixjs/lib-esm/Pointing.js");
+;// ./node_modules/healpixjs/lib-esm/Vec3.js
 /**
  * Partial porting to Javascript of Vec3.java from Healpix3.30
  */
@@ -5019,12 +3248,12 @@ __webpack_require__.r(__webpack_exports__);
 
 class Vec3 {
     constructor(in_x, in_y, in_z) {
-        if (in_x instanceof _Pointing_js__WEBPACK_IMPORTED_MODULE_1__.Pointing) {
+        if (in_x instanceof Pointing) {
             let ptg = in_x;
-            let sth = _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.sin(ptg.theta);
-            this.x = sth * _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.cos(ptg.phi);
-            this.y = sth * _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.sin(ptg.phi);
-            this.z = _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.cos(ptg.theta);
+            let sth = Hploc.sin(ptg.theta);
+            this.x = sth * Hploc.cos(ptg.phi);
+            this.y = sth * Hploc.sin(ptg.phi);
+            this.z = Hploc.cos(ptg.theta);
         }
         else {
             this.x = in_x;
@@ -5111,7 +3340,7 @@ class Vec3 {
     @return the angle in radians between this vector and {@code v1};
       constrained to the range [0,PI]. */
     angle(v1) {
-        return _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.atan2(this.cross(v1).length(), this.dot(v1));
+        return Hploc.atan2(this.cross(v1).length(), this.dot(v1));
     }
     /** Invert the signs of all components */
     flip() {
@@ -5120,120 +3349,143 @@ class Vec3 {
         this.z *= -1.0;
     }
     static pointing2Vec3(pointing) {
-        let sth = _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.sin(pointing.theta);
-        let x = sth * _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.cos(pointing.phi);
-        let y = sth * _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.sin(pointing.phi);
-        let z = _Hploc_js__WEBPACK_IMPORTED_MODULE_0__.Hploc.cos(pointing.theta);
+        let sth = Hploc.sin(pointing.theta);
+        let x = sth * Hploc.cos(pointing.phi);
+        let y = sth * Hploc.sin(pointing.phi);
+        let z = Hploc.cos(pointing.theta);
         return new Vec3(x, y, z);
     }
     ;
 }
 //# sourceMappingURL=Vec3.js.map
+;// ./node_modules/healpixjs/lib-esm/CircleFinder.js
 
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/Xyf.js":
-/*!***********************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/Xyf.js ***!
-  \***********************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Xyf: () => (/* binding */ Xyf)
-/* harmony export */ });
-/**
- * Partial porting to Javascript of Xyf.java from Healpix3.30
- */
-class Xyf {
-    constructor(x, y, f) {
-        this.ix = x;
-        this.iy = y;
-        this.face = f;
+class CircleFinder {
+    /**
+     * @param point: Vec3
+     */
+    constructor(point) {
+        let np = point.length;
+        //HealpixUtils.check(np>=2,"too few points");
+        if (!(np >= 2)) {
+            console.log("too few points");
+            return;
+        }
+        this.center = point[0].add(point[1]);
+        this.center.normalize();
+        this.cosrad = point[0].dot(this.center);
+        for (let i = 2; i < np; ++i) {
+            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
+                this.getCircle(point, i);
+            }
+        }
     }
-}
-//# sourceMappingURL=Xyf.js.map
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/Zphi.js":
-/*!************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/Zphi.js ***!
-  \************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Zphi: () => (/* binding */ Zphi)
-/* harmony export */ });
-class Zphi {
-    /** Creation from individual components */
-    constructor(z_, phi_) {
-        this.z = z_;
-        this.phi = phi_;
+    ;
+    /**
+     * @parm point: Vec3
+     * @param q: int
+     */
+    getCircle(point, q) {
+        this.center = point[0].add(point[q]);
+        this.center.normalize();
+        this.cosrad = point[0].dot(this.center);
+        for (let i = 1; i < q; ++i) {
+            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
+                this.getCircle2(point, i, q);
+            }
+        }
+    }
+    ;
+    /**
+     * @parm point: Vec3
+     * @param q1: int
+     * @param q2: int
+     */
+    getCircle2(point, q1, q2) {
+        this.center = point[q1].add(point[q2]);
+        this.center.normalize();
+        this.cosrad = point[q1].dot(this.center);
+        for (let i = 0; i < q1; ++i) {
+            if (point[i].dot(this.center) < this.cosrad) { // point outside the current circle
+                this.center = (point[q1].sub(point[i])).cross(point[q2].sub(point[i]));
+                this.center.normalize();
+                this.cosrad = point[i].dot(this.center);
+                if (this.cosrad < 0) {
+                    this.center.flip();
+                    this.cosrad = -this.cosrad;
+                }
+            }
+        }
+    }
+    ;
+    getCenter() {
+        return new Vec3(this.center.x, this.center.y, this.center.z);
+    }
+    getCosrad() {
+        return this.cosrad;
     }
     ;
 }
-//# sourceMappingURL=Zphi.js.map
+//# sourceMappingURL=CircleFinder.js.map
+;// ./node_modules/healpixjs/lib-esm/Fxyf.js
+/**
+ * Partial porting to Javascript of Fxyf.java from Healpix3.30
+ */
 
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/index.js":
-/*!*************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/index.js ***!
-  \*************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   CircleFinder: () => (/* reexport safe */ _CircleFinder_js__WEBPACK_IMPORTED_MODULE_2__.CircleFinder),
-/* harmony export */   Constants: () => (/* reexport safe */ _Constants_js__WEBPACK_IMPORTED_MODULE_0__.Constants),
-/* harmony export */   Fxyf: () => (/* reexport safe */ _Fxyf_js__WEBPACK_IMPORTED_MODULE_3__.Fxyf),
-/* harmony export */   Healpix: () => (/* reexport safe */ _Healpix_js__WEBPACK_IMPORTED_MODULE_4__.Healpix),
-/* harmony export */   Hploc: () => (/* reexport safe */ _Hploc_js__WEBPACK_IMPORTED_MODULE_10__.Hploc),
-/* harmony export */   Pointing: () => (/* reexport safe */ _Pointing_js__WEBPACK_IMPORTED_MODULE_5__.Pointing),
-/* harmony export */   RangeSet: () => (/* reexport safe */ _RangeSet_js__WEBPACK_IMPORTED_MODULE_6__.RangeSet),
-/* harmony export */   Vec3: () => (/* reexport safe */ _Vec3_js__WEBPACK_IMPORTED_MODULE_7__.Vec3),
-/* harmony export */   Xyf: () => (/* reexport safe */ _Xyf_js__WEBPACK_IMPORTED_MODULE_8__.Xyf),
-/* harmony export */   Zphi: () => (/* reexport safe */ _Zphi_js__WEBPACK_IMPORTED_MODULE_9__.Zphi),
-/* harmony export */   pstack: () => (/* reexport safe */ _pstack_js__WEBPACK_IMPORTED_MODULE_1__.pstack)
-/* harmony export */ });
-/* harmony import */ var _Constants_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Constants.js */ "./node_modules/healpixjs/lib-esm/Constants.js");
-/* harmony import */ var _pstack_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./pstack.js */ "./node_modules/healpixjs/lib-esm/pstack.js");
-/* harmony import */ var _CircleFinder_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./CircleFinder.js */ "./node_modules/healpixjs/lib-esm/CircleFinder.js");
-/* harmony import */ var _Fxyf_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Fxyf.js */ "./node_modules/healpixjs/lib-esm/Fxyf.js");
-/* harmony import */ var _Healpix_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Healpix.js */ "./node_modules/healpixjs/lib-esm/Healpix.js");
-/* harmony import */ var _Pointing_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./Pointing.js */ "./node_modules/healpixjs/lib-esm/Pointing.js");
-/* harmony import */ var _RangeSet_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./RangeSet.js */ "./node_modules/healpixjs/lib-esm/RangeSet.js");
-/* harmony import */ var _Vec3_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./Vec3.js */ "./node_modules/healpixjs/lib-esm/Vec3.js");
-/* harmony import */ var _Xyf_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./Xyf.js */ "./node_modules/healpixjs/lib-esm/Xyf.js");
-/* harmony import */ var _Zphi_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./Zphi.js */ "./node_modules/healpixjs/lib-esm/Zphi.js");
-/* harmony import */ var _Hploc_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./Hploc.js */ "./node_modules/healpixjs/lib-esm/Hploc.js");
-
-
-
-
-
-
-
-
-
-
-
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ "./node_modules/healpixjs/lib-esm/pstack.js":
-/*!**************************************************!*\
-  !*** ./node_modules/healpixjs/lib-esm/pstack.js ***!
-  \**************************************************/
-/***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   pstack: () => (/* binding */ pstack)
-/* harmony export */ });
+class Fxyf {
+    constructor(x, y, f) {
+        this.fx = x;
+        this.fy = y;
+        this.face = f;
+        // coordinate of the lowest corner of each face
+        this.jrll = new Uint8Array([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
+        this.jpll = new Uint8Array([1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7]);
+        this.halfpi = Math.PI / 2.;
+    }
+    toHploc() {
+        let loc = new Hploc();
+        let jr = this.jrll[this.face] - this.fx - this.fy;
+        let nr;
+        if (jr < 1) {
+            nr = jr;
+            let tmp = nr * nr / 3.;
+            loc.z = 1 - tmp;
+            if (loc.z > 0.99) {
+                loc.sth = Math.sqrt(tmp * (2.0 - tmp));
+                loc.have_sth = true;
+            }
+        }
+        else if (jr > 3) {
+            nr = 4 - jr;
+            let tmp = nr * nr / 3.;
+            loc.z = tmp - 1;
+            if (loc.z < -0.99) {
+                loc.sth = Math.sqrt(tmp * (2.0 - tmp));
+                loc.have_sth = true;
+            }
+        }
+        else {
+            nr = 1;
+            loc.z = (2 - jr) * 2.0 / 3.;
+        }
+        let tmp = this.jpll[this.face] * nr + this.fx - this.fy;
+        if (tmp < 0) {
+            tmp += 8;
+        }
+        if (tmp >= 8) {
+            tmp -= 8;
+        }
+        loc.phi = (nr < 1e-15) ? 0 : (0.5 * this.halfpi * tmp) / nr;
+        return loc;
+    }
+    ;
+    toVec3() {
+        return this.toHploc().toVec3();
+    }
+    ;
+}
+//# sourceMappingURL=Fxyf.js.map
+;// ./node_modules/healpixjs/lib-esm/pstack.js
 class pstack {
     /** Creation from individual components */
     constructor(sz) {
@@ -5279,36 +3531,87 @@ class pstack {
     ;
 }
 //# sourceMappingURL=pstack.js.map
-
-/***/ }),
-
-/***/ "./src/AstroSphere.ts":
-/*!****************************!*\
-  !*** ./src/AstroSphere.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var _Config_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Config.js */ "./src/Config.ts");
-/* harmony import */ var _Camera_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Camera.js */ "./src/Camera.ts");
-/* harmony import */ var _utils_RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/RayPickingUtils.js */ "./src/utils/RayPickingUtils.ts");
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Global.js */ "./src/Global.ts");
-/* harmony import */ var _utils_MouseHelper_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./utils/MouseHelper.js */ "./src/utils/MouseHelper.ts");
-/* harmony import */ var _utils_Utils_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./utils/Utils.js */ "./src/utils/Utils.ts");
-/* harmony import */ var _model_hips_HiPS_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./model/hips/HiPS.js */ "./src/model/hips/HiPS.ts");
-/* harmony import */ var _utils_PerspectiveMatrixManager_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./utils/PerspectiveMatrixManager.js */ "./src/utils/PerspectiveMatrixManager.ts");
-/* harmony import */ var _model_Point_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./model/Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _utils_FoVUtils_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./utils/FoVUtils.js */ "./src/utils/FoVUtils.ts");
-/* harmony import */ var _model_grid_EquatorialGrid_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./model/grid/EquatorialGrid.js */ "./src/model/grid/EquatorialGrid.ts");
-/* harmony import */ var _model_grid_HealpixGrid_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./model/grid/HealpixGrid.js */ "./src/model/grid/HealpixGrid.ts");
-/* harmony import */ var _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./utils/CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./model/ColorMaps.js */ "./src/model/ColorMaps.ts");
-
-
-
+;// ./node_modules/healpixjs/lib-esm/RangeSet.js
+class RangeSet {
+    /**
+     * @param int cap: initial capacity
+     */
+    constructor(cap) {
+        if (cap < 0)
+            console.error("capacity must be positive");
+        this.r = new Int32Array(cap << 1);
+        this.sz = 0;
+    }
+    ;
+    /** Append a single-value range to the object.
+    @param val value to append */
+    append(val) {
+        this.append1(val, val + 1);
+    }
+    ;
+    /** Append a range to the object.
+   @param a first long in range
+   @param b one-after-last long in range */
+    append1(a, b) {
+        if (a >= b)
+            return;
+        if ((this.sz > 0) && (a <= this.r[this.sz - 1])) {
+            if (a < this.r[this.sz - 2])
+                console.error("bad append operation");
+            if (b > this.r[this.sz - 1])
+                this.r[this.sz - 1] = b;
+            return;
+        }
+        // this.ensureCapacity(this.sz+2);
+        let cap = this.sz + 2;
+        if (this.r.length < cap) {
+            let newsize = Math.max(2 * this.r.length, cap);
+            let rnew = new Int32Array(newsize);
+            rnew.set(this.r);
+            this.r = rnew;
+        }
+        this.r[this.sz] = a;
+        this.r[this.sz + 1] = b;
+        this.sz += 2;
+    }
+    ;
+    /** Make sure the object can hold at least the given number of entries.
+     * @param cap int
+     * */
+    ensureCapacity(cap) {
+        if (this.r.length < cap)
+            this.resize(Math.max(2 * this.r.length, cap));
+    }
+    ;
+    /**
+     * @param newsize int
+     */
+    resize(newsize) {
+        if (newsize < this.sz)
+            console.error("requested array size too small");
+        if (newsize == this.r.length)
+            return;
+        let rnew = new Int32Array(newsize);
+        let sliced = this.r.slice(0, this.sz + 1);
+        //		this.arrayCopy(this.r, 0, rnew, 0, this.sz);
+        this.r = sliced;
+    }
+    ;
+}
+//# sourceMappingURL=RangeSet.js.map
+;// ./node_modules/healpixjs/lib-esm/Xyf.js
+/**
+ * Partial porting to Javascript of Xyf.java from Healpix3.30
+ */
+class Xyf {
+    constructor(x, y, f) {
+        this.ix = x;
+        this.iy = y;
+        this.face = f;
+    }
+}
+//# sourceMappingURL=Xyf.js.map
+;// ./node_modules/healpixjs/lib-esm/Healpix.js
 
 
 
@@ -5321,768 +3624,837 @@ __webpack_require__.r(__webpack_exports__);
 
 
 /**
- * AstroSphere — main WebGL scene controller (TS port)
+ * Partial porting to Javascript of HealpixBase.java from Healpix3.30
  */
-class AstroSphere {
-    _camera;
-    _perspectiveMatrixManager;
-    centralPoinCoords;
-    mousePointCoords;
-    canvas;
-    _healpixGrid;
-    _equatorialGrid;
-    mouseHelper;
-    mouseDown = false;
-    lastMouseX = null;
-    lastMouseY = null;
-    inertiaX = 0.0;
-    inertiaY = 0.0;
-    zoomInertia = 0.0;
-    _activeHiPS = null;
-    startup = true;
-    fov;
-    activeCatalogues = [];
-    activeFootprintSets = [];
-    _webgl;
-    _selectedColorMap;
-    constructor(canvas, webgl) {
-        console.log('[AstroSphere] new instance for canvas', canvas.id);
-        // Keep global GL context (as in original JS)
-        this._webgl = webgl;
-        this.mouseHelper = new _utils_MouseHelper_js__WEBPACK_IMPORTED_MODULE_4__["default"]();
-        this.canvas = canvas;
-        const nativeColorMap = 'native';
-        this._selectedColorMap = _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_13__["default"][nativeColorMap];
-        _Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere = _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.insideSphere;
-        this.initCamera();
-        this._healpixGrid = new _model_grid_HealpixGrid_js__WEBPACK_IMPORTED_MODULE_11__.HealpixGrid(this._webgl);
-        this._perspectiveMatrixManager = new _utils_PerspectiveMatrixManager_js__WEBPACK_IMPORTED_MODULE_7__.PerspectiveMatrixManager(canvas, this._camera, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_fov_deg, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_near_plane, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.insideSphere);
-        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_fov_deg, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_near_plane, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.insideSphere);
-        this._equatorialGrid = new _model_grid_EquatorialGrid_js__WEBPACK_IMPORTED_MODULE_10__.EquatorialGrid(this._webgl, this._healpixGrid);
-        this._equatorialGrid.init(this._healpixGrid.getMinFoV());
-        this.updateCentralPoint();
-        this.startup = true;
-        this.addEventListeners(canvas);
-        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+// import Fxyf from './Fxyf.js';
+// import Hploc from './Hploc.js';
+// import Xyf from './Xyf.js';
+// import Vec3 from './Vec3.js';
+// import Pointing from './Pointing.js';
+// import CircleFinder from './CircleFinder.js';
+// import Zphi from './Zphi.js';
+// import pstack from './pstack.js';
+// import Constants from './Constants.js';
+// import RangeSet from './RangeSet.js';
+class Healpix {
+    constructor(nside_in) {
+        this.order_max = 29;
+        this.inv_halfpi = 2.0 / Math.PI;
+        this.twothird = 2.0 / 3.;
+        // console.log("twothird "+this.twothird);
+        // this.ns_max=1L<<order_max;
+        this.ns_max = Math.pow(2, this.order_max);
+        this.ctab = new Uint16Array([
+            0, 1, 256, 257, 2, 3, 258, 259, 512, 513, 768, 769, 514, 515, 770, 771, 4, 5, 260, 261, 6, 7, 262,
+            263, 516, 517, 772, 773, 518, 519, 774, 775, 1024, 1025, 1280, 1281, 1026, 1027, 1282, 1283,
+            1536, 1537, 1792, 1793, 1538, 1539, 1794, 1795, 1028, 1029, 1284, 1285, 1030, 1031, 1286,
+            1287, 1540, 1541, 1796, 1797, 1542, 1543, 1798, 1799, 8, 9, 264, 265, 10, 11, 266, 267, 520,
+            521, 776, 777, 522, 523, 778, 779, 12, 13, 268, 269, 14, 15, 270, 271, 524, 525, 780, 781, 526,
+            527, 782, 783, 1032, 1033, 1288, 1289, 1034, 1035, 1290, 1291, 1544, 1545, 1800, 1801, 1546,
+            1547, 1802, 1803, 1036, 1037, 1292, 1293, 1038, 1039, 1294, 1295, 1548, 1549, 1804, 1805,
+            1550, 1551, 1806, 1807, 2048, 2049, 2304, 2305, 2050, 2051, 2306, 2307, 2560, 2561, 2816,
+            2817, 2562, 2563, 2818, 2819, 2052, 2053, 2308, 2309, 2054, 2055, 2310, 2311, 2564, 2565,
+            2820, 2821, 2566, 2567, 2822, 2823, 3072, 3073, 3328, 3329, 3074, 3075, 3330, 3331, 3584,
+            3585, 3840, 3841, 3586, 3587, 3842, 3843, 3076, 3077, 3332, 3333, 3078, 3079, 3334, 3335,
+            3588, 3589, 3844, 3845, 3590, 3591, 3846, 3847, 2056, 2057, 2312, 2313, 2058, 2059, 2314,
+            2315, 2568, 2569, 2824, 2825, 2570, 2571, 2826, 2827, 2060, 2061, 2316, 2317, 2062, 2063,
+            2318, 2319, 2572, 2573, 2828, 2829, 2574, 2575, 2830, 2831, 3080, 3081, 3336, 3337, 3082,
+            3083, 3338, 3339, 3592, 3593, 3848, 3849, 3594, 3595, 3850, 3851, 3084, 3085, 3340, 3341,
+            3086, 3087, 3342, 3343, 3596, 3597, 3852, 3853, 3598, 3599, 3854, 3855
+        ]);
+        this.utab = new Uint16Array([0, 1, 4, 5, 16, 17, 20, 21, 64, 65, 68, 69, 80, 81, 84, 85, 256, 257, 260, 261, 272, 273, 276, 277,
+            320, 321, 324, 325, 336, 337, 340, 341, 1024, 1025, 1028, 1029, 1040, 1041, 1044, 1045, 1088,
+            1089, 1092, 1093, 1104, 1105, 1108, 1109, 1280, 1281, 1284, 1285, 1296, 1297, 1300, 1301,
+            1344, 1345, 1348, 1349, 1360, 1361, 1364, 1365, 4096, 4097, 4100, 4101, 4112, 4113, 4116,
+            4117, 4160, 4161, 4164, 4165, 4176, 4177, 4180, 4181, 4352, 4353, 4356, 4357, 4368, 4369,
+            4372, 4373, 4416, 4417, 4420, 4421, 4432, 4433, 4436, 4437, 5120, 5121, 5124, 5125, 5136,
+            5137, 5140, 5141, 5184, 5185, 5188, 5189, 5200, 5201, 5204, 5205, 5376, 5377, 5380, 5381,
+            5392, 5393, 5396, 5397, 5440, 5441, 5444, 5445, 5456, 5457, 5460, 5461, 16384, 16385, 16388,
+            16389, 16400, 16401, 16404, 16405, 16448, 16449, 16452, 16453, 16464, 16465, 16468, 16469,
+            16640, 16641, 16644, 16645, 16656, 16657, 16660, 16661, 16704, 16705, 16708, 16709, 16720,
+            16721, 16724, 16725, 17408, 17409, 17412, 17413, 17424, 17425, 17428, 17429, 17472, 17473,
+            17476, 17477, 17488, 17489, 17492, 17493, 17664, 17665, 17668, 17669, 17680, 17681, 17684,
+            17685, 17728, 17729, 17732, 17733, 17744, 17745, 17748, 17749, 20480, 20481, 20484, 20485,
+            20496, 20497, 20500, 20501, 20544, 20545, 20548, 20549, 20560, 20561, 20564, 20565, 20736,
+            20737, 20740, 20741, 20752, 20753, 20756, 20757, 20800, 20801, 20804, 20805, 20816, 20817,
+            20820, 20821, 21504, 21505, 21508, 21509, 21520, 21521, 21524, 21525, 21568, 21569, 21572,
+            21573, 21584, 21585, 21588, 21589, 21760, 21761, 21764, 21765, 21776, 21777, 21780, 21781,
+            21824, 21825, 21828, 21829, 21840, 21841, 21844, 21845]);
+        this.jrll = new Int16Array([2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4]);
+        this.jpll = new Int16Array([1, 3, 5, 7, 0, 2, 4, 6, 1, 3, 5, 7]);
+        this.xoffset = new Int16Array([-1, -1, 0, 1, 1, 1, 0, -1]);
+        this.yoffset = new Int16Array([0, 1, 1, 1, 0, -1, -1, -1]);
+        this.facearray = [
+            new Int16Array([8, 9, 10, 11, -1, -1, -1, -1, 10, 11, 8, 9]),
+            new Int16Array([5, 6, 7, 4, 8, 9, 10, 11, 9, 10, 11, 8]),
+            new Int16Array([-1, -1, -1, -1, 5, 6, 7, 4, -1, -1, -1, -1]),
+            new Int16Array([4, 5, 6, 7, 11, 8, 9, 10, 11, 8, 9, 10]),
+            new Int16Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]),
+            new Int16Array([1, 2, 3, 0, 0, 1, 2, 3, 5, 6, 7, 4]),
+            new Int16Array([-1, -1, -1, -1, 7, 4, 5, 6, -1, -1, -1, -1]),
+            new Int16Array([3, 0, 1, 2, 3, 0, 1, 2, 4, 5, 6, 7]),
+            new Int16Array([2, 3, 0, 1, -1, -1, -1, -1, 0, 1, 2, 3]) // N
+        ];
+        // questo forse deve essere un UInt8Array. Viene usato da neighbours
+        this.swaparray = [
+            new Int16Array([0, 0, 3]),
+            new Int16Array([0, 0, 6]),
+            new Int16Array([0, 0, 0]),
+            new Int16Array([0, 0, 5]),
+            new Int16Array([0, 0, 0]),
+            new Int16Array([5, 0, 0]),
+            new Int16Array([0, 0, 0]),
+            new Int16Array([6, 0, 0]),
+            new Int16Array([3, 0, 0]) // N
+        ];
+        if (nside_in <= this.ns_max && nside_in > 0) {
+            this.nside = nside_in;
+            this.npface = this.nside * this.nside;
+            this.npix = 12 * this.npface;
+            this.order = this.nside2order(this.nside);
+            this.nl2 = 2 * this.nside;
+            this.nl3 = 3 * this.nside;
+            this.nl4 = 4 * this.nside;
+            this.fact2 = 4.0 / this.npix;
+            this.fact1 = (this.nside << 1) * this.fact2;
+            this.ncap = 2 * this.nside * (this.nside - 1); // pixels in each polar cap
+            // console.log("order: "+this.order);
+            // console.log("nside: "+this.nside);
+        }
+        this.bn = [];
+        this.mpr = [];
+        this.cmpr = [];
+        this.smpr = [];
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // TODO INFINITE LOOP!!!!!! FIX ITTTTTTTTTT
+        // Uncaught RangeError: Maximum call stack size exceeded
+        // MOVED TO computeBn()
+        //        for (let i=0; i <= this.order_max; ++i) {
+        //        	this.bn[i]=new Healpix(1<<i);
+        //        	this.mpr[i]=bn[i].maxPixrad();
+        //        	this.cmpr[i]=Math.cos(mpr[i]);
+        //        	this.smpr[i]=Math.sin(mpr[i]);
+        //        }
     }
-    initCamera() {
-        if (_Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.insideSphere) {
-            this._camera = new _Camera_js__WEBPACK_IMPORTED_MODULE_1__["default"]([0.0, 0.0, -0.005], true);
+    computeBn() {
+        for (let i = 0; i <= this.order_max; ++i) {
+            this.bn[i] = new Healpix(1 << i);
+            this.mpr[i] = this.bn[i].maxPixrad();
+            this.cmpr[i] = Hploc.cos(this.mpr[i]);
+            this.smpr[i] = Hploc.sin(this.mpr[i]);
+        }
+    }
+    getNPix() {
+        return this.npix;
+    }
+    ;
+    getBoundaries(pix) {
+        let points = new Array();
+        let xyf = this.nest2xyf(pix);
+        let dc = 0.5 / this.nside;
+        let xc = (xyf.ix + 0.5) / this.nside;
+        let yc = (xyf.iy + 0.5) / this.nside;
+        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
+        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
+        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
+        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
+        return points;
+    }
+    ;
+    /** Returns a set of points along the boundary of the given pixel.
+     * Step 1 gives 4 points on the corners. The first point corresponds
+     * to the northernmost corner, the subsequent points follow the pixel
+     * boundary through west, south and east corners.
+     *
+     * @param pix pixel index number
+     * @param step the number of returned points is 4*step
+     * @return {@link Vec3} for each point
+     */
+    getBoundariesWithStep(pix, step) {
+        // var points = new Array(); 
+        let points = new Array();
+        let xyf = this.nest2xyf(pix);
+        let dc = 0.5 / this.nside;
+        let xc = (xyf.ix + 0.5) / this.nside;
+        let yc = (xyf.iy + 0.5) / this.nside;
+        let d = 1.0 / (this.nside * step);
+        for (let i = 0; i < step; i++) {
+            points[i] = new Fxyf(xc + dc - i * d, yc + dc, xyf.face).toVec3();
+            points[i + step] = new Fxyf(xc - dc, yc + dc - i * d, xyf.face).toVec3();
+            points[i + 2 * step] = new Fxyf(xc - dc + i * d, yc - dc, xyf.face).toVec3();
+            points[i + 3 * step] = new Fxyf(xc + dc, yc - dc + i * d, xyf.face).toVec3();
+        }
+        return points;
+    }
+    ;
+    getPointsForXyfNoStep(x, y, face) {
+        // let nside = Math.pow(2, this.order);
+        let points = new Array();
+        let xyf = new Xyf(x, y, face);
+        let dc = 0.5 / this.nside;
+        let xc = (xyf.ix + 0.5) / this.nside;
+        let yc = (xyf.iy + 0.5) / this.nside;
+        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
+        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
+        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
+        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
+        return points;
+    }
+    getPointsForXyf(x, y, step, face) {
+        let nside = step * Math.pow(2, this.order);
+        let points = new Array();
+        let xyf = new Xyf(x, y, face);
+        let dc = 0.5 / nside;
+        let xc = (xyf.ix + 0.5) / nside;
+        let yc = (xyf.iy + 0.5) / nside;
+        points[0] = new Fxyf(xc + dc, yc + dc, xyf.face).toVec3();
+        points[1] = new Fxyf(xc - dc, yc + dc, xyf.face).toVec3();
+        points[2] = new Fxyf(xc - dc, yc - dc, xyf.face).toVec3();
+        points[3] = new Fxyf(xc + dc, yc - dc, xyf.face).toVec3();
+        return points;
+    }
+    /** Returns the neighboring pixels of ipix.
+    This method works in both RING and NEST schemes, but is
+    considerably faster in the NEST scheme.
+    @param ipix the requested pixel number.
+    @return array with indices of the neighboring pixels.
+      The returned array contains (in this order)
+      the pixel numbers of the SW, W, NW, N, NE, E, SE and S neighbor
+      of ipix. If a neighbor does not exist (this can only happen
+      for the W, N, E and S neighbors), its entry is set to -1. */
+    neighbours(ipix) {
+        let result = new Int32Array(8);
+        let xyf = this.nest2xyf(ipix);
+        let ix = xyf.ix;
+        let iy = xyf.iy;
+        let face_num = xyf.face;
+        var nsm1 = this.nside - 1;
+        if ((ix > 0) && (ix < nsm1) && (iy > 0) && (iy < nsm1)) {
+            let fpix = Math.floor(face_num << (2 * this.order));
+            let px0 = this.spread_bits(ix);
+            let py0 = this.spread_bits(iy) << 1;
+            let pxp = this.spread_bits(ix + 1);
+            let pyp = this.spread_bits(iy + 1) << 1;
+            let pxm = this.spread_bits(ix - 1);
+            let pym = this.spread_bits(iy - 1) << 1;
+            result[0] = fpix + pxm + py0;
+            result[1] = fpix + pxm + pyp;
+            result[2] = fpix + px0 + pyp;
+            result[3] = fpix + pxp + pyp;
+            result[4] = fpix + pxp + py0;
+            result[5] = fpix + pxp + pym;
+            result[6] = fpix + px0 + pym;
+            result[7] = fpix + pxm + pym;
         }
         else {
-            this._camera = new _Camera_js__WEBPACK_IMPORTED_MODULE_1__["default"]([0.0, 0.0, 4.0], false);
-        }
-    }
-    setCamera(camera) {
-        this._camera = camera;
-    }
-    get healpixGrid() {
-        return this._healpixGrid;
-    }
-    get equatorialGrid() {
-        return this._equatorialGrid;
-    }
-    // This is a lickely a duplication of FoVUtils.getCenterJ2000(this.canvas)
-    updateCentralPoint() {
-        const sphericalCoords = this.getPhiThetaDeg(this.canvas);
-        const astroCoords = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_5__.sphericalToAstroDeg)(sphericalCoords.phi, sphericalCoords.theta);
-        const raHMS = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_5__.raDegToHMS)(astroCoords.ra);
-        const decDMS = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_5__.decDegToDMS)(astroCoords.dec);
-        this.centralPoinCoords = {
-            astroDeg: astroCoords,
-            sphericalDeg: sphericalCoords,
-            raHMS: raHMS,
-            decDMS: decDMS
-        };
-        return this.centralPoinCoords;
-    }
-    updateLastMousePoint() {
-        const sphericalCoords = { phi: this.mouseHelper.phi, theta: this.mouseHelper.theta };
-        const astroCoords = { ra: this.mouseHelper.ra, dec: this.mouseHelper.dec };
-        const raHMS = this.mouseHelper.raHMS;
-        const decDMS = this.mouseHelper.decDMS;
-        this.mousePointCoords = {
-            astroDeg: astroCoords,
-            sphericalDeg: sphericalCoords,
-            raHMS: raHMS,
-            decDMS: decDMS
-        };
-        return this.mousePointCoords;
-    }
-    // This should call FoVUtils.getJ200Centre(this.canvas)
-    getCentralPointCoordinates() {
-        return this.centralPoinCoords;
-    }
-    getLastMousePointCoordinates() {
-        return this.mousePointCoords;
-    }
-    _rotating = false;
-    addEventListeners(canvas) {
-        if (_Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].debug) {
-            console.log('[AstroSphere::addEventListeners]');
-        }
-        const handleMouseDown = (event) => {
-            canvas.setPointerCapture(event.pointerId);
-            this.mouseDown = true;
-            const rect = canvas.getBoundingClientRect();
-            this.lastMouseX = event.clientX - rect.left; // locale al canvas
-            this.lastMouseY = event.clientY - rect.top; // locale al canvas
-            // session.clearHoveredFootprints()
-            event.preventDefault();
-            return false;
-        };
-        const handleMouseUp = (event) => {
-            canvas.releasePointerCapture(event.pointerId);
-            this.mouseDown = false;
-            document.body.style.cursor = 'auto';
-            const rect = canvas.getBoundingClientRect();
-            this.lastMouseX = event.clientX - rect.left;
-            this.lastMouseY = event.clientY - rect.top;
-        };
-        const handleMouseMove = (event) => {
-            const rect = canvas.getBoundingClientRect();
-            // 🔹 canvas-local coordinates
-            const localX = event.clientX - rect.left;
-            const localY = event.clientY - rect.top;
-            const newX = localX;
-            const newY = localY;
-            // if (!healpixGridSingleton) return;
-            if (!this._healpixGrid)
-                return;
-            let hit = false;
-            if (this.mouseDown) {
-                this._rotating = true;
-                document.body.style.cursor = 'grab';
-                // Rotation deltas – either use client-space or local-space, but be consistent
-                const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
-                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
-                this.inertiaX += 0.1 * deltaX;
-                this.inertiaY += 0.1 * deltaY;
-                this.updateCentralPoint();
-                hit = true;
-            }
-            else {
-                // Use canvas-local coords for picking
-                const mousePoint = _utils_RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_2__["default"].getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-                if (mousePoint && mousePoint.length > 0) {
-                    this.mouseHelper.update(mousePoint);
-                    this.updateLastMousePoint();
-                    hit = true;
-                    // console.log("hit")
+            for (let i = 0; i < 8; ++i) {
+                let x = ix + this.xoffset[i];
+                let y = iy + this.yoffset[i];
+                let nbnum = 4;
+                if (x < 0) {
+                    x += this.nside;
+                    nbnum -= 1;
                 }
-            }
-            if (!this.centralPoinCoords) {
-                this.updateCentralPoint();
-                hit = true;
-            }
-            const centralradeg = this.centralPoinCoords?.astroDeg.ra;
-            const centraldecdeg = this.centralPoinCoords?.astroDeg.dec;
-            // if (this._rotating && centraldecdeg && centralradeg) {
-            if (centraldecdeg !== undefined && centralradeg !== undefined) {
-                const detail = {
-                    fovDeg: this.fov.minFoV,
-                    position: this._camera.getCameraPosition(),
-                    vMatrix: this._camera.getCameraMatrix(),
-                    pMatrix: this._perspectiveMatrixManager.pMatrix,
-                    mMatrix: this._healpixGrid.getModelMatrix(),
-                    camera: this._camera,
-                    timestamp: performance.now(),
-                    centralPoint: new _model_Point_js__WEBPACK_IMPORTED_MODULE_8__.Point({ raDeg: centralradeg, decDeg: centraldecdeg }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_12__.CoordsType.ASTRO),
-                    mouseHoverPoint: this.mousePointCoords,
-                    colorMap: this._selectedColorMap
-                };
-                // if (this._rotating) {
-                this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
-                    detail,
-                    // bubbles: false, composed: false
-                    bubbles: true, composed: true,
-                }));
-                // }
-            }
-            this.lastMouseX = newX;
-            this.lastMouseY = newY;
-            event.preventDefault();
-        };
-        const handleMouseWheel = (event) => {
-            if (event.deltaY < 0) {
-                this.zoomInertia -= 0.001;
-            }
-            else {
-                this.zoomInertia += 0.001;
-            }
-            event.preventDefault();
-        };
-        canvas.onpointerdown = handleMouseDown;
-        canvas.onpointerup = handleMouseUp;
-        canvas.onpointermove = handleMouseMove;
-        // canvas.onwheel = handleMouseWheel
-        canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
-    }
-    // REVIEW THIS METHOD AND MOVE IT 
-    getPhiThetaDeg(canvas) {
-        const maxX = canvas.width;
-        const maxY = canvas.height;
-        const pickerPoint = _utils_RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_2__["default"].getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-        return (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_5__.cartesianToSpherical)(pickerPoint);
-    }
-    activateHiPS(hipsDescriptor) {
-        this._activeHiPS = new _model_hips_HiPS_js__WEBPACK_IMPORTED_MODULE_6__.HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
-    }
-    // Catalogue section
-    async showCatalogue(cat) {
-        console.log(cat);
-        if (cat)
-            this.activeCatalogues.push(cat);
-        return cat;
-    }
-    deleteCatalogue(catalogue) {
-        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
-    }
-    // End Catalogue section
-    // Footprint section
-    async showFootprintSet(fset) {
-        console.log(fset);
-        if (fset)
-            this.activeFootprintSets.push(fset);
-        return fset;
-    }
-    deleteFootprintSet(footprintSet) {
-        this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
-    }
-    getHoveredFootprints() {
-        let footprintsHovered = [];
-        this.activeFootprintSets.forEach(fset => {
-            footprintsHovered.push(fset.hoveredFootprints);
-        });
-        return footprintsHovered;
-    }
-    // End Footprint section
-    goTo(raDeg, decDeg) {
-        this._camera.goTo(raDeg, decDeg);
-    }
-    getFoV() {
-        return this.fov;
-    }
-    getFoVPolygon() {
-        if (this.healpixGrid == null)
-            throw new Error(`healpixGrid is ${this.healpixGrid}`);
-        return _utils_FoVUtils_js__WEBPACK_IMPORTED_MODULE_9__.FoVUtils.getFoVPolygon(this._camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl, this._perspectiveMatrixManager.pMatrix);
-    }
-    changeFoV(deg) {
-        const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg);
-        this._camera.translate(distance);
-        this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
-    }
-    changeFoV2(deg) {
-        const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
-        this._camera.setCameraPosition(newCameraPos);
-    }
-    changeFoV3(deg) {
-        const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
-        this._camera.setCameraPosition(newPos);
-        // Recompute projection after moving the camera
-        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_fov_deg, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_near_plane, false);
-    }
-    getInsideSphere() {
-        return _Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere;
-    }
-    toggleInsideSphere() {
-        _Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere = !_Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere;
-        console.log(_Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere);
-        this._camera.toggleInsideSphere();
-    }
-    // imposta posizione camera
-    setCameraPosition(pos) {
-        this._camera.setCameraPosition(pos);
-        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_fov_deg, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_near_plane, _Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere);
-    }
-    // imposta orientamento camera tramite view matrix
-    setCameraMatrix(viewMatrix) {
-        this._camera.setCameraMatrix(viewMatrix);
-        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_fov_deg, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_near_plane, _Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere);
-    }
-    _refreshingStatus = false;
-    // set completo camera (pos + orientamento)
-    applyFullCameraState(detail, applyColor) {
-        this._refreshingStatus = true;
-        this._camera = detail.camera;
-        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
-        this._healpixGrid.setModelMatrix(detail.mMatrix);
-        this._perspectiveMatrixManager.pMatrix = detail.pMatrix;
-        this.setCameraMatrix(detail.vMatrix);
-        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
-        if (applyColor) {
-            this._activeHiPS?.changeColorMap(detail.colorMap);
-        }
-        this._refreshingStatus = false;
-    }
-    getCurrentStatus() {
-        const centralradeg = this.centralPoinCoords?.astroDeg.ra;
-        const centraldecdeg = this.centralPoinCoords?.astroDeg.dec;
-        if (this._rotating && centraldecdeg && centralradeg) {
-            const detail = {
-                fovDeg: this.fov.minFoV,
-                position: this._camera.getCameraPosition(),
-                vMatrix: this._camera.getCameraMatrix(),
-                pMatrix: this._perspectiveMatrixManager.pMatrix,
-                mMatrix: this._healpixGrid.getModelMatrix(),
-                camera: this._camera,
-                timestamp: performance.now(),
-                centralPoint: new _model_Point_js__WEBPACK_IMPORTED_MODULE_8__.Point({ raDeg: centralradeg, decDeg: centraldecdeg }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_12__.CoordsType.ASTRO),
-                mouseHoverPoint: this.mousePointCoords,
-                colorMap: this._selectedColorMap
-            };
-            return detail;
-        }
-        return null;
-    }
-    changeColorMap(cm) {
-        if (!this._activeHiPS)
-            return;
-        this._selectedColorMap = cm;
-        this._activeHiPS?.changeColorMap(cm);
-    }
-    prevFov = 0;
-    prevCentralRaDeg = null;
-    prevCentralDecDeg = null;
-    get activeHiPS() {
-        return this._activeHiPS;
-    }
-    draw(canvas) {
-        if (this._refreshingStatus)
-            return;
-        if (!this._webgl)
-            return;
-        if (!this._activeHiPS)
-            return;
-        if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
-            return;
-        if (this._healpixGrid.fovObj === undefined)
-            return;
-        // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
-        // global.gl.getExtension('OES_element_index_uint')
-        // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
-        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_fov_deg, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_near_plane, _Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere);
-        let cameraRotated = false;
-        let THETA = 0;
-        let PHI = 0;
-        this._webgl.viewport(0, 0, this._webgl.drawingBufferWidth, this._webgl.drawingBufferHeight);
-        this._webgl.clear(this._webgl.COLOR_BUFFER_BIT | this._webgl.DEPTH_BUFFER_BIT);
-        // Zoom inertia
-        if (this._healpixGrid.fovObj.minFoV > 0.1 || this.zoomInertia > 0) {
-            if (Math.abs(this.zoomInertia) > 0.0001) {
-                this._camera.zoom(this.zoomInertia);
-                this.zoomInertia *= 0.95;
-                this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
-                if (this.prevFov != this.fov.minFoV) {
-                    if (!this.centralPoinCoords) {
-                        this.centralPoinCoords = this.updateCentralPoint();
+                else if (x >= this.nside) {
+                    x -= this.nside;
+                    nbnum += 1;
+                }
+                if (y < 0) {
+                    y += this.nside;
+                    nbnum -= 3;
+                }
+                else if (y >= this.nside) {
+                    y -= this.nside;
+                    nbnum += 3;
+                }
+                let f = this.facearray[nbnum][face_num];
+                if (f >= 0) {
+                    let bits = this.swaparray[nbnum][face_num >>> 2];
+                    if ((bits & 1) > 0) {
+                        x = Math.floor(this.nside - x - 1);
                     }
-                    // const detail: CameraChangedDetail = {
-                    //   fovDeg: this.fov.minFoV,
-                    //   position: this._camera.getCameraPosition(),
-                    //   vMatrix: this._camera.getCameraMatrix() as Float32Array,
-                    //   pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
-                    //   mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
-                    //   camera: this._camera,
-                    //   timestamp: performance.now(),
-                    //   centralPoint: new Point({ raDeg: this.centralPoinCoords.astroDeg.ra, decDeg: this.centralPoinCoords.astroDeg.dec }, CoordsType.ASTRO),
-                    //   mouseHoverPoint: this.mousePointCoords,
-                    //   colorMap: this._selectedColorMap
-                    // };
-                    // this.canvas.dispatchEvent(new CustomEvent<CameraChangedDetail>(
-                    //   'camera-changed',
-                    //   { detail, bubbles: true, composed: true }
-                    // ));
-                    this.prevFov = this.fov.minFoV;
+                    if ((bits & 2) > 0) {
+                        y = Math.floor(this.nside - y - 1);
+                    }
+                    if ((bits & 4) > 0) {
+                        let tint = x;
+                        x = y;
+                        y = tint;
+                    }
+                    result[i] = this.xyf2nest(x, y, f);
+                }
+                else {
+                    result[i] = -1;
                 }
             }
         }
-        // Rotation inertia
-        if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
-            this._rotating = true;
-            cameraRotated = true;
-            THETA = this.inertiaY;
-            PHI = this.inertiaX;
-            this.inertiaX *= 0.95;
-            this.inertiaY *= 0.95;
-            this._camera.rotate(PHI, THETA);
-            this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_fov_deg, _Config_js__WEBPACK_IMPORTED_MODULE_0__.bootSetup.camera_near_plane, _Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere);
+        return result;
+    }
+    ;
+    nside2order(nside) {
+        return ((nside & (nside - 1)) != 0) ? -1 : Math.log2(nside);
+    }
+    ;
+    nest2xyf(ipix) {
+        let pix = Math.floor(ipix & (this.npface - 1));
+        let xyf = new Xyf(this.compress_bits(pix), this.compress_bits(pix >> 1), Math.floor((ipix >> (2 * this.order))));
+        return xyf;
+    }
+    ;
+    xyf2nest(ix, iy, face_num) {
+        return Math.floor(face_num << (2 * this.order))
+            + this.spread_bits(ix) + (this.spread_bits(iy) << 1);
+    }
+    ;
+    loc2pix(hploc) {
+        let z = hploc.z;
+        let phi = hploc.phi;
+        let za = Math.abs(z);
+        let tt = this.fmodulo((phi * this.inv_halfpi), 4.0); // in [0,4)
+        let pixNo;
+        if (za <= this.twothird) { // Equatorial region
+            let temp1 = this.nside * (0.5 + tt);
+            let temp2 = this.nside * (z * 0.75);
+            let jp = Math.floor(temp1 - temp2); // index of ascending edge line
+            let jm = Math.floor(temp1 + temp2); // index of descending edge line
+            let ifp = Math.floor(jp >>> this.order); // in {0,4}
+            let ifm = Math.floor(jm >>> this.order);
+            let face_num = Math.floor((ifp == ifm) ? (ifp | 4) : ((ifp < ifm) ? ifp : (ifm + 8)));
+            let ix = Math.floor(jm & (this.nside - 1));
+            let iy = Math.floor(this.nside - (jp & (this.nside - 1)) - 1);
+            pixNo = this.xyf2nest(ix, iy, face_num);
+        }
+        else { // polar region, za > 2/3
+            let ntt = Math.min(3, Math.floor(tt));
+            let tp = tt - ntt;
+            let tmp = ((za < 0.99) || (!hploc.have_sth)) ?
+                this.nside * Math.sqrt(3 * (1 - za)) :
+                this.nside * hploc.sth / Math.sqrt((1.0 + za) / 3.);
+            let jp = Math.floor(tp * tmp); // increasing edge line index
+            let jm = Math.floor((1.0 - tp) * tmp); // decreasing edge line index
+            if (jp >= this.nside) {
+                jp = this.nside - 1; // for points too close to the boundary
+            }
+            if (jm >= this.nside) {
+                jm = this.nside - 1;
+            }
+            if (z >= 0) {
+                pixNo = this.xyf2nest(Math.floor(this.nside - jm - 1), Math.floor(this.nside - jp - 1), ntt);
+            }
+            else {
+                pixNo = this.xyf2nest(Math.floor(jp), Math.floor(jm), ntt + 8);
+            }
+        }
+        return pixNo;
+    }
+    ;
+    /** Returns the normalized 3-vector corresponding to the center of the
+    supplied pixel.
+    @param pix long the requested pixel number.
+    @return the pixel's center coordinates. */
+    pix2vec(pix) {
+        return this.pix2loc(pix).toVec3();
+    }
+    ;
+    /** Returns the Zphi corresponding to the center of the supplied pixel.
+     @param pix the requested pixel number.
+     @return the pixel's center coordinates. */
+    pix2zphi(pix) {
+        return this.pix2loc(pix).toZphi();
+    }
+    pix2ang(pix, mirror) {
+        return this.pix2loc(pix).toPointing(mirror);
+    }
+    /**
+     * @param pix long
+     * @return Hploc
+     */
+    pix2loc(pix) {
+        let loc = new Hploc(undefined);
+        let xyf = this.nest2xyf(pix);
+        let jr = ((this.jrll[xyf.face]) << this.order) - xyf.ix - xyf.iy - 1;
+        let nr;
+        if (jr < this.nside) {
+            nr = jr;
+            let tmp = (nr * nr) * this.fact2;
+            loc.z = 1 - tmp;
+            if (loc.z > 0.99) {
+                loc.sth = Math.sqrt(tmp * (2. - tmp));
+                loc.have_sth = true;
+            }
+        }
+        else if (jr > this.nl3) {
+            nr = this.nl4 - jr;
+            let tmp = (nr * nr) * this.fact2;
+            loc.z = tmp - 1;
+            if (loc.z < -0.99) {
+                loc.sth = Math.sqrt(tmp * (2. - tmp));
+                loc.have_sth = true;
+            }
         }
         else {
-            this.inertiaY = 0;
-            this.inertiaX = 0;
-            this._rotating = false;
+            nr = this.nside;
+            loc.z = (this.nl2 - jr) * this.fact1;
         }
-        // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
-        if (cameraRotated) {
-            // Ricalcola il punto centrale
-            const center = this.updateCentralPoint();
-            const centralRaDeg = center.astroDeg.ra;
-            const centralDecDeg = center.astroDeg.dec;
-            // Evita spam: emetti solo se è cambiato abbastanza
-            const raChanged = this.prevCentralRaDeg === null ||
-                Math.abs(centralRaDeg - this.prevCentralRaDeg) > 1e-5;
-            const decChanged = this.prevCentralDecDeg === null ||
-                Math.abs(centralDecDeg - this.prevCentralDecDeg) > 1e-5;
-            if (raChanged || decChanged) {
-                // const detail: CameraChangedDetail = {
-                //   fovDeg: this.fov.minFoV,
-                //   position: this._camera.getCameraPosition(),
-                //   vMatrix: this._camera.getCameraMatrix() as Float32Array,
-                //   pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
-                //   mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
-                //   camera: this._camera,
-                //   timestamp: performance.now(),
-                //   centralPoint: new Point(
-                //     { raDeg: centralRaDeg, decDeg: centralDecDeg },
-                //     CoordsType.ASTRO
-                //   ),
-                //   mouseHoverPoint: this.mousePointCoords,
-                //   colorMap: this._selectedColorMap
-                // };
-                // this.canvas.dispatchEvent(
-                //   new CustomEvent<CameraChangedDetail>('camera-changed', {
-                //     detail,
-                //     bubbles: true, composed: true,
-                //   })
-                // );
-                this.prevCentralRaDeg = centralRaDeg;
-                this.prevCentralDecDeg = centralDecDeg;
+        let tmp = (this.jpll[xyf.face]) * nr + xyf.ix - xyf.iy;
+        //      	assert(tmp<8*nr); // must not happen
+        if (tmp < 0) {
+            tmp += 8 * nr;
+        }
+        loc.phi = (nr == this.nside) ? 0.75 * Constants.halfpi * tmp * this.fact1 : (0.5 * Constants.halfpi * tmp) / nr;
+        // loc.setPhi((nr == this.nside) ? 0.75 * Constants.halfpi * tmp * this.fact1 : (0.5 * Constants.halfpi * tmp)/nr);
+        return loc;
+    }
+    ;
+    za2vec(z, a) {
+        const sin_theta = Math.sqrt(1 - z * z);
+        const X = sin_theta * Math.cos(a);
+        const Y = sin_theta * Math.sin(a);
+        return new Vec3(X, Y, z);
+    }
+    ang2vec(theta, phi) {
+        const z = Math.cos(theta);
+        return this.za2vec(z, phi);
+    }
+    vec2ang(v) {
+        const { z, a } = this.vec2za(v.getX(), v.getY(), v.getZ());
+        return { theta: Math.acos(z), phi: a };
+    }
+    vec2za(X, Y, z) {
+        const r2 = X * X + Y * Y;
+        if (r2 == 0)
+            return { z: z < 0 ? -1 : 1, a: 0 };
+        else {
+            const PI2 = Math.PI / 2;
+            const a = (Math.atan2(Y, X) + PI2) % PI2;
+            z /= Math.sqrt(z * z + r2);
+            return { z, a };
+        }
+    }
+    ang2pix(ptg, mirror) {
+        return this.loc2pix(new Hploc(ptg));
+    }
+    ;
+    fmodulo(v1, v2) {
+        if (v1 >= 0) {
+            return (v1 < v2) ? v1 : v1 % v2;
+        }
+        var tmp = v1 % v2 + v2;
+        return (tmp === v2) ? 0.0 : tmp;
+    }
+    ;
+    compress_bits(v) {
+        var raw = Math.floor((v & 0x5555)) | Math.floor(((v & 0x55550000) >>> 15));
+        var compressed = this.ctab[raw & 0xff] | (this.ctab[raw >>> 8] << 4);
+        return compressed;
+    }
+    ;
+    spread_bits(v) {
+        return Math.floor(this.utab[v & 0xff]) | Math.floor((this.utab[(v >>> 8) & 0xff] << 16))
+            | Math.floor((this.utab[(v >>> 16) & 0xff] << 32)) | Math.floor((this.utab[(v >>> 24) & 0xff] << 48));
+    }
+    ;
+    /**
+     * Returns a range set of pixels that overlap with the convex polygon
+     * defined by the {@code vertex} array.
+     * <p>
+     * This method is more efficient in the RING scheme.
+     * <p>
+     * This method may return some pixels which don't overlap with the polygon
+     * at all. The higher {@code fact} is chosen, the fewer false positives are
+     * returned, at the cost of increased run time.
+     *
+     * @param vertex
+     *            an array containing the vertices of the requested convex
+     *            polygon.
+     * @param fact
+     *            The overlapping test will be done at the resolution
+     *            {@code fact*nside}. For NESTED ordering, {@code fact} must be
+     *            a power of 2, else it can be any positive integer. A typical
+     *            choice would be 4.
+     * @return the requested set of pixel number ranges
+     */
+    queryPolygonInclusive(vertex, fact) {
+        let inclusive = (fact != 0);
+        let nv = vertex.length;
+        //        let ncirc = inclusive ? nv+1 : nv;
+        if (!(nv >= 3)) {
+            console.log("not enough vertices in polygon");
+            return;
+        }
+        let vv = new Array();
+        for (let i = 0; i < nv; ++i) {
+            vv[i] = Vec3.pointing2Vec3(vertex[i]);
+        }
+        let normal = new Array();
+        let flip = 0;
+        let index = 0;
+        let back = false;
+        while (index < vv.length) {
+            let first = vv[index];
+            let medium = null;
+            let last = null;
+            if (index == vv.length - 1) {
+                last = vv[1];
+                medium = vv[0];
+            }
+            else if (index == vv.length - 2) {
+                last = vv[0];
+                medium = vv[index + 1];
+            }
+            else {
+                medium = vv[index + 1];
+                last = vv[index + 2];
+            }
+            normal[index] = first.cross(medium).norm();
+            let hnd = normal[index].dot(last);
+            if (index == 0) {
+                flip = (hnd < 0.) ? -1 : 1;
+                let tmp = new Pointing(first); // TODO not used
+                back = false;
+            }
+            else {
+                let flipThnd = flip * hnd;
+                if (flipThnd < 0) {
+                    let tmp = new Pointing(medium);
+                    vv.splice(index + 1, 1);
+                    normal.splice(index, 1);
+                    back = true;
+                    index -= 1;
+                    continue;
+                }
+                else {
+                    let tmp = new Pointing(first);
+                    back = false;
+                }
+            }
+            normal[index].scale(flip);
+            index += 1;
+        }
+        nv = vv.length;
+        let ncirc = inclusive ? nv + 1 : nv;
+        let rad = new Array(ncirc);
+        rad = rad.fill(Constants.halfpi);
+        //        rad = rad.fill(1.5707963267948966);
+        //        let p = "1.5707963267948966";
+        //        rad = rad.fill(parseFloat(p));
+        if (inclusive) {
+            let cf = new CircleFinder(vv);
+            normal[nv] = cf.getCenter();
+            rad[nv] = Hploc.acos(cf.getCosrad());
+        }
+        return this.queryMultiDisc(normal, rad, fact);
+    }
+    ;
+    /**
+     * For NEST schema only
+     *
+     * @param normal:
+     *            Vec3[]
+     * @param rad:
+     *            Float32Array
+     * @param fact:
+     *            The overlapping test will be done at the resolution
+     *            {@code fact*nside}. For NESTED ordering, {@code fact} must be
+     *            a power of 2, else it can be any positive integer. A typical
+     *            choice would be 4.
+     * @return RangeSet the requested set of pixel number ranges
+     */
+    queryMultiDisc(norm, rad, fact) {
+        this.computeBn();
+        let inclusive = (fact != 0);
+        let nv = norm.length;
+        // HealpixUtils.check(nv==rad.lengt0,"inconsistent input arrays");
+        if (!(nv == rad.length)) {
+            console.error("inconsistent input arrays");
+            return;
+        }
+        let res = new RangeSet(4 << 1);
+        // Removed code for Scheme.RING
+        let oplus = 0;
+        if (inclusive) {
+            if (!(Math.pow(2, this.order_max - this.order) >= fact)) {
+                console.error("invalid oversampling factor");
+            }
+            if (!((fact & (fact - 1)) == 0)) {
+                console.error("oversampling factor must be a power of 2");
+            }
+            oplus = this.ilog2(fact);
+        }
+        let omax = this.order + oplus; // the order up to which we test
+        // TODO: ignore all disks with radius>=pi
+        //        let crlimit = new Float32Array[omax+1][nv][3];
+        let crlimit = new Array(omax + 1);
+        let o;
+        let i;
+        for (o = 0; o <= omax; ++o) { // prepare data at the required orders
+            crlimit[o] = new Array(nv);
+            let dr = this.bn[o].maxPixrad(); // safety distance
+            for (i = 0; i < nv; ++i) {
+                crlimit[o][i] = new Float64Array(3);
+                crlimit[o][i][0] = (rad[i] + dr > Math.PI) ? -1 : Hploc.cos(rad[i] + dr);
+                crlimit[o][i][1] = (o == 0) ? Hploc.cos(rad[i]) : crlimit[0][i][1];
+                crlimit[o][i][2] = (rad[i] - dr < 0.) ? 1. : Hploc.cos(rad[i] - dr);
             }
         }
-        // GL state
-        this._webgl.disable(this._webgl.DEPTH_TEST);
-        this._webgl.enable(this._webgl.BLEND);
-        this._webgl.enable(this._webgl.CULL_FACE);
-        this._webgl.cullFace(_Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere ? this._webgl.BACK : this._webgl.FRONT);
-        this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-        // DRAW HiPS
-        const skyEntityDrawInput = {
-            fovDeg: this._healpixGrid.getMinFoV(),
-            camera: this._camera,
-            pMatrix: this._perspectiveMatrixManager.pMatrix
-        };
-        this._activeHiPS.draw(skyEntityDrawInput);
-        this._healpixGrid.draw(skyEntityDrawInput);
-        this._equatorialGrid.draw(skyEntityDrawInput);
-        this._webgl.enable(this._webgl.DEPTH_TEST);
-        this._webgl.disable(this._webgl.CULL_FACE);
-        if (this.startup) {
-            this.startup = false;
-            const phiTheta = this.getPhiThetaDeg(canvas);
-            const raDecDeg = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_5__.sphericalToAstroDeg)(phiTheta.phi, phiTheta.theta);
-            const raHMS = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_5__.raDegToHMS)(raDecDeg.ra);
-            const decDMS = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_5__.decDegToDMS)(raDecDeg.dec);
-            this.prevFov = this._healpixGrid.getMinFoV();
-            console.log('(startup coords)', {
-                raDeg: raDecDeg.ra,
-                decDeg: raDecDeg.dec,
-                raHMS,
-                decDMS,
-            });
+        let stk = new pstack(12 + 3 * omax);
+        for (let i = 0; i < 12; i++) { // insert the 12 base pixels in reverse
+            // order
+            stk.push(11 - i, 0);
         }
-        this.activeCatalogues.forEach(cat => {
-            if (this._activeHiPS) {
-                cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+        while (stk.size() > 0) { // as long as there are pixels on the stack
+            // pop current pixel number and order from the stack
+            let pix = stk.ptop();
+            let o = stk.otop();
+            stk.pop();
+            let pv = this.bn[o].pix2vec(pix);
+            let zone = 3;
+            for (let i = 0; (i < nv) && (zone > 0); ++i) {
+                let crad = pv.dot(norm[i]);
+                for (let iz = 0; iz < zone; ++iz) {
+                    if (crad < crlimit[o][i][iz]) {
+                        zone = iz;
+                    }
+                }
             }
-        });
-        this.activeFootprintSets.forEach(fst => {
-            if (this._activeHiPS) {
-                fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            if (zone > 0) {
+                this.check_pixel(o, omax, zone, res, pix, stk, inclusive);
             }
-        });
+        }
+        return res;
+    }
+    ;
+    /** Integer base 2 logarithm.
+    @param arg
+    @return the largest integer {@code n} that fulfills {@code 2^n<=arg}.
+    For negative arguments and zero, 0 is returned. */
+    ilog2(arg) {
+        let max = Math.max(arg, 1);
+        return 31 - Math.clz32(max);
+    }
+    ;
+    /** Computes the cosine of the angular distance between two z, phi positions
+      on the unit sphere. */
+    cosdist_zphi(z1, phi1, z2, phi2) {
+        return z1 * z2 + Hploc.cos(phi1 - phi2) * Math.sqrt((1.0 - z1 * z1) * (1.0 - z2 * z2));
+    }
+    /**
+     * @param int o
+     * @param int omax
+     * @param int zone
+     * @param RangeSet pixset
+     * @param long pix
+     * @param pstack stk
+     * @param boolean inclusive
+     */
+    check_pixel(o, omax, zone, pixset, pix, stk, inclusive) {
+        if (zone == 0)
+            return;
+        if (o < this.order) {
+            if (zone >= 3) { // output all subpixels
+                let sdist = 2 * (this.order - o); // the "bit-shift distance" between map orders
+                pixset.append1(pix << sdist, ((pix + 1) << sdist));
+            }
+            else { // (zone>=1)
+                for (let i = 0; i < 4; ++i) {
+                    stk.push(4 * pix + 3 - i, o + 1); // add children
+                }
+            }
+        }
+        else if (o > this.order) { // this implies that inclusive==true
+            if (zone >= 2) { // pixel center in shape
+                pixset.append(pix >>> (2 * (o - this.order))); // output the parent pixel at order
+                stk.popToMark(); // unwind the stack
+            }
+            else { // (zone>=1): pixel center in safety range
+                if (o < omax) { // check sublevels
+                    for (let i = 0; i < 4; ++i) { // add children in reverse order
+                        stk.push(4 * pix + 3 - i, o + 1); // add children
+                    }
+                }
+                else { // at resolution limit
+                    pixset.append(pix >>> (2 * (o - this.order))); // output the parent pixel at order
+                    stk.popToMark(); // unwind the stack
+                }
+            }
+        }
+        else { // o==order
+            if (zone >= 2) {
+                pixset.append(pix);
+            }
+            else if (inclusive) { // and (zone>=1)
+                if (this.order < omax) { // check sublevels
+                    stk.mark(); // remember current stack position
+                    for (let i = 0; i < 4; ++i) { // add children in reverse order
+                        stk.push(4 * pix + 3 - i, o + 1); // add children
+                    }
+                }
+                else { // at resolution limit
+                    pixset.append(pix); // output the pixel
+                }
+            }
+        }
+    }
+    /** Returns the maximum angular distance between a pixel center and its
+    corners.
+    @return maximum angular distance between a pixel center and its
+      corners. */
+    maxPixrad() {
+        let zphia = new Zphi(2. / 3., Math.PI / this.nl4);
+        let xyz1 = this.convertZphi2xyz(zphia);
+        let va = new Vec3(xyz1[0], xyz1[1], xyz1[2]);
+        let t1 = 1. - 1. / this.nside;
+        t1 *= t1;
+        let zphib = new Zphi(1 - t1 / 3, 0);
+        let xyz2 = this.convertZphi2xyz(zphib);
+        let vb = new Vec3(xyz2[0], xyz2[1], xyz2[2]);
+        return va.angle(vb);
+    }
+    ;
+    /**
+     * this is a workaround replacing the Vec3(Zphi) constructor.
+     */
+    convertZphi2xyz(zphi) {
+        let sth = Math.sqrt((1.0 - zphi.z) * (1.0 + zphi.z));
+        let x = sth * Hploc.cos(zphi.phi);
+        let y = sth * Hploc.sin(zphi.phi);
+        let z = zphi.z;
+        return [x, y, z];
+    }
+    ;
+    /** Returns a range set of pixels which overlap with a given disk. <p>
+      This method is more efficient in the RING scheme. <p>
+      This method may return some pixels which don't overlap with
+      the polygon at all. The higher {@code fact} is chosen, the fewer false
+      positives are returned, at the cost of increased run time.
+      @param ptg the angular coordinates of the disk center
+      @param radius the radius (in radians) of the disk
+      @param fact The overlapping test will be done at the resolution
+        {@code fact*nside}. For NESTED ordering, {@code fact} must be a power
+        of 2, else it can be any positive integer. A typical choice would be 4.
+      @return the requested set of pixel number ranges  */
+    queryDiscInclusive(ptg, radius, fact) {
+        this.computeBn();
+        let inclusive = (fact != 0);
+        let pixset = new RangeSet();
+        if (radius >= Math.PI) { // disk covers the whole sphere
+            pixset.append1(0, this.npix);
+            return pixset;
+        }
+        let oplus = 0;
+        if (inclusive) {
+            // HealpixUtils.check ((1L<<order_max)>=fact,"invalid oversampling factor");
+            if (!((fact & (fact - 1)) == 0)) {
+                console.error("oversampling factor must be a power of 2");
+            }
+            oplus = this.ilog2(fact);
+        }
+        let omax = Math.min(this.order_max, this.order + oplus); // the order up to which we test
+        let vptg = Vec3.pointing2Vec3(ptg);
+        let crpdr = new Array(omax + 1);
+        let crmdr = new Array(omax + 1);
+        let cosrad = Hploc.cos(radius);
+        let sinrad = Hploc.sin(radius);
+        for (let o = 0; o <= omax; o++) { // prepare data at the required orders
+            let dr = this.mpr[o]; // safety distance
+            let cdr = this.cmpr[o];
+            let sdr = this.smpr[o];
+            crpdr[o] = (radius + dr > Math.PI) ? -1. : cosrad * cdr - sinrad * sdr;
+            crmdr[o] = (radius - dr < 0.) ? 1. : cosrad * cdr + sinrad * sdr;
+        }
+        let stk = new pstack(12 + 3 * omax);
+        for (let i = 0; i < 12; i++) { // insert the 12 base pixels in reverse order
+            stk.push(11 - i, 0);
+        }
+        while (stk.size() > 0) { // as long as there are pixels on the stack
+            // pop current pixel number and order from the stack
+            let pix = stk.ptop();
+            let curro = stk.otop();
+            stk.pop();
+            let pos = this.bn[curro].pix2zphi(pix);
+            // cosine of angular distance between pixel center and disk center
+            let cangdist = this.cosdist_zphi(vptg.z, ptg.phi, pos.z, pos.phi);
+            if (cangdist > crpdr[curro]) {
+                let zone = (cangdist < cosrad) ? 1 : ((cangdist <= crmdr[curro]) ? 2 : 3);
+                this.check_pixel(curro, omax, zone, pixset, pix, stk, inclusive);
+            }
+        }
+        return pixset;
     }
 }
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (AstroSphere);
-
-
-/***/ }),
-
-/***/ "./src/AstroViewer.ts":
-/*!****************************!*\
-  !*** ./src/AstroViewer.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   AstroViewer: () => (/* binding */ AstroViewer)
-/* harmony export */ });
-/* harmony import */ var _AstroSphere_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./AstroSphere.js */ "./src/AstroSphere.ts");
-/* harmony import */ var _model_hips_HiPSDescriptor_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./model/hips/HiPSDescriptor.js */ "./src/model/hips/HiPSDescriptor.ts");
-/* harmony import */ var _model_catalogues_CatalogueGL_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./model/catalogues/CatalogueGL.js */ "./src/model/catalogues/CatalogueGL.ts");
-/* harmony import */ var _Config_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Config.js */ "./src/Config.ts");
-/* harmony import */ var _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./model/ColorMaps.js */ "./src/model/ColorMaps.ts");
-// import global from './Global.js'
+//# sourceMappingURL=Healpix.js.map
+;// ./node_modules/healpixjs/lib-esm/index.js
 
 
 
 
 
-// & {
-//   viewportWidth: number
-//   viewportHeight: number
-// }
-class AstroViewer {
-    astroSphere;
-    canvas;
-    webgl;
-    rafId = null;
-    webglContextList = new Map();
-    // API
-    run() {
-        return this.tick();
+
+
+
+
+
+
+//# sourceMappingURL=index.js.map
+;// ./src/Global.ts
+
+
+
+class Global {
+    // --- cached / runtime state ---
+    // private _camera: Camera | null;
+    // private _gl: GL | null;
+    _healpix;
+    // --- config/state flags ---
+    _selectionnside;
+    // private _healpix4footprints: boolean;
+    _useCORSProxy;
+    _corsProxyUrl;
+    _maxDecimals;
+    _debug;
+    _insideSphere;
+    _version;
+    constructor() {
+        this._useCORSProxy = bootSetup.useCORSProxy;
+        this._corsProxyUrl = bootSetup.corsProxyUrl;
+        this._maxDecimals = bootSetup.maxDecimals;
+        this._debug = bootSetup.debug;
+        this._insideSphere = bootSetup.insideView;
+        this._version = bootSetup.version;
+        this._healpix = {};
+        this._selectionnside = 32;
     }
-    // CATALOGUES
-    createCatalogue(catalogueName, catalogueDescription, providerUrl, metadataManager) {
-        return new _model_catalogues_CatalogueGL_js__WEBPACK_IMPORTED_MODULE_2__.CatalogueGL(catalogueName, catalogueDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    init() {
+        console.log('Global.init()');
     }
-    showCatalogue(catalogue) {
-        this.astroSphere.showCatalogue(catalogue);
-    }
-    hideCatalogue(catalogue, isVisible) {
-        catalogue.setIsVisible(isVisible);
-    }
-    deleteCatalogue(catalogue) {
-        this.astroSphere.deleteCatalogue(catalogue);
-    }
-    changeCatalogueRA(catalogue, raColumnName) {
-        catalogue.changeMetaRA(raColumnName);
-        // catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
-        return catalogue;
-    }
-    changeCatalogueDec(catalogue, decColumnName) {
-        catalogue.changeMetaDec(decColumnName);
-        // catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
-        return catalogue;
-    }
-    changeCatalogueColor(catalogue, hexColor) {
-        catalogue.changeColor(hexColor);
-        // catalogue.catalogueProps.changeColor(hexColor)
-        return catalogue;
-    }
-    setCatalogueShapeHue(catalogue, metadataColumnName) {
-        catalogue.changeMetaShapeHue(metadataColumnName);
-        return catalogue;
-    }
-    setCatalogueShapeSize(catalogue, metadataColumnName) {
-        catalogue.changeMetaShapeSize(metadataColumnName);
-        return catalogue;
-    }
-    //FOOTPRINT
-    showFootprintSet(footprintSet) {
-        this.astroSphere.showFootprintSet(footprintSet);
-    }
-    hideFootprintSet(footprintSet, isVisible) {
-        footprintSet.setIsVisible(isVisible);
-    }
-    deleteFootprintSet(footprintSet) {
-        this.astroSphere.deleteFootprintSet(footprintSet);
-    }
-    changeFootprintSetColor(footprintSet, hexColor) {
-        // footprintSet.footprintsetProps.changeColor(hexColor)
-        footprintSet.changeColor(hexColor);
-    }
-    getHoveredFootprints() {
-        return this.astroSphere.getHoveredFootprints();
-    }
-    // HIPS
-    getDefaultHiPSURL() {
-        return _Config_js__WEBPACK_IMPORTED_MODULE_3__.bootSetup.defaultHipsUrl;
-    }
-    activateHiPS(hipsDescriptor) {
-        this.astroSphere.activateHiPS(hipsDescriptor);
-    }
-    async loadHiPS(baseUrl) {
-        const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-        const resp = await fetch(hipsUrl + 'properties');
-        if (!resp.ok)
-            throw new Error(`HTTP ${resp.status} fetching properties`);
-        const propsText = await resp.text();
-        const desc = new _model_hips_HiPSDescriptor_js__WEBPACK_IMPORTED_MODULE_1__.HiPSDescriptor(propsText, hipsUrl);
-        this.astroSphere.activateHiPS(desc);
-        return desc.surveyName;
-        // this.activateHiPS(desc);
-    }
-    // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
-    changeColorMap(colorMapName) {
-        const colorMap = _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_4__["default"][colorMapName];
-        // hips.changeColorMap(colorMap)
-        this.astroSphere.changeColorMap(colorMap);
-    }
-    getActiveHiPS() {
-        return this.astroSphere.activeHiPS;
-    }
-    // Camera: GOTOs and COORDS
-    setCamera(camera) {
-        this.astroSphere.setCamera(camera);
-    }
-    setCameraPosition(pos) {
-        this.astroSphere.setCameraPosition(pos);
-    }
-    setCameraMatrix(viewMatrix) {
-        this.astroSphere.setCameraMatrix(viewMatrix);
-    }
-    restoreAstroViewerState(detail, applyColorMap) {
-        this.astroSphere.applyFullCameraState(detail, applyColorMap);
-    }
-    getCurrentAstroViewerStatus() {
-        return this.astroSphere.getCurrentStatus();
-    }
-    goTo(raDeg, decDeg) {
-        // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
-        this.astroSphere.goTo(raDeg, decDeg);
-    }
-    getCenterCoordinates() {
-        return this.astroSphere.getCentralPointCoordinates();
-    }
-    getCoordinatesFromMouse() {
-        return this.astroSphere.getLastMousePointCoordinates();
-    }
-    // GRIDs
-    setModelMatrix(modelMatrix) {
-        this.astroSphere.healpixGrid.setModelMatrix(modelMatrix);
-    }
-    toggleHealpixGrid() {
-        // healpixGridSingleton.toggleShowGrid()
-        this.astroSphere.healpixGrid.toggleShowGrid();
-    }
-    isHealpixGridVisible() {
-        // return healpixGridSingleton.isVisible()
-        return this.astroSphere.healpixGrid.isVisible();
-    }
-    toggleEquatorialGrid() {
-        // equatorialGridSingleton.toggleShowGrid()
-        return this.astroSphere.equatorialGrid.toggleShowGrid();
-    }
-    isEquatorialGridVisible() {
-        // return equatorialGridSingleton.isVisible()
-        return this.astroSphere.equatorialGrid.isVisible();
-    }
-    // FOV
-    getFoV() {
-        return this.astroSphere.getFoV();
-    }
-    getFoVPolygon() {
-        return this.astroSphere.getFoVPolygon();
-    }
-    changeFoV(deg) {
-        this, this.astroSphere.changeFoV(deg);
-    }
-    changeFoV2(deg) {
-        this, this.astroSphere.changeFoV2(deg);
-    }
-    changeFoV3(deg) {
-        this, this.astroSphere.changeFoV3(deg);
-    }
-    getInsideSphere() {
-        return this.astroSphere.getInsideSphere();
-    }
-    toggleInsideSphere() {
-        this.astroSphere.toggleInsideSphere();
-    }
-    // Internal
-    constructor(canvasEl) {
-        this.init(canvasEl);
-        this.webglContextList = new Map();
-    }
-    init(canvasEl) {
-        console.log('init webgl');
-        this.canvas = canvasEl;
-        const gl = this.canvas.getContext('webgl2', { alpha: false });
-        if (!gl) {
-            alert('Could not initialise WebGL, sorry :-(');
-            throw new Error('WebGL2 not available');
+    // --- getters/setters ---
+    get version() { return this._version; }
+    set corsProxyUrl(url) { this._corsProxyUrl = url; }
+    get corsProxyUrl() { return this._corsProxyUrl; }
+    get useCORSProxy() { return this._useCORSProxy; }
+    set useCORSProxy(enabled) { this._useCORSProxy = enabled; }
+    get debug() { return this._debug; }
+    getHealpix(order) {
+        if (this._healpix[order] === undefined) {
+            // order is HEALPix "order" ⇒ nside = 2^order
+            this._healpix[order] = new Healpix(Math.pow(2, order));
         }
-        // Extend with custom fields used elsewhere
-        this.webgl = gl;
-        // this.webgl.viewportWidth = this.canvas.width
-        // this.webgl.viewportHeight = this.canvas.height
-        try {
-            // 1/255 = 0.00392156862
-            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
-        }
-        catch (e) {
-            console.log('Error instantiating WebGL context');
-        }
-        this.initListeners();
-        // ; (global as any).gl = this.webgl
-        this.astroSphere = new _AstroSphere_js__WEBPACK_IMPORTED_MODULE_0__["default"](this.canvas, this.webgl);
+        return this._healpix[order];
     }
-    initListeners() {
-        console.log('inside initListeners');
-        const resizeCanvas = () => {
-            console.log('[resizeCanvas]');
-            const rect = this.canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            const newWidth = Math.max(1, Math.floor(rect.width * dpr));
-            const newHeight = Math.max(1, Math.floor(rect.height * dpr));
-            if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
-                this.canvas.width = newWidth;
-                this.canvas.height = newHeight;
-                // this.webgl.viewportWidth = this.canvas.width
-                // this.webgl.viewportHeight = this.canvas.height
-                this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
-            }
-        };
-        const handleContextLost = (event) => {
-            console.log('[handleContextLost]');
-            event.preventDefault();
-            if (this.rafId !== null) {
-                cancelAnimationFrame(this.rafId);
-                this.rafId = null;
-            }
-        };
-        const handleContextRestored = (_event) => {
-            console.log('[handleContextRestored]');
-            // this.webgl.viewportWidth = this.canvas.width
-            // this.webgl.viewportHeight = this.canvas.height
-            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
-            this.webgl.enable(this.webgl.DEPTH_TEST);
-            this.rafId = requestAnimationFrame(() => this.tick());
-        };
-        // 🔥 ResizeObserver per pannelli / split / layout dinamici
-        if ('ResizeObserver' in window) {
-            const ro = new ResizeObserver(() => {
-                resizeCanvas();
-            });
-            // Osserva il canvas o il suo parent (a tua scelta)
-            ro.observe(this.canvas);
-        }
-        window.addEventListener('resize', resizeCanvas);
-        this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
-        this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
-        resizeCanvas();
-    }
-    tick() {
-        this.drawScene();
-        this.rafId = requestAnimationFrame(() => this.tick());
-        return this.rafId;
-    }
-    drawScene() {
-        this.astroSphere.draw(this.canvas);
-    }
+    get MAX_DECIMALS() { return this._maxDecimals; }
+    set insideSphere(v) { this._insideSphere = v; }
+    get insideSphere() { return this._insideSphere; }
+    get nsideForSelection() { return this._selectionnside; }
 }
+const global = new Global();
+/* harmony default export */ const src_Global = (global);
 
-
-/***/ }),
-
-/***/ "./src/Camera.ts":
-/*!***********************!*\
-  !*** ./src/Camera.ts ***!
-  \***********************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec3.js");
-/* harmony import */ var _utils_Utils_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./utils/Utils.js */ "./src/utils/Utils.ts");
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Global.js */ "./src/Global.ts");
+;// ./src/Camera.ts
 /**
  * @author Fabrizio Giordano (Fab)
  */
@@ -6091,64 +4463,65 @@ __webpack_require__.r(__webpack_exports__);
 
 class Camera {
     insideSphere = false;
-    cam_pos = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create(); // camera position
+    cam_pos = create(); // camera position
     cam_speed = 1.0;
-    vMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create(); // view matrix
-    T = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create(); // translation matrix
-    R = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create(); // rotation matrix
+    vMatrix = mat4_create(); // view matrix
+    T = mat4_create(); // translation matrix
+    R = mat4_create(); // rotation matrix
     // Optional state used in rotate helpers
     FoV = 180.0;
     previousFoV = 180.0;
-    move = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
+    move = create();
     phi = 0; // accumulated yaw (radians)
     theta = 0; // accumulated pitch (radians)
+    // lock rotation around world axes
+    lockRotX = false;
+    lockRotY = false;
+    lockRotZ = false;
     constructor(in_position, in_sphere) {
         this.init(in_position, in_sphere);
     }
     init(in_position, in_sphere) {
         this.insideSphere = in_sphere;
-        this.cam_pos = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.clone(in_position);
-        this.vMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        this.T = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        this.R = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.translate(this.T, this.T, [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]]);
+        this.cam_pos = clone(in_position);
+        this.vMatrix = mat4_create();
+        this.T = mat4_create();
+        this.R = mat4_create();
+        translate(this.T, this.T, [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]]);
         // reset helpers
         this.FoV = this.previousFoV = 180.0;
-        this.move = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.clone([0, 0, 0]);
+        this.move = clone([0, 0, 0]);
         const raDeg = 0;
         const decDeg = 0;
         this.goTo(raDeg, decDeg);
     }
     goTo(raDeg, decDeg) {
-        // eslint-disable-next-line no-console
-        // console.log(`Camera.goto ${raDeg} ${decDeg}`);
         // mirror RA
         const mirroredRA = 360 - raDeg;
-        this.goToPhiTheta((0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_2__.astroDegToSpherical)(mirroredRA, decDeg));
+        this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
     }
     goToPhiTheta(ptDeg) {
-        // console.log(`Camera.goToPhiTheta ${ptDeg.phi} ${ptDeg.theta}`);
-        const xyz = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_2__.sphericalToCartesian)(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
-        let cameraMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        cameraMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.translate(cameraMatrix, cameraMatrix, gl_matrix__WEBPACK_IMPORTED_MODULE_1__.fromValues(xyz[0], xyz[1], xyz[2]));
+        const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
+        let cameraMatrix = mat4_create();
+        cameraMatrix = translate(cameraMatrix, cameraMatrix, fromValues(xyz[0], xyz[1], xyz[2]));
         const focusPoint = [0.0, 0.0, 0.0];
-        const cameraUp = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.clone([0.0, 1.0, 0.0]);
+        const cameraUp = clone([0.0, 1.0, 0.0]);
         const cameraPos = [cameraMatrix[12], cameraMatrix[13], cameraMatrix[14]];
-        cameraMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
-        this.R = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.clone(cameraMatrix);
+        cameraMatrix = targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
+        this.R = mat4_clone(cameraMatrix);
         this.R[12] = 0;
         this.R[13] = 0;
         this.R[14] = 0;
-        const viewMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
+        const viewMatrix = mat4_create();
         if (this.cam_pos[2] !== 0) {
-            gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(viewMatrix, cameraMatrix);
+            invert(viewMatrix, cameraMatrix);
         }
         this.vMatrix = viewMatrix;
     }
     toggleInsideSphere() {
         // if (inside !== global.insideSphere) {
         //   global.insideSphere = inside;
-        if (_Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere) {
+        if (src_Global.insideSphere) {
             if (this.cam_pos[2] <= 2) {
                 this.cam_pos[2] = -2 + this.cam_pos[2];
             }
@@ -6159,14 +4532,14 @@ class Camera {
         else {
             this.cam_pos[2] = 2.0 + this.cam_pos[2];
         }
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.translate(this.T, gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create(), this.cam_pos);
+        translate(this.T, mat4_create(), this.cam_pos);
         this.refreshViewMatrix();
         // }
     }
     zoom(inertia) {
-        this.move = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.clone([0, 0, 0]);
+        this.move = clone([0, 0, 0]);
         this.move[2] += this.cam_speed * inertia;
-        if (_Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].insideSphere) {
+        if (src_Global.insideSphere) {
             if (this.cam_pos[2] + this.move[2] >= -0.005 && inertia > 0) {
                 this.cam_pos[2] = -0.005;
                 inertia = 0;
@@ -6195,11 +4568,9 @@ class Camera {
             else {
                 this.cam_pos[2] += this.move[2];
             }
-            // NOTE: your original code adds move[2] twice; if that's unintended, remove this next line.
-            // this.cam_pos[2] += this.move[2];
         }
-        const identity = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.translate(this.T, identity, this.cam_pos);
+        const identity = mat4_create();
+        translate(this.T, identity, this.cam_pos);
         this.refreshViewMatrix();
     }
     /**
@@ -6212,11 +4583,11 @@ class Camera {
      */
     moveAlongView(distance) {
         // World-space forward vector: transform camera-space -Z by inverse rotation
-        const R_inverse = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(R_inverse, this.R);
-        const forwardCam = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.fromValues(0, 0, -1); // camera looks along -Z in its local space
-        const fwdWorld = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_1__.transformMat4(fwdWorld, forwardCam, R_inverse);
+        const R_inverse = mat4_create();
+        invert(R_inverse, this.R);
+        const forwardCam = fromValues(0, 0, -1); // camera looks along -Z in its local space
+        const fwdWorld = create();
+        transformMat4(fwdWorld, forwardCam, R_inverse);
         // Normalise to get direction only
         const len = Math.hypot(fwdWorld[0], fwdWorld[1], fwdWorld[2]);
         if (len > 0) {
@@ -6229,65 +4600,126 @@ class Camera {
         this.cam_pos[1] += fwdWorld[1] * distance;
         this.cam_pos[2] += fwdWorld[2] * distance;
         // Rebuild translation matrix and view matrix
-        const identity = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.translate(this.T, identity, this.cam_pos);
+        const identity = mat4_create();
+        translate(this.T, identity, this.cam_pos);
         this.refreshViewMatrix();
     }
     translate(distance) {
-        // const pos = this.getCameraPosition();
         this.cam_pos[2] = distance + 1;
-        // vec3.scale(pos, pos, distance);
-        const identity = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.translate(this.T, identity, this.cam_pos);
-        this.refreshViewMatrix();
-    }
-    rotateZ(sign) {
-        const factorRad = sign * 0.01;
-        this.phi += factorRad;
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, factorRad, [0, 0, 1]);
-        this.refreshViewMatrix();
-    }
-    rotateY(sign) {
-        const factorRad = sign * 0.01;
-        this.phi += factorRad;
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, factorRad, [0, 1, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateXRadian(radian) {
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, radian, [1, 0, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateYRadian(radian) {
-        this.phi += radian;
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, radian, [0, 1, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateZRadian(radian) {
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, radian, [0, 0, 1]);
+        const identity = mat4_create();
+        translate(this.T, identity, this.cam_pos);
         this.refreshViewMatrix();
     }
     rotateX(sign) {
+        if (this.lockRotX)
+            return;
         const factorRad = sign * 0.01;
         this.theta += factorRad;
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, factorRad, [1, 0, 0]);
+        rotate(this.R, this.R, factorRad, [1, 0, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateY(sign) {
+        if (this.lockRotY)
+            return;
+        const factorRad = sign * 0.01;
+        this.phi += factorRad;
+        rotate(this.R, this.R, factorRad, [0, 1, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateZ(sign) {
+        if (this.lockRotZ)
+            return;
+        const factorRad = sign * 0.01;
+        // this.phi += factorRad;
+        rotate(this.R, this.R, factorRad, [0, 0, 1]);
+        this.refreshViewMatrix();
+    }
+    rotateXRadian(radian) {
+        if (this.lockRotX)
+            return;
+        rotate(this.R, this.R, radian, [1, 0, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateYRadian(radian) {
+        if (this.lockRotY)
+            return;
+        this.phi += radian;
+        rotate(this.R, this.R, radian, [0, 1, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateZRadian(radian) {
+        if (this.lockRotZ)
+            return;
+        rotate(this.R, this.R, radian, [0, 0, 1]);
         this.refreshViewMatrix();
     }
     rotate(phi, theta) {
+        // If Z is locked, completely disable orbit rotation
+        if (this.lockRotZ) {
+            return;
+        }
         const totRot = Math.sqrt(phi * phi + theta * theta);
         if (totRot === 0)
             return;
+        // If both X and Y rotations are locked, nothing to do
+        if (this.lockRotX && this.lockRotY) {
+            return;
+        }
         const pos = this.getCameraPosition();
         const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
         const usedRot = (totRot * (dist2Center - 1)) / 3.0;
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, -usedRot, [theta / totRot, phi / totRot, 0]);
+        // Build an axis from phi/theta, but zero components that are locked
+        let axisX = this.lockRotX ? 0 : theta;
+        let axisY = this.lockRotY ? 0 : phi;
+        const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
+        // If after locking we have no axis left, do nothing
+        if (axisLen === 0) {
+            return;
+        }
+        axisX /= axisLen;
+        axisY /= axisLen;
+        rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
         this.refreshViewMatrix();
     }
+    // rotate(phi: number, theta: number): void {
+    //   // totRot is the magnitude of the requested rotation
+    //   const totRot = Math.sqrt(phi * phi + theta * theta);
+    //   if (totRot === 0) return;
+    //   // If both X and Y rotations are locked, nothing to do
+    //   if (this.lockRotX && this.lockRotY) {
+    //     return;
+    //   }
+    //   const pos = this.getCameraPosition();
+    //   const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+    //   const usedRot = (totRot * (dist2Center - 1)) / 3.0;
+    //   // Build an axis from phi/theta, but zero components that are locked
+    //   let axisX = this.lockRotX ? 0 : theta;
+    //   let axisY = this.lockRotY ? 0 : phi;
+    //   const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
+    //   // If after locking we have no axis left, do nothing
+    //   if (axisLen === 0) {
+    //     return;
+    //   }
+    //   axisX /= axisLen;
+    //   axisY /= axisLen;
+    //   mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
+    //   this.refreshViewMatrix();
+    // }
+    // rotate(phi: number, theta: number): void {
+    //   const totRot = Math.sqrt(phi * phi + theta * theta);
+    //   if (totRot === 0) return;
+    //   const pos = this.getCameraPosition();
+    //   const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+    //   const usedRot = (totRot * (dist2Center - 1)) / 3.0;
+    //   mat4.rotate(this.R, this.R, -usedRot, [theta / totRot, phi / totRot, 0]);
+    //   this.refreshViewMatrix();
+    // }
     refreshViewMatrix() {
-        const T_inverse = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        const R_inverse = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(T_inverse, this.T);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(R_inverse, this.R);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.multiply(this.vMatrix, T_inverse, R_inverse);
+        const T_inverse = mat4_create();
+        const R_inverse = mat4_create();
+        invert(T_inverse, this.T);
+        invert(R_inverse, this.R);
+        mat4_multiply(this.vMatrix, T_inverse, R_inverse);
     }
     refreshFoV(currentFoV) {
         this.previousFoV = this.FoV;
@@ -6297,340 +4729,609 @@ class Camera {
         return this.vMatrix;
     }
     getCameraPosition() {
-        const inv = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        if (!gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(inv, this.vMatrix)) {
+        const inv = mat4_create();
+        if (!invert(inv, this.vMatrix)) {
             // fallback — we already maintain cam_pos
             return [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]];
         }
         return [inv[12], inv[13], inv[14]];
     }
-    // setCameraPosition(position: Vec3Tuple) {
-    //   const inv = mat4.create();
-    //   if (mat4.invert(inv, this.vMatrix)) {
-    //     [inv[12], inv[13], inv[14]] = [position[0], position[1], position[2]]
-    //     mat4.invert(this.vMatrix, inv)
-    //   }
-    // }
     setCameraMatrix(viewMatrix) {
         this.vMatrix = viewMatrix;
     }
     setCameraPosition(position) {
         // Update authoritative position
-        this.cam_pos = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.fromValues(position[0], position[1], position[2]);
+        this.cam_pos = fromValues(position[0], position[1], position[2]);
         // Rebuild translation matrix from cam_pos
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.translate(this.T, gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create(), this.cam_pos);
+        translate(this.T, mat4_create(), this.cam_pos);
         // Do NOT touch this.R here (keep orientation)
         // Recompute view: vMatrix = inv(T) * inv(R)
         this.refreshViewMatrix();
     }
     getCameraAngle() {
         const [x, y, z] = this.getCameraPosition();
-        const posVec = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.fromValues(x, y, z);
-        const ptDeg = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_2__.cartesianToSpherical)(posVec);
+        const posVec = fromValues(x, y, z);
+        const ptDeg = cartesianToSpherical(posVec);
         // eslint-disable-next-line no-console
         console.log("[Camera::getCameraAngle]", ptDeg);
         return ptDeg;
     }
+    /**
+     * Lock/unlock rotation around world axes X, Y, Z.
+     * Passing `undefined` leaves that axis as-is.
+     */
+    setRotationLock(options) {
+        if (options.x !== undefined)
+            this.lockRotX = options.x;
+        if (options.y !== undefined)
+            this.lockRotY = options.y;
+        if (options.z !== undefined)
+            this.lockRotZ = options.z;
+    }
+    /** Convenience helpers */
+    clearRotationLock() {
+        this.lockRotX = this.lockRotY = this.lockRotZ = false;
+    }
+    isRotationLockedX() { return this.lockRotX; }
+    isRotationLockedY() { return this.lockRotY; }
+    isRotationLockedZ() { return this.lockRotZ; }
 }
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Camera);
+/* harmony default export */ const src_Camera = (Camera);
+
+;// ./src/utils/RayPickingUtils.ts
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
 
 
-/***/ }),
-
-/***/ "./src/Config.ts":
-/*!***********************!*\
-  !*** ./src/Config.ts ***!
-  \***********************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   bootSetup: () => (/* binding */ bootSetup),
-/* harmony export */   hipsNodes: () => (/* binding */ hipsNodes),
-/* harmony export */   tapRepos: () => (/* binding */ tapRepos)
-/* harmony export */ });
-const hipsNodes = [
-    "https://skies.esac.esa.int/",
-    "https://alasky.cds.unistra.fr/",
-];
-// If you want to re-enable multiple TAP repos, just uncomment and extend the array
-// export const tapRepos: string[] = [
-//   "https://archive.eso.org/tap_cat/",
-//   "https://archive.eso.org/tap_obs/",
-//   "https://sky.esa.int/esasky-tap/tap/",
-//   "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/argus",
-// ];
-const tapRepos = [
-    "https://sky.esa.int/esasky-tap/tap/",
-];
-const bootSetup = {
-    insideSphere: false,
-    defaultHips: "",
-    camera_fov_deg: 34,
-    camera_fov_rad: 34 * Math.PI / 180.0,
-    camera_near_plane: 0.00001,
-    camera_far_plane: 2.5,
-    corsProxyUrl: "http://localhost:4000/",
-    useCORSProxy: false,
-    maxDecimals: 15,
-    // defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
-    defaultHipsUrl: "https://cdn.skies.esac.esa.int/DSSColor/",
-    version: "Astrobrowser v1.0.0",
-    debug: false,
-    insideView: false,
-};
-
-
-/***/ }),
-
-/***/ "./src/Global.ts":
-/*!***********************!*\
-  !*** ./src/Global.ts ***!
-  \***********************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var healpixjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! healpixjs */ "./node_modules/healpixjs/lib-esm/index.js");
-/* harmony import */ var _Config_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Config.js */ "./src/Config.ts");
-
-
-
-class Global {
-    // --- cached / runtime state ---
-    // private _camera: Camera | null;
-    // private _gl: GL | null;
-    _healpix;
-    // --- config/state flags ---
-    _selectionnside;
-    // private _healpix4footprints: boolean;
-    _useCORSProxy;
-    _corsProxyUrl;
-    _maxDecimals;
-    _debug;
-    _insideSphere;
-    _version;
-    constructor() {
-        this._useCORSProxy = _Config_js__WEBPACK_IMPORTED_MODULE_1__.bootSetup.useCORSProxy;
-        this._corsProxyUrl = _Config_js__WEBPACK_IMPORTED_MODULE_1__.bootSetup.corsProxyUrl;
-        this._maxDecimals = _Config_js__WEBPACK_IMPORTED_MODULE_1__.bootSetup.maxDecimals;
-        this._debug = _Config_js__WEBPACK_IMPORTED_MODULE_1__.bootSetup.debug;
-        this._insideSphere = _Config_js__WEBPACK_IMPORTED_MODULE_1__.bootSetup.insideView;
-        this._version = _Config_js__WEBPACK_IMPORTED_MODULE_1__.bootSetup.version;
-        this._healpix = {};
-        this._selectionnside = 32;
+class RayPickingUtils {
+    static lastNearestVisibleObjectIdx = -1;
+    /** Get index of the last object found under the mouse (if any). */
+    static getNearestVisibleObjectIdx() {
+        return this.lastNearestVisibleObjectIdx;
     }
-    init() {
-        console.log('Global.init()');
+    /**
+     * Builds a world-space ray from mouse coords.
+     * @param mouseX ClientX (page pixels)
+     * @param mouseY ClientY (page pixels)
+     * @param pMatrix Projection matrix
+     * @returns World-space direction (normalized) as a vec3
+     */
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
+        const gl = webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        // mouseX / mouseY are already local to the canvas (CSS pixels)
+        const canvasMX = mouseX;
+        const canvasMY = mouseY;
+        // Use rect.width / rect.height (CSS) for NDC
+        const x = (2.0 * canvasMX) / rect.width - 1.0;
+        const y = 1.0 - (2.0 * canvasMY) / rect.height;
+        const z = -1.0;
+        const rayClip = [x, y, z, 1.0];
+        const pInv = mat4_create();
+        invert(pInv, pMatrix);
+        const rayEye4 = [0, 0, 0, 0];
+        RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+        // direction in eye space
+        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+        const vInv = mat4_create();
+        invert(vInv, vMatrix);
+        const rayWorld4 = [0, 0, 0, 0];
+        RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+        const rayWorld = fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+        normalize(rayWorld, rayWorld);
+        return rayWorld;
     }
-    // --- getters/setters ---
-    get version() { return this._version; }
-    set corsProxyUrl(url) { this._corsProxyUrl = url; }
-    get corsProxyUrl() { return this._corsProxyUrl; }
-    get useCORSProxy() { return this._useCORSProxy; }
-    set useCORSProxy(enabled) { this._useCORSProxy = enabled; }
-    get debug() { return this._debug; }
-    getHealpix(order) {
-        if (this._healpix[order] === undefined) {
-            // order is HEALPix "order" ⇒ nside = 2^order
-            this._healpix[order] = new healpixjs__WEBPACK_IMPORTED_MODULE_0__.Healpix(Math.pow(2, order));
+    /** a*b (4x4 * vec4) → vec4 (in `out`) */
+    static mat4MultiplyVec4(a, b, out) {
+        const d = b[0], e = b[1], g = b[2], w = b[3];
+        out[0] = a[0] * d + a[4] * e + a[8] * g + a[12] * w;
+        out[1] = a[1] * d + a[5] * e + a[9] * g + a[13] * w;
+        out[2] = a[2] * d + a[6] * e + a[10] * g + a[14] * w;
+        out[3] = a[3] * d + a[7] * e + a[11] * g + a[15] * w;
+        return out;
+    }
+    /**
+     * Ray–sphere intersection (world space).
+     * @returns distance `t` along the ray to the first hit, or `-1` if no hit.
+     */
+    static raySphere(rayOrigWorld, rayDirectionWorld, healpixGridSingleton) {
+        let intersectionDistance = -1;
+        const L = create();
+        subtract(L, rayOrigWorld, healpixGridSingleton.center);
+        const b = vec3_dot(rayDirectionWorld, L);
+        const c = vec3_dot(L, L) - healpixGridSingleton.radius * healpixGridSingleton.radius;
+        const disc = b * b - c;
+        if (disc > 0.0) {
+            const s = Math.sqrt(disc);
+            const ta = -b + s;
+            const tb = -b - s;
+            if (ta < 0.0 && tb < 0.0) {
+                // behind camera
+            }
+            else if (tb < 0.0) {
+                intersectionDistance = ta;
+            }
+            else {
+                intersectionDistance = Math.min(ta, tb);
+            }
         }
-        return this._healpix[order];
+        else if (disc === 0.0) {
+            const t = -b; // tangent
+            if (t >= 0.0) {
+                intersectionDistance = t;
+            }
+        }
+        return intersectionDistance;
     }
-    get MAX_DECIMALS() { return this._maxDecimals; }
-    set insideSphere(v) { this._insideSphere = v; }
-    get insideSphere() { return this._insideSphere; }
-    get nsideForSelection() { return this._selectionnside; }
+    /**
+     * Compute intersection with a single model (defaults to the Healpix grid).
+     * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
+     */
+    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera, pMatrix) {
+        const vMatrix = camera.getCameraMatrix();
+        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
+        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
+        let intersectionModelPoint = [];
+        if (t >= 0) {
+            // world intersection
+            const worldHit = create();
+            scale(worldHit, rayWorld, t);
+            add(worldHit, camera.getCameraPosition(), worldHit);
+            // world → model
+            const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
+            const modelHit4 = [0, 0, 0, 0];
+            // RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
+            RayPickingUtils.mat4MultiplyVec4(healpixGrid.getModelMatrixInverse(), worldHit4, modelHit4);
+            intersectionModelPoint = [modelHit4[0], modelHit4[1], modelHit4[2]];
+        }
+        return intersectionModelPoint;
+    }
 }
-const global = new Global();
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (global);
+/* harmony default export */ const utils_RayPickingUtils = (RayPickingUtils);
 
-
-/***/ }),
-
-/***/ "./src/model/AbstractSkyEntity.ts":
-/*!****************************************!*\
-  !*** ./src/model/AbstractSkyEntity.ts ***!
-  \****************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   AbstractSkyEntity: () => (/* binding */ AbstractSkyEntity)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec3.js");
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../Global.js */ "./src/Global.ts");
-/* harmony import */ var _shader_HiPSShaderProgram_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../shader/HiPSShaderProgram.js */ "./src/shader/HiPSShaderProgram.ts");
+;// ./src/utils/MouseHelper.ts
 /**
  * @author Fabrizio Giordano (Fab)
  */
 
 
 
-class AbstractSkyEntity {
-    // Public-ish properties used elsewhere in the app
-    refreshMe = false;
-    fovX_deg = 180;
-    fovY_deg = 180;
-    xRad;
-    yRad;
-    prevFoV = this.fovX_deg;
-    _name;
-    // public insideSphere: boolean = bootSetup.insideSphere
-    // Picking/sphere
-    center;
-    radius;
-    isGalacticHips;
-    // GL resources
-    vertexTextureCoordBuffer = null;
-    vertexPositionBuffer = null;
-    vertexIndexBuffer = null;
-    shaderProgram = null;
-    // Matrices
-    T = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-    R = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-    modelMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-    inverseModelMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-    // Precomputed transform from galactic to equatorial (already inverted)
-    galacticMatrixInverted = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-    _webgl;
-    _hipsShaderProgram;
-    // protected _visibleTilesManager: VisibleTilesManager
-    // protected _tileBuffer: TileBuffer
-    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, webgl, isGalacticHips) {
-        this._webgl = webgl;
-        this.xRad = in_xRad;
-        this.yRad = in_yRad;
-        this._name = in_name;
-        this.center = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.clone(in_position);
-        this.radius = in_radius;
-        // this.insideSphere = global.insideSphere
-        this.isGalacticHips = !!isGalacticHips;
-        // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
-        // this._tileBuffer = new TileBuffer(1, this._webgl)
-        // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
-        // this._visibleTilesManager = new VisibleTilesManager()
-        this._hipsShaderProgram = new _shader_HiPSShaderProgram_js__WEBPACK_IMPORTED_MODULE_3__.HiPSShaderProgram(this._webgl);
-    }
-    get name() {
-        return this._name;
-    }
-    get hipsShaderProgram() {
-        return this._hipsShaderProgram;
-    }
-    // get tileBuffer() {
-    //   return this._tileBuffer
-    // }
-    get webgl() {
-        return this._webgl;
-    }
-    /** GL setup and initial model transform */
-    initGL(gl) {
-        // GL resources
-        this.vertexTextureCoordBuffer = gl.createBuffer();
-        this.vertexPositionBuffer = gl.createBuffer();
-        this.vertexIndexBuffer = gl.createBuffer();
-        this.shaderProgram = gl.createProgram();
-        // Reset object transforms
-        this.T = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        this.R = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        this.modelMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        this.inverseModelMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        // Initial pose
-        this.translate(this.center);
-        this.rotate(this.xRad, this.yRad);
-    }
-    translate(translation) {
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.translate(this.T, this.T, translation);
-        this.refreshModelMatrix();
-    }
-    rotate(rad1, rad2) {
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, rad2, [0, 0, 1]);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, rad1, [1, 0, 0]);
-        this.refreshModelMatrix();
-    }
-    rotateFromZero(rad1, rad2) {
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.identity(this.R);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, rad1, [1, 0, 0]);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.rotate(this.R, this.R, rad2, [0, 0, 1]);
-        this.refreshModelMatrix();
-    }
-    refreshModelMatrix() {
-        const R_inverse = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(R_inverse, this.R);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.multiply(this.modelMatrix, this.T, R_inverse);
-        // Flip Y if we're outside the sphere
-        if (!_Global_js__WEBPACK_IMPORTED_MODULE_2__["default"].insideSphere) {
-            this.modelMatrix[1] = -this.modelMatrix[1];
-            this.modelMatrix[5] = -this.modelMatrix[5];
-            this.modelMatrix[9] = -this.modelMatrix[9];
-            this.modelMatrix[13] = -this.modelMatrix[13];
-        }
-        // Apply galactic frame transform if needed
-        if (this.isGalacticHips) {
-            gl_matrix__WEBPACK_IMPORTED_MODULE_0__.multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
+
+function toVec3(p) {
+    return Array.isArray(p) ? fromValues(p[0], p[1], p[2]) : p;
+}
+class MouseHelper {
+    _xyz = null;
+    _raDecDeg = null;
+    _phiThetaDeg = null;
+    raHMS;
+    decDMS;
+    /**
+     * @param in_xyz [x, y, z]
+     * @param in_raDecDeg { ra, dec } in degrees (ICRS/J2000)
+     * @param in_phiThetaDeg { phi, theta } in degrees (spherical)
+     */
+    constructor(in_xyz, in_raDecDeg, in_phiThetaDeg) {
+        if (in_xyz != null)
+            this._xyz = in_xyz;
+        if (in_raDecDeg != null)
+            this._raDecDeg = in_raDecDeg;
+        if (in_phiThetaDeg != null)
+            this._phiThetaDeg = in_phiThetaDeg;
+        if (this._raDecDeg) {
+            this.raHMS = raDegToHMS(this._raDecDeg.ra);
+            this.decDMS = decDegToDMS(this._raDecDeg.dec);
         }
     }
-    getModelMatrixInverse() {
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.identity(this.inverseModelMatrix);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(this.inverseModelMatrix, this.modelMatrix);
-        return this.inverseModelMatrix;
+    /** (Formerly `computeNpix256`) Uses global.nsideForSelection. */
+    computeNpix() {
+        if (!this._xyz)
+            return null;
+        const hp = src_Global.getHealpix(src_Global.nsideForSelection);
+        const v = new Vec3(this._xyz[0], this._xyz[1], this._xyz[2]);
+        const ptg = new Pointing(v, false);
+        return hp.ang2pix(ptg, false);
     }
-    getModelMatrix() {
-        return this.modelMatrix;
+    /** Update helper state from a world-space 3D point on the unit sphere. */
+    update(mousePoint) {
+        const mp = toVec3(mousePoint);
+        const sph = cartesianToSpherical(mp);
+        const radec = sphericalToAstroDeg(sph.phi, sph.theta);
+        this._xyz = [mp[0], mp[1], mp[2]];
+        this._phiThetaDeg = sph;
+        this._raDecDeg = radec;
+        this.raHMS = raDegToHMS(radec.ra);
+        this.decDMS = decDegToDMS(radec.dec);
     }
-    setModelMatrix(modelMatrix) {
-        this.modelMatrix = modelMatrix;
+    clear() {
+        this._xyz = null;
+        this._raDecDeg = null;
+        this._phiThetaDeg = null;
+        this.raHMS = undefined;
+        this.decDMS = undefined;
     }
-    /** Children with hierarchical geometry (e.g., HiPS) can override this. */
-    setGeometryNeedsToBeRefreshed() {
-        this.refreshGeometryOnFoVChanged = false;
+    // --- getters ---
+    get xyz() {
+        return this._xyz;
     }
-    // Helpers operating on raw mat4 buffers (kept from your JS)
-    rotateX(m, angle) {
-        const c = Math.cos(angle);
-        const s = Math.sin(angle);
-        const mv1 = m[1], mv5 = m[5], mv9 = m[9];
-        m[1] = m[1] * c - m[2] * s;
-        m[5] = m[5] * c - m[6] * s;
-        m[9] = m[9] * c - m[10] * s;
-        m[2] = m[2] * c + mv1 * s;
-        m[6] = m[6] * c + mv5 * s;
-        m[10] = m[10] * c + mv9 * s;
-        return m;
+    get x() {
+        return this._xyz ? this._xyz[0] : null;
     }
-    rotateY(m, angle) {
-        const c = Math.cos(angle);
-        const s = Math.sin(angle);
-        const mv0 = m[0], mv4 = m[4], mv8 = m[8];
-        m[0] = c * m[0] + s * m[2];
-        m[4] = c * m[4] + s * m[6];
-        m[8] = c * m[8] + s * m[10];
-        m[2] = c * m[2] - s * mv0;
-        m[6] = c * m[6] - s * mv4;
-        m[10] = c * m[10] - s * mv8;
-        return m;
+    get y() {
+        return this._xyz ? this._xyz[1] : null;
+    }
+    get z() {
+        return this._xyz ? this._xyz[2] : null;
+    }
+    get ra() {
+        return this._raDecDeg ? this._raDecDeg.ra : null;
+    }
+    get dec() {
+        return this._raDecDeg ? this._raDecDeg.dec : null;
+    }
+    get phi() {
+        return this._phiThetaDeg ? this._phiThetaDeg.phi : null;
+    }
+    get theta() {
+        return this._phiThetaDeg ? this._phiThetaDeg.theta : null;
+    }
+    get raDecDeg() {
+        return this._raDecDeg;
+    }
+    get phiThetaDeg() {
+        return this._phiThetaDeg;
+    }
+}
+/* harmony default export */ const utils_MouseHelper = (MouseHelper);
+
+;// ./src/shader/ShaderManager.ts
+// ShaderManager.ts
+class ShaderManager {
+    static catalogueVS() {
+        return `#version 300 es
+    in vec4 aCatPosition;
+    in float a_selected;
+    in float a_pointsize;
+    in float a_brightness;
+
+    out float v_selected;
+    out float v_brightness;
+    out lowp vec4 vColor;  // not used
+
+    uniform mat4 uPMatrix;
+    uniform mat4 uMVMatrix;
+
+    void main() {
+
+      gl_Position = (uPMatrix * uMVMatrix * aCatPosition);
+      gl_PointSize = a_pointsize;
+      v_selected = a_selected;
+      v_brightness = a_brightness;
+    }`;
+    }
+    static catalogueFS() {
+        return `#version 300 es
+    precision mediump float;
+    
+    #ifdef GL_OES_standard_derivatives
+    #extension GL_OES_standard_derivatives : enable
+    #endif
+
+    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+
+    // precision mediump float;
+
+    in float v_selected;
+    in float v_brightness;
+
+    uniform vec4 u_fragcolor;
+
+    out vec4 fragColor;
+
+    // varying float v_selected;
+    // varying float v_brightness;
+
+    const float EPSILON = 1e-10;
+    
+    vec3 RGBtoHCV(in vec3 rgb) {
+      // RGB [0..1] to Hue-Chroma-Value [0..1]
+      // Based on work by Sam Hocevar and Emil Persson
+      vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
+      vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
+      float c = q.x - min(q.w, q.y);
+      float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
+      return vec3(h, c, q.x);
+    }
+
+    vec3 RGBtoHSL(in vec3 rgb) {
+      // RGB [0..1] to Hue-Saturation-Lightness [0..1]
+      vec3 hcv = RGBtoHCV(rgb);
+      //vec3 hcv = vec3(1., 1., 1.);
+      float z = hcv.z - hcv.y * 0.5;
+      float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
+      return vec3(hcv.x, s, z);
+    }
+
+    vec3 HUEtoRGB(in float hue){
+      // Hue [0..1] to RGB [0..1]
+      // See http://www.chilliant.com/rgb2hsv.html
+      vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
+      return clamp(rgb, 0., 1.);
+    }
+
+    vec3 HSLtoRGB(in vec3 hsl) {
+      // Hue-Saturation-Lightness [0..1] to RGB [0..1]
+      vec3 rgb = HUEtoRGB(hsl.x);
+      float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
+      return (rgb - 0.5) * c + hsl.z;
+    }
+  
+    void main() {
+
+      float r = 0.0, delta = 0.0, alpha = 1.0;
+      vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      r = dot(cxy, cxy);
+      if (r > 1.0) {
+        discard;
+      }
+
+      #ifdef GL_OES_standard_derivatives
+        delta = fwidth(r);
+        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+      #endif
+
+      if (v_selected == 1.0){
+        // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+        fragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+      } else if (v_selected == 2.0){
+        // gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+        fragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+      }else{
+        if (r < 0.4) {
+          discard;
+        }
+        if ( v_brightness >= -1.0 && v_brightness <= 1.0) {
+          // Round-trip RGB->HSL->RGB with time-dependent lightness
+          vec3 hsl = RGBtoHSL(vec3(u_fragcolor));
+          //hsl.z = pow(hsl.z, sin(iTime) + 1.5);
+          // hsl.z = pow(hsl.z, v_brightness + 1.5);
+          hsl.z = pow(hsl.z, v_brightness + 1.5);
+          vec3 hslcolor = HSLtoRGB(hsl);
+          // gl_FragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+          fragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+        } else {
+          // gl_FragColor = u_fragcolor * (alpha);
+          fragColor = u_fragcolor * (alpha);
+        }
+      }
+    }`;
+    }
+    static footprintVS() {
+        return `#version 300 es
+    precision highp float;
+
+    layout(location = 0) in vec4 aCatPosition;
+
+    uniform float u_pointsize;
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    void main() {
+      gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+      gl_PointSize = u_pointsize;   // Works in WebGL2
+    }`;
+    }
+    static footprintFS() {
+        return `#version 300 es
+    precision mediump float;
+
+    uniform vec4 u_fragcolor;
+    out vec4 fragColor;
+
+    void main() {
+      fragColor = u_fragcolor;
+    }`;
+    }
+    static hipsVS() {
+        return `#version 300 es
+    in vec3 aVertexPosition;
+    in vec2 aTextureCoord;
+
+    uniform mat4 uMMatrix;
+    uniform mat4 uVMatrix;
+    uniform mat4 uPMatrix;
+
+    out vec2 vTextureCoord;
+
+    void main() {
+      gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
+      vTextureCoord = aTextureCoord;
+    }`;
+    }
+    static hipsNativeFS() {
+        return `#version 300 es
+    precision mediump float;
+
+    in vec2 vTextureCoord;
+
+    uniform sampler2D uSampler0;
+    uniform sampler2D uSampler1;
+    uniform sampler2D uSampler2;
+    uniform sampler2D uSampler3;
+    uniform sampler2D uSampler4;
+    uniform sampler2D uSampler5;
+    uniform sampler2D uSampler6;
+    uniform sampler2D uSampler7;
+
+    uniform float uFactor0;
+    uniform float uFactor1;
+    uniform float uFactor2;
+    uniform float uFactor3;
+    uniform float uFactor4;
+    uniform float uFactor5;
+    uniform float uFactor6;
+    uniform float uFactor7;
+
+    out vec4 fragColor;
+
+    void main() {
+      vec3 finalColor = vec3(0.0);
+
+      if (uFactor0 >= 0.0){
+        vec4 mycolor;
+        #if __VERSION__ > 120
+          vec4 color0 = texture(uSampler0, vTextureCoord);
+        #else
+          vec4 color0 = texture2D(uSampler0, vTextureCoord);
+        #endif
+        mycolor = color0;
+        finalColor += mycolor.rgb * uFactor0;
+      } else if (uFactor7 >= 0.0){
+        finalColor = vec3(1.0, 0.0, 0.0);
+      }
+      fragColor = vec4(finalColor, 1.0);
+    }`;
+    }
+    static hipsGrayscaleFS() {
+        return `#version 300 es
+    precision mediump float;
+
+    in vec2 vTextureCoord;
+
+    uniform sampler2D uSampler0;
+    uniform sampler2D uSampler1;
+    uniform sampler2D uSampler2;
+    uniform sampler2D uSampler3;
+    uniform sampler2D uSampler4;
+    uniform sampler2D uSampler5;
+    uniform sampler2D uSampler6;
+    uniform sampler2D uSampler7;
+
+    uniform float uFactor0;
+    uniform float uFactor1;
+    uniform float uFactor2;
+    uniform float uFactor3;
+    uniform float uFactor4;
+    uniform float uFactor5;
+    uniform float uFactor6;
+    uniform float uFactor7;
+
+    out vec4 fragColor;
+
+    void main() {
+      vec3 finalColor = vec3(0.0);
+
+      if (uFactor0 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color0 = texture(uSampler0, vTextureCoord);
+        #else
+          vec4 color0 = texture2D(uSampler0, vTextureCoord);
+        #endif
+        float gray = 0.21 * color0.r + 0.71 * color0.g + 0.07 * color0.b;
+        finalColor = color0.rgb * (1.0 - uFactor0) + vec3(gray) * uFactor0;
+      }
+      if (uFactor1 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color1 = texture(uSampler1, vTextureCoord);
+        #else
+          vec4 color1 = texture2D(uSampler1, vTextureCoord);
+        #endif
+        finalColor += color1.rgb * uFactor1;
+      }
+      if (uFactor2 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color2 = texture(uSampler2, vTextureCoord);
+        #else
+          vec4 color2 = texture2D(uSampler2, vTextureCoord);
+        #endif
+        finalColor += color2.rgb * uFactor2;
+      }
+      if (uFactor3 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color3 = texture(uSampler3, vTextureCoord);
+        #else
+          vec4 color3 = texture2D(uSampler3, vTextureCoord);
+        #endif
+        finalColor += color3.rgb * uFactor3;
+      }
+      if (uFactor4 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color4 = texture(uSampler4, vTextureCoord);
+        #else
+          vec4 color4 = texture2D(uSampler4, vTextureCoord);
+        #endif
+        finalColor += color4.rgb * uFactor4;
+      }
+      if (uFactor5 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color5 = texture(uSampler5, vTextureCoord);
+        #else
+          vec4 color5 = texture2D(uSampler5, vTextureCoord);
+        #endif
+        finalColor += color5.rgb * uFactor5;
+      }
+      if (uFactor6 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color6 = texture(uSampler6, vTextureCoord);
+        #else
+          vec4 color6 = texture2D(uSampler6, vTextureCoord);
+        #endif
+        finalColor += color6.rgb * uFactor6;
+      }
+      if (uFactor7 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color7 = texture(uSampler7, vTextureCoord);
+        #else
+          vec4 color7 = texture2D(uSampler7, vTextureCoord);
+        #endif
+        finalColor += color7.rgb * uFactor7;
+      }
+      fragColor = vec4(finalColor, 1.0);
+    }`;
+    }
+    static hipsColorMapFS() {
+        return `#version 300 es
+    precision mediump float;
+
+    in vec2 vTextureCoord;
+
+    // UBO
+    layout (std140) uniform colormap {
+      float r_palette[256];
+      float g_palette[256];
+      float b_palette[256];
+    };
+
+    uniform sampler2D uSampler0;
+    uniform float uFactor0;
+
+    out vec4 fragColor;
+
+    void main() {
+      #if __VERSION__ > 120
+        vec4 color0 = texture(uSampler0, vTextureCoord);
+      #else
+        vec4 color0 = texture2D(uSampler0, vTextureCoord);
+      #endif
+
+      int x = int(color0.r * 255.0);
+      float px = r_palette[x] / 256.0;
+
+      int y = int(color0.g * 255.0);
+      float py = g_palette[y] / 256.0;
+
+      int z = int(color0.b * 255.0);
+      float pz = b_palette[z] / 256.0;
+
+      // uFactor0 reserved for future blending if needed
+      fragColor = vec4(px, py, pz, 1.0);
+    }`;
     }
 }
 
-
-/***/ }),
-
-/***/ "./src/model/ColorMaps.ts":
-/*!********************************!*\
-  !*** ./src/model/ColorMaps.ts ***!
-  \********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   ColorMaps: () => (/* binding */ ColorMaps),
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
+;// ./src/model/ColorMaps.ts
 const ColorMaps = {
     grayscale: {
         name: 'grayscale',
@@ -7877,2864 +6578,522 @@ const ColorMaps = {
         ])
     },
 };
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (ColorMaps);
+/* harmony default export */ const model_ColorMaps = (ColorMaps);
 
+;// ./src/shader/HiPSShaderProgram.ts
+// HiPSShaderProgram.ts
 
-/***/ }),
 
-/***/ "./src/model/FoV.ts":
-/*!**************************!*\
-  !*** ./src/model/FoV.ts ***!
-  \**************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   FoV: () => (/* binding */ FoV)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec3.js");
-/* harmony import */ var _utils_RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/RayPickingUtils.js */ "./src/utils/RayPickingUtils.ts");
-/* harmony import */ var _utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../utils/Utils.js */ "./src/utils/Utils.ts");
-
-/**
- * FoV singleton (TypeScript)
- * - Uses computePerspectiveMatrixSingleton.pMatrix
- * - Guards acos domain (numeric safety)
- * - Uses vec3.transformMat4 instead of custom mat4*vec3
- * - Keeps original “insideSphere ? 360 - angle : angle” behavior
- */
-
-
-
-class FoV {
-    fovXDeg = 180;
-    fovYDeg = 180;
-    ratio = +0;
-    _minFoV = 180;
-    _webgl;
-    constructor(webgl) {
-        this._webgl = webgl;
-    }
-    /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere, healpixGridSingleton, camera, pMatrix) {
-        // const gl = webgl
-        const gl = this._webgl;
-        if (!gl || !gl.canvas) {
-            // Handle the error or assign default values
-            this.fovXDeg = 180;
-            this.fovYDeg = 180;
-            this._minFoV = this.minFoV;
-            return this;
-        }
-        // horizontal FoV: ray through (centerY)
-        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
-        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix);
-        this.fovXDeg = xFoVComputed.angleDeg;
-        // vertical FoV: ray through (centerX)
-        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix);
-        this.fovYDeg = yFoVComputed.angleDeg;
-        this._minFoV = this.minFoV;
-        this.ratio = this.computeRatio(camera);
-        return this;
-    }
-    computeRatio(camera) {
-        // const camera = global.camera
-        if (!camera)
-            throw Error("Camera not defined");
-        const pos = camera.getCameraPosition();
-        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
-        const ratio = distanceFromCenter / this.fovYDeg;
-        return ratio;
-    }
-    changeMinFov(deg) {
-        console.log("inside changeMinFov");
-        if (this.fovYDeg <= this.fovXDeg) {
-            this.fovYDeg = deg;
-        }
-        else {
-            this.fovXDeg = deg;
-        }
-        console.log("changeMinFov: ping");
-        this.minFoV;
-        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
-    }
-    get minFoV() {
-        this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
-        return this._minFoV;
-    }
-    computeDistanceFromAngle(angleDeg) {
-        const desiredFoV = angleDeg;
-        const distance = desiredFoV * this.ratio;
-        // return Math.abs(distance)
-        return distance;
-    }
-    /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera, pMatrix) {
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix
-        if (!pMatrix) {
-            // Handle the error or assign a default value
-            console.warn('FoV: projection matrix is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const vMatrix = camera.getCameraMatrix();
-        if (!camera) {
-            // Handle the error or assign a default value
-            console.warn('FoV: camera is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const rayWorld = _utils_RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_2__["default"].getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix);
-        const intersectionDistance = _utils_RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_2__["default"].raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
-        let angleDeg;
-        if (intersectionDistance > 0) {
-            // world-space intersection point on the sphere
-            const hit = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-            gl_matrix__WEBPACK_IMPORTED_MODULE_1__.scale(hit, rayWorld, intersectionDistance);
-            gl_matrix__WEBPACK_IMPORTED_MODULE_1__.add(hit, camera.getCameraPosition(), hit);
-            const center = healpixGridSingleton.center;
-            // vectors from sphere center
-            const vHit = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-            gl_matrix__WEBPACK_IMPORTED_MODULE_1__.subtract(vHit, hit, center);
-            // reference vector: rotate world +Z into current camera orientation, then from center
-            const refWorldZ = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.fromValues(center[0], center[1], center[2] + healpixGridSingleton.radius);
-            const vInv = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-            gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(vInv, camera.getCameraMatrix());
-            const refCamZ = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-            gl_matrix__WEBPACK_IMPORTED_MODULE_1__.transformMat4(refCamZ, refWorldZ, vInv);
-            const vRef = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-            gl_matrix__WEBPACK_IMPORTED_MODULE_1__.subtract(vRef, refCamZ, center);
-            // angle between vHit and vRef, doubled
-            const dot = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.dot(vHit, vRef);
-            const n1 = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.length(vHit);
-            const n2 = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.length(vRef);
-            // numeric safety for acos
-            const c = Math.min(1, Math.max(-1, dot / (n1 * n2)));
-            const angleRad = Math.acos(c);
-            angleDeg = 2 * (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.radToDeg)(angleRad);
-        }
-        else {
-            angleDeg = 180;
-        }
-        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
-        // return insideSphere ? 360 - angleDeg : angleDeg
-        return { angleDeg: finalAngle, distance: intersectionDistance };
-    }
-    /**
-   * Computes the camera position (x,y,z) along the current view direction that would
-   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
-   * This method does NOT mutate the camera; it only returns the suggested position.
-   *
-   * Geometry: for a sphere of radius R observed from distance d (from center),
-   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
-   * along the tighter axis; we solve for d and place the camera on the current
-   * center→camera direction with that distance.
-   *
-   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
-   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
-   */
-    computeCameraPositionForMinFoV(targetMinFoVDeg) {
-        // const camera = global.camera
-        // const center = healpixGridSingleton.center
-        // const R = healpixGridSingleton.radius
-        // if (!camera) {
-        //   console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.')
-        //   return [center[0], center[1], center[2] + 2 * R]
-        // }
-        // // Clamp and validate input
-        // const eps = 1e-6
-        // const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg))
-        // const halfRad = (clamped * Math.PI / 180) * 0.5
-        // // Distance from center needed to achieve the angular diameter
-        // // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
-        // const sinHalf = Math.sin(halfRad)
-        // if (sinHalf <= 0) {
-        //   console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.')
-        //   return [center[0], center[1], center[2] + 2 * R]
-        // }
-        // let d = R / sinHalf
-        // // Ensure we remain strictly outside the sphere
-        // d = Math.max(d, R + 1e-4)
-        // // Use the current center→camera direction to keep orientation
-        // const camPos = camera.getCameraPosition()
-        // let dirX = camPos[0] - center[0]
-        // let dirY = camPos[1] - center[1]
-        // let dirZ = camPos[2] - center[2]
-        // const len = Math.hypot(dirX, dirY, dirZ)
-        // if (len < eps) {
-        //   // If somehow at the center, use +Z as a default direction
-        //   dirX = 0; dirY = 0; dirZ = 1;
-        // } else {
-        //   dirX /= len
-        //   dirY /= len
-        //   dirZ /= len
-        // }
-        // const newX = center[0] + dirX * d
-        // const newY = center[1] + dirY * d
-        // const newZ = center[2] + dirZ * d
-        // return [newX, newY, newZ]
-        return [0, 0, 0];
-    }
-    /**
-       * Computes the camera world-space position required to achieve a target FoV (deg),
-       * keeping the same viewing direction. Acts as the inverse of computeAngle().
-       *
-       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
-       * @param canvasWidth  canvas width in pixels
-       * @param canvasHeight canvas height in pixels
-       * @returns [x, y, z] coordinates for the new camera position
-       */
-    computeCameraPositionForFoV(targetFoVDeg) {
-        // const camera = global.camera;
-        // const center = healpixGridSingleton.center;
-        // const R = healpixGridSingleton.radius;
-        // if (!camera) {
-        //   console.warn("FoV.computeCameraPositionForFoV: camera missing.");
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // const eps = 1e-6;
-        // const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
-        // const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
-        // // Distance from center that yields this FoV
-        // const sinHalf = Math.sin(halfRad);
-        // if (sinHalf <= 0) {
-        //   console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // let d = R / sinHalf;
-        // // Slightly outside sphere to avoid clipping
-        // d = Math.max(d, R + 1e-4);
-        // // Get current viewing direction
-        // const camPos = camera.getCameraPosition();
-        // let dirX = camPos[0] - center[0];
-        // let dirY = camPos[1] - center[1];
-        // let dirZ = camPos[2] - center[2];
-        // const len = Math.hypot(dirX, dirY, dirZ);
-        // if (len < eps) {
-        //   dirX = 0; dirY = 0; dirZ = 1;
-        // } else {
-        //   dirX /= len;
-        //   dirY /= len;
-        //   dirZ /= len;
-        // }
-        // const newX = center[0] + dirX * d;
-        // const newY = center[1] + dirY * d;
-        // const newZ = center[2] + dirZ * d;
-        // return [newX, newY, newZ];
-        return [0, 0, 0];
-    }
-    /**
-   * Return a camera position such that the sphere's apparent angular diameter
-   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
-   * Keeps current view direction; does not mutate the camera.
-   *
-   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
-   * @returns [x,y,z] world position
-   */
-    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
-        // const camera = global.camera;
-        // const center = healpixGridSingleton.center;
-        // const R = healpixGridSingleton.radius;
-        // if (!camera) {
-        //   console.warn('computeCameraPositionForAngularDiameter: camera missing.');
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // const eps = 1e-6;
-        // const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
-        // const half = (α * Math.PI) / 360.0;
-        // const sinHalf = Math.sin(half);
-        // // d = R / sin(α/2)
-        // let d = R / sinHalf;
-        // d = Math.max(d, R + 1e-4); // stay outside
-        // // project along current center→camera direction
-        // const [cx, cy, cz] = center as [number, number, number];
-        // const [px, py, pz] = camera.getCameraPosition();
-        // let dx = px - cx, dy = py - cy, dz = pz - cz;
-        // const L = Math.hypot(dx, dy, dz);
-        // if (L < eps) { dx = 0; dy = 0; dz = 1; } else { dx /= L; dy /= L; dz /= L; }
-        // return [cx + dx * d, cy + dy * d, cz + dz * d];
-        return [0, 0, 0];
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/model/MetadataColumn.ts":
-/*!*************************************!*\
-  !*** ./src/model/MetadataColumn.ts ***!
-  \*************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   ColumnType: () => (/* binding */ ColumnType),
-/* harmony export */   MetadataColumn: () => (/* binding */ MetadataColumn)
-/* harmony export */ });
-
-var ColumnType;
-(function (ColumnType) {
-    ColumnType["STRING"] = "STRING";
-    ColumnType["NUMBER"] = "NUMBER";
-    ColumnType["GEOM_RA"] = "GEOM_RA";
-    ColumnType["GEOM_DEC"] = "GEOM_DEC";
-    ColumnType["GEOM_FOOTPRINT"] = "GEOM_FOOTPRINT";
-    ColumnType["MAIN_NAME"] = "MAIN_NAME";
-})(ColumnType || (ColumnType = {}));
-class MetadataColumn {
-    _index; // mandatory
-    _name; // mandatory
-    _description = ""; // mandatory default ""
-    _columnType; // mandatory
-    _unit; // mandatory
-    _details = new Map();
-    constructor(init) {
-        if (!init.name)
-            throw new Error(`No name column defined.`);
-        this._name = init.name;
-        if (init.index < 0 || isNaN(init.index))
-            throw new Error(`No index column defined.`);
-        this._index = init.index;
-        this._columnType = init.columnType ?? ColumnType.STRING;
-        this._unit = init.unit ?? "";
-        this._description = init.description ?? "";
-        if (init.details)
-            this._details = new Map(init.details);
-    }
-    get details() {
-        return new Map(this._details);
-    }
-    /** Get any detail; optional fallback. */
-    getDetail(key, fallback) {
-        return this._details.has(key) ? this._details.get(key) : fallback;
-    }
-    /** Type-leaning getters with fallbacks. */
-    getString(key, fallback = "") {
-        const v = this._details.get(key);
-        return typeof v === "string" ? v : fallback;
-    }
-    getNumber(key, fallback = NaN) {
-        const v = this._details.get(key);
-        return typeof v === "number" ? v : fallback;
-    }
-    /** Set or update a detail. */
-    setDetail(key, value) {
-        this._details.set(key, value);
-    }
-    /** Add many details at once. */
-    setDetails(details) {
-        const entries = details instanceof Map ? details.entries() : Object.entries(details);
-        for (const [k, v] of entries)
-            this._details.set(k, v);
-    }
-    /** Keys, values, entries (as arrays). */
-    detailKeys() {
-        return Array.from(this._details.keys());
-    }
-    detailValues() {
-        return Array.from(this._details.values());
-    }
-    detailEntries() {
-        return Array.from(this._details.entries());
-    }
-    // ---------- core getters/setters ----------
-    get name() {
-        return this._name;
-    }
-    get description() {
-        return this._description;
-    }
-    get columnType() {
-        return this._columnType;
-    }
-    get index() {
-        return this._index;
-    }
-    get unit() {
-        return this._unit;
-    }
-    // ---------- serialisation ----------
-    toJSON() {
-        return {
-            name: this._name,
-            description: this._description,
-            columnType: this._columnType,
-            index: this._index,
-            unit: this._unit,
-            details: Object.fromEntries(this._details),
-        };
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/model/MetadataManager.ts":
-/*!**************************************!*\
-  !*** ./src/model/MetadataManager.ts ***!
-  \**************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   MetadataManager: () => (/* binding */ MetadataManager)
-/* harmony export */ });
-/* harmony import */ var _MetadataColumn_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MetadataColumn.js */ "./src/model/MetadataColumn.ts");
-
-class MetadataManager {
-    static STANDARD_SIZE = "STANDARD_SIZE";
-    static STANDARD_HUE = "STANDARD_HUE";
-    _outlineColumnList = [];
-    _raColumnList = [];
-    _decColumnList = [];
-    _shapeColumnList = [];
-    _hueColumnList = [];
-    _selectedOutlineColumn;
-    _selectedRaColumn;
-    _selectedDecColumn;
-    _selectedShapeColumn;
-    _selectedHueColumn;
-    _selectedNameColumn;
-    _columns = [];
-    constructor(metadataColumns) {
-        metadataColumns.forEach(c => {
-            if (c.columnType == _MetadataColumn_js__WEBPACK_IMPORTED_MODULE_0__.ColumnType.NUMBER) {
-                this.addHueColumn(c);
-                this.addShapeColumn(c);
-            }
-            if (c.columnType == _MetadataColumn_js__WEBPACK_IMPORTED_MODULE_0__.ColumnType.GEOM_RA) {
-                this.addRaColumn(c);
-            }
-            if (c.columnType == _MetadataColumn_js__WEBPACK_IMPORTED_MODULE_0__.ColumnType.GEOM_DEC) {
-                this.addDecColumn(c);
-            }
-            if (c.columnType == _MetadataColumn_js__WEBPACK_IMPORTED_MODULE_0__.ColumnType.GEOM_FOOTPRINT) {
-                this.addOutlineColumn(c);
-            }
-            if (c.columnType == _MetadataColumn_js__WEBPACK_IMPORTED_MODULE_0__.ColumnType.MAIN_NAME) {
-                this._selectedNameColumn = c;
-            }
-            this._columns.push(c);
-        });
-        // if (!this._selectedNameColumn) {
-        //     throw new Error("No name column found")
-        // }
-    }
-    addOutlineColumn(outlineColumn) {
-        this._outlineColumnList.push(outlineColumn);
-        this._selectedOutlineColumn = outlineColumn;
-    }
-    addRaColumn(column) {
-        this._selectedRaColumn = this._selectedRaColumn || column;
-        this._raColumnList.push(column);
-    }
-    addDecColumn(column) {
-        this._selectedDecColumn = this._selectedDecColumn || column;
-        this._decColumnList.push(column);
-    }
-    addHueColumn(column) {
-        this._hueColumnList.push(column);
-    }
-    addShapeColumn(column) {
-        this._shapeColumnList.push(column);
-    }
-    get selectedRaColumn() {
-        return this._selectedRaColumn;
-    }
-    get selectedDecColumn() {
-        return this._selectedDecColumn;
-    }
-    get selectedHueColumn() {
-        return this._selectedHueColumn;
-    }
-    get selectedShapeColumn() {
-        return this._selectedShapeColumn;
-    }
-    get selectedOutlineColumn() {
-        return this._selectedOutlineColumn;
-    }
-    get selectedNameColumn() {
-        return this._selectedNameColumn;
-    }
-    get columns() {
-        return this._columns;
-    }
-    get raColumnList() {
-        return this._raColumnList;
-    }
-    get decColumnList() {
-        return this._decColumnList;
-    }
-    get outlineColumnList() {
-        return this._outlineColumnList;
-    }
-    get hueColumnList() {
-        return this._hueColumnList;
-    }
-    get shapeColumnList() {
-        return this._shapeColumnList;
-    }
-    set selectedRaColumn(columnName) {
-        this._selectedRaColumn = this._raColumnList.find(c => c.name === columnName) || this._selectedRaColumn;
-    }
-    set selectedDecColumn(columnName) {
-        this._selectedDecColumn = this._decColumnList.find(c => c.name === columnName) || this._selectedDecColumn;
-    }
-    set selectedHueColumn(columnName) {
-        this._selectedHueColumn = this._hueColumnList.find(c => c.name === columnName);
-    }
-    set selectedShapeColumn(columnName) {
-        this._selectedShapeColumn = this._shapeColumnList.find(c => c.name === columnName);
-    }
-    set selectedNameColumn(columnName) {
-        this._selectedNameColumn = this._shapeColumnList.find(c => c.name === columnName);
-    }
-    resetShapeColumn() {
-        this._selectedShapeColumn = undefined;
-    }
-    resetHueColumn() {
-        this._selectedHueColumn = undefined;
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/model/Point.ts":
-/*!****************************!*\
-  !*** ./src/model/Point.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   Point: () => (/* binding */ Point)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec3.js");
-/* harmony import */ var _utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../utils/Utils.js */ "./src/utils/Utils.ts");
-/* harmony import */ var _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../utils/CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Global.js */ "./src/Global.ts");
-/**
- * @author Fabrizio Giordano (Fab77)
- */
-
-
-
-
-
-class Point {
-    _x;
-    _y;
-    _z;
-    _xyz;
-    _raDeg;
-    _decDeg;
-    _raRad;
-    _decRad;
-    _raDecDeg;
-    constructor(in_options, in_type) {
-        this._xyz = [0, 0, 0];
-        this._raDecDeg = [0, 0];
-        // Prefer config value if present, fallback to 12
-        const MAX_DECIMALS = _Global_js__WEBPACK_IMPORTED_MODULE_3__["default"].MAX_DECIMALS ?? 12;
-        if (in_type === _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN) {
-            const { x, y, z } = in_options;
-            this._x = Number(x.toFixed(MAX_DECIMALS));
-            this._y = Number(y.toFixed(MAX_DECIMALS));
-            this._z = Number(z.toFixed(MAX_DECIMALS));
-            this._xyz = [this._x, this._y, this._z];
-            const [ra, dec] = this.computeAstroCoords();
-            this._raDeg = Number(ra);
-            this._decDeg = Number(dec);
-            this._raRad = (this._raDeg * Math.PI) / 180;
-            this._decRad = (this._decDeg * Math.PI) / 180;
-            this._raDecDeg = [this._raDeg, this._decDeg];
-        }
-        else if (in_type === _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.ASTRO) {
-            const { raDeg, decDeg } = in_options;
-            this._raDeg = Number(raDeg);
-            this._decDeg = Number(decDeg);
-            this._raDecDeg = [this._raDeg, this._decDeg];
-            this._raRad = (this._raDeg * Math.PI) / 180;
-            this._decRad = (this._decDeg * Math.PI) / 180;
-            const [x, y, z] = this.computeCartesianCoords();
-            this._x = Number(x.toFixed(MAX_DECIMALS));
-            this._y = Number(y.toFixed(MAX_DECIMALS));
-            this._z = Number(z.toFixed(MAX_DECIMALS));
-            this._xyz = [this._x, this._y, this._z];
-        }
-        else if (in_type === _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.SPHERICAL) {
-            // Not implemented in original; keep behavior
-            console.log(`${_utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.SPHERICAL} not implemented yet`);
-            this._x = 0;
-            this._y = 0;
-            this._z = 0;
-            this._raDeg = 0;
-            this._decDeg = 0;
-            this._raRad = 0;
-            this._decRad = 0;
-        }
-        else {
-            console.error('CoordsType ' + String(in_type) + ' not recognised.');
-            // Initialize to zeroed state to keep object consistent
-            this._x = 0;
-            this._y = 0;
-            this._z = 0;
-            this._raDeg = 0;
-            this._decDeg = 0;
-            this._raRad = 0;
-            this._decRad = 0;
-        }
-    }
-    computeAstroCoords() {
-        const phiThetaDeg = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__.cartesianToSpherical)(gl_matrix__WEBPACK_IMPORTED_MODULE_0__.fromValues(this._xyz[0], this._xyz[1], this._xyz[2]));
-        const rad = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__.sphericalToAstroDeg)(phiThetaDeg.phi, phiThetaDeg.theta);
-        return [rad.ra, rad.dec];
-    }
-    computeCartesianCoords() {
-        const phiThetaDeg = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__.astroDegToSpherical)(this._raDeg, this._decDeg);
-        const [x, y, z] = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__.sphericalToCartesian)(phiThetaDeg.phi, phiThetaDeg.theta, 1);
-        return [x, y, z];
-    }
-    /**
-     * @return {phi, theta} (degrees)
-     */
-    computeHealpixPhiTheta() {
-        return (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__.astroDegToSpherical)(this._raDeg, this._decDeg);
-    }
-    /** Scale the vector by a given factor */
-    scale(n) {
-        return new Point({ x: this.x * n, y: this.y * n, z: this.z * n }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN);
-    }
-    dot(v) {
-        return this.x * v.x + this.y * v.y + this.z * v.z;
-    }
-    cross(v) {
-        return new Point({
-            x: this.y * v.z - v.y * this.z,
-            y: this.z * v.x - v.z * this.x,
-            z: this.x * v.y - v.x * this.y,
-        }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN);
-    }
-    norm() {
-        const d = 1 / this.length();
-        return new Point({ x: this.x * d, y: this.y * d, z: this.z * d }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN);
-    }
-    length() {
-        return Math.sqrt(this.lengthSquared());
-    }
-    lengthSquared() {
-        return this.x * this.x + this.y * this.y + this.z * this.z;
-    }
-    subtract(v) {
-        return new Point({ x: this.x - v.x, y: this.y - v.y, z: this.z - v.z }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN);
-    }
-    add(v) {
-        return new Point({ x: this.x + v.x, y: this.y + v.y, z: this.z + v.z }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN);
-    }
-    get x() { return this._x; }
-    get y() { return this._y; }
-    get z() { return this._z; }
-    get xyz() { return this._xyz; }
-    get raDeg() { return this._raDeg; }
-    get decDeg() { return this._decDeg; }
-    get raDecDeg() { return this._raDecDeg; }
-    toADQL() {
-        return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
-    }
-    toString() {
-        return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/model/Point2D.ts":
-/*!******************************!*\
-  !*** ./src/model/Point2D.ts ***!
-  \******************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-class Point2D {
-    _x;
-    _y;
-    constructor(x, y) {
-        this._x = x;
-        this._y = y;
-    }
-    get x() {
-        return this._x;
-    }
-    get y() {
-        return this._y;
-    }
-}
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Point2D);
-
-
-/***/ }),
-
-/***/ "./src/model/Source.ts":
-/*!*****************************!*\
-  !*** ./src/model/Source.ts ***!
-  \*****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var healpixjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! healpixjs */ "./node_modules/healpixjs/lib-esm/index.js");
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Global.js */ "./src/Global.ts");
-
-
-
-class Source {
-    _point;
-    _name;
-    _details;
-    _h_pix;
-    _shapesize;
-    _brightnessFactor;
-    /**
-     * @param in_point Point.js (Cartesian/RA-Dec wrapper)
-     * @param in_details Optional array of key/value metadata
-     */
-    constructor(in_point, in_details = []) {
-        this._point = in_point;
-        this._details = in_details;
-        this._shapesize = 8.0;
-        this._brightnessFactor = -99;
-        this.computeHealpixPixel();
-    }
-    getDetailByindex(index) {
-        if (index < 0 || index >= this._details.length) {
-            return undefined;
-        }
-        return this._details[index];
-    }
-    get details() {
-        return this._details;
-    }
-    computeHealpixPixel() {
-        // Get Healpix instance from global
-        const healpix = _Global_js__WEBPACK_IMPORTED_MODULE_1__["default"].getHealpix(_Global_js__WEBPACK_IMPORTED_MODULE_1__["default"].nsideForSelection);
-        const vec3 = new healpixjs__WEBPACK_IMPORTED_MODULE_0__.Vec3(this._point.x, this._point.y, this._point.z);
-        const ptg = new healpixjs__WEBPACK_IMPORTED_MODULE_0__.Pointing(vec3, false);
-        this._h_pix = healpix.ang2pix(ptg, false);
-    }
-    get point() {
-        return this._point;
-    }
-    get name() {
-        return this._name;
-    }
-    get healpixPixel() {
-        return this._h_pix;
-    }
-    get shapeSize() {
-        return this._shapesize;
-    }
-    set shapeSize(size) {
-        this._shapesize = size;
-    }
-    get brightnessFactor() {
-        return this._brightnessFactor;
-    }
-    /**
-     * @param factor Must be in [-1..1]
-     */
-    set brightnessFactor(factor) {
-        this._brightnessFactor = factor;
-    }
-}
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Source);
-
-
-/***/ }),
-
-/***/ "./src/model/catalogues/CatalogueGL.ts":
-/*!*********************************************!*\
-  !*** ./src/model/catalogues/CatalogueGL.ts ***!
-  \*********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   CatalogueGL: () => (/* binding */ CatalogueGL)
-/* harmony export */ });
-/* harmony import */ var _Source_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../Source.js */ "./src/model/Source.ts");
-/* harmony import */ var _Point_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../..//utils/CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var _utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/Utils.js */ "./src/utils/Utils.ts");
-/* harmony import */ var _shader_CatalogueShaderProgram_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../shader/CatalogueShaderProgram.js */ "./src/shader/CatalogueShaderProgram.ts");
-/* harmony import */ var _MetadataManager_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../MetadataManager.js */ "./src/model/MetadataManager.ts");
-// import global from '../../Global.js';
-// import CatalogueProps from './CatalogueProps.js';
-
-
-// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
-
-
-// import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
-
-// import { TapMetadata } from '../tap/TapMetadata.js';
-
-// `Source` is assumed to expose at least these:
-class CatalogueGL {
-    _kind = "CatalogueGL";
-    static ELEM_SIZE = 6;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    static STANDARD_SHAPE_SIZE = 8.0;
-    static STANDARD_SHAPE_HUE = 3.0;
-    _ready;
-    _name;
-    _description;
-    // Data
-    sources;
-    // gl: GL;
-    // Buffers & arrays
-    vertexCataloguePositionBuffer = null;
-    vertexhoveredCataloguePositionBuffer = null;
-    vertexCataloguePosition;
-    _bufferInitialised = false;
-    _webgl;
-    // Index/selection bookkeeping
-    hoveredIndexes;
-    selectedIndexes;
-    extHoveredIndexes;
-    _oldMouseCoords;
-    _metadataManager;
-    _isVisible = true;
-    _shapeColor = '#8F00FF';
-    _healpixDensityMap;
-    _providerUrl;
-    _catalogueShaderProgram;
-    _visibleTilesManager;
-    constructor(catalogueName, catalogueDescription, providerUrl, metadataManager, webgl, visibleTilesManager) {
-        this._webgl = webgl;
-        this._ready = false;
-        this._visibleTilesManager = visibleTilesManager;
-        this.TYPE = 'SOURCE_CATALOGUE';
-        this._name = catalogueName;
-        this._description = catalogueDescription;
-        this._providerUrl = providerUrl;
-        this._metadataManager = metadataManager;
-        this.sources = [];
-        // GL init
-        // this.gl = global.gl as GL;
-        // this.vertexCataloguePositionBuffer = this.gl.createBuffer();
-        // this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
-        this.vertexCataloguePosition = new Float32Array(0);
-        this.hoveredIndexes = [];
-        this.selectedIndexes = [];
-        this.extHoveredIndexes = [];
-        this._oldMouseCoords = null;
-        this._healpixDensityMap = new Map();
-        // this.catalogueProps = new CatalogueProps(metadataManager, defaultColor);
-        // call catalogueShaderProgram to init shaders if they are not yet initialised 
-        this._catalogueShaderProgram = new _shader_CatalogueShaderProgram_js__WEBPACK_IMPORTED_MODULE_4__.CatalogueShaderProgram(this._webgl);
-        this._catalogueShaderProgram.shaderProgram;
-        // catalogueShaderProgram.shaderProgram
-        this._isVisible = true;
-    }
-    setIsVisible(visibility) {
-        this._isVisible = visibility;
-    }
-    get shapeColor() {
-        return this._shapeColor;
-    }
-    get providerUrl() {
-        return this._providerUrl;
-    }
-    get name() {
-        return this._name;
-    }
-    get isVisible() {
-        return this._isVisible;
-    }
-    minMax(columnindex) {
-        if (!this.sources.length)
-            return { min: 0, max: 0 };
-        let min = this.sources[0].details[columnindex];
-        if (isNaN(Number(min))) {
-            // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`)
-            console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain only number values`);
-            return { min: 0, max: 0 };
-        }
-        let max = min;
-        for (const source of this.sources) {
-            const v = source.details[columnindex];
-            if (isNaN(Number(v))) {
-                // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
-                console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain number only values`);
-                return { min: 0, max: 0 };
-            }
-            if (v < min)
-                min = v;
-            if (v > max)
-                max = v;
-        }
-        return {
-            min: Number(min),
-            max: Number(max)
-        };
-    }
-    get metadataManager() {
-        return this._metadataManager;
-    }
-    changeMetaRA(raColumnName) {
-        this._metadataManager.selectedRaColumn = raColumnName;
-    }
-    changeMetaDec(decColumnName) {
-        this._metadataManager.selectedDecColumn = decColumnName;
-    }
-    changeColor(color) {
-        this._shapeColor = color;
-    }
-    changeMetaShapeSize(metacolumnName) {
-        if (!this._webgl)
-            return;
-        if (metacolumnName == _MetadataManager_js__WEBPACK_IMPORTED_MODULE_5__.MetadataManager.STANDARD_SIZE) {
-            this._metadataManager.resetShapeColumn();
-            for (const source of this.sources) {
-                const size = CatalogueGL.STANDARD_SHAPE_SIZE;
-                source.shapeSize = size;
-            }
-            this._bufferInitialised = false;
-            // this.initBuffer(this._webgl);
-            return;
-        }
-        // const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
-        // this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
-        // const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
-        const oldShapeSizeName = this._metadataManager.selectedShapeColumn?.name;
-        this._metadataManager.selectedShapeColumn = metacolumnName;
-        const idx = this._metadataManager.selectedShapeColumn?.index ?? -1;
-        if (idx < 0) {
-            // if (oldShapeSizeName) this.catalogueProps.changeCatalogueMetaShapeSize(oldShapeSizeName);
-            if (oldShapeSizeName)
-                this._metadataManager.selectedShapeColumn = oldShapeSizeName;
-            return;
-        }
-        const minmax = this.minMax(idx);
-        if (minmax.min == minmax.max) {
-            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
-            return;
-        }
-        for (const source of this.sources) {
-            const raw = Number(source.getDetailByindex(idx));
-            const min = Number(minmax.min);
-            const max = Number(minmax.max);
-            const norm = (raw - min) / Math.max(1e-12, (max - min));
-            const size = norm * (20 - 8) + 8;
-            source.shapeSize = size;
-        }
-        this._bufferInitialised = false;
-        // this.initBuffer(this._webgl);
-    }
-    changeMetaShapeHue(metacolumnName) {
-        if (!this._webgl)
-            return;
-        if (metacolumnName == _MetadataManager_js__WEBPACK_IMPORTED_MODULE_5__.MetadataManager.STANDARD_HUE) {
-            this._metadataManager.resetHueColumn();
-            for (const source of this.sources) {
-                const hue = CatalogueGL.STANDARD_SHAPE_HUE;
-                source.brightnessFactor = hue;
-            }
-            this._bufferInitialised = false;
-            // this.initBuffer(this._webgl);
-            return;
-        }
-        const oldHueSizeName = this._metadataManager.selectedShapeColumn?.name;
-        this._metadataManager.selectedHueColumn = metacolumnName;
-        const idx = this._metadataManager.selectedHueColumn?.index ?? -1;
-        if (idx < 0) {
-            if (oldHueSizeName)
-                this._metadataManager.selectedHueColumn = oldHueSizeName;
-            return;
-        }
-        const minmax = this.minMax(idx);
-        if (minmax.min == minmax.max) {
-            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
-            return;
-        }
-        for (const source of this.sources) {
-            const raw = Number(source.getDetailByindex(idx));
-            const min = Number(minmax.min);
-            const max = Number(minmax.max);
-            const norm = (raw - min) / Math.max(1e-12, (max - min));
-            // map [0,1] -> [1,-1]
-            source.brightnessFactor = -(norm * 2 - 1);
-        }
-        this._bufferInitialised = false;
-        // this.initBuffer(this._webgl);
-    }
-    addSource(source) {
-        this.sources.push(source);
-    }
-    /**
-     * @param in_data Rows of TAP results
-     * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
-     */
-    addSources(in_data, columnsmeta) {
-        this._ready = false;
-        this.sources = [];
-        this._metadataManager = new _MetadataManager_js__WEBPACK_IMPORTED_MODULE_5__.MetadataManager(columnsmeta);
-        // const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
-        // const decDataIndex = (this.catalogueProps.decColumn as any).index ?? (this.catalogueProps.decColumn as any)._index;
-        const raDataIndex = this._metadataManager.selectedRaColumn?.index ?? -1;
-        const decDataIndex = this._metadataManager.selectedDecColumn?.index ?? -1;
-        if (raDataIndex < 0 || decDataIndex < 0)
-            throw new Error(`(ra, dec) idx not defined (${raDataIndex}, ${decDataIndex}) `);
-        for (let j = 0; j < in_data.length; j++) {
-            const point = new _Point_js__WEBPACK_IMPORTED_MODULE_1__.Point({
-                raDeg: in_data[j][raDataIndex],
-                decDeg: in_data[j][decDataIndex]
-            }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.ASTRO);
-            const source = new _Source_js__WEBPACK_IMPORTED_MODULE_0__["default"](point, in_data[j]);
-            // Ensure optional fields exist
-            source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
-            source.brightnessFactor = 3;
-            this.addSource(source);
-            // if (this.catalogueProps.shapeHueColumn?.name) {
-            if (this._metadataManager.selectedHueColumn?.name) {
-                // this.changeCatalogueMetaShapeHue(this.catalogueProps.shapeHueColumn.name)
-                this.changeMetaShapeHue(this._metadataManager.selectedHueColumn.name);
-            }
-            // if (this.catalogueProps.shapeSizeColumn?.name) {
-            if (this._metadataManager.selectedShapeColumn?.name) {
-                // this.changeCatalogueMetaShapeSize(this.shapeSizeColumn.name)
-                this.changeMetaShapeSize(this._metadataManager.selectedShapeColumn.name);
-            }
-        }
-        // this.initBuffer();
-        this._ready = true;
-        this._bufferInitialised = false;
-    }
-    clearSources() {
-        this.sources = [];
-        this.hoveredIndexes = [];
-        this._healpixDensityMap.clear();
-        this.vertexCataloguePosition = new Float32Array(0);
-    }
-    extHighlightSource(source, highlighted) {
-        const sIdx = this.sources.indexOf(source);
-        if (sIdx < 0)
-            return;
-        if (highlighted) {
-            if (!this.extHoveredIndexes.includes(sIdx)) {
-                this.extHoveredIndexes.push(sIdx);
-            }
-        }
-        else {
-            const i = this.extHoveredIndexes.indexOf(sIdx);
-            if (i >= 0)
-                this.extHoveredIndexes.splice(i, 1);
-        }
-    }
-    extAddSources2Selected(sources) {
-        for (const s of sources) {
-            const sIdx = this.sources.indexOf(s);
-            if (sIdx >= 0 && !this.selectedIndexes.includes(sIdx)) {
-                this.selectedIndexes.push(sIdx);
-            }
-        }
-    }
-    extRemoveSourceFromSelection(source) {
-        const indexOfObject = this.sources.indexOf(source);
-        if (indexOfObject < 0)
-            return;
-        const sidx = this.selectedIndexes.indexOf(indexOfObject);
-        if (sidx >= 0)
-            this.selectedIndexes.splice(sidx, 1);
-        const eidx = this.extHoveredIndexes.indexOf(indexOfObject);
-        if (eidx >= 0)
-            this.extHoveredIndexes.splice(eidx, 1);
-        // Clear hovered flag in buffer view (if present)
-        if (this.vertexCataloguePosition.length >= (indexOfObject + 1) * CatalogueGL.ELEM_SIZE) {
-            this.vertexCataloguePosition[indexOfObject * CatalogueGL.ELEM_SIZE + 3] = 0.0;
-        }
-    }
-    initBuffer() {
-        // this._webgl = webgl
-        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
-        this.vertexhoveredCataloguePositionBuffer = this._webgl.createBuffer();
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        const nSources = this.sources.length;
-        this.vertexCataloguePosition = new Float32Array(nSources * CatalogueGL.ELEM_SIZE);
-        let positionIndex = 0;
-        for (let j = 0; j < nSources; j++) {
-            const currSource = this.sources[j];
-            const currPix = currSource.healpixPixel;
-            // density map
-            const bucket = this._healpixDensityMap.get(currPix);
-            if (bucket) {
-                if (!bucket.includes(j))
-                    bucket.push(j);
-            }
-            else {
-                this._healpixDensityMap.set(currPix, [j]);
-            }
-            // position
-            this.vertexCataloguePosition[positionIndex + 0] = currSource.point.x;
-            this.vertexCataloguePosition[positionIndex + 1] = currSource.point.y;
-            this.vertexCataloguePosition[positionIndex + 2] = currSource.point.z;
-            // hovered flag
-            this.vertexCataloguePosition[positionIndex + 3] = 0.0;
-            // size
-            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
-            // brightness
-            this.vertexCataloguePosition[positionIndex + 5] = currSource.brightnessFactor ?? 0.0;
-            positionIndex += CatalogueGL.ELEM_SIZE;
-        }
-        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
-        this._bufferInitialised = true;
-    }
-    getSelectionRadius() {
-        const order = this._visibleTilesManager.getVisibleOrder();
-        switch (order) {
-            case 0:
-            case 1:
-            case 2:
-                return 0.005;
-            case 3:
-                return 0.001;
-            case 4:
-                return 0.0009;
-            case 5:
-                return 0.0005;
-            case 6:
-                return 0.0001;
-            case 7:
-                return 0.00009;
-            case 8:
-                return 0.00005;
-            case 9:
-                return 0.00001;
-            default:
-                return 0.000005;
-        }
-    }
-    checkSelection(in_mouseHelper) {
-        if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
-            console.log('CatalogueGL.checkSelection: missing mouse coords');
-            return [];
-        }
-        const hoveredIndexes = [];
-        const sourcesHovered = [];
-        const mousePix = in_mouseHelper.computeNpix();
-        if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
-            const candidates = this._healpixDensityMap.get(mousePix);
-            const selR = this.getSelectionRadius();
-            for (let i = 0; i < candidates.length; i++) {
-                const sourceIdx = candidates[i];
-                const source = this.sources[sourceIdx];
-                if (!source)
-                    continue;
-                const dx = source.point.x - in_mouseHelper.x;
-                const dy = source.point.y - in_mouseHelper.y;
-                const dz = source.point.z - in_mouseHelper.z;
-                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-                if (dist <= selR) {
-                    hoveredIndexes.push(sourceIdx);
-                    sourcesHovered.push(source);
-                }
-            }
-        }
-        return hoveredIndexes;
-    }
-    /**
-     * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
-     */
-    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
-        if (!this.isVisible)
-            return;
-        if (!this._ready)
-            return;
-        if (!vMatrix)
-            return;
-        if (!this._bufferInitialised)
-            this.initBuffer();
-        if (!this._webgl)
-            return;
-        this._catalogueShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        // positions
-        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.position, 3, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
-        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.position);
-        // hovered flag
-        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.hovered, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
-        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.hovered);
-        // point size
-        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.pointSize, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
-        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.pointSize);
-        // brightness
-        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.brightness, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
-        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.brightness);
-        // color
-        const rgb = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.colorHex2RGB)(this._shapeColor);
-        if (this._catalogueShaderProgram.locations.color) {
-            this._webgl.uniform4f(this._catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
-        }
-        // Hover logic on mouse move
-        if (in_mouseHelper != null && in_mouseHelper.xyz !== this._oldMouseCoords) {
-            // clear old hovered
-            for (let k = 0; k < this.hoveredIndexes.length; k++) {
-                const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
-                this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-                this.vertexCataloguePosition[base + 4] = this.sources[this.hoveredIndexes[k]].shapeSize; // size
-            }
-            this.hoveredIndexes = this.checkSelection(in_mouseHelper);
-            // new hovered
-            for (let i = 0; i < this.hoveredIndexes.length; i++) {
-                const idx = this.hoveredIndexes[i];
-                const base = idx * CatalogueGL.ELEM_SIZE;
-                this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-                this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-            }
-        }
-        // selected flags
-        for (let s = 0; s < this.selectedIndexes.length; s++) {
-            const idx = this.selectedIndexes[s];
-            const base = idx * CatalogueGL.ELEM_SIZE;
-            this.vertexCataloguePosition[base + 3] = 2.0; // selected
-            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-        }
-        // external hovered
-        for (let e = 0; e < this.extHoveredIndexes.length; e++) {
-            const idx = this.extHoveredIndexes[e];
-            const base = idx * CatalogueGL.ELEM_SIZE;
-            this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
-        }
-        // upload buffer
-        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
-        // draw
-        const numItems = this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
-        this._webgl.drawArrays(this._webgl.POINTS, 0, numItems);
-        this._oldMouseCoords = in_mouseHelper.xyz;
-    }
-}
-// export default CatalogueGL;
-
-
-/***/ }),
-
-/***/ "./src/model/footprints/Footprint.ts":
-/*!*******************************************!*\
-  !*** ./src/model/footprints/Footprint.ts ***!
-  \*******************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var _utils_GeomUtils_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../utils/GeomUtils.js */ "./src/utils/GeomUtils.ts");
-/* harmony import */ var _utils_STCSParser_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/STCSParser.js */ "./src/utils/STCSParser.ts");
-
-/**
- * @author Fabrizio Giordano (Fab)
- */
-// import { Pointing, Healpix } from 'healpixjs';
-// import { degToRad } from '../../utils/Utils.js';
-
-// import global from '../../Global.js';
-
-// export interface ParsedSTCS {
-//   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
-//   totpoints: number;
-// }
-class Footprint {
-    _polygons = []; // array of polygons (-> array of points)
-    _convexPolygons = []; // convex polygons
-    _stcs; // STC-S string
-    _valid = false;
-    _details;
-    _totPoints = 0;
-    _totConvexPoints = 0;
-    _npix256;
-    _footprintsPointsOrder;
-    _selectionObj;
-    _identifier;
-    _center; // could be typed if you have a Point type
-    /**
-     * @param in_stcs STC-S representation of the footprint
-     * @param in_details optional metadata
-     * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
-     */
-    constructor(in_stcs, in_details = [], footprintsPointsOrder) {
-        if (in_stcs) {
-            this._stcs = in_stcs.toUpperCase();
-            this._details = in_details;
-            this._totPoints = 0;
-            this._totConvexPoints = 0;
-            this._footprintsPointsOrder = footprintsPointsOrder;
-            this.computePoints();
-            this._selectionObj = this.computeSelectionObject();
-            this._valid = true;
-        }
-        else {
-            this._details = [];
-        }
-    }
-    computeSelectionObject() {
-        return _utils_GeomUtils_js__WEBPACK_IMPORTED_MODULE_0__["default"].computeSelectionObject(this._polygons);
-    }
-    // /**
-    //  * Return array of HEALPix pixels covering the footprint
-    //  * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
-    //  */
-    // private computeNpix256(): number[] {
-    //   const healpix256 = new Healpix(global.nsideForSelection);
-    //   const points: Pointing[] = [];
-    //   for (const poly of this._convexPolygons) {
-    //     for (const currPoint of poly) {
-    //       const phiTheta = currPoint.computeHealpixPhiTheta();
-    //       const phiRad = degToRad(phiTheta.phi);
-    //       const thetaRad = degToRad(phiTheta.theta);
-    //       points.push(new Pointing(null, false, thetaRad, phiRad));
-    //     }
-    //   }
-    //   const rangeSet = healpix256.queryPolygonInclusive(points, 32);
-    //   return Array.from(rangeSet.r);
-    // }
-    computePoints() {
-        const res = _utils_STCSParser_js__WEBPACK_IMPORTED_MODULE_1__["default"].parseSTCS(this._stcs);
-        this._polygons = res.polygons;
-        this._totPoints = res.totpoints;
-    }
-    get valid() {
-        return this._valid;
-    }
-    get totPoints() {
-        return this._totPoints;
-    }
-    get totConvexPoints() {
-        return this._totConvexPoints;
-    }
-    get polygons() {
-        return this._polygons;
-    }
-    get convexPolygons() {
-        return this._convexPolygons;
-    }
-    get identifier() {
-        return this._identifier;
-    }
-    get center() {
-        return this._center;
-    }
-    get pixels() {
-        return this._npix256;
-    }
-    get details() {
-        return this._details;
-    }
-    get selectionObj() {
-        return this._selectionObj;
-    }
-}
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Footprint);
-
-
-/***/ }),
-
-/***/ "./src/model/footprints/FootprintSetGL.ts":
-/*!************************************************!*\
-  !*** ./src/model/footprints/FootprintSetGL.ts ***!
-  \************************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   FootprintSetGL: () => (/* binding */ FootprintSetGL)
-/* harmony export */ });
-/* harmony import */ var _Footprint_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Footprint.js */ "./src/model/footprints/Footprint.ts");
-/* harmony import */ var _utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../utils/Utils.js */ "./src/utils/Utils.ts");
-/* harmony import */ var _shader_FootprintShaderProgram_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../shader/FootprintShaderProgram.js */ "./src/shader/FootprintShaderProgram.ts");
-/* harmony import */ var _Point_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _utils_GeomUtils_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../utils/GeomUtils.js */ "./src/utils/GeomUtils.ts");
-/* harmony import */ var _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var _MetadataManager_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../MetadataManager.js */ "./src/model/MetadataManager.ts");
-
-// import global from '../../Global.js'
-
-// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
-// import { TapRepo } from '../tap/TapRepo.js'
-// import {TapMetadataList} from '../tap/TapMetadataList.js'
-// import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
-
-
-
-
-
-class FootprintSetGL {
-    static ELEM_SIZE = 3;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    static CONVEXPOLY_ELEM_SIZE = 3;
-    _kind = "FootprintSetGL";
-    _ready;
-    // footprintsetProps: FootprintProps
-    _name;
-    _description;
-    // tapRepo: TapRepo
-    extHoveredIndexes;
-    oldMouseCoords;
-    healpixDensityMap;
-    _providerUrl;
-    totConvexPoints;
-    // footprintsInPix256: Map<number, Footprint[]>
-    // gl: GL;
-    // shaderProgram: WebGLProgram
-    vertexCataloguePositionBuffer;
-    indexBuffer;
-    hoveredVertexPositionBuffer;
-    hoveredIndexBuffer;
-    selectedVertexPositionBuffer;
-    selectedIndexBuffer;
-    indexes;
-    footprintPolygons = [];
-    vertexCataloguePosition;
-    totPoints;
-    nPrimitiveFlags = 0;
-    hoveredIndexes;
-    _hoveredFootprints = [];
-    hoveredVertexPosition;
-    totHoveredPoints;
-    nHoveredPrimitiveFlags = 0;
-    selectedIndexes;
-    _selectedFootprints = [];
-    selectedVertexPosition;
-    totSelectedPoints;
-    nSlectedPrimitiveFlags = 0;
-    _shapeColor = '#00fff2ff';
-    _bufferInitialised = false;
-    _webgl;
-    _footprintShaderProgram;
-    _isVisible = true;
-    _metadataManager;
-    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl) {
-        this._webgl = webgl;
-        this._ready = false;
-        this.TYPE = 'FOOTPRINT_SET';
-        this._name = fsetName;
-        this._description = fsetDescription;
-        this._providerUrl = providerUrl;
-        this._metadataManager = metadataManager;
-        this.initFootprintArrays();
-        this.oldMouseCoords = null;
-        this._footprintShaderProgram = new _shader_FootprintShaderProgram_js__WEBPACK_IMPORTED_MODULE_2__.FootprintShaderProgram(this._webgl);
-        this._footprintShaderProgram.shaderProgram;
-    }
-    initFootprintArrays() {
-        this.footprintPolygons = [];
-        this.indexes = new Uint32Array();
-        this.vertexCataloguePosition = new Float32Array();
-        this.totPoints = 0;
-        this.totConvexPoints = 0;
-        this.extHoveredIndexes = new Uint32Array;
-        this._hoveredFootprints = [];
-        this.hoveredVertexPosition = new Float32Array();
-        this.totHoveredPoints = 0;
-        this.hoveredIndexes = new Uint32Array;
-        this._selectedFootprints = [];
-        this.selectedVertexPosition = new Float32Array();
-        this.totSelectedPoints = 0;
-        this.selectedIndexes = new Uint32Array;
-    }
-    initGLBuffers() {
-        if (!this._webgl)
-            return;
-        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
-        this.indexBuffer = this._webgl.createBuffer();
-        this.hoveredVertexPositionBuffer = this._webgl.createBuffer();
-        this.hoveredIndexBuffer = this._webgl.createBuffer();
-        this.selectedVertexPositionBuffer = this._webgl.createBuffer();
-        this.selectedIndexBuffer = this._webgl.createBuffer();
-    }
-    setIsVisible(visibility) {
-        this._isVisible = visibility;
-    }
-    get isVisible() {
-        return this._isVisible;
-    }
-    get shapeColor() {
-        return this._shapeColor;
-    }
-    get providerUrl() {
-        return this._providerUrl;
-    }
-    get name() {
-        return this._name;
-    }
-    get metadataManager() {
-        return this._metadataManager;
-    }
-    addFootprint(in_footprint) {
-        this.footprintPolygons.push(in_footprint);
-    }
-    // addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void {
-    addFootprints(in_data, columnsmeta) {
-        this._ready = false;
-        this._metadataManager = new _MetadataManager_js__WEBPACK_IMPORTED_MODULE_6__.MetadataManager(columnsmeta);
-        // const geomDataIndex = this.footprintsetProps.geomColumn?.index
-        const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
-        if (geomDataIndex < 0) {
-            throw new Error('geomColumn or its index is undefined in footprintsetProps');
-        }
-        for (let j = 0; j < in_data.length; j++) {
-            if (in_data[j][0] !== null) {
-                const footprint = new _Footprint_js__WEBPACK_IMPORTED_MODULE_0__["default"](in_data[j][geomDataIndex], in_data[j]);
-                if (footprint._valid) {
-                    this.addFootprint(footprint);
-                    this.totPoints += footprint.totPoints;
-                    this.totConvexPoints += footprint.totConvexPoints;
-                }
-            }
-        }
-        // this.initBuffer()
-        this._ready = true;
-        this._bufferInitialised = false;
-    }
-    clearFootprints() {
-        this.initFootprintArrays();
-    }
-    initBuffer() {
-        // this._webgl = webgl
-        if (!this._webgl)
-            return;
-        this.initGLBuffers();
-        const nFootprints = this.footprintPolygons.length;
-        let npolygons = nFootprints - 1;
-        for (let j = 0; j < nFootprints; j++) {
-            npolygons += this.footprintPolygons[j].polygons.length - 1;
-        }
-        this.indexes = new Uint32Array(this.totPoints + npolygons + 1);
-        const MAX_UNSIGNED_INT = 0xffffffff;
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        this.vertexCataloguePosition = new Float32Array(3 * this.totPoints);
-        let positionIndex = 0;
-        let vIdx = 0;
-        const R = 1.0;
-        this.nPrimitiveFlags = 0;
-        for (let j = 0; j < nFootprints; j++) {
-            const footprint = this.footprintPolygons[j];
-            const footprintPoly = footprint.polygons;
-            if (j > 0) {
-                this.indexes[vIdx++] = MAX_UNSIGNED_INT;
-                this.nPrimitiveFlags++;
-            }
-            for (const poly of footprintPoly) {
-                if (poly !== footprintPoly[0]) {
-                    this.indexes[vIdx++] = MAX_UNSIGNED_INT;
-                    this.nPrimitiveFlags++;
-                }
-                for (const point of poly) {
-                    this.vertexCataloguePosition[positionIndex++] = R * point.x;
-                    this.vertexCataloguePosition[positionIndex++] = R * point.y;
-                    this.vertexCataloguePosition[positionIndex++] = R * point.z;
-                    this.indexes[vIdx++] = Math.floor((positionIndex - 1) / 3);
-                }
-            }
-        }
-        this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
-        console.log('Buffer initialized');
-    }
-    checkSelection(mouseHelper) {
-        if (!mouseHelper.x || !mouseHelper.y || !mouseHelper.z)
-            return;
-        let mousePix = mouseHelper.computeNpix();
-        if (!mousePix)
-            return;
-        this._hoveredFootprints = [];
-        this.totHoveredPoints = 0;
-        const mousePoint = new _Point_js__WEBPACK_IMPORTED_MODULE_3__.Point({ x: mouseHelper.x, y: mouseHelper.y, z: mouseHelper.z }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_5__.CoordsType.CARTESIAN);
-        for (let i = 0; i < this.footprintPolygons.length; i++) {
-            const footprint = this.footprintPolygons[i];
-            if (!footprint.selectionObj)
-                continue;
-            if (_utils_GeomUtils_js__WEBPACK_IMPORTED_MODULE_4__["default"].checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
-                const details = [...footprint.details];
-                // const geomDataIndex = this.footprintsetProps.geomColumn?.index
-                const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
-                if (geomDataIndex < 0)
-                    continue;
-                details.splice(geomDataIndex, 1);
-                this._hoveredFootprints.push(footprint);
-                this.totHoveredPoints += footprint.totPoints;
-            }
-        }
-        this.initHoveringBuffer();
-    }
-    get hoveredFootprints() {
-        return {
-            // metadata: this.footprintsetProps.tapMetadataList,
-            metadata: this._metadataManager,
-            footprints: this._hoveredFootprints,
-            tableName: this._name,
-            description: this._description,
-            // provider: this.tapRepo.tapBaseUrl
-            provider: this._providerUrl
-        };
-    }
-    get selectedFootprints() {
-        return this._selectedFootprints;
-    }
-    // highlightFootprint(footprint: Footprint, highlighted: boolean) {
-    //   if (highlighted) {
-    //     this._hoveredFootprints.push(footprint)
-    //     this.totHoveredPoints += footprint.totPoints
-    //   } else {
-    //     const indexOfFootprint = this._hoveredFootprints.indexOf(footprint)
-    //     this._hoveredFootprints.splice(indexOfFootprint, 1)
-    //     this.totHoveredPoints -= footprint.totPoints
-    //   }
-    //   this.initHoveringBuffer()
-    // }
-    /**
-     *
-     * @param {Footprint[]} footprints
-     */
-    // addFootprint2Selected(footprints: Footprint[]) {
-    //   let refreshBuffer = false
-    //   for (let f of footprints) {
-    //     if (!this._selectedFootprints.includes(f)) {
-    //       this._selectedFootprints.push(f)
-    //       this.totSelectedPoints += f.totPoints
-    //       refreshBuffer = true
-    //     }
-    //   }
-    //   if (refreshBuffer) {
-    //     this.initSelectionBuffer()
-    //   }
-    // }
-    /**
-     *
-     * @param {Footprint} footprint
-     */
-    // removeFootprintFromSelection(footprint: Footprint) {
-    //   const indexOfObject = this._selectedFootprints.indexOf(footprint)
-    //   if (indexOfObject >= 0) {
-    //     this._selectedFootprints.splice(indexOfObject, 1)
-    //     this.totSelectedPoints -= footprint.totPoints
-    //     if (this._selectedFootprints.length > 0) {
-    //       this.initSelectionBuffer()
-    //     }
-    //   }
-    // }
-    initHoveringBuffer() {
-        /*
-                TODO better approach. when creating the indexbuffer of footprints,
-                add 1 extra position for the selection (set to 0 == not selected),
-                and save the position "positionIndex" in an array (selectionIndexes).
-                When checking the selection, I get the index of the footprint, which
-                matches with the index in the selectionIndexes to retrieve the position
-                of the flag to be set to 1 in the vertexposition
-                This will ease checking the selection in the vertex/fragment shader and
-                set the pointsize and shape color.
-                */
-        if (!this._webgl)
-            return;
-        if (this._hoveredFootprints.length == 0) {
-            return;
-        }
-        let nFootprints = this._hoveredFootprints.length;
-        let npolygons = nFootprints - 1;
-        for (let j = 0; j < nFootprints; j++) {
-            npolygons += this._hoveredFootprints[j].polygons.length - 1;
-        }
-        // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
-        // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-        this.hoveredIndexes = new Uint32Array(this.totHoveredPoints + npolygons);
-        const MAX_UNSIGNED_INT = 0xffffffff; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-        // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
-        this.hoveredVertexPosition = new Float32Array(3 * this.totHoveredPoints);
-        let positionIndex = 0;
-        let vIdx = 0;
-        let R = 1.0;
-        this.nHoveredPrimitiveFlags = 0;
-        for (let j = 0; j < nFootprints; j++) {
-            let hoveredFootprintPoly = this._hoveredFootprints[j].polygons;
-            if (j > 0) {
-                this.hoveredIndexes[vIdx] = MAX_UNSIGNED_INT;
-                this.nHoveredPrimitiveFlags += 1;
-                vIdx += 1;
-            }
-            for (let polyIdx = 0; polyIdx < hoveredFootprintPoly.length; polyIdx++) {
-                if (polyIdx > 0) {
-                    this.hoveredIndexes[vIdx] = MAX_UNSIGNED_INT;
-                    this.nHoveredPrimitiveFlags += 1;
-                    vIdx += 1;
-                }
-                const poly = hoveredFootprintPoly[polyIdx];
-                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
-                    const p = poly[pointIdx];
-                    this.hoveredVertexPosition[positionIndex] = R * p.x;
-                    this.hoveredVertexPosition[positionIndex + 1] = R * p.y;
-                    this.hoveredVertexPosition[positionIndex + 2] = R * p.z;
-                    this.hoveredIndexes[vIdx] = Math.floor(positionIndex / 3);
-                    vIdx += 1;
-                    positionIndex += 3;
-                }
-            }
-        }
-    }
-    // initSelectionBuffer() {
-    //   /*
-    //           TODO better approach. when creating the indexbuffer of footprints, 
-    //           add 1 extra position for the selection (set to 0 == not selected), 
-    //           and save the position "positionIndex" in an array (selectionIndexes).
-    //           When checking the selection, I get the index of the footprint, which
-    //           matches with the index in the selectionIndexes to retrieve the position 
-    //           of the flag to be set to 1 in the vertexposition
-    //           This will ease checking the selection in the vertex/fragment shader and
-    //           set the pointsize and shape color.
-    //           */
-    //   let nFootprints = this._selectedFootprints.length
-    //   let npolygons = nFootprints - 1
-    //   for (let j = 0; j < nFootprints; j++) {
-    //     npolygons += this._selectedFootprints[j].polygons.length - 1
-    //   }
-    //   // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
-    //   // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-    //   this.selectedIndexes = new Uint32Array(this.totSelectedPoints + npolygons)
-    //   const MAX_UNSIGNED_INT = 0xffffffff // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-    //   // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
-    //   this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer)
-    //   this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints)
-    //   let positionIndex = 0
-    //   let vIdx = 0
-    //   let R = 1.0
-    //   this.nSlectedPrimitiveFlags = 0
-    //   for (let j = 0; j < nFootprints; j++) {
-    //     let footprintPoly = this._selectedFootprints[j].polygons
-    //     if (j > 0) {
-    //       this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT
-    //       this.nSlectedPrimitiveFlags += 1
-    //       vIdx += 1
-    //     }
-    //     for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
-    //       if (polyIdx > 0) {
-    //         this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
-    //         this.nSlectedPrimitiveFlags += 1;
-    //         vIdx += 1;
-    //       }
-    //       const poly = footprintPoly[polyIdx];
-    //       for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
-    //         const p = poly[pointIdx];
-    //         this.selectedVertexPosition[positionIndex] = R * p.x;
-    //         this.selectedVertexPosition[positionIndex + 1] = R * p.y;
-    //         this.selectedVertexPosition[positionIndex + 2] = R * p.z;
-    //         this.selectedIndexes[vIdx] = Math.floor(positionIndex / 3);
-    //         vIdx += 1;
-    //         positionIndex += 3;
-    //       }
-    //     }
-    //   }
-    // }
-    changeColor(color) {
-        this._shapeColor = color;
-    }
-    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
-        if (!this.isVisible)
-            return;
-        if (!this._ready)
-            return;
-        if (!vMatrix)
-            return;
-        // if (!global.camera) return
-        if (!this._bufferInitialised)
-            this.initBuffer();
-        if (!this._webgl)
-            return;
-        this._footprintShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
-        // this._footprintShaderProgram.enableShaders(
-        //   computePerspectiveMatrixSingleton.pMatrix as Float32Array,
-        //   in_mMatrix,
-        //   vMatrix
-        // )
-        if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
-            this.checkSelection(in_mouseHelper);
-        }
-        if (this._hoveredFootprints.length > 0) {
-            // TODO POINT_SIZE doesn't have any effect on line thickness!! it only applies to points
-            const rgb = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__.colorHex2RGB)('#00FF00');
-            const alpha = 1.0;
-            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
-            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
-            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
-            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.hoveredVertexPosition, this._webgl.STATIC_DRAW);
-            // setting footprint position
-            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
-            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer);
-            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexes, this._webgl.STATIC_DRAW);
-            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
-            this._webgl.drawElements(this._webgl.LINE_LOOP, this.hoveredVertexPosition.length / 3 + this.nHoveredPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
-        }
-        if (this._selectedFootprints.length > 0) {
-            const rgb = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__.colorHex2RGB)('#ECB462');
-            const alpha = 1.0;
-            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
-            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
-            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
-            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.selectedVertexPosition, this._webgl.STATIC_DRAW);
-            // setting footprint position
-            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
-            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer);
-            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexes, this._webgl.STATIC_DRAW);
-            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
-            this._webgl.drawElements(this._webgl.LINE_LOOP, this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
-        }
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
-        this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-        this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
-        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexes, this._webgl.STATIC_DRAW);
-        // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
-        const shapeColor = [...(0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_1__.colorHex2RGB)(this._shapeColor), 1.0];
-        this._webgl.uniform4f(this._footprintShaderProgram.locations.color, ...shapeColor);
-        this._webgl.drawElements(this._webgl.LINE_LOOP, this.indexes.length, this._webgl.UNSIGNED_INT, 0);
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
-        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, null);
-        this.oldMouseCoords = in_mouseHelper.xyz;
-    }
-}
-// export default FootprintSetGL
-
-
-/***/ }),
-
-/***/ "./src/model/grid/EquatorialGrid.ts":
-/*!******************************************!*\
-  !*** ./src/model/grid/EquatorialGrid.ts ***!
-  \******************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   EquatorialGrid: () => (/* binding */ EquatorialGrid)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec4.js");
-/* harmony import */ var _hips_FoVHelper_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../hips/FoVHelper.js */ "./src/model/hips/FoVHelper.ts");
-/* harmony import */ var _utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../utils/Utils.js */ "./src/utils/Utils.ts");
-/* harmony import */ var _shader_GridShaderManager_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../shader/GridShaderManager.js */ "./src/shader/GridShaderManager.ts");
-/* harmony import */ var _Point_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../utils/CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var _utils_FoVUtils_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/FoVUtils.js */ "./src/utils/FoVUtils.ts");
-/* harmony import */ var _GridTextHelper_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./GridTextHelper.js */ "./src/model/grid/GridTextHelper.ts");
-/* harmony import */ var _HealpixGrid_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./HealpixGrid.js */ "./src/model/grid/HealpixGrid.ts");
-/* harmony import */ var _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../AbstractSkyEntity.js */ "./src/model/AbstractSkyEntity.ts");
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-
-
-
-
-
-
-
-
-
-
-/** Equatorial grid rendered as RA/Dec great-circle line loops */
-class EquatorialGrid extends _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_10__.AbstractSkyEntity {
-    static ELEM_SIZE = 3;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    showGrid = false;
-    // private _gl: GL;
+// export default class HiPSShaderProgram {
+class HiPSShaderProgram {
+    _colorMapBlockIndex = null;
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
-    defaultColor = '#41d421';
-    gridText = new _GridTextHelper_js__WEBPACK_IMPORTED_MODULE_8__["default"]();
-    _attribLocations = {
-        position: 0,
-        selected: 1,
-        pointSize: 2,
-        color: 3,
+    _UBO_colorMapBuffer = null;
+    _UBO_colorMapVariableInfo = {
+        r_palette: { index: 0, offset: 0 },
+        g_palette: { index: 0, offset: 0 },
+        b_palette: { index: 0, offset: 0 }
     };
-    _phiVertexPositionBuffer;
-    _thetaVertexPositionBuffer;
-    _fov;
-    // Step sizes (degrees + radians) and label caches
-    _phiStep = 0;
-    _phiStepRad = 0;
-    _thetaStep = 0;
-    _thetaStepRad = 0;
-    _phiArray = [];
-    _thetaArray = [];
-    // For placing text labels near current view center:
-    //  - _dec4Labels: key = RA(deg), value = points along that RA ring (for Dec labels)
-    //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
-    _dec4Labels = new Map();
-    _ra4Labels = new Map();
-    _healpixGrid;
-    /**
-     * @param radius Not used by current implementation (sphere is unit-radius)
-     * @param fov    Field of view in degrees
-     */
-    constructor(webgl, healpixGrid) {
-        super(_HealpixGrid_js__WEBPACK_IMPORTED_MODULE_9__.HealpixGrid.RADIUS, _HealpixGrid_js__WEBPACK_IMPORTED_MODULE_9__.HealpixGrid.INITIAL_POSITION, _HealpixGrid_js__WEBPACK_IMPORTED_MODULE_9__.HealpixGrid.INITIAL_PhiRad, _HealpixGrid_js__WEBPACK_IMPORTED_MODULE_9__.HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
-        this._healpixGrid = healpixGrid;
-    }
-    init(fov) {
-        this._fov = fov;
-        this.initGL(super.webgl);
-        // Program & buffers
-        this._shaderProgram = super.webgl.createProgram();
-        this.initShaders();
-        this._phiVertexPositionBuffer = super.webgl.createBuffer();
-        this._thetaVertexPositionBuffer = super.webgl.createBuffer();
-        // Build initial RA/Dec line buffers
-        this.initBuffers(this._fov);
-    }
-    /** Compile/link shaders and fetch uniform/attribute locations */
-    initShaders() {
-        // Fragment
-        const fsSource = _shader_GridShaderManager_js__WEBPACK_IMPORTED_MODULE_4__["default"].healpixGridFS();
-        this._fragmentShader = super.webgl.createShader(super.webgl.FRAGMENT_SHADER);
-        super.webgl.shaderSource(this._fragmentShader, fsSource);
-        super.webgl.compileShader(this._fragmentShader);
-        if (!super.webgl.getShaderParameter(this._fragmentShader, super.webgl.COMPILE_STATUS)) {
-            // Keep identical behavior (alert) but surface errors in console too
-            const log = super.webgl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
-            console.error(log);
-            alert(log);
-            return;
-        }
-        // Vertex
-        const vsSource = _shader_GridShaderManager_js__WEBPACK_IMPORTED_MODULE_4__["default"].healpixGridVS();
-        this._vertexShader = super.webgl.createShader(super.webgl.VERTEX_SHADER);
-        super.webgl.shaderSource(this._vertexShader, vsSource);
-        super.webgl.compileShader(this._vertexShader);
-        if (!super.webgl.getShaderParameter(this._vertexShader, super.webgl.COMPILE_STATUS)) {
-            const log = super.webgl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
-            console.error(log);
-            alert(log);
-            return;
-        }
-        // Link
-        super.webgl.attachShader(this._shaderProgram, this._vertexShader);
-        super.webgl.attachShader(this._shaderProgram, this._fragmentShader);
-        super.webgl.linkProgram(this._shaderProgram);
-        if (!super.webgl.getProgramParameter(this._shaderProgram, super.webgl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        super.webgl.useProgram(this._shaderProgram);
-    }
-    /** Build RA/Dec line vertex arrays based on FoV step helper */
-    initBuffers(fovDeg) {
-        const R = 1.0;
-        const steps = _hips_FoVHelper_js__WEBPACK_IMPORTED_MODULE_2__.fovHelper.getRADegSteps(fovDeg);
-        const phiStep = steps.raStep; // RA step (deg)
-        const thetaStep = steps.decStep; // Dec step (deg)
-        this._phiStep = phiStep;
-        this._phiStepRad = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.degToRad)(phiStep);
-        this._thetaStep = thetaStep;
-        this._thetaStepRad = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.degToRad)(thetaStep);
-        this._ra4Labels = new Map();
-        this._dec4Labels = new Map();
-        this._phiArray = [];
-        this._thetaArray = [];
-        // Lines of constant Dec (varying RA): for each Dec, a ring with vertices every phiStep°
-        for (let theta = thetaStep; theta < 180; theta += thetaStep) {
-            const phiVertexPosition = new Float32Array((360 / phiStep) * 3);
-            const thetaRad = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.degToRad)(theta);
-            for (let phi = 0; phi < 360; phi += phiStep) {
-                const phiRad = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.degToRad)(phi);
-                const x = R * Math.sin(thetaRad) * Math.cos(phiRad);
-                const y = R * Math.sin(thetaRad) * Math.sin(phiRad);
-                const z = R * Math.cos(thetaRad);
-                const idx = Math.floor(phi / phiStep);
-                phiVertexPosition[3 * idx + 0] = x;
-                phiVertexPosition[3 * idx + 1] = y;
-                phiVertexPosition[3 * idx + 2] = z;
-                if (!this._dec4Labels.has(phi))
-                    this._dec4Labels.set(phi, []);
-                this._dec4Labels.get(phi).push([x, y, z]);
-            }
-            this._phiArray.push(phiVertexPosition);
-        }
-        // Lines of constant RA (varying Dec): for each RA, a ring with vertices every thetaStep°
-        for (let phi = 0; phi < 360; phi += phiStep) {
-            const thetaVertexPosition = new Float32Array((360 / thetaStep) * 3);
-            const phiRad = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.degToRad)(phi);
-            for (let theta = 0; theta < 360; theta += thetaStep) {
-                const thetaRad = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.degToRad)(theta);
-                const x = R * Math.sin(thetaRad) * Math.cos(phiRad);
-                const y = R * Math.sin(thetaRad) * Math.sin(phiRad);
-                const z = R * Math.cos(thetaRad);
-                const idx = Math.floor(theta / thetaStep);
-                thetaVertexPosition[3 * idx + 0] = x;
-                thetaVertexPosition[3 * idx + 1] = y;
-                thetaVertexPosition[3 * idx + 2] = z;
-                const decKey = 90 - theta; // original code’s keying for RA labels
-                if (!this._ra4Labels.has(decKey))
-                    this._ra4Labels.set(decKey, []);
-                this._ra4Labels.get(decKey).push([x, y, z]);
-            }
-            this._thetaArray.push(thetaVertexPosition);
-        }
-    }
-    /** Update buffers when FoV (in degrees) changes */
-    refresh(fovDeg) {
-        // const fovDeg = healpixGridSingleton.getMinFoV()
-        if (this._fov !== fovDeg) {
-            this._fov = fovDeg;
-            this.initBuffers(this._fov);
-        }
-    }
-    vectorDistance(p1, p2) {
-        const dx = p1.x - p2.x;
-        const dy = p1.y - p2.y;
-        const dz = p1.z - p2.z;
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-    enableShader(mMatrix, pMatrix, vMatrix) {
-        const gl = super.webgl;
-        gl.useProgram(this._shaderProgram);
-        // uMVMatrix = camera * model
-        const mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.multiply(mvMatrix, vMatrix, mMatrix);
-        // TODO move locations retrieval elsewhere
-        // Uniform locations
-        const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
-        const uPMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-        const uColor = gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
-        // Attribute locations
-        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
-        if (uMVMatrixLoc)
-            gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
-        if (uPMatrixLoc)
-            gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
-        if (uColor) {
-            const rgb = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.colorHex2RGB)(this.defaultColor);
-            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
-        }
-    }
-    isVisible() {
-        return this.showGrid;
-    }
-    toggleShowGrid() {
-        this.showGrid = !this.showGrid;
-    }
-    /**
-     * @param mMatrix model matrix associated with current HiPS (or scene) transform
-     * @param fovObj  current field-of-view (degrees). If your FoV type differs,
-     *                pass the numeric value here; this signature matches original usage.
-     */
-    draw(input) {
-        const fovDeg = input.fovDeg;
-        if (!fovDeg)
-            return;
-        const gl = super.webgl;
-        const mMatrix = this.getModelMatrix();
-        const camera = input.camera;
-        if (!camera)
-            return;
-        const vMatrix = camera.getCameraMatrix();
-        const pMatrix = input.pMatrix;
-        if (!pMatrix)
-            return;
-        if (!vMatrix)
-            return;
-        if (this._thetaArray.length === 0)
-            return;
-        this.refresh(fovDeg);
-        if (!this.showGrid) {
-            // gridTextHelper.resetDivSets();
-            this.gridText.resetDivSets();
-            return;
-        }
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-        this.enableShader(mMatrix, pMatrix, vMatrix);
-        // Draw Dec rings
-        for (let i = 0; i < this._phiArray.length; i++) {
-            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
-            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._phiArray[i], super.webgl.STATIC_DRAW);
-            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
-            super.webgl.enableVertexAttribArray(this._attribLocations.position);
-            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._phiStep);
-        }
-        // Draw RA rings
-        for (let j = 0; j < this._thetaArray.length; j++) {
-            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._thetaVertexPositionBuffer);
-            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._thetaArray[j], super.webgl.STATIC_DRAW);
-            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
-            super.webgl.enableVertexAttribArray(this._attribLocations.position);
-            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
-        }
-        // Label layout (HTML overlay)
-        const center = _utils_FoVUtils_js__WEBPACK_IMPORTED_MODULE_7__.FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera, pMatrix);
-        // MVP = P * V * M
-        const mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.multiply(mvMatrix, vMatrix, mMatrix);
-        const mvpMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.multiply(mvpMatrix, pMatrix, mvMatrix);
-        // Dec labels (loop over RA keys)
-        for (const [raDegKey, points] of this._dec4Labels.entries()) {
-            if (Math.abs(raDegKey - center.raDeg) <= this._phiStep) {
-                for (let p = 0; p < points.length; p++) {
-                    const [x, y, z] = points[p];
-                    const phiPoint = [x, y, z, 1];
-                    const point = new _Point_js__WEBPACK_IMPORTED_MODULE_5__.Point({ x, y, z }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_6__.CoordsType.CARTESIAN);
-                    const decDeg = point.decDeg;
-                    if (Math.abs(decDeg - center.decDeg) < 60) {
-                        const clipspace = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-                        gl_matrix__WEBPACK_IMPORTED_MODULE_1__.transformMat4(clipspace, phiPoint, mvpMatrix);
-                        // perspective divide
-                        clipspace[0] /= clipspace[3];
-                        clipspace[1] /= clipspace[3];
-                        // clip->pixel
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
-                        this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
-                        // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
-                    }
-                }
-            }
-        }
-        // RA labels (loop over Dec keys)
-        for (const [decDegKey, points] of this._ra4Labels.entries()) {
-            if (Math.abs(decDegKey - center.decDeg) <= this._thetaStep) {
-                for (let p = 0; p < points.length; p++) {
-                    const [x, y, z] = points[p];
-                    const phiPoint = [x, y, z, 1];
-                    const point = new _Point_js__WEBPACK_IMPORTED_MODULE_5__.Point({ x, y, z }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_6__.CoordsType.CARTESIAN);
-                    const d = this.vectorDistance(point, center);
-                    const raDeg = point.raDeg;
-                    if (d < (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_3__.degToRad)(50)) {
-                        const clipspace = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-                        gl_matrix__WEBPACK_IMPORTED_MODULE_1__.transformMat4(clipspace, phiPoint, mvpMatrix);
-                        clipspace[0] /= clipspace[3];
-                        clipspace[1] /= clipspace[3];
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
-                        // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
-                        this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
-                    }
-                }
-            }
-        }
-        this.gridText.resetDivSets();
-        // gridTextHelper.resetDivSets();
-        // Cleanup
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    }
-}
-// const equatorialGridSingleton = new EquatorialGrid();
-// export default equatorialGridSingleton;
-
-
-/***/ }),
-
-/***/ "./src/model/grid/GridTextHelper.ts":
-/*!******************************************!*\
-  !*** ./src/model/grid/GridTextHelper.ts ***!
-  \******************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/**
- * @author Fabrizio Giordano (Fab)
- * @param in_radius - number
- * @param in_gl - GL context
- * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
- */
-class GridTextHelper {
-    _divEqContainerElement;
-    _divHPXContainerElement;
-    _divSets;
-    _divSetNdx;
-    constructor() {
-        this._divEqContainerElement = document.querySelector('#gridcoords');
-        this._divHPXContainerElement = document.querySelector('#gridhpx');
-        this._divSetNdx = 0;
-        this._divSets = [];
-    }
-    initHtml() {
-        // Kept for API parity; nothing required here with current logic.
-    }
-    resetDivSets() {
-        // Hide remaining divs and reset index
-        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
-            this._divSets[this._divSetNdx].style.display = 'none';
-        }
-        this._divSetNdx = 0;
-    }
-    /**
-     * Add / reuse a floating label for HPX coordinates
-     */
-    addHPXDivSet(msg, x, y) {
-        let divSet = this._divSets[this._divSetNdx++];
-        // Create on demand
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = 'floating-div-ra'; // style like RA tags
-            div.appendChild(textNode);
-            if (!this._divHPXContainerElement) {
-                this._divHPXContainerElement = document.querySelector('#gridhpx');
-            }
-            if (!this._divHPXContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divHPXContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
-        }
-        // Show & position
-        divSet.style.display = 'block';
-        divSet.style.left = `${Math.floor(x + 25)}px`;
-        divSet.style.top = `${Math.floor(y)}px`;
-        divSet.textNode.nodeValue = msg;
-    }
-    /**
-     * Add / reuse a floating label for Equatorial coords
-     * @param type 'ra' or 'dec'
-     */
-    addEqDivSet(msg, x, y, type) {
-        let divSet = this._divSets[this._divSetNdx++];
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
-            div.appendChild(textNode);
-            if (!this._divEqContainerElement) {
-                this._divEqContainerElement = document.querySelector('#gridcoords');
-            }
-            if (!this._divEqContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divEqContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
-        }
-        divSet.style.display = 'block';
-        if (type === 'ra') {
-            divSet.style.left = `${Math.floor(x + 25)}px`;
-            divSet.style.top = `${Math.floor(y)}px`;
-        }
-        else {
-            divSet.style.left = `${Math.floor(x)}px`;
-            divSet.style.top = `${Math.floor(y + 25)}px`;
-        }
-        divSet.textNode.nodeValue = msg;
-    }
-}
-// export const gridTextHelper = new GridTextHelper();
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (GridTextHelper);
-
-
-/***/ }),
-
-/***/ "./src/model/grid/HealpixGrid.ts":
-/*!***************************************!*\
-  !*** ./src/model/grid/HealpixGrid.ts ***!
-  \***************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   HealpixGrid: () => (/* binding */ HealpixGrid)
-/* harmony export */ });
-/* harmony import */ var _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../AbstractSkyEntity.js */ "./src/model/AbstractSkyEntity.ts");
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../Global.js */ "./src/Global.ts");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec4.js");
-/* harmony import */ var _hips_FoVHelper_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../hips/FoVHelper.js */ "./src/model/hips/FoVHelper.ts");
-/* harmony import */ var _utils_FoVUtils_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../utils/FoVUtils.js */ "./src/utils/FoVUtils.ts");
-/* harmony import */ var _FoV_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../FoV.js */ "./src/model/FoV.ts");
-/* harmony import */ var _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../utils/CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var _Point_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _shader_GridShaderManager_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../shader/GridShaderManager.js */ "./src/shader/GridShaderManager.ts");
-/* harmony import */ var _utils_GeomUtils_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../utils/GeomUtils.js */ "./src/utils/GeomUtils.ts");
-/* harmony import */ var _GridTextHelper_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./GridTextHelper.js */ "./src/model/grid/GridTextHelper.ts");
-/* harmony import */ var _utils_Utils_js__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../../utils/Utils.js */ "./src/utils/Utils.ts");
-/* harmony import */ var _hips_VisibleTilesManager_js__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../hips/VisibleTilesManager.js */ "./src/model/hips/VisibleTilesManager.ts");
-/* harmony import */ var _Config_js__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../../Config.js */ "./src/Config.ts");
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-class HealpixGrid extends _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__.AbstractSkyEntity {
-    static ELEM_SIZE = 3;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    _visibleorder = 0;
-    showGrid = false;
-    _shaderProgram;
-    fragmentShader;
-    vertexShader;
-    defaultColor = '#ec0acaff';
-    gridText = new _GridTextHelper_js__WEBPACK_IMPORTED_MODULE_11__["default"]();
-    // private _hipsShaderProgram: HiPSShaderProgram
-    _attribLocations = {
-        position: 0,
-        selected: 1,
-        pointSize: 2,
-        color: 3,
-    };
-    _nPrimitiveFlags = 0;
-    _vertexCataloguePositionBuffer;
-    _indexBuffer;
-    _vertexCataloguePosition = new Float32Array(0);
-    _indexes = new Uint32Array(0);
-    fovObj;
-    static INITIAL_FOV = 180;
-    static RADIUS = 1;
-    static INITIAL_POSITION = [0.0, 0.0, 0.0];
-    static INITIAL_PhiRad = 0;
-    static INITIAL_ThetaRad = 0;
-    _visibleTilesManager;
+    gl_uniforms;
+    gl_attributes;
+    locations;
+    _webgl;
     constructor(webgl) {
-        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
-        this.init();
-        this._visibleTilesManager = new _hips_VisibleTilesManager_js__WEBPACK_IMPORTED_MODULE_13__.VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
-        this._visibleTilesManager.init(_Config_js__WEBPACK_IMPORTED_MODULE_14__.bootSetup.insideSphere);
+        this._webgl = webgl;
+        this.gl_uniforms = {
+            sampler: 'uSampler0',
+            factor: 'uFactor0',
+            m_perspective: 'uPMatrix',
+            m_model: 'uMMatrix',
+            m_view: 'uVMatrix',
+            colormapIdx: 'cmapIdx',
+            colormap_red: 'r',
+            colormap_green: 'g',
+            colormap_blue: 'b'
+        };
+        this.gl_attributes = {
+            vertex_pos: 'aVertexPosition',
+            text_coords: 'aTextureCoord'
+        };
+        this.locations = {
+            pMatrix: null,
+            mMatrix: null,
+            vMatrix: null,
+            sampler: null,
+            textureAlpha: null,
+            clorMapIdx: null,
+            vertexPositionAttribute: -1,
+            textureCoordAttribute: -1
+        };
     }
-    init() {
-        console.log('HealpixGridSingleton.init()');
-        this.initGL(super.webgl);
-        this._shaderProgram = super.webgl.createProgram();
-        this.initShaders();
-        const order = _hips_FoVHelper_js__WEBPACK_IMPORTED_MODULE_4__.fovHelper.getHiPSNorder(HealpixGrid.INITIAL_FOV);
-        this._visibleorder = order;
-        this._nPrimitiveFlags = 0;
-        this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
-        this._indexBuffer = super.webgl.createBuffer();
-        this._vertexCataloguePosition = new Float32Array(0);
-        this.fovObj = new _FoV_js__WEBPACK_IMPORTED_MODULE_6__.FoV(super.webgl);
-    }
-    get RADIUS() {
-        return HealpixGrid.RADIUS;
-    }
-    get INITIAL_POSITION() {
-        return HealpixGrid.INITIAL_POSITION;
-    }
-    get INITIAL_PhiRad() {
-        return HealpixGrid.INITIAL_PhiRad;
-    }
-    get INITIAL_ThetaRad() {
-        return HealpixGrid.INITIAL_ThetaRad;
-    }
-    refreshFoV(camera, pMatrix) {
-        return this.fovObj.getFoV(_Global_js__WEBPACK_IMPORTED_MODULE_1__["default"].insideSphere, this, camera, pMatrix);
-    }
-    getFoV() {
-        return this.fovObj;
-    }
-    getMinFoV() {
-        return this.fovObj.minFoV;
+    get shaderProgram() {
+        const gl = this._webgl;
+        if (!this._shaderProgram) {
+            // const gl = global.gl as GL
+            this._shaderProgram = gl.createProgram();
+            this.initShaders();
+        }
+        ;
+        gl.useProgram(this._shaderProgram);
+        return this._shaderProgram;
     }
     initShaders() {
-        const gl = super.webgl;
-        const fragmentShaderStr = _shader_GridShaderManager_js__WEBPACK_IMPORTED_MODULE_9__["default"].healpixGridFS();
-        this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this.fragmentShader, fragmentShaderStr);
-        gl.compileShader(this.fragmentShader);
-        if (!gl.getShaderParameter(this.fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this.fragmentShader) || 'Fragment shader compile error');
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        const fragmentShaderStr = ShaderManager.hipsNativeFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
             return;
         }
-        const vertexShaderStr = _shader_GridShaderManager_js__WEBPACK_IMPORTED_MODULE_9__["default"].healpixGridVS();
-        this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(this.vertexShader, vertexShaderStr);
-        gl.compileShader(this.vertexShader);
-        if (!gl.getShaderParameter(this.vertexShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this.vertexShader) || 'Vertex shader compile error');
+        const vertexShaderStr = ShaderManager.hipsVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vertexShaderStr);
+        gl.compileShader(this._vertexShader);
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
             return;
         }
-        gl.attachShader(this._shaderProgram, this.vertexShader);
-        gl.attachShader(this._shaderProgram, this.fragmentShader);
+        gl.attachShader(this._shaderProgram, this._vertexShader);
+        gl.attachShader(this._shaderProgram, this._fragmentShader);
         gl.linkProgram(this._shaderProgram);
         if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
             alert('Could not initialise shaders');
         }
-        gl.useProgram(this._shaderProgram);
     }
-    initBuffers(pixels, order) {
-        this._nPrimitiveFlags = 0;
-        const healpix = _Global_js__WEBPACK_IMPORTED_MODULE_1__["default"].getHealpix(order);
-        const subhpx = _Global_js__WEBPACK_IMPORTED_MODULE_1__["default"].getHealpix(order + 1);
-        const subsubhpx = _Global_js__WEBPACK_IMPORTED_MODULE_1__["default"].getHealpix(order + 2);
-        let positionIndex = 0;
-        let vIdx = 0;
-        const R = 1.0;
-        const MAX_UINT = 0xffffffff;
-        this._indexes = new Uint32Array(17 * pixels.length);
-        this._vertexCataloguePosition = new Float32Array(3 * 16 * pixels.length);
-        for (let p = 0; p < pixels.length; p++) {
-            const vecs = healpix.getBoundaries(pixels[p]);
-            const cpix0 = pixels[p] << 2;
-            const cpix1 = cpix0 + 1;
-            const cpix2 = cpix0 + 2;
-            const cpix3 = cpix0 + 3;
-            const cp0vecs = subhpx.getBoundaries(cpix0);
-            const cp3vecs = subhpx.getBoundaries(cpix3);
-            // helper to push a vertex
-            const pushV = (v) => {
-                this._vertexCataloguePosition[positionIndex] = R * v.x;
-                this._vertexCataloguePosition[positionIndex + 1] = R * v.y;
-                this._vertexCataloguePosition[positionIndex + 2] = R * v.z;
-                this._indexes[vIdx] = Math.floor(positionIndex / 3);
-                vIdx += 1;
-                positionIndex += 3;
+    enableProgram() {
+        // (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
+        this._webgl.useProgram(this.shaderProgram);
+    }
+    setGrayscaleShader() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
+        const fragmentShaderStr = ShaderManager.hipsGrayscaleFS();
+        this.changeFSShader(fragmentShaderStr);
+    }
+    setNativeShader() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
+        const fragmentShaderStr = ShaderManager.hipsNativeFS();
+        this.changeFSShader(fragmentShaderStr);
+    }
+    setColorMapShader() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        // Swap fragment shader
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
+        const fragmentShaderStr = ShaderManager.hipsColorMapFS();
+        this.changeFSShader(fragmentShaderStr);
+        // UBO discovery for the "colormap" block
+        const blockIndex = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
+        // INVALID_INDEX == 0xFFFFFFFF in WebGL2
+        if (blockIndex === gl.INVALID_INDEX) {
+            console.warn('HiPSShaderProgram: uniform block "colormap" not found in hipsColorMapFS()');
+            this._colorMapBlockIndex = null;
+            this._UBO_colorMapBuffer = null;
+            return; // do NOT proceed with UBO setup
+        }
+        this._colorMapBlockIndex = blockIndex;
+        // const blockSize = gl.getActiveUniformBlockParameter(
+        //   this.shaderProgram as WebGLProgram,
+        //   blockIndex,
+        //   gl.UNIFORM_BLOCK_DATA_SIZE
+        // ) as number
+        const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'];
+        const uboVariableIndices = gl.getUniformIndices(this.shaderProgram, uboVariableNames);
+        const uboVariableOffsets = gl.getActiveUniforms(this.shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
+        // Create buffer only once
+        if (!this._UBO_colorMapBuffer) {
+            this._UBO_colorMapBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
+            // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
+            const BYTES = 12288; // 3 * 4096
+            gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+            gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer);
+        }
+        // Store offsets
+        uboVariableNames.forEach((name, index) => {
+            this._UBO_colorMapVariableInfo[name] = {
+                index: uboVariableIndices[index],
+                offset: uboVariableOffsets[index]
             };
-            // v0(3/0)
-            pushV(vecs[0]);
-            // v1(15/2)
-            let subcpix3 = cpix3 << 2;
-            let subcpix3_3 = subcpix3 + 3;
-            let tmp = subsubhpx.getBoundaries(subcpix3_3);
-            pushV(tmp[1]);
-            // v1(3/1)
-            pushV(cp3vecs[1]);
-            // v0(2/2)
-            let subcpix2 = cpix2 << 2;
-            let subcpix2_2 = subcpix2 + 2;
-            tmp = subsubhpx.getBoundaries(subcpix2_2);
-            pushV(tmp[0]);
-            // v1(0/0)
-            pushV(vecs[1]);
-            // v2(2/2)
-            pushV(tmp[2]);
-            // v1(0/1)
-            pushV(cp0vecs[1]);
-            // v1(0/2)
-            let subcpix0 = cpix0 << 2;
-            let subcpix0_2 = subcpix0;
-            tmp = subsubhpx.getBoundaries(subcpix0_2);
-            pushV(tmp[1]);
-            // v2(0/0)
-            pushV(vecs[2]);
-            // v3(0/2)
-            pushV(tmp[3]);
-            // v3(0/1)
-            pushV(cp0vecs[3]);
-            // v2(5/2)
-            let subcpix1 = cpix1 << 2;
-            let subcpix1_1 = subcpix1 + 1;
-            tmp = subsubhpx.getBoundaries(subcpix1_1);
-            pushV(tmp[2]);
-            // v3(0/0)
-            pushV(vecs[3]);
-            // v0(5/2)
-            pushV(tmp[0]);
-            // v3(3/1)
-            pushV(cp3vecs[3]);
-            tmp = subsubhpx.getBoundaries(subcpix3_3);
-            pushV(tmp[3]);
-            // primitive restart
-            this._indexes[vIdx] = MAX_UINT;
-            this._nPrimitiveFlags += 1;
-            vIdx += 1;
-        }
+        });
     }
-    // updateTiles(pixels: number[], order: number) {
-    //   return (this as any)._tileBuffer.updateTiles(pixels, order);
-    // }
-    refresh(camera, pMatrix) {
-        this.refreshFoV(camera, pMatrix);
-        const fov = this.getMinFoV();
-        // expose to global (legacy)
-        // (global as any).hipsFoV = fov;
-        // global.order = fovHelper.getHiPSNorder(fov);
-        // this._visibleorder = global.order;
-        this._visibleorder = _hips_FoVHelper_js__WEBPACK_IMPORTED_MODULE_4__.fovHelper.getHiPSNorder(fov);
-    }
-    enableShader(in_mMatrix, pMatrix, vMatrix) {
-        const gl = super.webgl;
-        gl.useProgram(this._shaderProgram);
-        // TODO move locations retrieval elsewhere
-        // Uniform locations
-        const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
-        const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-        const uColor = super.webgl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
-        // Attribute locations
-        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
-        let mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_2__.create();
-        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
-        mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_2__.multiply(mvMatrix, vMatrix, in_mMatrix);
-        if (uMV)
-            gl.uniformMatrix4fv(uMV, false, mvMatrix);
-        if (uP)
-            gl.uniformMatrix4fv(uP, false, pMatrix);
-        if (uColor) {
-            const rgb = (0,_utils_Utils_js__WEBPACK_IMPORTED_MODULE_12__.colorHex2RGB)(this.defaultColor);
-            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
-        }
-    }
-    isVisible() {
-        return this.showGrid;
-    }
-    toggleShowGrid() {
-        this.showGrid = !this.showGrid;
-    }
-    get visibleTilesManager() {
-        return this._visibleTilesManager;
-    }
-    draw(input) {
-        const gl = super.webgl;
-        const mMatrix = this.getModelMatrix();
-        // const vMatrix = input.camera.getCameraMatrix()
-        const camera = input.camera;
-        if (!camera)
-            return;
-        const vMatrix = camera.getCameraMatrix();
-        const pMatrix = input.pMatrix;
-        if (!pMatrix)
-            return;
-        this.refresh(camera, pMatrix);
-        if (!this.showGrid) {
-            // gridTextHelper.resetDivSets();
-            this.gridText.resetDivSets();
+    changeFSShader(fragmentShaderStr) {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
             return;
         }
-        // const visibleTiles = visibleTilesManager.visibleTilesByOrder
-        const visibleTiles = this._visibleTilesManager.visibleTilesByOrder;
-        const pixels = visibleTiles.pixels;
-        const order = visibleTiles.order;
-        this.initBuffers(pixels, order);
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-        this.enableShader(mMatrix, pMatrix, vMatrix);
-        // Upload positions
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
-        gl.vertexAttribPointer(this._attribLocations.position, HealpixGrid.ELEM_SIZE, gl.FLOAT, false, HealpixGrid.BYTES_X_ELEM * HealpixGrid.ELEM_SIZE, 0);
-        gl.enableVertexAttribArray(this._attribLocations.position);
-        // Index buffer
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexes, gl.STATIC_DRAW);
-        gl.drawElements(gl.LINE_LOOP, this._vertexCataloguePosition.length / 3 + this._nPrimitiveFlags, gl.UNSIGNED_INT, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-        // Project and label pixel centers that are inside current FoV
-        let mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_2__.create();
-        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
-        mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_2__.multiply(mvMatrix, vMatrix, mMatrix);
-        let mvpMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_2__.create();
-        mvpMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_2__.multiply(mvpMatrix, pMatrix, mvMatrix);
-        // FIX: pass model & pMatrix to match FoVUtils TS signature
-        const center = _utils_FoVUtils_js__WEBPACK_IMPORTED_MODULE_5__.FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl, camera, pMatrix);
-        const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
-        for (let p = 0; p < pixels.length; p++) {
-            const pixCenter = _Global_js__WEBPACK_IMPORTED_MODULE_1__["default"].getHealpix(this._visibleorder).pix2vec(pixels[p]);
-            // const pixCenter = (global.getHealpix(global.order).pix2vec(pixels[p]) as BoundVec);
-            const point = new _Point_js__WEBPACK_IMPORTED_MODULE_8__.Point({ x: pixCenter.x, y: pixCenter.y, z: pixCenter.z }, _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_7__.CoordsType.CARTESIAN);
-            const distance = _utils_GeomUtils_js__WEBPACK_IMPORTED_MODULE_10__["default"].orthodromicDistance(center, point);
-            if (distance < fovMin) {
-                const vertex = [pixCenter.x, pixCenter.y, pixCenter.z, 1];
-                const clipspace = gl_matrix__WEBPACK_IMPORTED_MODULE_3__.create();
-                gl_matrix__WEBPACK_IMPORTED_MODULE_3__.transformMat4(clipspace, vertex, mvpMatrix);
-                // NDC divide
-                clipspace[0] /= clipspace[3];
-                clipspace[1] /= clipspace[3];
-                // clip → pixels
-                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
-                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
-                this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
-                // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this.shaderProgram);
+    }
+    enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model);
+        this.locations.vMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_view);
+        this.locations.sampler = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.sampler);
+        this.locations.textureAlpha = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.factor);
+        this.locations.clorMapIdx = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.colormapIdx);
+        // NEW
+        // if (this.locations.clorMapIdx) {
+        gl.uniform1i(this.locations.clorMapIdx, colorMapIdx);
+        // }
+        // Make sampler explicit: we always use TEXTURE0 in your draw code
+        if (this.locations.sampler) {
+            gl.uniform1i(this.locations.sampler, 0);
+        }
+        // END NEW
+        this.locations.vertexPositionAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.textureCoordAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.text_coords);
+        if (colorMapIdx >= 2 && this._UBO_colorMapBuffer && this._colorMapBlockIndex !== null) {
+            gl.uniformBlockBinding(this.shaderProgram, this._colorMapBlockIndex, 0);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
+            let currentColorMap;
+            if (colorMapIdx === 2) {
+                currentColorMap = {
+                    r: ColorMaps.planck.r,
+                    g: ColorMaps.planck.g,
+                    b: ColorMaps.planck.b,
+                };
             }
+            else if (colorMapIdx === 3) {
+                currentColorMap = {
+                    r: ColorMaps.cmb.r,
+                    g: ColorMaps.cmb.g,
+                    b: ColorMaps.cmb.b,
+                };
+            }
+            else if (colorMapIdx === 4) {
+                currentColorMap = {
+                    r: ColorMaps.rainbow.r,
+                    g: ColorMaps.rainbow.g,
+                    b: ColorMaps.rainbow.b,
+                };
+            }
+            else if (colorMapIdx === 5) {
+                currentColorMap = {
+                    r: ColorMaps.eosb.r,
+                    g: ColorMaps.eosb.g,
+                    b: ColorMaps.eosb.b,
+                };
+            }
+            else if (colorMapIdx === 6) {
+                currentColorMap = {
+                    r: ColorMaps.cubehelix.r,
+                    g: ColorMaps.cubehelix.g,
+                    b: ColorMaps.cubehelix.b,
+                };
+            }
+            else if (colorMapIdx === 7) {
+                currentColorMap = {
+                    r: ColorMaps.hot.r,
+                    g: ColorMaps.hot.g,
+                    b: ColorMaps.hot.b,
+                };
+            }
+            else if (colorMapIdx === 8) {
+                currentColorMap = {
+                    r: ColorMaps.gray.r,
+                    g: ColorMaps.gray.g,
+                    b: ColorMaps.gray.b,
+                };
+            }
+            if (currentColorMap) {
+                const info = this._UBO_colorMapVariableInfo;
+                gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0);
+                gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0);
+                gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0);
+            }
+            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
         }
-        // gridTextHelper.resetDivSets();
-        this.gridText.resetDivSets();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    }
-    get visibleorder() {
-        return this._visibleorder;
+        gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
     }
 }
 
-
-/***/ }),
-
-/***/ "./src/model/hips/AllSky.ts":
-/*!**********************************!*\
-  !*** ./src/model/hips/AllSky.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ AllSky)
-/* harmony export */ });
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../Global.js */ "./src/Global.ts");
+;// ./src/model/AbstractSkyEntity.ts
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
 
 
-class AllSky {
-    _ready = false;
-    _hips;
-    _format;
-    _baseurl;
-    _isGalacticHips;
-    _order = 3;
-    opacity = 1.0;
-    _hipsShaderIndex = 0;
-    _texture = null;
-    _image;
-    _texurl;
-    _textureLoaded = false;
-    _maxTiles = 0;
-    _numFacesXTile = 0;
-    _numFaces = 0;
-    vertexPosition;
-    vertexPositionBuffer;
-    vertexIndexBuffer;
-    vidx = 0;
+
+class AbstractSkyEntity {
+    // Public-ish properties used elsewhere in the app
+    refreshMe = false;
+    fovX_deg = 180;
+    fovY_deg = 180;
+    xRad;
+    yRad;
+    prevFoV = this.fovX_deg;
+    _name;
+    // public insideSphere: boolean = bootSetup.insideSphere
+    // Picking/sphere
+    center;
+    radius;
+    isGalacticHips;
+    // GL resources
+    vertexTextureCoordBuffer = null;
+    vertexPositionBuffer = null;
+    vertexIndexBuffer = null;
+    shaderProgram = null;
+    // Matrices
+    T = mat4_create();
+    R = mat4_create();
+    modelMatrix = mat4_create();
+    inverseModelMatrix = mat4_create();
+    // Precomputed transform from galactic to equatorial (already inverted)
+    galacticMatrixInverted = mat4_create();
     _webgl;
-    _tileBuffer;
     _hipsShaderProgram;
-    constructor(hips, webgl, tileBuffer, hipsShaderProgram) {
-        this._tileBuffer = tileBuffer;
-        this._hips = hips;
+    // protected _visibleTilesManager: VisibleTilesManager
+    // protected _tileBuffer: TileBuffer
+    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, webgl, isGalacticHips) {
         this._webgl = webgl;
-        this._format = hips.format;
-        this._baseurl = hips.baseURL;
-        this._isGalacticHips = hips.isGalacticHips;
-        this._hipsShaderProgram = hipsShaderProgram;
-        this.initImage();
+        this.xRad = in_xRad;
+        this.yRad = in_yRad;
+        this._name = in_name;
+        this.center = clone(in_position);
+        this.radius = in_radius;
+        // this.insideSphere = global.insideSphere
+        this.isGalacticHips = !!isGalacticHips;
+        // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
+        mat4_set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
+        // this._tileBuffer = new TileBuffer(1, this._webgl)
+        // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
+        // this._visibleTilesManager = new VisibleTilesManager()
+        this._hipsShaderProgram = new HiPSShaderProgram(this._webgl);
     }
-    initImage() {
-        this._image = new Image();
-        this._texurl = `${this._baseurl}/Norder3/Allsky.${this._format}`;
-        this._image.onload = () => this.imageLoaded();
-        this._image.onerror = () => {
-            console.error('File not found? %s', this._texurl);
-        };
-        this._image.setAttribute('crossorigin', 'anonymous');
-        this._image.src = this._texurl;
+    get name() {
+        return this._name;
     }
-    imageLoaded() {
-        this.textureLoaded();
-        this.initModelBuffer();
-        this._textureLoaded = true;
-        this._ready = true;
+    get hipsShaderProgram() {
+        return this._hipsShaderProgram;
     }
-    textureLoaded() {
-        // hipsShaderProgram.enableProgram()
-        this._hipsShaderProgram.enableProgram();
-        const gl = this._webgl;
-        this._texture = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        // gl.uniform1i(hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex)
-        if (!gl.isTexture(this._texture)) {
-            console.log('error in texture');
-        }
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        const useMipmaps = true;
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, useMipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
-        // MAG filter: ONLY NEAREST or LINEAR are valid
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-        // gl.generateMipmap(gl.TEXTURE_2D)
-        if (useMipmaps)
-            gl.generateMipmap(gl.TEXTURE_2D);
+    // get tileBuffer() {
+    //   return this._tileBuffer
+    // }
+    get webgl() {
+        return this._webgl;
     }
-    initModelBuffer() {
-        const gl = this._webgl;
-        const orderjump = 1;
-        const tgtHpxOrder = this._order + orderjump;
-        const healpix = _Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].getHealpix(this._order);
-        this._maxTiles = healpix.getNPix();
-        const tgtHealpix = _Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].getHealpix(tgtHpxOrder);
-        this._numFacesXTile = 4 ** orderjump; // used in gl.draw
-        this._numFaces = this._numFacesXTile * this._maxTiles;
-        this.vertexPosition = new Float32Array(20 * this._numFaces);
-        let sindex = 0;
-        let tindex = 0;
-        this.vidx = 0;
-        for (let t = 0; t < this._maxTiles; t++) {
-            const xyf = healpix.nest2xyf(t);
-            const dxmin = xyf.ix << orderjump;
-            const dxmax = (xyf.ix << orderjump) + (1 << orderjump);
-            const dymin = xyf.iy << orderjump;
-            const dymax = (xyf.iy << orderjump) + (1 << orderjump);
-            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, tgtHealpix, xyf, 0, 0);
-            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, tgtHealpix, xyf, 0, 1);
-            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, tgtHealpix, xyf, 1, 0);
-            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin + (dxmax - dxmin) / 2, dxmax, dymin + (dymax - dymin) / 2, dymax, tgtHealpix, xyf, 1, 1);
-            sindex++;
-            if (sindex === 27) {
-                tindex++;
-                sindex = 0;
-            }
-        }
-        const vertexIndices = new Uint16Array(6 * this._numFaces);
-        let baseFaceIndex = 0;
-        for (let i = 0; i < this._numFaces; i++) {
-            vertexIndices[6 * i] = baseFaceIndex;
-            vertexIndices[6 * i + 1] = baseFaceIndex + 1;
-            vertexIndices[6 * i + 2] = baseFaceIndex + 3;
-            vertexIndices[6 * i + 3] = baseFaceIndex + 1;
-            vertexIndices[6 * i + 4] = baseFaceIndex + 2;
-            vertexIndices[6 * i + 5] = baseFaceIndex + 3;
-            baseFaceIndex += 4;
-        }
+    /** GL setup and initial model transform */
+    initGL(gl) {
+        // GL resources
+        this.vertexTextureCoordBuffer = gl.createBuffer();
         this.vertexPositionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition, gl.STATIC_DRAW);
         this.vertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexIndices, gl.STATIC_DRAW);
+        this.shaderProgram = gl.createProgram();
+        // Reset object transforms
+        this.T = mat4_create();
+        this.R = mat4_create();
+        this.modelMatrix = mat4_create();
+        this.inverseModelMatrix = mat4_create();
+        // Initial pose
+        this.translate(this.center);
+        this.rotate(this.xRad, this.yRad);
     }
-    setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmax, dymin, dymax, tgthealpix, xyf, qx, qy) {
-        let facesVec3Array = [];
-        const factor = 2 ** (tgthealpix.order - 3);
-        const s_step = 1 / (27 * factor); // 0.037037037...
-        const t_step = 1 / (29 * factor); // 0.034482759...
-        const s_pixel_size = s_step / 64;
-        const t_pixel_size = t_step / 64;
-        const base_s = factor * s_step * sindex + s_step * qx;
-        const base_t = factor * t_step * tindex + t_step * qy;
-        for (let dx = dxmin; dx < dxmax; dx++) {
-            for (let dy = dymin; dy < dymax; dy++) {
-                facesVec3Array = tgthealpix.getPointsForXyfNoStep(dx, dy, xyf.face);
-                // bottom right
-                this.vertexPosition[20 * this.vidx] = facesVec3Array[0].x;
-                this.vertexPosition[20 * this.vidx + 1] = facesVec3Array[0].y;
-                this.vertexPosition[20 * this.vidx + 2] = facesVec3Array[0].z;
-                this.vertexPosition[20 * this.vidx + 3] = s_step + base_s - s_pixel_size;
-                this.vertexPosition[20 * this.vidx + 4] = 1 - (t_step + base_t) + t_pixel_size;
-                // top right
-                this.vertexPosition[20 * this.vidx + 5] = facesVec3Array[1].x;
-                this.vertexPosition[20 * this.vidx + 6] = facesVec3Array[1].y;
-                this.vertexPosition[20 * this.vidx + 7] = facesVec3Array[1].z;
-                this.vertexPosition[20 * this.vidx + 8] = s_step + base_s - s_pixel_size;
-                this.vertexPosition[20 * this.vidx + 9] = 1 - base_t - t_pixel_size;
-                // top left
-                this.vertexPosition[20 * this.vidx + 10] = facesVec3Array[2].x;
-                this.vertexPosition[20 * this.vidx + 11] = facesVec3Array[2].y;
-                this.vertexPosition[20 * this.vidx + 12] = facesVec3Array[2].z;
-                this.vertexPosition[20 * this.vidx + 13] = base_s + s_pixel_size;
-                this.vertexPosition[20 * this.vidx + 14] = 1 - base_t - t_pixel_size;
-                // bottom left
-                this.vertexPosition[20 * this.vidx + 15] = facesVec3Array[3].x;
-                this.vertexPosition[20 * this.vidx + 16] = facesVec3Array[3].y;
-                this.vertexPosition[20 * this.vidx + 17] = facesVec3Array[3].z;
-                this.vertexPosition[20 * this.vidx + 18] = base_s + s_pixel_size;
-                this.vertexPosition[20 * this.vidx + 19] = 1 - (t_step + base_t) + t_pixel_size;
-                this.vidx++;
-            }
+    translate(translation) {
+        translate(this.T, this.T, translation);
+        this.refreshModelMatrix();
+    }
+    rotate(rad1, rad2) {
+        rotate(this.R, this.R, rad2, [0, 0, 1]);
+        rotate(this.R, this.R, rad1, [1, 0, 0]);
+        this.refreshModelMatrix();
+    }
+    rotateFromZero(rad1, rad2) {
+        identity(this.R);
+        rotate(this.R, this.R, rad1, [1, 0, 0]);
+        rotate(this.R, this.R, rad2, [0, 0, 1]);
+        this.refreshModelMatrix();
+    }
+    refreshModelMatrix() {
+        const R_inverse = mat4_create();
+        invert(R_inverse, this.R);
+        mat4_multiply(this.modelMatrix, this.T, R_inverse);
+        // Flip Y if we're outside the sphere
+        if (!src_Global.insideSphere) {
+            this.modelMatrix[1] = -this.modelMatrix[1];
+            this.modelMatrix[5] = -this.modelMatrix[5];
+            this.modelMatrix[9] = -this.modelMatrix[9];
+            this.modelMatrix[13] = -this.modelMatrix[13];
+        }
+        // Apply galactic frame transform if needed
+        if (this.isGalacticHips) {
+            mat4_multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
         }
     }
-    /**
-     * Renders the all-sky layer and, when available, delegates to higher-resolution child tiles.
-     * Returns `true` if it attempted to draw (ready), `false` if still not ready.
-     */
-    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        if (!this._ready)
-            return false;
-        let allSkyTiles2Skip = [];
-        if (visibleOrder >= this._order) {
-            const skipped = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
-            if (skipped)
-                allSkyTiles2Skip = skipped;
-        }
-        const gl = this._webgl;
-        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
-        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
-        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
-        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        // gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity)
-        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        gl.vertexAttribPointer(
-        // hipsShaderProgram.locations.vertexPositionAttribute,
-        this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-        gl.vertexAttribPointer(
-        // hipsShaderProgram.locations.textureCoordAttribute,
-        this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
-        for (let t = 0; t < this._maxTiles; t++) {
-            if (!allSkyTiles2Skip.includes(t)) {
-                gl.drawElements(gl.TRIANGLES, 6 * this._numFacesXTile, gl.UNSIGNED_SHORT, 12 * t * this._numFacesXTile);
-            }
-        }
-        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
-        // gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute)
-        // gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute)
-        return true;
+    getModelMatrixInverse() {
+        identity(this.inverseModelMatrix);
+        invert(this.inverseModelMatrix, this.modelMatrix);
+        return this.inverseModelMatrix;
     }
-    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        const childrenOrder = this._order;
-        if (!visibleTilesMap.has(childrenOrder))
-            return;
-        const visibleTiles = visibleTilesMap.get(childrenOrder);
-        const allSkyTiles2Skip = [];
-        for (let i = 0; i < visibleTiles.length; i++) {
-            const tileno = visibleTiles[i];
-            const childTile = this._isGalacticHips
-                ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-                : this._tileBuffer.getTile(tileno, childrenOrder, this._hips);
-            // const childTile = this._isGalacticHips
-            //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-            //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
-            // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
-            childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram);
-            if (childTile.getReadyState()) {
-                allSkyTiles2Skip.push(tileno);
-            }
-        }
-        return allSkyTiles2Skip;
+    getModelMatrix() {
+        return this.modelMatrix;
+    }
+    setModelMatrix(modelMatrix) {
+        this.modelMatrix = modelMatrix;
+    }
+    /** Children with hierarchical geometry (e.g., HiPS) can override this. */
+    setGeometryNeedsToBeRefreshed() {
+        this.refreshGeometryOnFoVChanged = false;
+    }
+    // Helpers operating on raw mat4 buffers (kept from your JS)
+    rotateX(m, angle) {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const mv1 = m[1], mv5 = m[5], mv9 = m[9];
+        m[1] = m[1] * c - m[2] * s;
+        m[5] = m[5] * c - m[6] * s;
+        m[9] = m[9] * c - m[10] * s;
+        m[2] = m[2] * c + mv1 * s;
+        m[6] = m[6] * c + mv5 * s;
+        m[10] = m[10] * c + mv9 * s;
+        return m;
+    }
+    rotateY(m, angle) {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const mv0 = m[0], mv4 = m[4], mv8 = m[8];
+        m[0] = c * m[0] + s * m[2];
+        m[4] = c * m[4] + s * m[6];
+        m[8] = c * m[8] + s * m[10];
+        m[2] = c * m[2] - s * mv0;
+        m[6] = c * m[6] - s * mv4;
+        m[10] = c * m[10] - s * mv8;
+        return m;
     }
 }
 
+;// ./src/model/hips/FoVHelper.ts
+// FoVHelper.ts
 
-/***/ }),
+class FoVHelper {
+    getHiPSNorder(fov) {
+        if (fov >= 179)
+            return 0;
+        if (fov >= 90)
+            return 1;
+        if (fov >= 30)
+            return 2;
+        if (fov >= 20)
+            return 3;
+        if (fov >= 6)
+            return 4;
+        if (fov >= 3.2)
+            return 5;
+        if (fov >= 1.6)
+            return 6;
+        if (fov >= 0.85)
+            return 7;
+        if (fov >= 0.42)
+            return 8;
+        if (fov >= 0.21)
+            return 9;
+        if (fov >= 0.12)
+            return 10;
+        if (fov >= 0.06)
+            return 11;
+        if (fov < 0.015)
+            return 12;
+        return 13;
+    }
+    getRADegSteps(fov) {
+        let raStep;
+        let decStep;
+        if (fov >= 179) {
+            raStep = 10;
+            decStep = 10;
+        }
+        else if (fov >= 25) {
+            raStep = 9;
+            decStep = 9;
+        }
+        else if (fov >= 12.5) {
+            raStep = 8;
+            decStep = 8;
+        }
+        else if (fov >= 6) {
+            raStep = 6;
+            decStep = 6;
+        }
+        else if (fov >= 3.2) {
+            raStep = 5;
+            decStep = 5;
+        }
+        else if (fov >= 1.6) {
+            raStep = 4;
+            decStep = 4;
+        }
+        else if (fov >= 0.85) {
+            raStep = 3;
+            decStep = 3;
+        }
+        else if (fov >= 0.42) {
+            raStep = 2;
+            decStep = 2;
+        }
+        else if (fov >= 0.21) {
+            raStep = 1;
+            decStep = 1;
+        }
+        else if (fov >= 0.12) {
+            raStep = 0.5;
+            decStep = 0.5;
+        }
+        else if (fov >= 0.06) {
+            raStep = 0.25;
+            decStep = 0.25;
+        }
+        else {
+            raStep = 10;
+            decStep = 10;
+        }
+        return { raStep, decStep };
+    }
+    getRefOrder(order) {
+        switch (order) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+                return order + 6;
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+                return order + 5;
+            case 8:
+                return order + 4;
+            default:
+                return order + 3;
+        }
+    }
+}
+const fovHelper = new FoVHelper();
+/* harmony default export */ const hips_FoVHelper = ((/* unused pure expression or super */ null && (FoVHelper)));
 
-/***/ "./src/model/hips/AncestorTile.ts":
-/*!****************************************!*\
-  !*** ./src/model/hips/AncestorTile.ts ***!
-  \****************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../Global.js */ "./src/Global.ts");
-/* harmony import */ var _FoVHelper_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./FoVHelper.js */ "./src/model/hips/FoVHelper.ts");
+;// ./src/model/hips/AncestorTile.ts
 
 
 
@@ -10818,15 +7177,15 @@ class AncestorTile {
         this.vertexPositionBuffer = [];
         this.vertexIndices = new Uint16Array();
         // this.vertexIndexBuffer created later
-        const reforder = _FoVHelper_js__WEBPACK_IMPORTED_MODULE_1__.fovHelper.getRefOrder(this._order);
-        const orighealpix = _Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].getHealpix(this._order);
+        const reforder = fovHelper.getRefOrder(this._order);
+        const orighealpix = src_Global.getHealpix(this._order);
         const origxyf = orighealpix.nest2xyf(this._tileno);
         const orderjump = reforder - this._order;
         const dxmin = origxyf.ix << orderjump;
         const dxmax = (origxyf.ix << orderjump) + (1 << orderjump);
         const dymin = origxyf.iy << orderjump;
         const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
-        const healpix = _Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].getHealpix(reforder);
+        const healpix = src_Global.getHealpix(reforder);
         this._pixels = [];
         // Using getBoundaries (like the JS source)
         this.setupPositionAndTexture4Quadrant(dxmin, dxmax / 2, dymin, dymax / 2, 0, healpix, orderjump, origxyf);
@@ -10981,147 +7340,242 @@ class AncestorTile {
         return quadrantsToDraw;
     }
 }
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (AncestorTile);
+/* harmony default export */ const hips_AncestorTile = (AncestorTile);
+
+;// ./src/model/hips/AllSky.ts
 
 
-/***/ }),
-
-/***/ "./src/model/hips/FoVHelper.ts":
-/*!*************************************!*\
-  !*** ./src/model/hips/FoVHelper.ts ***!
-  \*************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__),
-/* harmony export */   fovHelper: () => (/* binding */ fovHelper)
-/* harmony export */ });
-// FoVHelper.ts
-
-class FoVHelper {
-    getHiPSNorder(fov) {
-        if (fov >= 179)
-            return 0;
-        if (fov >= 90)
-            return 1;
-        if (fov >= 30)
-            return 2;
-        if (fov >= 20)
-            return 3;
-        if (fov >= 6)
-            return 4;
-        if (fov >= 3.2)
-            return 5;
-        if (fov >= 1.6)
-            return 6;
-        if (fov >= 0.85)
-            return 7;
-        if (fov >= 0.42)
-            return 8;
-        if (fov >= 0.21)
-            return 9;
-        if (fov >= 0.12)
-            return 10;
-        if (fov >= 0.06)
-            return 11;
-        if (fov < 0.015)
-            return 12;
-        return 13;
+class AllSky {
+    _ready = false;
+    _hips;
+    _format;
+    _baseurl;
+    _isGalacticHips;
+    _order = 3;
+    opacity = 1.0;
+    _hipsShaderIndex = 0;
+    _texture = null;
+    _image;
+    _texurl;
+    _textureLoaded = false;
+    _maxTiles = 0;
+    _numFacesXTile = 0;
+    _numFaces = 0;
+    vertexPosition;
+    vertexPositionBuffer;
+    vertexIndexBuffer;
+    vidx = 0;
+    _webgl;
+    _tileBuffer;
+    _hipsShaderProgram;
+    constructor(hips, webgl, tileBuffer, hipsShaderProgram) {
+        this._tileBuffer = tileBuffer;
+        this._hips = hips;
+        this._webgl = webgl;
+        this._format = hips.format;
+        this._baseurl = hips.baseURL;
+        this._isGalacticHips = hips.isGalacticHips;
+        this._hipsShaderProgram = hipsShaderProgram;
+        this.initImage();
     }
-    getRADegSteps(fov) {
-        let raStep;
-        let decStep;
-        if (fov >= 179) {
-            raStep = 10;
-            decStep = 10;
-        }
-        else if (fov >= 25) {
-            raStep = 9;
-            decStep = 9;
-        }
-        else if (fov >= 12.5) {
-            raStep = 8;
-            decStep = 8;
-        }
-        else if (fov >= 6) {
-            raStep = 6;
-            decStep = 6;
-        }
-        else if (fov >= 3.2) {
-            raStep = 5;
-            decStep = 5;
-        }
-        else if (fov >= 1.6) {
-            raStep = 4;
-            decStep = 4;
-        }
-        else if (fov >= 0.85) {
-            raStep = 3;
-            decStep = 3;
-        }
-        else if (fov >= 0.42) {
-            raStep = 2;
-            decStep = 2;
-        }
-        else if (fov >= 0.21) {
-            raStep = 1;
-            decStep = 1;
-        }
-        else if (fov >= 0.12) {
-            raStep = 0.5;
-            decStep = 0.5;
-        }
-        else if (fov >= 0.06) {
-            raStep = 0.25;
-            decStep = 0.25;
-        }
-        else {
-            raStep = 10;
-            decStep = 10;
-        }
-        return { raStep, decStep };
+    initImage() {
+        this._image = new Image();
+        this._texurl = `${this._baseurl}/Norder3/Allsky.${this._format}`;
+        this._image.onload = () => this.imageLoaded();
+        this._image.onerror = () => {
+            console.error('File not found? %s', this._texurl);
+        };
+        this._image.setAttribute('crossorigin', 'anonymous');
+        this._image.src = this._texurl;
     }
-    getRefOrder(order) {
-        switch (order) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-                return order + 6;
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-                return order + 5;
-            case 8:
-                return order + 4;
-            default:
-                return order + 3;
+    imageLoaded() {
+        this.textureLoaded();
+        this.initModelBuffer();
+        this._textureLoaded = true;
+        this._ready = true;
+    }
+    textureLoaded() {
+        // hipsShaderProgram.enableProgram()
+        this._hipsShaderProgram.enableProgram();
+        const gl = this._webgl;
+        this._texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        // gl.uniform1i(hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex)
+        if (!gl.isTexture(this._texture)) {
+            console.log('error in texture');
         }
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        const useMipmaps = true;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, useMipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+        // MAG filter: ONLY NEAREST or LINEAR are valid
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+        // gl.generateMipmap(gl.TEXTURE_2D)
+        if (useMipmaps)
+            gl.generateMipmap(gl.TEXTURE_2D);
+    }
+    initModelBuffer() {
+        const gl = this._webgl;
+        const orderjump = 1;
+        const tgtHpxOrder = this._order + orderjump;
+        const healpix = src_Global.getHealpix(this._order);
+        this._maxTiles = healpix.getNPix();
+        const tgtHealpix = src_Global.getHealpix(tgtHpxOrder);
+        this._numFacesXTile = 4 ** orderjump; // used in gl.draw
+        this._numFaces = this._numFacesXTile * this._maxTiles;
+        this.vertexPosition = new Float32Array(20 * this._numFaces);
+        let sindex = 0;
+        let tindex = 0;
+        this.vidx = 0;
+        for (let t = 0; t < this._maxTiles; t++) {
+            const xyf = healpix.nest2xyf(t);
+            const dxmin = xyf.ix << orderjump;
+            const dxmax = (xyf.ix << orderjump) + (1 << orderjump);
+            const dymin = xyf.iy << orderjump;
+            const dymax = (xyf.iy << orderjump) + (1 << orderjump);
+            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, tgtHealpix, xyf, 0, 0);
+            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, tgtHealpix, xyf, 0, 1);
+            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, tgtHealpix, xyf, 1, 0);
+            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin + (dxmax - dxmin) / 2, dxmax, dymin + (dymax - dymin) / 2, dymax, tgtHealpix, xyf, 1, 1);
+            sindex++;
+            if (sindex === 27) {
+                tindex++;
+                sindex = 0;
+            }
+        }
+        const vertexIndices = new Uint16Array(6 * this._numFaces);
+        let baseFaceIndex = 0;
+        for (let i = 0; i < this._numFaces; i++) {
+            vertexIndices[6 * i] = baseFaceIndex;
+            vertexIndices[6 * i + 1] = baseFaceIndex + 1;
+            vertexIndices[6 * i + 2] = baseFaceIndex + 3;
+            vertexIndices[6 * i + 3] = baseFaceIndex + 1;
+            vertexIndices[6 * i + 4] = baseFaceIndex + 2;
+            vertexIndices[6 * i + 5] = baseFaceIndex + 3;
+            baseFaceIndex += 4;
+        }
+        this.vertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition, gl.STATIC_DRAW);
+        this.vertexIndexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexIndices, gl.STATIC_DRAW);
+    }
+    setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmax, dymin, dymax, tgthealpix, xyf, qx, qy) {
+        let facesVec3Array = [];
+        const factor = 2 ** (tgthealpix.order - 3);
+        const s_step = 1 / (27 * factor); // 0.037037037...
+        const t_step = 1 / (29 * factor); // 0.034482759...
+        const s_pixel_size = s_step / 64;
+        const t_pixel_size = t_step / 64;
+        const base_s = factor * s_step * sindex + s_step * qx;
+        const base_t = factor * t_step * tindex + t_step * qy;
+        for (let dx = dxmin; dx < dxmax; dx++) {
+            for (let dy = dymin; dy < dymax; dy++) {
+                facesVec3Array = tgthealpix.getPointsForXyfNoStep(dx, dy, xyf.face);
+                // bottom right
+                this.vertexPosition[20 * this.vidx] = facesVec3Array[0].x;
+                this.vertexPosition[20 * this.vidx + 1] = facesVec3Array[0].y;
+                this.vertexPosition[20 * this.vidx + 2] = facesVec3Array[0].z;
+                this.vertexPosition[20 * this.vidx + 3] = s_step + base_s - s_pixel_size;
+                this.vertexPosition[20 * this.vidx + 4] = 1 - (t_step + base_t) + t_pixel_size;
+                // top right
+                this.vertexPosition[20 * this.vidx + 5] = facesVec3Array[1].x;
+                this.vertexPosition[20 * this.vidx + 6] = facesVec3Array[1].y;
+                this.vertexPosition[20 * this.vidx + 7] = facesVec3Array[1].z;
+                this.vertexPosition[20 * this.vidx + 8] = s_step + base_s - s_pixel_size;
+                this.vertexPosition[20 * this.vidx + 9] = 1 - base_t - t_pixel_size;
+                // top left
+                this.vertexPosition[20 * this.vidx + 10] = facesVec3Array[2].x;
+                this.vertexPosition[20 * this.vidx + 11] = facesVec3Array[2].y;
+                this.vertexPosition[20 * this.vidx + 12] = facesVec3Array[2].z;
+                this.vertexPosition[20 * this.vidx + 13] = base_s + s_pixel_size;
+                this.vertexPosition[20 * this.vidx + 14] = 1 - base_t - t_pixel_size;
+                // bottom left
+                this.vertexPosition[20 * this.vidx + 15] = facesVec3Array[3].x;
+                this.vertexPosition[20 * this.vidx + 16] = facesVec3Array[3].y;
+                this.vertexPosition[20 * this.vidx + 17] = facesVec3Array[3].z;
+                this.vertexPosition[20 * this.vidx + 18] = base_s + s_pixel_size;
+                this.vertexPosition[20 * this.vidx + 19] = 1 - (t_step + base_t) + t_pixel_size;
+                this.vidx++;
+            }
+        }
+    }
+    /**
+     * Renders the all-sky layer and, when available, delegates to higher-resolution child tiles.
+     * Returns `true` if it attempted to draw (ready), `false` if still not ready.
+     */
+    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (!this._ready)
+            return false;
+        let allSkyTiles2Skip = [];
+        if (visibleOrder >= this._order) {
+            const skipped = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
+            if (skipped)
+                allSkyTiles2Skip = skipped;
+        }
+        const gl = this._webgl;
+        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        // gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity)
+        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        gl.vertexAttribPointer(
+        // hipsShaderProgram.locations.vertexPositionAttribute,
+        this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
+        gl.vertexAttribPointer(
+        // hipsShaderProgram.locations.textureCoordAttribute,
+        this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+        for (let t = 0; t < this._maxTiles; t++) {
+            if (!allSkyTiles2Skip.includes(t)) {
+                gl.drawElements(gl.TRIANGLES, 6 * this._numFacesXTile, gl.UNSIGNED_SHORT, 12 * t * this._numFacesXTile);
+            }
+        }
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute)
+        // gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute)
+        return true;
+    }
+    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        const childrenOrder = this._order;
+        if (!visibleTilesMap.has(childrenOrder))
+            return;
+        const visibleTiles = visibleTilesMap.get(childrenOrder);
+        const allSkyTiles2Skip = [];
+        for (let i = 0; i < visibleTiles.length; i++) {
+            const tileno = visibleTiles[i];
+            const childTile = this._isGalacticHips
+                ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
+                : this._tileBuffer.getTile(tileno, childrenOrder, this._hips);
+            // const childTile = this._isGalacticHips
+            //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
+            //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
+            // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+            childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram);
+            if (childTile.getReadyState()) {
+                allSkyTiles2Skip.push(tileno);
+            }
+        }
+        return allSkyTiles2Skip;
     }
 }
-const fovHelper = new FoVHelper();
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (FoVHelper);
 
-
-/***/ }),
-
-/***/ "./src/model/hips/HiPS.ts":
-/*!********************************!*\
-  !*** ./src/model/hips/HiPS.ts ***!
-  \********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   HiPS: () => (/* binding */ HiPS)
-/* harmony export */ });
-/* harmony import */ var _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../AbstractSkyEntity.js */ "./src/model/AbstractSkyEntity.ts");
-/* harmony import */ var _FoVHelper_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./FoVHelper.js */ "./src/model/hips/FoVHelper.ts");
-/* harmony import */ var _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../ColorMaps.js */ "./src/model/ColorMaps.ts");
-/* harmony import */ var _AncestorTile_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./AncestorTile.js */ "./src/model/hips/AncestorTile.ts");
-/* harmony import */ var _AllSky_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./AllSky.js */ "./src/model/hips/AllSky.ts");
+;// ./src/model/hips/HiPS.ts
 
 /**
  * @author Fabrizio Giordano (Fab77)
@@ -11133,7 +7587,7 @@ __webpack_require__.r(__webpack_exports__);
 // import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 
 
-class HiPS extends _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__.AbstractSkyEntity {
+class HiPS extends AbstractSkyEntity {
     _ancestorTiles;
     _allSkyTile;
     _format;
@@ -11144,7 +7598,7 @@ class HiPS extends _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__.AbstractSk
     _allSky = true;
     samplerIdx = 0;
     colorMapIdx = 0;
-    colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['native'];
+    colorMap = model_ColorMaps['native'];
     _healpixGrid;
     // exposed read-only helpers
     get maxOrder() { return this._maxorder; }
@@ -11170,18 +7624,18 @@ class HiPS extends _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__.AbstractSk
         this.initShaders();
         // pick initial order from a starting FoV
         const fov = 180;
-        let order = _FoVHelper_js__WEBPACK_IMPORTED_MODULE_1__.fovHelper.getHiPSNorder(fov);
+        let order = fovHelper.getHiPSNorder(fov);
         this._visibleorder = Math.min(order, this._maxorder);
         this._ancestorTiles = [];
         this._allSkyTile = null;
         // auto-detect all-sky: original code forces true
         this._allSky = true;
         if (this._allSky) {
-            this._allSkyTile = new _AllSky_js__WEBPACK_IMPORTED_MODULE_4__["default"](this, this._webgl, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram);
+            this._allSkyTile = new AllSky(this, this._webgl, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram);
         }
         else {
             for (let t = 0; t < 12; t++) {
-                this._ancestorTiles.push(new _AncestorTile_js__WEBPACK_IMPORTED_MODULE_3__["default"](t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl));
+                this._ancestorTiles.push(new hips_AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl));
             }
         }
     }
@@ -11224,54 +7678,54 @@ class HiPS extends _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__.AbstractSk
             case 'grayscale':
                 this.colorMapIdx = 1;
                 // hipsShaderProgram.setGrayscaleShader()
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['grayscale'];
+                this.colorMap = model_ColorMaps['grayscale'];
                 super.hipsShaderProgram.setGrayscaleShader();
                 break;
             case 'planck':
                 this.colorMapIdx = 2;
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['planck'];
+                this.colorMap = model_ColorMaps['planck'];
                 // hipsShaderProgram.setColorMapShader()
                 super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'cmb':
                 this.colorMapIdx = 3;
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['cmb'];
+                this.colorMap = model_ColorMaps['cmb'];
                 // hipsShaderProgram.setColorMapShader()
                 super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'rainbow':
                 this.colorMapIdx = 4;
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['rainbow'];
+                this.colorMap = model_ColorMaps['rainbow'];
                 // hipsShaderProgram.setColorMapShader()
                 super.hipsShaderProgram.setColorMapShader();
                 break;
             case 'eosb':
                 this.colorMapIdx = 5;
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['eosb'];
+                this.colorMap = model_ColorMaps['eosb'];
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
             case 'cubehelix':
                 this.colorMapIdx = 6;
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['cubehelix'];
+                this.colorMap = model_ColorMaps['cubehelix'];
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
             case 'hot':
                 this.colorMapIdx = 7;
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['hot'];
+                this.colorMap = model_ColorMaps['hot'];
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
             case 'gray':
                 this.colorMapIdx = 8;
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['gray'];
+                this.colorMap = model_ColorMaps['gray'];
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
             default:
                 this.colorMapIdx = 0;
-                this.colorMap = _ColorMaps_js__WEBPACK_IMPORTED_MODULE_2__["default"]['native'];
+                this.colorMap = model_ColorMaps['native'];
                 super.hipsShaderProgram.setNativeShader();
             // hipsShaderProgram.setNativeShader()
         }
@@ -11288,7 +7742,7 @@ class HiPS extends _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__.AbstractSk
     refresh() {
         // const fov = healpixGridSingleton.getMinFoV()
         const fov = this._healpixGrid.getMinFoV();
-        this._visibleorder = Math.min(_FoVHelper_js__WEBPACK_IMPORTED_MODULE_1__.fovHelper.getHiPSNorder(fov), this._maxorder);
+        this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
     }
     draw(input) {
         const vMatrix = input.camera.getCameraMatrix();
@@ -11332,154 +7786,1741 @@ class HiPS extends _AbstractSkyEntity_js__WEBPACK_IMPORTED_MODULE_0__.AbstractSk
     }
 }
 
+;// ./src/utils/PerspectiveMatrixManager.ts
 
-/***/ }),
-
-/***/ "./src/model/hips/HiPSDescriptor.ts":
-/*!******************************************!*\
-  !*** ./src/model/hips/HiPSDescriptor.ts ***!
-  \******************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   HiPSDescriptor: () => (/* binding */ HiPSDescriptor)
-/* harmony export */ });
-// HiPSDescriptor.ts
-
-class HiPSDescriptor {
-    _minOrder = 3;
-    _imgformats = [];
-    _datarange = { min: undefined, max: undefined };
-    _maxOrder;
-    _tilewidth;
-    _hipsFrame;
-    _hipsName = 'NONAME';
-    _hipsurl;
-    _emMin;
-    _emMax;
-    _isGalctic = false;
-    _propertiesRawText;
-    constructor(hipsproperties, hipsurl) {
-        this._hipsurl = hipsurl;
-        this._propertiesRawText = hipsproperties;
-        const lines = hipsproperties.split(/\r\n|\n/);
-        for (const raw of lines) {
-            const line = raw.trim();
-            if (!line || line.startsWith('#'))
-                continue;
-            if (line.startsWith('hips_tile_format') || line.startsWith('format')) {
-                // normalize jpeg→jpg
-                const list = this.getValue(line)?.replace(/jpeg/gi, 'jpg') ?? '';
-                this._imgformats = list.split(/\s+/).filter(Boolean);
-            }
-            else if (line.startsWith('hips_data_range')) {
-                const v = this.getValue(line);
-                if (v) {
-                    const [minStr, maxStr] = v.split(/\s+/);
-                    this._datarange.min = parseFloat(minStr);
-                    this._datarange.max = parseFloat(maxStr);
-                }
-            }
-            else if (line.startsWith('hips_tile_width')) {
-                const n = Number(this.getValue(line));
-                this._tilewidth = Number.isFinite(n) ? n : undefined;
-            }
-            else if (line.startsWith('hips_order_min')) {
-                const n = Number(this.getValue(line));
-                this._minOrder = Number.isFinite(n) ? n : this._minOrder;
-            }
-            else if (line.startsWith('hips_order') || line.startsWith('maxOrder')) {
-                const n = Number(this.getValue(line));
-                this._maxOrder = Number.isFinite(n) ? n : this._maxOrder;
-            }
-            else if (line.startsWith('hips_frame') || line.startsWith('frame')) {
-                this._hipsFrame = this.getValue(line);
-            }
-            else if (line.startsWith('obs_collection') || line.startsWith('label')) {
-                this._hipsName = this.getValue(line) ?? this._hipsName;
-            }
-            else if (line.startsWith('em_min')) {
-                const n = Number(this.getValue(line));
-                this._emMin = Number.isFinite(n) ? n : undefined;
-            }
-            else if (line.startsWith('em_max')) {
-                const n = Number(this.getValue(line));
-                this._emMax = Number.isFinite(n) ? n : undefined;
-            }
+class PerspectiveMatrixManager {
+    _pMatrix;
+    _aspectRatio = 1;
+    constructor(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
+        this._pMatrix = this.computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane, insideSphere);
+    }
+    get pMatrix() {
+        return this._pMatrix;
+    }
+    set pMatrix(pMatrix) {
+        this._pMatrix = pMatrix;
+    }
+    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
+        this._aspectRatio = canvas.width / canvas.height;
+        const p = mat4_create();
+        let farPlane;
+        if (insideSphere) {
+            // Inside the sphere: cap slightly beyond radius
+            farPlane = 1.1;
         }
-        if (!this._hipsName) {
-            console.warn(`[HiPSDescriptor] hipsName not defined in properties of ${this._hipsurl}. Defaulting to 'NONAME'.`);
+        else {
+            const camMat = camera.getCameraMatrix();
+            const distCamera = -Number(camMat[14]); // camera z translation
+            const r = 1; // HiPS sphere radius (inject real value if available)
+            // Guard against negative due to rounding/logic
+            const c2 = Math.sqrt(Math.max(distCamera ** 2 - r ** 2, 0));
+            const beta = Math.atan2(c2, r);
+            const cf = c2 * Math.sin(beta);
+            farPlane = cf > 0 ? cf : r;
         }
-        if (!this._hipsFrame) {
-            console.warn(`[HiPSDescriptor] hips_frame not defined in properties of ${this._hipsurl}. Defaulting to 'equatorial'.`);
-            this._hipsFrame = 'equatorial';
-        }
-        this._isGalctic = this._hipsFrame.toLowerCase().includes('gal');
-        if (this._maxOrder === undefined || this._imgformats.length === 0) {
-            throw new Error(`[HiPSDescriptor] Invalid properties for ${this._hipsurl}. maxOrder=${this._maxOrder}, imgFormats.length=${this._imgformats.length}`);
-        }
-    }
-    getValue(line) {
-        const idx = line.indexOf('=');
-        if (idx < 0)
-            return undefined;
-        return line.slice(idx + 1).trim();
-    }
-    // --- Getters ---
-    get propertiesRawText() {
-        return this._propertiesRawText;
-    }
-    get surveyName() {
-        return this._hipsName;
-    }
-    get url() {
-        return this._hipsurl;
-    }
-    get maxOrder() {
-        return this._maxOrder;
-    }
-    get minOrder() {
-        return this._minOrder;
-    }
-    get imgFormats() {
-        return this._imgformats;
-    }
-    get hipsFrame() {
-        return this._hipsFrame;
-    }
-    get isGalactic() {
-        return this._isGalctic;
-    }
-    get emMin() {
-        return this._emMin;
-    }
-    get emMax() {
-        return this._emMax;
-    }
-    get tileWidth() {
-        return this._tilewidth;
-    }
-    get dataRange() {
-        return this._datarange;
+        perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
+        this._pMatrix = p;
+        return p;
     }
 }
 
+;// ./src/utils/CoordsType.ts
+/**
+ * Enum for coordinate types.
+ * @author Fabrizio Giordano (Fab77)
+ */
+var CoordsType;
+(function (CoordsType) {
+    CoordsType["CARTESIAN"] = "cartesian";
+    CoordsType["SPHERICAL"] = "spherical";
+    CoordsType["ASTRO"] = "astro";
+})(CoordsType || (CoordsType = {}));
+// export default CoordsType;
 
-/***/ }),
+;// ./src/model/Point.ts
+/**
+ * @author Fabrizio Giordano (Fab77)
+ */
 
-/***/ "./src/model/hips/Tile.ts":
-/*!********************************!*\
-  !*** ./src/model/hips/Tile.ts ***!
-  \********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ Tile)
-/* harmony export */ });
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../Global.js */ "./src/Global.ts");
-/* harmony import */ var _FoVHelper_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./FoVHelper.js */ "./src/model/hips/FoVHelper.ts");
+
+
+
+class Point {
+    _x;
+    _y;
+    _z;
+    _xyz;
+    _raDeg;
+    _decDeg;
+    _raRad;
+    _decRad;
+    _raDecDeg;
+    constructor(in_options, in_type) {
+        this._xyz = [0, 0, 0];
+        this._raDecDeg = [0, 0];
+        // Prefer config value if present, fallback to 12
+        const MAX_DECIMALS = src_Global.MAX_DECIMALS ?? 12;
+        if (in_type === CoordsType.CARTESIAN) {
+            const { x, y, z } = in_options;
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+            const [ra, dec] = this.computeAstroCoords();
+            this._raDeg = Number(ra);
+            this._decDeg = Number(dec);
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            this._raDecDeg = [this._raDeg, this._decDeg];
+        }
+        else if (in_type === CoordsType.ASTRO) {
+            const { raDeg, decDeg } = in_options;
+            this._raDeg = Number(raDeg);
+            this._decDeg = Number(decDeg);
+            this._raDecDeg = [this._raDeg, this._decDeg];
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            const [x, y, z] = this.computeCartesianCoords();
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+        }
+        else if (in_type === CoordsType.SPHERICAL) {
+            // Not implemented in original; keep behavior
+            console.log(`${CoordsType.SPHERICAL} not implemented yet`);
+            this._x = 0;
+            this._y = 0;
+            this._z = 0;
+            this._raDeg = 0;
+            this._decDeg = 0;
+            this._raRad = 0;
+            this._decRad = 0;
+        }
+        else {
+            console.error('CoordsType ' + String(in_type) + ' not recognised.');
+            // Initialize to zeroed state to keep object consistent
+            this._x = 0;
+            this._y = 0;
+            this._z = 0;
+            this._raDeg = 0;
+            this._decDeg = 0;
+            this._raRad = 0;
+            this._decRad = 0;
+        }
+    }
+    computeAstroCoords() {
+        const phiThetaDeg = cartesianToSpherical(fromValues(this._xyz[0], this._xyz[1], this._xyz[2]));
+        const rad = sphericalToAstroDeg(phiThetaDeg.phi, phiThetaDeg.theta);
+        return [rad.ra, rad.dec];
+    }
+    computeCartesianCoords() {
+        const phiThetaDeg = astroDegToSpherical(this._raDeg, this._decDeg);
+        const [x, y, z] = sphericalToCartesian(phiThetaDeg.phi, phiThetaDeg.theta, 1);
+        return [x, y, z];
+    }
+    /**
+     * @return {phi, theta} (degrees)
+     */
+    computeHealpixPhiTheta() {
+        return astroDegToSpherical(this._raDeg, this._decDeg);
+    }
+    /** Scale the vector by a given factor */
+    scale(n) {
+        return new Point({ x: this.x * n, y: this.y * n, z: this.z * n }, CoordsType.CARTESIAN);
+    }
+    dot(v) {
+        return this.x * v.x + this.y * v.y + this.z * v.z;
+    }
+    cross(v) {
+        return new Point({
+            x: this.y * v.z - v.y * this.z,
+            y: this.z * v.x - v.z * this.x,
+            z: this.x * v.y - v.x * this.y,
+        }, CoordsType.CARTESIAN);
+    }
+    norm() {
+        const d = 1 / this.length();
+        return new Point({ x: this.x * d, y: this.y * d, z: this.z * d }, CoordsType.CARTESIAN);
+    }
+    length() {
+        return Math.sqrt(this.lengthSquared());
+    }
+    lengthSquared() {
+        return this.x * this.x + this.y * this.y + this.z * this.z;
+    }
+    subtract(v) {
+        return new Point({ x: this.x - v.x, y: this.y - v.y, z: this.z - v.z }, CoordsType.CARTESIAN);
+    }
+    add(v) {
+        return new Point({ x: this.x + v.x, y: this.y + v.y, z: this.z + v.z }, CoordsType.CARTESIAN);
+    }
+    get x() { return this._x; }
+    get y() { return this._y; }
+    get z() { return this._z; }
+    get xyz() { return this._xyz; }
+    get raDeg() { return this._raDeg; }
+    get decDeg() { return this._decDeg; }
+    get raDecDeg() { return this._raDecDeg; }
+    toADQL() {
+        return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
+    }
+    toString() {
+        return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
+    }
+}
+
+;// ./src/utils/FoVUtils.ts
+
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+
+
+
+
+class FoVUtils {
+    /**
+     * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
+     * (Kept here for parity; this class doesn’t maintain those fields.)
+     */
+    getMinFoV() {
+        return this._fovY_deg <= this._fovX_deg ? this._fovY_deg : this._fovX_deg;
+    }
+    /**
+     * Compute the FoV polygon as a list of Points (clockwise).
+     * Uses ray picking + frustum planes against a unit sphere.
+     */
+    static getFoVPolygon(
+    // _pMatrix: ReadonlyMat4 | null,
+    camera, canvas, model, healpixGrid, webgl, pMatrix) {
+        // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
+        //   _pMatrix) as ReadonlyMat4;
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4 
+        const vMatrix = camera.getCameraMatrix();
+        const mMatrix = model.getModelMatrix();
+        const canvasWidth = canvas.clientWidth;
+        const canvasHeight = canvas.clientHeight;
+        let points = [];
+        // First check: does the sphere cover the whole screen?
+        const intersectionWithModel = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
+        if (intersectionWithModel.length > 0) {
+            // Fully covered → grab corners + midpoints (CASE C)
+            const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
+            points = cornersPoints;
+        }
+        else {
+            // Partial coverage: build frustum planes
+            let M = mat4_create();
+            M = mat4_multiply(M, vMatrix, mMatrix);
+            M = mat4_multiply(M, pMatrix, M);
+            const topPlane = [M[3] - M[1], M[7] - M[5], M[11] - M[9], M[15] - M[13]]; // m41-m21, ...
+            const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
+            const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
+            const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
+            const intersectionTopMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera, pMatrix);
+            const intersectionRightMiddle = utils_RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera, pMatrix);
+            // CASE A: zoomed out, hemisphere fully visible
+            if (intersectionTopMiddle.length === 0 &&
+                intersectionRightMiddle.length === 0) {
+                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
+                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
+                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
+                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
+                points.push(topPoints[0], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], middleLeftTop);
+            }
+            // CASE E: no intersection on top/bottom planes
+            else if (intersectionTopMiddle.length === 0) {
+                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
+                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
+                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
+                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[1], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[1], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
+                points.push(topPoints[0], middleTopRight, rightPoints[0], rightPoints[1], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], leftPoints[1], middleLeftTop);
+            }
+            // CASE D: no intersection on right/left planes
+            else if (intersectionRightMiddle.length === 0) {
+                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
+                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
+                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
+                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[1], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[1], leftPoints[0])[0];
+                points.push(topPoints[0], topPoints[1], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], bottomPoints[1], middleBottomLeft, leftPoints[0], middleLeftTop);
+            }
+            // CASE B: all frustum planes intersect
+            else {
+                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
+                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
+                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
+                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
+                points.push(topPoints[0], topPoints[1], rightPoints[0], rightPoints[1], bottomPoints[0], bottomPoints[1], leftPoints[0], leftPoints[1]);
+            }
+        }
+        return points;
+    }
+    /**
+     * Ray pick against 8 key screen positions (corners + midpoints).
+     * Returns Points in clockwise order starting from top-left.
+     */
+    static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        const topLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
+        const middleTop = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera, pMatrix);
+        const topRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera, pMatrix);
+        const middleRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera, pMatrix);
+        const bottomRight = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera, pMatrix);
+        const middleBottom = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera, pMatrix);
+        const bottomLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera, pMatrix);
+        const middleLeft = utils_RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera, pMatrix);
+        const out = [];
+        const pushIf = (ip) => {
+            if (ip.length > 0) {
+                out.push(new Point({ x: ip[0], y: ip[1], z: ip[2] }, CoordsType.CARTESIAN));
+            }
+        };
+        pushIf(topLeft);
+        pushIf(middleTop);
+        pushIf(topRight);
+        pushIf(middleRight);
+        pushIf(bottomRight);
+        pushIf(middleBottom);
+        pushIf(bottomLeft);
+        pushIf(middleLeft);
+        return out;
+    }
+    /** Returns the center point (in J2000) of the current view as a `Point`. */
+    static getCenterJ2000(canvas, healpixGrid, webgl, camera, pMatrix) {
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        const center = utils_RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera, pMatrix);
+        if (center.length <= 0)
+            throw Error(`Central point is null`);
+        return new Point({ x: center[0], y: center[1], z: center[2] }, CoordsType.CARTESIAN);
+    }
+    /** Middle point on the unit sphere along the arc between two 3D points. */
+    static computeMiddlePoint(p1, p2) {
+        // midpoint of segment
+        const xm = (p1.x + p2.x) / 2;
+        const ym = (p1.y + p2.y) / 2;
+        const zm = (p1.z + p2.z) / 2;
+        // project the midpoint back to unit sphere
+        const len = Math.hypot(xm, ym, zm) || 1;
+        const x = xm / len;
+        const y = ym / len;
+        const z = zm / len;
+        return [new Point({ x, y, z }, CoordsType.CARTESIAN)];
+    }
+    /**
+     * Nearest intersection point between a frustum plane and the unit sphere,
+     * using the plane normal.
+     */
+    static getNearestSpherePoint(plane) {
+        const [A, B, C, D] = plane;
+        const R = 1;
+        const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
+        const t1 = R * invLen;
+        const t2 = -R * invLen;
+        const P1 = [A * t1, B * t1, C * t1];
+        const P2 = [A * t2, B * t2, C * t2];
+        const den = Math.sqrt(A * A + B * B + C * C) || 1;
+        const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
+        const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
+        const P = dist1 <= dist2 ? P1 : P2;
+        return [new Point({ x: P[0], y: P[1], z: P[2] }, CoordsType.CARTESIAN)];
+    }
+    /**
+     * Intersections between a frustum plane and the unit sphere,
+     * computed via two perpendicular planes.
+     * Returns two points (first from `plane4Circle_1`, second from `plane4Circle_2`).
+     */
+    static getFrustumIntersectionWithSphere(_M, plane4Sphere, plane4Circle_1, plane4Circle_2) {
+        const [A0, B0, C0, D0] = plane4Sphere;
+        // center of the circle (projection of sphere center onto plane)
+        const denom0 = (A0 * A0 + B0 * B0 + C0 * C0) || 1;
+        const x_c = -(A0 * D0) / denom0;
+        const y_c = -(B0 * D0) / denom0;
+        const z_c = -(C0 * D0) / denom0;
+        const d = Math.abs(D0) / Math.sqrt(denom0); // distance from sphere center (0,0,0)
+        const R = 1;
+        const out = [];
+        if (R > d) {
+            const r = Math.sqrt(R * R - d * d);
+            const pick = (plane) => {
+                const [A, B, C, D] = plane;
+                const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
+                const t1 = r * invLen;
+                const t2 = -r * invLen;
+                const P1 = [x_c + A * t1, y_c + B * t1, z_c + C * t1];
+                const P2 = [x_c + A * t2, y_c + B * t2, z_c + C * t2];
+                const den = Math.sqrt(A * A + B * B + C * C) || 1;
+                const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
+                const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
+                return dist1 <= dist2 ? P1 : P2;
+            };
+            const P_intersection_1 = pick(plane4Circle_1);
+            const P_intersection_2 = pick(plane4Circle_2);
+            out.push(new Point({ x: P_intersection_1[0], y: P_intersection_1[1], z: P_intersection_1[2] }, CoordsType.CARTESIAN), new Point({ x: P_intersection_2[0], y: P_intersection_2[1], z: P_intersection_2[2] }, CoordsType.CARTESIAN));
+        }
+        else if (R === d) {
+            // Tangent: both intersections collapse to the circle center on the plane
+            out.push(new Point({ x: x_c, y: y_c, z: z_c }, CoordsType.CARTESIAN), new Point({ x: x_c, y: y_c, z: z_c }, CoordsType.CARTESIAN));
+        }
+        else {
+            // No intersection; return empty to avoid pushing undefined values
+            // console.log('Frustum plane not intersecting the sphere');
+        }
+        return out;
+    }
+    /** Build ADQL string from an array of Points (ra,dec pairs). */
+    static getAstroFoVPolygon(points) {
+        return points.map(p => p.toADQL()).join(',');
+    }
+}
+
+;// ./node_modules/gl-matrix/esm/vec4.js
+
+
+/**
+ * 4 Dimensional Vector
+ * @module vec4
+ */
+
+/**
+ * Creates a new, empty vec4
+ *
+ * @returns {vec4} a new 4D vector
+ */
+function vec4_create() {
+  var out = new ARRAY_TYPE(4);
+  if (ARRAY_TYPE != Float32Array) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 0;
+    out[3] = 0;
+  }
+  return out;
+}
+
+/**
+ * Creates a new vec4 initialized with values from an existing vector
+ *
+ * @param {ReadonlyVec4} a vector to clone
+ * @returns {vec4} a new 4D vector
+ */
+function vec4_clone(a) {
+  var out = new glMatrix.ARRAY_TYPE(4);
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  out[3] = a[3];
+  return out;
+}
+
+/**
+ * Creates a new vec4 initialized with the given values
+ *
+ * @param {Number} x X component
+ * @param {Number} y Y component
+ * @param {Number} z Z component
+ * @param {Number} w W component
+ * @returns {vec4} a new 4D vector
+ */
+function vec4_fromValues(x, y, z, w) {
+  var out = new glMatrix.ARRAY_TYPE(4);
+  out[0] = x;
+  out[1] = y;
+  out[2] = z;
+  out[3] = w;
+  return out;
+}
+
+/**
+ * Copy the values from one vec4 to another
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the source vector
+ * @returns {vec4} out
+ */
+function vec4_copy(out, a) {
+  out[0] = a[0];
+  out[1] = a[1];
+  out[2] = a[2];
+  out[3] = a[3];
+  return out;
+}
+
+/**
+ * Set the components of a vec4 to the given values
+ *
+ * @param {vec4} out the receiving vector
+ * @param {Number} x X component
+ * @param {Number} y Y component
+ * @param {Number} z Z component
+ * @param {Number} w W component
+ * @returns {vec4} out
+ */
+function vec4_set(out, x, y, z, w) {
+  out[0] = x;
+  out[1] = y;
+  out[2] = z;
+  out[3] = w;
+  return out;
+}
+
+/**
+ * Adds two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_add(out, a, b) {
+  out[0] = a[0] + b[0];
+  out[1] = a[1] + b[1];
+  out[2] = a[2] + b[2];
+  out[3] = a[3] + b[3];
+  return out;
+}
+
+/**
+ * Subtracts vector b from vector a
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_subtract(out, a, b) {
+  out[0] = a[0] - b[0];
+  out[1] = a[1] - b[1];
+  out[2] = a[2] - b[2];
+  out[3] = a[3] - b[3];
+  return out;
+}
+
+/**
+ * Multiplies two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_multiply(out, a, b) {
+  out[0] = a[0] * b[0];
+  out[1] = a[1] * b[1];
+  out[2] = a[2] * b[2];
+  out[3] = a[3] * b[3];
+  return out;
+}
+
+/**
+ * Divides two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_divide(out, a, b) {
+  out[0] = a[0] / b[0];
+  out[1] = a[1] / b[1];
+  out[2] = a[2] / b[2];
+  out[3] = a[3] / b[3];
+  return out;
+}
+
+/**
+ * Math.ceil the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to ceil
+ * @returns {vec4} out
+ */
+function vec4_ceil(out, a) {
+  out[0] = Math.ceil(a[0]);
+  out[1] = Math.ceil(a[1]);
+  out[2] = Math.ceil(a[2]);
+  out[3] = Math.ceil(a[3]);
+  return out;
+}
+
+/**
+ * Math.floor the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to floor
+ * @returns {vec4} out
+ */
+function vec4_floor(out, a) {
+  out[0] = Math.floor(a[0]);
+  out[1] = Math.floor(a[1]);
+  out[2] = Math.floor(a[2]);
+  out[3] = Math.floor(a[3]);
+  return out;
+}
+
+/**
+ * Returns the minimum of two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_min(out, a, b) {
+  out[0] = Math.min(a[0], b[0]);
+  out[1] = Math.min(a[1], b[1]);
+  out[2] = Math.min(a[2], b[2]);
+  out[3] = Math.min(a[3], b[3]);
+  return out;
+}
+
+/**
+ * Returns the maximum of two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {vec4} out
+ */
+function vec4_max(out, a, b) {
+  out[0] = Math.max(a[0], b[0]);
+  out[1] = Math.max(a[1], b[1]);
+  out[2] = Math.max(a[2], b[2]);
+  out[3] = Math.max(a[3], b[3]);
+  return out;
+}
+
+/**
+ * symmetric round the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to round
+ * @returns {vec4} out
+ */
+function vec4_round(out, a) {
+  out[0] = glMatrix.round(a[0]);
+  out[1] = glMatrix.round(a[1]);
+  out[2] = glMatrix.round(a[2]);
+  out[3] = glMatrix.round(a[3]);
+  return out;
+}
+
+/**
+ * Scales a vec4 by a scalar number
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the vector to scale
+ * @param {Number} b amount to scale the vector by
+ * @returns {vec4} out
+ */
+function vec4_scale(out, a, b) {
+  out[0] = a[0] * b;
+  out[1] = a[1] * b;
+  out[2] = a[2] * b;
+  out[3] = a[3] * b;
+  return out;
+}
+
+/**
+ * Adds two vec4's after scaling the second operand by a scalar value
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @param {Number} scale the amount to scale b by before adding
+ * @returns {vec4} out
+ */
+function vec4_scaleAndAdd(out, a, b, scale) {
+  out[0] = a[0] + b[0] * scale;
+  out[1] = a[1] + b[1] * scale;
+  out[2] = a[2] + b[2] * scale;
+  out[3] = a[3] + b[3] * scale;
+  return out;
+}
+
+/**
+ * Calculates the euclidian distance between two vec4's
+ *
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {Number} distance between a and b
+ */
+function vec4_distance(a, b) {
+  var x = b[0] - a[0];
+  var y = b[1] - a[1];
+  var z = b[2] - a[2];
+  var w = b[3] - a[3];
+  return Math.sqrt(x * x + y * y + z * z + w * w);
+}
+
+/**
+ * Calculates the squared euclidian distance between two vec4's
+ *
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {Number} squared distance between a and b
+ */
+function vec4_squaredDistance(a, b) {
+  var x = b[0] - a[0];
+  var y = b[1] - a[1];
+  var z = b[2] - a[2];
+  var w = b[3] - a[3];
+  return x * x + y * y + z * z + w * w;
+}
+
+/**
+ * Calculates the length of a vec4
+ *
+ * @param {ReadonlyVec4} a vector to calculate length of
+ * @returns {Number} length of a
+ */
+function vec4_length(a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var w = a[3];
+  return Math.sqrt(x * x + y * y + z * z + w * w);
+}
+
+/**
+ * Calculates the squared length of a vec4
+ *
+ * @param {ReadonlyVec4} a vector to calculate squared length of
+ * @returns {Number} squared length of a
+ */
+function vec4_squaredLength(a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var w = a[3];
+  return x * x + y * y + z * z + w * w;
+}
+
+/**
+ * Negates the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to negate
+ * @returns {vec4} out
+ */
+function vec4_negate(out, a) {
+  out[0] = -a[0];
+  out[1] = -a[1];
+  out[2] = -a[2];
+  out[3] = -a[3];
+  return out;
+}
+
+/**
+ * Returns the inverse of the components of a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to invert
+ * @returns {vec4} out
+ */
+function vec4_inverse(out, a) {
+  out[0] = 1.0 / a[0];
+  out[1] = 1.0 / a[1];
+  out[2] = 1.0 / a[2];
+  out[3] = 1.0 / a[3];
+  return out;
+}
+
+/**
+ * Normalize a vec4
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a vector to normalize
+ * @returns {vec4} out
+ */
+function vec4_normalize(out, a) {
+  var x = a[0];
+  var y = a[1];
+  var z = a[2];
+  var w = a[3];
+  var len = x * x + y * y + z * z + w * w;
+  if (len > 0) {
+    len = 1 / Math.sqrt(len);
+  }
+  out[0] = x * len;
+  out[1] = y * len;
+  out[2] = z * len;
+  out[3] = w * len;
+  return out;
+}
+
+/**
+ * Calculates the dot product of two vec4's
+ *
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @returns {Number} dot product of a and b
+ */
+function dot(a, b) {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+}
+
+/**
+ * Returns the cross-product of three vectors in a 4-dimensional space
+ *
+ * @param {ReadonlyVec4} out the receiving vector
+ * @param {ReadonlyVec4} u the first vector
+ * @param {ReadonlyVec4} v the second vector
+ * @param {ReadonlyVec4} w the third vector
+ * @returns {vec4} result
+ */
+function vec4_cross(out, u, v, w) {
+  var A = v[0] * w[1] - v[1] * w[0],
+    B = v[0] * w[2] - v[2] * w[0],
+    C = v[0] * w[3] - v[3] * w[0],
+    D = v[1] * w[2] - v[2] * w[1],
+    E = v[1] * w[3] - v[3] * w[1],
+    F = v[2] * w[3] - v[3] * w[2];
+  var G = u[0];
+  var H = u[1];
+  var I = u[2];
+  var J = u[3];
+  out[0] = H * F - I * E + J * D;
+  out[1] = -(G * F) + I * C - J * B;
+  out[2] = G * E - H * C + J * A;
+  out[3] = -(G * D) + H * B - I * A;
+  return out;
+}
+
+/**
+ * Performs a linear interpolation between two vec4's
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the first operand
+ * @param {ReadonlyVec4} b the second operand
+ * @param {Number} t interpolation amount, in the range [0-1], between the two inputs
+ * @returns {vec4} out
+ */
+function vec4_lerp(out, a, b, t) {
+  var ax = a[0];
+  var ay = a[1];
+  var az = a[2];
+  var aw = a[3];
+  out[0] = ax + t * (b[0] - ax);
+  out[1] = ay + t * (b[1] - ay);
+  out[2] = az + t * (b[2] - az);
+  out[3] = aw + t * (b[3] - aw);
+  return out;
+}
+
+/**
+ * Generates a random vector with the given scale
+ *
+ * @param {vec4} out the receiving vector
+ * @param {Number} [scale] Length of the resulting vector. If omitted, a unit vector will be returned
+ * @returns {vec4} out
+ */
+function vec4_random(out, scale) {
+  scale = scale === undefined ? 1.0 : scale;
+
+  // Marsaglia, George. Choosing a Point from the Surface of a
+  // Sphere. Ann. Math. Statist. 43 (1972), no. 2, 645--646.
+  // http://projecteuclid.org/euclid.aoms/1177692644;
+  var v1, v2, v3, v4;
+  var s1, s2;
+  var rand;
+  rand = glMatrix.RANDOM();
+  v1 = rand * 2 - 1;
+  v2 = (4 * glMatrix.RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
+  s1 = v1 * v1 + v2 * v2;
+  rand = glMatrix.RANDOM();
+  v3 = rand * 2 - 1;
+  v4 = (4 * glMatrix.RANDOM() - 2) * Math.sqrt(rand * -rand + rand);
+  s2 = v3 * v3 + v4 * v4;
+  var d = Math.sqrt((1 - s1) / s2);
+  out[0] = scale * v1;
+  out[1] = scale * v2;
+  out[2] = scale * v3 * d;
+  out[3] = scale * v4 * d;
+  return out;
+}
+
+/**
+ * Transforms the vec4 with a mat4.
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the vector to transform
+ * @param {ReadonlyMat4} m matrix to transform with
+ * @returns {vec4} out
+ */
+function vec4_transformMat4(out, a, m) {
+  var x = a[0],
+    y = a[1],
+    z = a[2],
+    w = a[3];
+  out[0] = m[0] * x + m[4] * y + m[8] * z + m[12] * w;
+  out[1] = m[1] * x + m[5] * y + m[9] * z + m[13] * w;
+  out[2] = m[2] * x + m[6] * y + m[10] * z + m[14] * w;
+  out[3] = m[3] * x + m[7] * y + m[11] * z + m[15] * w;
+  return out;
+}
+
+/**
+ * Transforms the vec4 with a quat
+ *
+ * @param {vec4} out the receiving vector
+ * @param {ReadonlyVec4} a the vector to transform
+ * @param {ReadonlyQuat} q normalized quaternion to transform with
+ * @returns {vec4} out
+ */
+function vec4_transformQuat(out, a, q) {
+  // Fast Vector Rotation using Quaternions by Robert Eisele
+  // https://raw.org/proof/vector-rotation-using-quaternions/
+
+  var qx = q[0],
+    qy = q[1],
+    qz = q[2],
+    qw = q[3];
+  var vx = a[0],
+    vy = a[1],
+    vz = a[2];
+
+  // t = q x v
+  var tx = qy * vz - qz * vy;
+  var ty = qz * vx - qx * vz;
+  var tz = qx * vy - qy * vx;
+
+  // t = 2t
+  tx = tx + tx;
+  ty = ty + ty;
+  tz = tz + tz;
+
+  // v + w t + q x t
+  out[0] = vx + qw * tx + qy * tz - qz * ty;
+  out[1] = vy + qw * ty + qz * tx - qx * tz;
+  out[2] = vz + qw * tz + qx * ty - qy * tx;
+  out[3] = a[3];
+  return out;
+}
+
+/**
+ * Set the components of a vec4 to zero
+ *
+ * @param {vec4} out the receiving vector
+ * @returns {vec4} out
+ */
+function vec4_zero(out) {
+  out[0] = 0.0;
+  out[1] = 0.0;
+  out[2] = 0.0;
+  out[3] = 0.0;
+  return out;
+}
+
+/**
+ * Returns a string representation of a vector
+ *
+ * @param {ReadonlyVec4} a vector to represent as a string
+ * @returns {String} string representation of the vector
+ */
+function vec4_str(a) {
+  return "vec4(" + a[0] + ", " + a[1] + ", " + a[2] + ", " + a[3] + ")";
+}
+
+/**
+ * Returns whether or not the vectors have exactly the same elements in the same position (when compared with ===)
+ *
+ * @param {ReadonlyVec4} a The first vector.
+ * @param {ReadonlyVec4} b The second vector.
+ * @returns {Boolean} True if the vectors are equal, false otherwise.
+ */
+function vec4_exactEquals(a, b) {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
+}
+
+/**
+ * Returns whether or not the vectors have approximately the same elements in the same position.
+ *
+ * @param {ReadonlyVec4} a The first vector.
+ * @param {ReadonlyVec4} b The second vector.
+ * @returns {Boolean} True if the vectors are equal, false otherwise.
+ */
+function vec4_equals(a, b) {
+  var a0 = a[0],
+    a1 = a[1],
+    a2 = a[2],
+    a3 = a[3];
+  var b0 = b[0],
+    b1 = b[1],
+    b2 = b[2],
+    b3 = b[3];
+  return Math.abs(a0 - b0) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a0), Math.abs(b0)) && Math.abs(a1 - b1) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a1), Math.abs(b1)) && Math.abs(a2 - b2) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a2), Math.abs(b2)) && Math.abs(a3 - b3) <= glMatrix.EPSILON * Math.max(1.0, Math.abs(a3), Math.abs(b3));
+}
+
+/**
+ * Alias for {@link vec4.subtract}
+ * @function
+ */
+var vec4_sub = (/* unused pure expression or super */ null && (vec4_subtract));
+
+/**
+ * Alias for {@link vec4.multiply}
+ * @function
+ */
+var vec4_mul = (/* unused pure expression or super */ null && (vec4_multiply));
+
+/**
+ * Alias for {@link vec4.divide}
+ * @function
+ */
+var vec4_div = (/* unused pure expression or super */ null && (vec4_divide));
+
+/**
+ * Alias for {@link vec4.distance}
+ * @function
+ */
+var vec4_dist = (/* unused pure expression or super */ null && (vec4_distance));
+
+/**
+ * Alias for {@link vec4.squaredDistance}
+ * @function
+ */
+var vec4_sqrDist = (/* unused pure expression or super */ null && (vec4_squaredDistance));
+
+/**
+ * Alias for {@link vec4.length}
+ * @function
+ */
+var vec4_len = (/* unused pure expression or super */ null && (vec4_length));
+
+/**
+ * Alias for {@link vec4.squaredLength}
+ * @function
+ */
+var vec4_sqrLen = (/* unused pure expression or super */ null && (vec4_squaredLength));
+
+/**
+ * Perform some operation over an array of vec4s.
+ *
+ * @param {Array} a the array of vectors to iterate over
+ * @param {Number} stride Number of elements between the start of each vec4. If 0 assumes tightly packed
+ * @param {Number} offset Number of elements to skip at the beginning of the array
+ * @param {Number} count Number of vec4s to iterate over. If 0 iterates over entire array
+ * @param {Function} fn Function to call for each vector in the array
+ * @param {Object} [arg] additional argument to pass to fn
+ * @returns {Array} a
+ * @function
+ */
+var vec4_forEach = function () {
+  var vec = vec4_create();
+  return function (a, stride, offset, count, fn, arg) {
+    var i, l;
+    if (!stride) {
+      stride = 4;
+    }
+    if (!offset) {
+      offset = 0;
+    }
+    if (count) {
+      l = Math.min(count * stride + offset, a.length);
+    } else {
+      l = a.length;
+    }
+    for (i = offset; i < l; i += stride) {
+      vec[0] = a[i];
+      vec[1] = a[i + 1];
+      vec[2] = a[i + 2];
+      vec[3] = a[i + 3];
+      fn(vec, vec, arg);
+      a[i] = vec[0];
+      a[i + 1] = vec[1];
+      a[i + 2] = vec[2];
+      a[i + 3] = vec[3];
+    }
+    return a;
+  };
+}();
+;// ./src/shader/GridShaderManager.ts
+// GridShaderManager.ts
+
+class GridShaderManager {
+    static healpixGridVS() {
+        return `#version 300 es
+        in vec4 aCatPosition;
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+
+        void main() {
+            gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+            gl_PointSize = 7.0;
+        }`;
+    }
+    static healpixGridFS() {
+        return `#version 300 es
+        precision mediump float;
+
+        uniform vec4 u_fragcolor;
+        out vec4 fragColor;
+
+        void main() {
+            // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            fragColor = u_fragcolor;
+        }`;
+    }
+}
+/* harmony default export */ const shader_GridShaderManager = (GridShaderManager);
+
+;// ./src/model/grid/GridTextHelper.ts
+/**
+ * @author Fabrizio Giordano (Fab)
+ * @param in_radius - number
+ * @param in_gl - GL context
+ * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
+ */
+class GridTextHelper {
+    _divEqContainerElement;
+    _divHPXContainerElement;
+    _divSets;
+    _divSetNdx;
+    constructor() {
+        this._divEqContainerElement = document.querySelector('#gridcoords');
+        this._divHPXContainerElement = document.querySelector('#gridhpx');
+        this._divSetNdx = 0;
+        this._divSets = [];
+    }
+    initHtml() {
+        // Kept for API parity; nothing required here with current logic.
+    }
+    resetDivSets() {
+        // Hide remaining divs and reset index
+        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
+            this._divSets[this._divSetNdx].style.display = 'none';
+        }
+        this._divSetNdx = 0;
+    }
+    /**
+     * Add / reuse a floating label for HPX coordinates
+     */
+    addHPXDivSet(msg, x, y) {
+        let divSet = this._divSets[this._divSetNdx++];
+        // Create on demand
+        if (!divSet) {
+            const div = document.createElement('div');
+            const textNode = document.createTextNode('');
+            div.className = 'floating-div-ra'; // style like RA tags
+            div.appendChild(textNode);
+            if (!this._divHPXContainerElement) {
+                this._divHPXContainerElement = document.querySelector('#gridhpx');
+            }
+            if (!this._divHPXContainerElement) {
+                // If container is still missing, abort gracefully
+                return;
+            }
+            this._divHPXContainerElement.appendChild(div);
+            divSet = { div, textNode, style: div.style };
+            this._divSets.push(divSet);
+        }
+        // Show & position
+        divSet.style.display = 'block';
+        divSet.style.left = `${Math.floor(x + 25)}px`;
+        divSet.style.top = `${Math.floor(y)}px`;
+        divSet.textNode.nodeValue = msg;
+    }
+    /**
+     * Add / reuse a floating label for Equatorial coords
+     * @param type 'ra' or 'dec'
+     */
+    addEqDivSet(msg, x, y, type) {
+        let divSet = this._divSets[this._divSetNdx++];
+        if (!divSet) {
+            const div = document.createElement('div');
+            const textNode = document.createTextNode('');
+            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
+            div.appendChild(textNode);
+            if (!this._divEqContainerElement) {
+                this._divEqContainerElement = document.querySelector('#gridcoords');
+            }
+            if (!this._divEqContainerElement) {
+                // If container is still missing, abort gracefully
+                return;
+            }
+            this._divEqContainerElement.appendChild(div);
+            divSet = { div, textNode, style: div.style };
+            this._divSets.push(divSet);
+        }
+        divSet.style.display = 'block';
+        if (type === 'ra') {
+            divSet.style.left = `${Math.floor(x + 25)}px`;
+            divSet.style.top = `${Math.floor(y)}px`;
+        }
+        else {
+            divSet.style.left = `${Math.floor(x)}px`;
+            divSet.style.top = `${Math.floor(y + 25)}px`;
+        }
+        divSet.textNode.nodeValue = msg;
+    }
+}
+// export const gridTextHelper = new GridTextHelper();
+/* harmony default export */ const grid_GridTextHelper = (GridTextHelper);
+
+;// ./src/model/FoV.ts
+
+/**
+ * FoV singleton (TypeScript)
+ * - Uses computePerspectiveMatrixSingleton.pMatrix
+ * - Guards acos domain (numeric safety)
+ * - Uses vec3.transformMat4 instead of custom mat4*vec3
+ * - Keeps original “insideSphere ? 360 - angle : angle” behavior
+ */
+
+
+
+class FoV {
+    fovXDeg = 180;
+    fovYDeg = 180;
+    ratio = +0;
+    _minFoV = 180;
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
+    }
+    /** Recomputes FoV for current camera + projection */
+    getFoV(insideSphere, healpixGridSingleton, camera, pMatrix) {
+        // const gl = webgl
+        const gl = this._webgl;
+        if (!gl || !gl.canvas) {
+            // Handle the error or assign default values
+            this.fovXDeg = 180;
+            this.fovYDeg = 180;
+            this._minFoV = this.minFoV;
+            return this;
+        }
+        // horizontal FoV: ray through (centerY)
+        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
+        const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix);
+        this.fovXDeg = xFoVComputed.angleDeg;
+        // vertical FoV: ray through (centerX)
+        const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix);
+        this.fovYDeg = yFoVComputed.angleDeg;
+        this._minFoV = this.minFoV;
+        this.ratio = this.computeRatio(camera);
+        return this;
+    }
+    computeRatio(camera) {
+        // const camera = global.camera
+        if (!camera)
+            throw Error("Camera not defined");
+        const pos = camera.getCameraPosition();
+        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
+        const ratio = distanceFromCenter / this.fovYDeg;
+        return ratio;
+    }
+    changeMinFov(deg) {
+        console.log("inside changeMinFov");
+        if (this.fovYDeg <= this.fovXDeg) {
+            this.fovYDeg = deg;
+        }
+        else {
+            this.fovXDeg = deg;
+        }
+        console.log("changeMinFov: ping");
+        this.minFoV;
+        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
+    }
+    get minFoV() {
+        this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        return this._minFoV;
+    }
+    computeDistanceFromAngle(angleDeg) {
+        const desiredFoV = angleDeg;
+        const distance = desiredFoV * this.ratio;
+        // return Math.abs(distance)
+        return distance;
+    }
+    /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
+    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera, pMatrix) {
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix
+        if (!pMatrix) {
+            // Handle the error or assign a default value
+            console.warn('FoV: projection matrix is null');
+            return { angleDeg: 180, distance: 1 };
+        }
+        const vMatrix = camera.getCameraMatrix();
+        if (!camera) {
+            // Handle the error or assign a default value
+            console.warn('FoV: camera is null');
+            return { angleDeg: 180, distance: 1 };
+        }
+        const rayWorld = utils_RayPickingUtils.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix);
+        const intersectionDistance = utils_RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
+        let angleDeg;
+        if (intersectionDistance > 0) {
+            // world-space intersection point on the sphere
+            const hit = create();
+            scale(hit, rayWorld, intersectionDistance);
+            add(hit, camera.getCameraPosition(), hit);
+            const center = healpixGridSingleton.center;
+            // vectors from sphere center
+            const vHit = create();
+            subtract(vHit, hit, center);
+            // reference vector: rotate world +Z into current camera orientation, then from center
+            const refWorldZ = fromValues(center[0], center[1], center[2] + healpixGridSingleton.radius);
+            const vInv = mat4_create();
+            invert(vInv, camera.getCameraMatrix());
+            const refCamZ = create();
+            transformMat4(refCamZ, refWorldZ, vInv);
+            const vRef = create();
+            subtract(vRef, refCamZ, center);
+            // angle between vHit and vRef, doubled
+            const dot = vec3_dot(vHit, vRef);
+            const n1 = vec3_length(vHit);
+            const n2 = vec3_length(vRef);
+            // numeric safety for acos
+            const c = Math.min(1, Math.max(-1, dot / (n1 * n2)));
+            const angleRad = Math.acos(c);
+            angleDeg = 2 * radToDeg(angleRad);
+        }
+        else {
+            angleDeg = 180;
+        }
+        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
+        // return insideSphere ? 360 - angleDeg : angleDeg
+        return { angleDeg: finalAngle, distance: intersectionDistance };
+    }
+    /**
+   * Computes the camera position (x,y,z) along the current view direction that would
+   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
+   * This method does NOT mutate the camera; it only returns the suggested position.
+   *
+   * Geometry: for a sphere of radius R observed from distance d (from center),
+   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
+   * along the tighter axis; we solve for d and place the camera on the current
+   * center→camera direction with that distance.
+   *
+   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
+   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
+   */
+    computeCameraPositionForMinFoV(targetMinFoVDeg) {
+        // const camera = global.camera
+        // const center = healpixGridSingleton.center
+        // const R = healpixGridSingleton.radius
+        // if (!camera) {
+        //   console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.')
+        //   return [center[0], center[1], center[2] + 2 * R]
+        // }
+        // // Clamp and validate input
+        // const eps = 1e-6
+        // const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg))
+        // const halfRad = (clamped * Math.PI / 180) * 0.5
+        // // Distance from center needed to achieve the angular diameter
+        // // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
+        // const sinHalf = Math.sin(halfRad)
+        // if (sinHalf <= 0) {
+        //   console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.')
+        //   return [center[0], center[1], center[2] + 2 * R]
+        // }
+        // let d = R / sinHalf
+        // // Ensure we remain strictly outside the sphere
+        // d = Math.max(d, R + 1e-4)
+        // // Use the current center→camera direction to keep orientation
+        // const camPos = camera.getCameraPosition()
+        // let dirX = camPos[0] - center[0]
+        // let dirY = camPos[1] - center[1]
+        // let dirZ = camPos[2] - center[2]
+        // const len = Math.hypot(dirX, dirY, dirZ)
+        // if (len < eps) {
+        //   // If somehow at the center, use +Z as a default direction
+        //   dirX = 0; dirY = 0; dirZ = 1;
+        // } else {
+        //   dirX /= len
+        //   dirY /= len
+        //   dirZ /= len
+        // }
+        // const newX = center[0] + dirX * d
+        // const newY = center[1] + dirY * d
+        // const newZ = center[2] + dirZ * d
+        // return [newX, newY, newZ]
+        return [0, 0, 0];
+    }
+    /**
+       * Computes the camera world-space position required to achieve a target FoV (deg),
+       * keeping the same viewing direction. Acts as the inverse of computeAngle().
+       *
+       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
+       * @param canvasWidth  canvas width in pixels
+       * @param canvasHeight canvas height in pixels
+       * @returns [x, y, z] coordinates for the new camera position
+       */
+    computeCameraPositionForFoV(targetFoVDeg) {
+        // const camera = global.camera;
+        // const center = healpixGridSingleton.center;
+        // const R = healpixGridSingleton.radius;
+        // if (!camera) {
+        //   console.warn("FoV.computeCameraPositionForFoV: camera missing.");
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // const eps = 1e-6;
+        // const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
+        // const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
+        // // Distance from center that yields this FoV
+        // const sinHalf = Math.sin(halfRad);
+        // if (sinHalf <= 0) {
+        //   console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // let d = R / sinHalf;
+        // // Slightly outside sphere to avoid clipping
+        // d = Math.max(d, R + 1e-4);
+        // // Get current viewing direction
+        // const camPos = camera.getCameraPosition();
+        // let dirX = camPos[0] - center[0];
+        // let dirY = camPos[1] - center[1];
+        // let dirZ = camPos[2] - center[2];
+        // const len = Math.hypot(dirX, dirY, dirZ);
+        // if (len < eps) {
+        //   dirX = 0; dirY = 0; dirZ = 1;
+        // } else {
+        //   dirX /= len;
+        //   dirY /= len;
+        //   dirZ /= len;
+        // }
+        // const newX = center[0] + dirX * d;
+        // const newY = center[1] + dirY * d;
+        // const newZ = center[2] + dirZ * d;
+        // return [newX, newY, newZ];
+        return [0, 0, 0];
+    }
+    /**
+   * Return a camera position such that the sphere's apparent angular diameter
+   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
+   * Keeps current view direction; does not mutate the camera.
+   *
+   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
+   * @returns [x,y,z] world position
+   */
+    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
+        // const camera = global.camera;
+        // const center = healpixGridSingleton.center;
+        // const R = healpixGridSingleton.radius;
+        // if (!camera) {
+        //   console.warn('computeCameraPositionForAngularDiameter: camera missing.');
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // const eps = 1e-6;
+        // const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
+        // const half = (α * Math.PI) / 360.0;
+        // const sinHalf = Math.sin(half);
+        // // d = R / sin(α/2)
+        // let d = R / sinHalf;
+        // d = Math.max(d, R + 1e-4); // stay outside
+        // // project along current center→camera direction
+        // const [cx, cy, cz] = center as [number, number, number];
+        // const [px, py, pz] = camera.getCameraPosition();
+        // let dx = px - cx, dy = py - cy, dz = pz - cz;
+        // const L = Math.hypot(dx, dy, dz);
+        // if (L < eps) { dx = 0; dy = 0; dz = 1; } else { dx /= L; dy /= L; dz /= L; }
+        // return [cx + dx * d, cy + dy * d, cz + dz * d];
+        return [0, 0, 0];
+    }
+}
+
+;// ./src/model/Point2D.ts
+class Point2D {
+    _x;
+    _y;
+    constructor(x, y) {
+        this._x = x;
+        this._y = y;
+    }
+    get x() {
+        return this._x;
+    }
+    get y() {
+        return this._y;
+    }
+}
+/* harmony default export */ const model_Point2D = (Point2D);
+
+;// ./src/utils/GeomUtils.ts
+
+
+
+class GeomUtils {
+    // Orthodromic (great-circle) distance in radians
+    static orthodromicDistance(p1, p2) {
+        return Math.acos(Math.sin(p1.decDeg * Math.PI / 180) * Math.sin(p2.decDeg * Math.PI / 180) +
+            Math.cos(p1.decDeg * Math.PI / 180) * Math.cos(p2.decDeg * Math.PI / 180) *
+                Math.cos((p2.raDeg - p1.raDeg) * Math.PI / 180));
+    }
+    /**
+     * Decide the 2D projection strategy and pre-project polygons for point-in-polygon tests.
+     * Returns the projected polygons + bbox + a flag describing the projection used:
+     * 0 → all points in same hemisphere with |Dec| > 10 → stereographic-like projection using x,y from 3D
+     * 1 → all points in equatorial belt (|Dec| < 10) → use RA/Dec directly
+     * 2 → equatorial belt and polygon crosses RA=0 → shift RA>180 by -360
+     */
+    static computeSelectionObject(polygons) {
+        let poly4selection = [];
+        let flag = 0;
+        let maxx;
+        let maxy;
+        let minx;
+        let miny;
+        const DEC_THRESHOLD = 10;
+        //  1 → northern hemisphere (Dec > +10), -1 → southern (Dec < -10), 0 → equatorial belt
+        let hemisphere = 0;
+        if (polygons[0][0].decDeg >= DEC_THRESHOLD) {
+            hemisphere = 1;
+        }
+        else if (polygons[0][0].decDeg <= -DEC_THRESHOLD) {
+            hemisphere = -1;
+        }
+        else {
+            flag = 1;
+        }
+        // Case flag = 0 → stereographic-like projection using x,y,z from 3D point
+        if (flag === 0) {
+            const first = GeomUtils.projectIn2D(polygons[0][0]);
+            maxx = minx = first.x;
+            maxy = miny = first.y;
+            for (const currpoly of polygons) {
+                const selpoly = [];
+                for (const point of currpoly) {
+                    // If a point violates the hemisphere constraint, fall back to belt logic
+                    if ((point.decDeg > hemisphere * DEC_THRESHOLD && hemisphere === -1) ||
+                        (point.decDeg < hemisphere * DEC_THRESHOLD && hemisphere === 1)) {
+                        flag = 1;
+                        poly4selection = [];
+                        break;
+                    }
+                    const p = GeomUtils.projectIn2D(point);
+                    selpoly.push(p);
+                    if (p.x > maxx)
+                        maxx = p.x;
+                    if (p.y > maxy)
+                        maxy = p.y;
+                    if (p.x < minx)
+                        minx = p.x;
+                    if (p.y < miny)
+                        miny = p.y;
+                }
+                poly4selection.push(selpoly);
+            }
+        }
+        if (flag === 0) {
+            return {
+                poly4selection,
+                flag,
+                maxx: maxx,
+                maxy: maxy,
+                minx: minx,
+                miny: miny,
+            };
+        }
+        // Case flag = 1 or 2 → work directly in (RA,Dec)
+        const RA_THRESHOLD = 180;
+        let belowThreshold = polygons[0][0].raDeg < RA_THRESHOLD;
+        maxx = minx = polygons[0][0].raDeg;
+        maxy = miny = polygons[0][0].decDeg;
+        for (const currpoly of polygons) {
+            const selpoly = [];
+            for (const point of currpoly) {
+                const p = new model_Point2D(point.raDeg, point.decDeg);
+                selpoly.push(p);
+                if (point.raDeg > maxx)
+                    maxx = point.raDeg;
+                if (point.decDeg > maxy)
+                    maxy = point.decDeg;
+                if (point.raDeg < minx)
+                    minx = point.raDeg;
+                if (point.decDeg < miny)
+                    miny = point.decDeg;
+                // Detect crossing of RA=0 meridian
+                if ((point.raDeg >= RA_THRESHOLD && belowThreshold) ||
+                    (point.raDeg <= RA_THRESHOLD && !belowThreshold)) {
+                    flag = 2;
+                    poly4selection = [];
+                    break;
+                }
+            }
+            poly4selection.push(selpoly);
+        }
+        if (flag === 1) {
+            return {
+                poly4selection,
+                flag,
+                maxx,
+                maxy,
+                minx,
+                miny,
+            };
+        }
+        // Case flag = 2 → shift RA>180 by -360 to unwrap around RA=0
+        let startRA = polygons[0][0].raDeg;
+        maxx = startRA >= RA_THRESHOLD ? startRA - 360 : startRA;
+        maxy = polygons[0][0].decDeg;
+        minx = maxx;
+        miny = maxy;
+        for (const currpoly of polygons) {
+            const selpoly = [];
+            for (const point of currpoly) {
+                const curra = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
+                if (curra > maxx)
+                    maxx = curra;
+                if (point.decDeg > maxy)
+                    maxy = point.decDeg;
+                if (curra < minx)
+                    minx = curra;
+                if (point.decDeg < miny)
+                    miny = point.decDeg;
+                selpoly.push(new model_Point2D(curra, point.decDeg));
+            }
+            poly4selection.push(selpoly);
+        }
+        return {
+            poly4selection,
+            flag,
+            maxx,
+            maxy,
+            minx,
+            miny,
+        };
+    }
+    /** Stereographic projection from 3D point on unit sphere onto plane */
+    static stereographic(point) {
+        const x = Number(point.xyz[0]);
+        const y = Number(point.xyz[1]);
+        const z = Number(point.xyz[2]);
+        return {
+            x: (2 * x) / (1 - z),
+            y: (2 * y) / (1 - z),
+        };
+    }
+    static projectIn2D(point) {
+        const p = GeomUtils.stereographic(point);
+        return new model_Point2D(p.x, p.y);
+    }
+    /**
+     * Robust point-in-polygon (ray casting) using the precomputed selection object.
+     * Works with any of the three flags (0,1,2).
+     */
+    static checkPointInsidePolygon5(selectionObj, point) {
+        let p0;
+        if (selectionObj.flag === 0) {
+            p0 = GeomUtils.projectIn2D(point);
+        }
+        else if (selectionObj.flag === 1) {
+            p0 = new model_Point2D(point.raDeg, point.decDeg);
+        }
+        else {
+            const RA_THRESHOLD = 180;
+            const raShifted = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
+            p0 = new model_Point2D(raShifted, point.decDeg);
+        }
+        const p1 = new model_Point2D(p0.x, p0.y + 2 * Math.abs(selectionObj.maxy - selectionObj.miny));
+        // quick reject by bbox
+        if (p0.x > selectionObj.maxx ||
+            p0.x < selectionObj.minx ||
+            p0.y > selectionObj.maxy ||
+            p0.y < selectionObj.miny) {
+            return false;
+        }
+        // Ray casting against each sub-polygon
+        for (const currpoly of selectionObj.poly4selection) {
+            let intersections = 0;
+            for (let i = 0; i < currpoly.length - 1; i++) {
+                const p2 = currpoly[i];
+                const p3 = currpoly[i + 1];
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            // close the polygon: last with first
+            {
+                const p2 = currpoly[currpoly.length - 1];
+                const p3 = currpoly[0];
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            if (intersections % 2 === 1) {
+                return true; // inside this subpolygon
+            }
+        }
+        return false;
+    }
+    // Legacy version kept for reference; now typed and using getters
+    static checkPointInsidePolygon4(polygons, point) {
+        const p0 = GeomUtils.projectIn2D(point);
+        let maxdist = point.raDeg + 15;
+        if (maxdist > 360)
+            maxdist = point.raDeg - 15;
+        const p1point = new Point({ raDeg: maxdist, decDeg: point.decDeg }, CoordsType.ASTRO);
+        const p1 = GeomUtils.projectIn2D(p1point);
+        for (const currpoly of polygons) {
+            let intersections = 0;
+            for (let i = 0; i < currpoly.length - 1; i++) {
+                const p2 = GeomUtils.projectIn2D(currpoly[i]);
+                const p3 = GeomUtils.projectIn2D(currpoly[i + 1]);
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            {
+                const p2 = GeomUtils.projectIn2D(currpoly[currpoly.length - 1]);
+                const p3 = GeomUtils.projectIn2D(currpoly[0]);
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            if (intersections % 2 === 1)
+                return true;
+        }
+        return false;
+    }
+}
+/* harmony default export */ const utils_GeomUtils = (GeomUtils);
+
+;// ./src/model/hips/Tile.ts
 // Tile.ts
 
 
@@ -11597,15 +9638,15 @@ class Tile {
         this.vertexPosition = [];
         this.vertexPositionBuffer = [];
         this.vertexIndices = new Uint16Array();
-        const reforder = _FoVHelper_js__WEBPACK_IMPORTED_MODULE_1__.fovHelper.getRefOrder(this._order);
-        const orighealpix = _Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].getHealpix(this._order);
+        const reforder = fovHelper.getRefOrder(this._order);
+        const orighealpix = src_Global.getHealpix(this._order);
         const origxyf = orighealpix.nest2xyf(this._tileno);
         const orderjump = reforder - this._order;
         const dxmin = origxyf.ix << orderjump;
         const dxmax = (origxyf.ix << orderjump) + (1 << orderjump);
         const dymin = origxyf.iy << orderjump;
         const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
-        const healpix = _Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].getHealpix(reforder);
+        const healpix = src_Global.getHealpix(reforder);
         this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, 0, healpix, orderjump, origxyf);
         this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, 1, healpix, orderjump, origxyf);
         this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, 2, healpix, orderjump, origxyf);
@@ -11828,20 +9869,7 @@ class Tile {
     }
 }
 
-
-/***/ }),
-
-/***/ "./src/model/hips/TileBuffer.ts":
-/*!**************************************!*\
-  !*** ./src/model/hips/TileBuffer.ts ***!
-  \**************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   TileBuffer: () => (/* binding */ TileBuffer)
-/* harmony export */ });
-/* harmony import */ var _Tile_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./Tile.js */ "./src/model/hips/Tile.ts");
+;// ./src/model/hips/TileBuffer.ts
 // TileBuffer.ts
  // adjust if your file is named differently
 // export default class TileBuffer {
@@ -11914,7 +9942,7 @@ class TileBuffer {
             }
             else {
                 // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
-                const tile = new _Tile_js__WEBPACK_IMPORTED_MODULE_0__["default"](tileno, order, hips, this, this._webgl, this._visibleTileManager);
+                const tile = new Tile(tileno, order, hips, this, this._webgl, this._visibleTileManager);
                 this._tiles.set(tileKey, tile);
             }
         }
@@ -11932,7 +9960,7 @@ class TileBuffer {
             }
             else {
                 // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
-                const tile = new _Tile_js__WEBPACK_IMPORTED_MODULE_0__["default"](tileno, order, hips, this, this._webgl, this._visibleTileManager);
+                const tile = new Tile(tileno, order, hips, this, this._webgl, this._visibleTileManager);
                 this._galTiles.set(tileKey, tile);
             }
         }
@@ -11984,26 +10012,7 @@ class TileBuffer {
 // Singleton (kept for compatibility with your original export)
 // export const newTileBuffer = new TileBuffer()
 
-
-/***/ }),
-
-/***/ "./src/model/hips/VisibleTilesManager.ts":
-/*!***********************************************!*\
-  !*** ./src/model/hips/VisibleTilesManager.ts ***!
-  \***********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   VisibleTilesManager: () => (/* binding */ VisibleTilesManager)
-/* harmony export */ });
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../Global.js */ "./src/Global.ts");
-/* harmony import */ var healpixjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! healpixjs */ "./node_modules/healpixjs/lib-esm/index.js");
-/* harmony import */ var _utils_RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../utils/RayPickingUtils.js */ "./src/utils/RayPickingUtils.ts");
-/* harmony import */ var _TileBuffer_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./TileBuffer.js */ "./src/model/hips/TileBuffer.ts");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec4.js");
-/* harmony import */ var _Config_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../Config.js */ "./src/Config.ts");
+;// ./src/model/hips/VisibleTilesManager.ts
 
 
 
@@ -12021,7 +10030,7 @@ class VisibleTilesManager {
     _galAncestorsMap;
     _galacticMatrixInverted;
     _galacticMatrix;
-    insideSphere = _Config_js__WEBPACK_IMPORTED_MODULE_6__.bootSetup.insideSphere;
+    insideSphere = bootSetup.insideSphere;
     _tileBuffer;
     _healpixGrid;
     _webgl;
@@ -12034,13 +10043,13 @@ class VisibleTilesManager {
         this._galVisibleTilesByOrder = { pixels: [], order: 0 };
         this._galAncestorsMap = new Map();
         // Matrices for galactic <-> equatorial
-        this._galacticMatrixInverted = gl_matrix__WEBPACK_IMPORTED_MODULE_4__.create();
-        this._galacticMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_4__.create();
+        this._galacticMatrixInverted = mat4_create();
+        this._galacticMatrix = mat4_create();
         // From https://observablehq.com/@fil/galactic-rotations (single-precision friendly)
         // This matrix is (galactic -> equatorial); we store its inverse too.
-        gl_matrix__WEBPACK_IMPORTED_MODULE_4__.set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_4__.invert(this._galacticMatrix, this._galacticMatrixInverted);
-        this._tileBuffer = new _TileBuffer_js__WEBPACK_IMPORTED_MODULE_3__.TileBuffer(1, webgl, hipsShaderProgram, this);
+        mat4_set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
+        invert(this._galacticMatrix, this._galacticMatrixInverted);
+        this._tileBuffer = new TileBuffer(1, webgl, hipsShaderProgram, this);
     }
     get healpixGrid() {
         return this._healpixGrid;
@@ -12063,7 +10072,7 @@ class VisibleTilesManager {
         if (!this.initialised)
             return;
         // let order = healpixGridSingleton.visibleorder;
-        if (_Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].insideSphere && order < 3) {
+        if (src_Global.insideSphere && order < 3) {
             order = 3;
         }
         this._ancestorsMap.set(order, []);
@@ -12071,7 +10080,7 @@ class VisibleTilesManager {
         let pixels = [];
         let galTiles = [];
         if (order === 0) {
-            const geomhealpix = _Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].getHealpix(0);
+            const geomhealpix = src_Global.getHealpix(0);
             const npix = geomhealpix.getNPix();
             for (let i = 0; i < npix; i++) {
                 pixels.push(i);
@@ -12081,7 +10090,7 @@ class VisibleTilesManager {
             }
         }
         else {
-            const geomhealpix = _Global_js__WEBPACK_IMPORTED_MODULE_0__["default"].getHealpix(order);
+            const geomhealpix = src_Global.getHealpix(order);
             // const maxX = (global.gl as GL).canvas.width;
             // const maxY = (global.gl as GL).canvas.height;
             const maxX = webgl.canvas.width;
@@ -12089,16 +10098,16 @@ class VisibleTilesManager {
             // Sample a grid of screen points, project to the sphere, then to galactic
             for (let i = 0; i <= maxX; i += maxX / 30) {
                 for (let j = 0; j <= maxY; j += maxY / 30) {
-                    const hit = _utils_RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_2__["default"].getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl, camera, pMatrix);
+                    const hit = utils_RayPickingUtils.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl, camera, pMatrix);
                     if (hit.length > 0) {
                         // Equatorial -> Galactic (use _galacticMatrix)
-                        const galVec = gl_matrix__WEBPACK_IMPORTED_MODULE_5__.create();
-                        gl_matrix__WEBPACK_IMPORTED_MODULE_5__.transformMat4(galVec, [hit[0], hit[1], hit[2], 1], this._galacticMatrix);
+                        const galVec = vec4_create();
+                        vec4_transformMat4(galVec, [hit[0], hit[1], hit[2], 1], this._galacticMatrix);
                         // Index in galactic HEALPix
-                        const galPoint = new healpixjs__WEBPACK_IMPORTED_MODULE_1__.Pointing(new healpixjs__WEBPACK_IMPORTED_MODULE_1__.Vec3(galVec[0], galVec[1], galVec[2]));
+                        const galPoint = new Pointing(new Vec3(galVec[0], galVec[1], galVec[2]));
                         const galTileNo = geomhealpix.ang2pix(galPoint);
                         // Index in equatorial HEALPix
-                        const curPoint = new healpixjs__WEBPACK_IMPORTED_MODULE_1__.Pointing(new healpixjs__WEBPACK_IMPORTED_MODULE_1__.Vec3(hit[0], hit[1], hit[2]));
+                        const curPoint = new Pointing(new Vec3(hit[0], hit[1], hit[2]));
                         const currPixNo = geomhealpix.ang2pix(curPoint);
                         if (!pixels.includes(currPixNo)) {
                             pixels.push(currPixNo);
@@ -12164,21 +10173,1321 @@ class VisibleTilesManager {
 }
 // export const visibleTilesManager = new VisibleTilesManager();
 
+;// ./src/model/grid/HealpixGrid.ts
 
-/***/ }),
 
-/***/ "./src/shader/CatalogueShaderProgram.ts":
-/*!**********************************************!*\
-  !*** ./src/shader/CatalogueShaderProgram.ts ***!
-  \**********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   CatalogueShaderProgram: () => (/* binding */ CatalogueShaderProgram)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var _ShaderManager_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./ShaderManager.js */ "./src/shader/ShaderManager.ts");
+
+
+
+
+
+
+
+
+
+
+
+
+class HealpixGrid extends AbstractSkyEntity {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    _visibleorder = 0;
+    showGrid = false;
+    _shaderProgram;
+    fragmentShader;
+    vertexShader;
+    defaultColor = '#ec0acaff';
+    gridText = new grid_GridTextHelper();
+    // private _hipsShaderProgram: HiPSShaderProgram
+    _attribLocations = {
+        position: 0,
+        selected: 1,
+        pointSize: 2,
+        color: 3,
+    };
+    _nPrimitiveFlags = 0;
+    _vertexCataloguePositionBuffer;
+    _indexBuffer;
+    _vertexCataloguePosition = new Float32Array(0);
+    _indexes = new Uint32Array(0);
+    fovObj;
+    static INITIAL_FOV = 180;
+    static RADIUS = 1;
+    static INITIAL_POSITION = [0.0, 0.0, 0.0];
+    static INITIAL_PhiRad = 0;
+    static INITIAL_ThetaRad = 0;
+    _visibleTilesManager;
+    constructor(webgl) {
+        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
+        this.init();
+        this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
+        this._visibleTilesManager.init(bootSetup.insideSphere);
+    }
+    init() {
+        console.log('HealpixGridSingleton.init()');
+        this.initGL(super.webgl);
+        this._shaderProgram = super.webgl.createProgram();
+        this.initShaders();
+        const order = fovHelper.getHiPSNorder(HealpixGrid.INITIAL_FOV);
+        this._visibleorder = order;
+        this._nPrimitiveFlags = 0;
+        this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
+        this._indexBuffer = super.webgl.createBuffer();
+        this._vertexCataloguePosition = new Float32Array(0);
+        this.fovObj = new FoV(super.webgl);
+    }
+    get RADIUS() {
+        return HealpixGrid.RADIUS;
+    }
+    get INITIAL_POSITION() {
+        return HealpixGrid.INITIAL_POSITION;
+    }
+    get INITIAL_PhiRad() {
+        return HealpixGrid.INITIAL_PhiRad;
+    }
+    get INITIAL_ThetaRad() {
+        return HealpixGrid.INITIAL_ThetaRad;
+    }
+    refreshFoV(camera, pMatrix) {
+        return this.fovObj.getFoV(src_Global.insideSphere, this, camera, pMatrix);
+    }
+    getFoV() {
+        return this.fovObj;
+    }
+    getMinFoV() {
+        return this.fovObj.minFoV;
+    }
+    initShaders() {
+        const gl = super.webgl;
+        const fragmentShaderStr = shader_GridShaderManager.healpixGridFS();
+        this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this.fragmentShader, fragmentShaderStr);
+        gl.compileShader(this.fragmentShader);
+        if (!gl.getShaderParameter(this.fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this.fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = shader_GridShaderManager.healpixGridVS();
+        this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this.vertexShader, vertexShaderStr);
+        gl.compileShader(this.vertexShader);
+        if (!gl.getShaderParameter(this.vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this.vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this._shaderProgram, this.vertexShader);
+        gl.attachShader(this._shaderProgram, this.fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this._shaderProgram);
+    }
+    initBuffers(pixels, order) {
+        this._nPrimitiveFlags = 0;
+        const healpix = src_Global.getHealpix(order);
+        const subhpx = src_Global.getHealpix(order + 1);
+        const subsubhpx = src_Global.getHealpix(order + 2);
+        let positionIndex = 0;
+        let vIdx = 0;
+        const R = 1.0;
+        const MAX_UINT = 0xffffffff;
+        this._indexes = new Uint32Array(17 * pixels.length);
+        this._vertexCataloguePosition = new Float32Array(3 * 16 * pixels.length);
+        for (let p = 0; p < pixels.length; p++) {
+            const vecs = healpix.getBoundaries(pixels[p]);
+            const cpix0 = pixels[p] << 2;
+            const cpix1 = cpix0 + 1;
+            const cpix2 = cpix0 + 2;
+            const cpix3 = cpix0 + 3;
+            const cp0vecs = subhpx.getBoundaries(cpix0);
+            const cp3vecs = subhpx.getBoundaries(cpix3);
+            // helper to push a vertex
+            const pushV = (v) => {
+                this._vertexCataloguePosition[positionIndex] = R * v.x;
+                this._vertexCataloguePosition[positionIndex + 1] = R * v.y;
+                this._vertexCataloguePosition[positionIndex + 2] = R * v.z;
+                this._indexes[vIdx] = Math.floor(positionIndex / 3);
+                vIdx += 1;
+                positionIndex += 3;
+            };
+            // v0(3/0)
+            pushV(vecs[0]);
+            // v1(15/2)
+            let subcpix3 = cpix3 << 2;
+            let subcpix3_3 = subcpix3 + 3;
+            let tmp = subsubhpx.getBoundaries(subcpix3_3);
+            pushV(tmp[1]);
+            // v1(3/1)
+            pushV(cp3vecs[1]);
+            // v0(2/2)
+            let subcpix2 = cpix2 << 2;
+            let subcpix2_2 = subcpix2 + 2;
+            tmp = subsubhpx.getBoundaries(subcpix2_2);
+            pushV(tmp[0]);
+            // v1(0/0)
+            pushV(vecs[1]);
+            // v2(2/2)
+            pushV(tmp[2]);
+            // v1(0/1)
+            pushV(cp0vecs[1]);
+            // v1(0/2)
+            let subcpix0 = cpix0 << 2;
+            let subcpix0_2 = subcpix0;
+            tmp = subsubhpx.getBoundaries(subcpix0_2);
+            pushV(tmp[1]);
+            // v2(0/0)
+            pushV(vecs[2]);
+            // v3(0/2)
+            pushV(tmp[3]);
+            // v3(0/1)
+            pushV(cp0vecs[3]);
+            // v2(5/2)
+            let subcpix1 = cpix1 << 2;
+            let subcpix1_1 = subcpix1 + 1;
+            tmp = subsubhpx.getBoundaries(subcpix1_1);
+            pushV(tmp[2]);
+            // v3(0/0)
+            pushV(vecs[3]);
+            // v0(5/2)
+            pushV(tmp[0]);
+            // v3(3/1)
+            pushV(cp3vecs[3]);
+            tmp = subsubhpx.getBoundaries(subcpix3_3);
+            pushV(tmp[3]);
+            // primitive restart
+            this._indexes[vIdx] = MAX_UINT;
+            this._nPrimitiveFlags += 1;
+            vIdx += 1;
+        }
+    }
+    // updateTiles(pixels: number[], order: number) {
+    //   return (this as any)._tileBuffer.updateTiles(pixels, order);
+    // }
+    refresh(camera, pMatrix) {
+        this.refreshFoV(camera, pMatrix);
+        const fov = this.getMinFoV();
+        // expose to global (legacy)
+        // (global as any).hipsFoV = fov;
+        // global.order = fovHelper.getHiPSNorder(fov);
+        // this._visibleorder = global.order;
+        this._visibleorder = fovHelper.getHiPSNorder(fov);
+    }
+    enableShader(in_mMatrix, pMatrix, vMatrix) {
+        const gl = super.webgl;
+        gl.useProgram(this._shaderProgram);
+        // TODO move locations retrieval elsewhere
+        // Uniform locations
+        const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = super.webgl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        // Attribute locations
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        let mvMatrix = mat4_create();
+        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
+        mvMatrix = mat4_multiply(mvMatrix, vMatrix, in_mMatrix);
+        if (uMV)
+            gl.uniformMatrix4fv(uMV, false, mvMatrix);
+        if (uP)
+            gl.uniformMatrix4fv(uP, false, pMatrix);
+        if (uColor) {
+            const rgb = colorHex2RGB(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    isVisible() {
+        return this.showGrid;
+    }
+    toggleShowGrid() {
+        this.showGrid = !this.showGrid;
+    }
+    get visibleTilesManager() {
+        return this._visibleTilesManager;
+    }
+    draw(input) {
+        const gl = super.webgl;
+        const mMatrix = this.getModelMatrix();
+        // const vMatrix = input.camera.getCameraMatrix()
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const vMatrix = camera.getCameraMatrix();
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refresh(camera, pMatrix);
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
+            return;
+        }
+        // const visibleTiles = visibleTilesManager.visibleTilesByOrder
+        const visibleTiles = this._visibleTilesManager.visibleTilesByOrder;
+        const pixels = visibleTiles.pixels;
+        const order = visibleTiles.order;
+        this.initBuffers(pixels, order);
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+        this.enableShader(mMatrix, pMatrix, vMatrix);
+        // Upload positions
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
+        gl.vertexAttribPointer(this._attribLocations.position, HealpixGrid.ELEM_SIZE, gl.FLOAT, false, HealpixGrid.BYTES_X_ELEM * HealpixGrid.ELEM_SIZE, 0);
+        gl.enableVertexAttribArray(this._attribLocations.position);
+        // Index buffer
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexes, gl.STATIC_DRAW);
+        gl.drawElements(gl.LINE_LOOP, this._vertexCataloguePosition.length / 3 + this._nPrimitiveFlags, gl.UNSIGNED_INT, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+        // Project and label pixel centers that are inside current FoV
+        let mvMatrix = mat4_create();
+        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
+        mvMatrix = mat4_multiply(mvMatrix, vMatrix, mMatrix);
+        let mvpMatrix = mat4_create();
+        mvpMatrix = mat4_multiply(mvpMatrix, pMatrix, mvMatrix);
+        // FIX: pass model & pMatrix to match FoVUtils TS signature
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl, camera, pMatrix);
+        const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
+        for (let p = 0; p < pixels.length; p++) {
+            const pixCenter = src_Global.getHealpix(this._visibleorder).pix2vec(pixels[p]);
+            // const pixCenter = (global.getHealpix(global.order).pix2vec(pixels[p]) as BoundVec);
+            const point = new Point({ x: pixCenter.x, y: pixCenter.y, z: pixCenter.z }, CoordsType.CARTESIAN);
+            const distance = utils_GeomUtils.orthodromicDistance(center, point);
+            if (distance < fovMin) {
+                const vertex = [pixCenter.x, pixCenter.y, pixCenter.z, 1];
+                const clipspace = vec4_create();
+                vec4_transformMat4(clipspace, vertex, mvpMatrix);
+                // NDC divide
+                clipspace[0] /= clipspace[3];
+                clipspace[1] /= clipspace[3];
+                // clip → pixels
+                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
+                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
+                this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+                // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+            }
+        }
+        // gridTextHelper.resetDivSets();
+        this.gridText.resetDivSets();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    get visibleorder() {
+        return this._visibleorder;
+    }
+}
+
+;// ./src/model/grid/EquatorialGrid.ts
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
+
+
+
+
+
+
+
+
+
+/** Equatorial grid rendered as RA/Dec great-circle line loops */
+class EquatorialGrid extends AbstractSkyEntity {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    showGrid = false;
+    // private _gl: GL;
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    defaultColor = '#41d421';
+    gridText = new grid_GridTextHelper();
+    _attribLocations = {
+        position: 0,
+        selected: 1,
+        pointSize: 2,
+        color: 3,
+    };
+    _phiVertexPositionBuffer;
+    _thetaVertexPositionBuffer;
+    _fov;
+    // Step sizes (degrees + radians) and label caches
+    _phiStep = 0;
+    _phiStepRad = 0;
+    _thetaStep = 0;
+    _thetaStepRad = 0;
+    _phiArray = [];
+    _thetaArray = [];
+    // For placing text labels near current view center:
+    //  - _dec4Labels: key = RA(deg), value = points along that RA ring (for Dec labels)
+    //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
+    _dec4Labels = new Map();
+    _ra4Labels = new Map();
+    _healpixGrid;
+    /**
+     * @param radius Not used by current implementation (sphere is unit-radius)
+     * @param fov    Field of view in degrees
+     */
+    constructor(webgl, healpixGrid) {
+        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
+        this._healpixGrid = healpixGrid;
+    }
+    init(fov) {
+        this._fov = fov;
+        this.initGL(super.webgl);
+        // Program & buffers
+        this._shaderProgram = super.webgl.createProgram();
+        this.initShaders();
+        this._phiVertexPositionBuffer = super.webgl.createBuffer();
+        this._thetaVertexPositionBuffer = super.webgl.createBuffer();
+        // Build initial RA/Dec line buffers
+        this.initBuffers(this._fov);
+    }
+    /** Compile/link shaders and fetch uniform/attribute locations */
+    initShaders() {
+        // Fragment
+        const fsSource = shader_GridShaderManager.healpixGridFS();
+        this._fragmentShader = super.webgl.createShader(super.webgl.FRAGMENT_SHADER);
+        super.webgl.shaderSource(this._fragmentShader, fsSource);
+        super.webgl.compileShader(this._fragmentShader);
+        if (!super.webgl.getShaderParameter(this._fragmentShader, super.webgl.COMPILE_STATUS)) {
+            // Keep identical behavior (alert) but surface errors in console too
+            const log = super.webgl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
+            console.error(log);
+            alert(log);
+            return;
+        }
+        // Vertex
+        const vsSource = shader_GridShaderManager.healpixGridVS();
+        this._vertexShader = super.webgl.createShader(super.webgl.VERTEX_SHADER);
+        super.webgl.shaderSource(this._vertexShader, vsSource);
+        super.webgl.compileShader(this._vertexShader);
+        if (!super.webgl.getShaderParameter(this._vertexShader, super.webgl.COMPILE_STATUS)) {
+            const log = super.webgl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
+            console.error(log);
+            alert(log);
+            return;
+        }
+        // Link
+        super.webgl.attachShader(this._shaderProgram, this._vertexShader);
+        super.webgl.attachShader(this._shaderProgram, this._fragmentShader);
+        super.webgl.linkProgram(this._shaderProgram);
+        if (!super.webgl.getProgramParameter(this._shaderProgram, super.webgl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        super.webgl.useProgram(this._shaderProgram);
+    }
+    /** Build RA/Dec line vertex arrays based on FoV step helper */
+    initBuffers(fovDeg) {
+        const R = 1.0;
+        const steps = fovHelper.getRADegSteps(fovDeg);
+        const phiStep = steps.raStep; // RA step (deg)
+        const thetaStep = steps.decStep; // Dec step (deg)
+        this._phiStep = phiStep;
+        this._phiStepRad = degToRad(phiStep);
+        this._thetaStep = thetaStep;
+        this._thetaStepRad = degToRad(thetaStep);
+        this._ra4Labels = new Map();
+        this._dec4Labels = new Map();
+        this._phiArray = [];
+        this._thetaArray = [];
+        // Lines of constant Dec (varying RA): for each Dec, a ring with vertices every phiStep°
+        for (let theta = thetaStep; theta < 180; theta += thetaStep) {
+            const phiVertexPosition = new Float32Array((360 / phiStep) * 3);
+            const thetaRad = degToRad(theta);
+            for (let phi = 0; phi < 360; phi += phiStep) {
+                const phiRad = degToRad(phi);
+                const x = R * Math.sin(thetaRad) * Math.cos(phiRad);
+                const y = R * Math.sin(thetaRad) * Math.sin(phiRad);
+                const z = R * Math.cos(thetaRad);
+                const idx = Math.floor(phi / phiStep);
+                phiVertexPosition[3 * idx + 0] = x;
+                phiVertexPosition[3 * idx + 1] = y;
+                phiVertexPosition[3 * idx + 2] = z;
+                if (!this._dec4Labels.has(phi))
+                    this._dec4Labels.set(phi, []);
+                this._dec4Labels.get(phi).push([x, y, z]);
+            }
+            this._phiArray.push(phiVertexPosition);
+        }
+        // Lines of constant RA (varying Dec): for each RA, a ring with vertices every thetaStep°
+        for (let phi = 0; phi < 360; phi += phiStep) {
+            const thetaVertexPosition = new Float32Array((360 / thetaStep) * 3);
+            const phiRad = degToRad(phi);
+            for (let theta = 0; theta < 360; theta += thetaStep) {
+                const thetaRad = degToRad(theta);
+                const x = R * Math.sin(thetaRad) * Math.cos(phiRad);
+                const y = R * Math.sin(thetaRad) * Math.sin(phiRad);
+                const z = R * Math.cos(thetaRad);
+                const idx = Math.floor(theta / thetaStep);
+                thetaVertexPosition[3 * idx + 0] = x;
+                thetaVertexPosition[3 * idx + 1] = y;
+                thetaVertexPosition[3 * idx + 2] = z;
+                const decKey = 90 - theta; // original code’s keying for RA labels
+                if (!this._ra4Labels.has(decKey))
+                    this._ra4Labels.set(decKey, []);
+                this._ra4Labels.get(decKey).push([x, y, z]);
+            }
+            this._thetaArray.push(thetaVertexPosition);
+        }
+    }
+    /** Update buffers when FoV (in degrees) changes */
+    refresh(fovDeg) {
+        // const fovDeg = healpixGridSingleton.getMinFoV()
+        if (this._fov !== fovDeg) {
+            this._fov = fovDeg;
+            this.initBuffers(this._fov);
+        }
+    }
+    vectorDistance(p1, p2) {
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        const dz = p1.z - p2.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    enableShader(mMatrix, pMatrix, vMatrix) {
+        const gl = super.webgl;
+        gl.useProgram(this._shaderProgram);
+        // uMVMatrix = camera * model
+        const mvMatrix = mat4_create();
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
+        mat4_multiply(mvMatrix, vMatrix, mMatrix);
+        // TODO move locations retrieval elsewhere
+        // Uniform locations
+        const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uPMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        // Attribute locations
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        if (uMVMatrixLoc)
+            gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
+        if (uPMatrixLoc)
+            gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
+        if (uColor) {
+            const rgb = colorHex2RGB(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    isVisible() {
+        return this.showGrid;
+    }
+    toggleShowGrid() {
+        this.showGrid = !this.showGrid;
+    }
+    /**
+     * @param mMatrix model matrix associated with current HiPS (or scene) transform
+     * @param fovObj  current field-of-view (degrees). If your FoV type differs,
+     *                pass the numeric value here; this signature matches original usage.
+     */
+    draw(input) {
+        const fovDeg = input.fovDeg;
+        if (!fovDeg)
+            return;
+        const gl = super.webgl;
+        const mMatrix = this.getModelMatrix();
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const vMatrix = camera.getCameraMatrix();
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        if (!vMatrix)
+            return;
+        if (this._thetaArray.length === 0)
+            return;
+        this.refresh(fovDeg);
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
+            return;
+        }
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+        this.enableShader(mMatrix, pMatrix, vMatrix);
+        // Draw Dec rings
+        for (let i = 0; i < this._phiArray.length; i++) {
+            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
+            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._phiArray[i], super.webgl.STATIC_DRAW);
+            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
+            super.webgl.enableVertexAttribArray(this._attribLocations.position);
+            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._phiStep);
+        }
+        // Draw RA rings
+        for (let j = 0; j < this._thetaArray.length; j++) {
+            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._thetaVertexPositionBuffer);
+            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._thetaArray[j], super.webgl.STATIC_DRAW);
+            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
+            super.webgl.enableVertexAttribArray(this._attribLocations.position);
+            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
+        }
+        // Label layout (HTML overlay)
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera, pMatrix);
+        // MVP = P * V * M
+        const mvMatrix = mat4_create();
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
+        mat4_multiply(mvMatrix, vMatrix, mMatrix);
+        const mvpMatrix = mat4_create();
+        mat4_multiply(mvpMatrix, pMatrix, mvMatrix);
+        // Dec labels (loop over RA keys)
+        for (const [raDegKey, points] of this._dec4Labels.entries()) {
+            if (Math.abs(raDegKey - center.raDeg) <= this._phiStep) {
+                for (let p = 0; p < points.length; p++) {
+                    const [x, y, z] = points[p];
+                    const phiPoint = [x, y, z, 1];
+                    const point = new Point({ x, y, z }, CoordsType.CARTESIAN);
+                    const decDeg = point.decDeg;
+                    if (Math.abs(decDeg - center.decDeg) < 60) {
+                        const clipspace = vec4_create();
+                        vec4_transformMat4(clipspace, phiPoint, mvpMatrix);
+                        // perspective divide
+                        clipspace[0] /= clipspace[3];
+                        clipspace[1] /= clipspace[3];
+                        // clip->pixel
+                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
+                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
+                        // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
+                    }
+                }
+            }
+        }
+        // RA labels (loop over Dec keys)
+        for (const [decDegKey, points] of this._ra4Labels.entries()) {
+            if (Math.abs(decDegKey - center.decDeg) <= this._thetaStep) {
+                for (let p = 0; p < points.length; p++) {
+                    const [x, y, z] = points[p];
+                    const phiPoint = [x, y, z, 1];
+                    const point = new Point({ x, y, z }, CoordsType.CARTESIAN);
+                    const d = this.vectorDistance(point, center);
+                    const raDeg = point.raDeg;
+                    if (d < degToRad(50)) {
+                        const clipspace = vec4_create();
+                        vec4_transformMat4(clipspace, phiPoint, mvpMatrix);
+                        clipspace[0] /= clipspace[3];
+                        clipspace[1] /= clipspace[3];
+                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
+                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
+                        this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
+                    }
+                }
+            }
+        }
+        this.gridText.resetDivSets();
+        // gridTextHelper.resetDivSets();
+        // Cleanup
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+}
+// const equatorialGridSingleton = new EquatorialGrid();
+// export default equatorialGridSingleton;
+
+;// ./src/AstroSphere.ts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * AstroSphere — main WebGL scene controller (TS port)
+ */
+class AstroSphere {
+    _camera;
+    _perspectiveMatrixManager;
+    centralPoinCoords;
+    mousePointCoords;
+    canvas;
+    _healpixGrid;
+    _equatorialGrid;
+    mouseHelper;
+    mouseDown = false;
+    lastMouseX = null;
+    lastMouseY = null;
+    inertiaX = 0.0;
+    inertiaY = 0.0;
+    zoomInertia = 0.0;
+    _activeHiPS = null;
+    startup = true;
+    fov;
+    activeCatalogues = [];
+    activeFootprintSets = [];
+    _webgl;
+    _selectedColorMap;
+    constructor(canvas, webgl) {
+        console.log('[AstroSphere] new instance for canvas', canvas.id);
+        // Keep global GL context (as in original JS)
+        this._webgl = webgl;
+        this.mouseHelper = new utils_MouseHelper();
+        this.canvas = canvas;
+        const nativeColorMap = 'native';
+        this._selectedColorMap = model_ColorMaps[nativeColorMap];
+        src_Global.insideSphere = bootSetup.insideSphere;
+        this.initCamera();
+        this._healpixGrid = new HealpixGrid(this._webgl);
+        this._perspectiveMatrixManager = new PerspectiveMatrixManager(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
+        this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
+        this._equatorialGrid.init(this._healpixGrid.getMinFoV());
+        this.updateCentralPoint();
+        this.startup = true;
+        this.addEventListeners(canvas);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+    }
+    initCamera() {
+        if (bootSetup.insideSphere) {
+            this._camera = new src_Camera([0.0, 0.0, -0.005], true);
+        }
+        else {
+            this._camera = new src_Camera([0.0, 0.0, 4.0], false);
+        }
+    }
+    setCamera(camera) {
+        this._camera = camera;
+    }
+    get healpixGrid() {
+        return this._healpixGrid;
+    }
+    get equatorialGrid() {
+        return this._equatorialGrid;
+    }
+    // This is a lickely a duplication of FoVUtils.getCenterJ2000(this.canvas)
+    updateCentralPoint() {
+        const sphericalCoords = this.getPhiThetaDeg(this.canvas);
+        const astroCoords = sphericalToAstroDeg(sphericalCoords.phi, sphericalCoords.theta);
+        const raHMS = raDegToHMS(astroCoords.ra);
+        const decDMS = decDegToDMS(astroCoords.dec);
+        this.centralPoinCoords = {
+            astroDeg: astroCoords,
+            sphericalDeg: sphericalCoords,
+            raHMS: raHMS,
+            decDMS: decDMS
+        };
+        return this.centralPoinCoords;
+    }
+    updateLastMousePoint() {
+        const sphericalCoords = { phi: this.mouseHelper.phi, theta: this.mouseHelper.theta };
+        const astroCoords = { ra: this.mouseHelper.ra, dec: this.mouseHelper.dec };
+        const raHMS = this.mouseHelper.raHMS;
+        const decDMS = this.mouseHelper.decDMS;
+        this.mousePointCoords = {
+            astroDeg: astroCoords,
+            sphericalDeg: sphericalCoords,
+            raHMS: raHMS,
+            decDMS: decDMS
+        };
+        return this.mousePointCoords;
+    }
+    // This should call FoVUtils.getJ200Centre(this.canvas)
+    getCentralPointCoordinates() {
+        return this.centralPoinCoords;
+    }
+    getLastMousePointCoordinates() {
+        return this.mousePointCoords;
+    }
+    _rotating = false;
+    addEventListeners(canvas) {
+        if (src_Global.debug) {
+            console.log('[AstroSphere::addEventListeners]');
+        }
+        const handleMouseDown = (event) => {
+            canvas.setPointerCapture(event.pointerId);
+            this.mouseDown = true;
+            const rect = canvas.getBoundingClientRect();
+            this.lastMouseX = event.clientX - rect.left; // locale al canvas
+            this.lastMouseY = event.clientY - rect.top; // locale al canvas
+            // session.clearHoveredFootprints()
+            event.preventDefault();
+            return false;
+        };
+        const handleMouseUp = (event) => {
+            canvas.releasePointerCapture(event.pointerId);
+            this.mouseDown = false;
+            document.body.style.cursor = 'auto';
+            const rect = canvas.getBoundingClientRect();
+            this.lastMouseX = event.clientX - rect.left;
+            this.lastMouseY = event.clientY - rect.top;
+        };
+        const handleMouseMove = (event) => {
+            const rect = canvas.getBoundingClientRect();
+            // 🔹 canvas-local coordinates
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            const newX = localX;
+            const newY = localY;
+            // if (!healpixGridSingleton) return;
+            if (!this._healpixGrid)
+                return;
+            let hit = false;
+            if (this.mouseDown) {
+                this._rotating = true;
+                document.body.style.cursor = 'grab';
+                // Rotation deltas – either use client-space or local-space, but be consistent
+                const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
+                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
+                this.inertiaX += 0.1 * deltaX;
+                this.inertiaY += 0.1 * deltaY;
+                this.updateCentralPoint();
+                hit = true;
+            }
+            else {
+                // Use canvas-local coords for picking
+                const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (mousePoint && mousePoint.length > 0) {
+                    this.mouseHelper.update(mousePoint);
+                    this.updateLastMousePoint();
+                    hit = true;
+                    // console.log("hit")
+                }
+            }
+            if (!this.centralPoinCoords) {
+                this.updateCentralPoint();
+                hit = true;
+            }
+            const centralradeg = this.centralPoinCoords?.astroDeg.ra;
+            const centraldecdeg = this.centralPoinCoords?.astroDeg.dec;
+            // if (this._rotating && centraldecdeg && centralradeg) {
+            if (centraldecdeg !== undefined && centralradeg !== undefined) {
+                const detail = {
+                    fovDeg: this.fov.minFoV,
+                    position: this._camera.getCameraPosition(),
+                    vMatrix: this._camera.getCameraMatrix(),
+                    pMatrix: this._perspectiveMatrixManager.pMatrix,
+                    mMatrix: this._healpixGrid.getModelMatrix(),
+                    camera: this._camera,
+                    timestamp: performance.now(),
+                    centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
+                    mouseHoverPoint: this.mousePointCoords,
+                    colorMap: this._selectedColorMap
+                };
+                // if (this._rotating) {
+                this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
+                    detail,
+                    // bubbles: false, composed: false
+                    bubbles: true, composed: true,
+                }));
+                // }
+            }
+            this.lastMouseX = newX;
+            this.lastMouseY = newY;
+            event.preventDefault();
+        };
+        const handleMouseWheel = (event) => {
+            if (event.deltaY < 0) {
+                this.zoomInertia -= 0.001;
+            }
+            else {
+                this.zoomInertia += 0.001;
+            }
+            event.preventDefault();
+        };
+        const onKeyDown = (evt) => {
+            console.log('[AstroSphere::onKeyDown] key=', evt.key);
+            switch (evt.key) {
+                case '1':
+                    // Free camera
+                    this._camera.clearRotationLock();
+                    break;
+                case '2':
+                    // Lock X axis rotation
+                    this._camera.setRotationLock({ x: true, y: false, z: false });
+                    break;
+                case '3':
+                    // Lock Y axis rotation
+                    this._camera.setRotationLock({ x: false, y: true, z: false });
+                    break;
+                case '4':
+                    // Lock Z axis rotation
+                    this._camera.setRotationLock({ x: false, y: false, z: true });
+                    break;
+            }
+        };
+        console.log('[AstroSphere] registering pointer and wheel listeners on canvas');
+        canvas.onpointerdown = handleMouseDown;
+        canvas.onpointerup = handleMouseUp;
+        canvas.onpointermove = handleMouseMove;
+        // canvas.onwheel = handleMouseWheel
+        console.log('[AstroSphere] adding wheel event listener with passive: false');
+        canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
+        console.log('[AstroSphere] registering global keydown listener on document');
+        document.addEventListener('keydown', onKeyDown, { capture: true });
+        // window.addEventListener('keydown', onKeyDown)
+        // window.addEventListener('keydown', e => console.log('[DEVTOOLS GLOBAL KEY]', e.key));
+        // window.top?.addEventListener('keydown', onKeyDown);
+        // globalThis.addEventListener('keydown', onKeyDown);
+    }
+    // REVIEW THIS METHOD AND MOVE IT 
+    getPhiThetaDeg(canvas) {
+        const maxX = canvas.width;
+        const maxY = canvas.height;
+        const pickerPoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        return cartesianToSpherical(pickerPoint);
+    }
+    activateHiPS(hipsDescriptor) {
+        this._activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
+    }
+    // Catalogue section
+    async showCatalogue(cat) {
+        console.log(cat);
+        if (cat)
+            this.activeCatalogues.push(cat);
+        return cat;
+    }
+    deleteCatalogue(catalogue) {
+        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
+    }
+    // End Catalogue section
+    // Footprint section
+    async showFootprintSet(fset) {
+        console.log(fset);
+        if (fset)
+            this.activeFootprintSets.push(fset);
+        return fset;
+    }
+    deleteFootprintSet(footprintSet) {
+        this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
+    }
+    getHoveredFootprints() {
+        let footprintsHovered = [];
+        this.activeFootprintSets.forEach(fset => {
+            footprintsHovered.push(fset.hoveredFootprints);
+        });
+        return footprintsHovered;
+    }
+    // End Footprint section
+    goTo(raDeg, decDeg) {
+        this._camera.goTo(raDeg, decDeg);
+    }
+    getFoV() {
+        return this.fov;
+    }
+    getFoVPolygon() {
+        if (this.healpixGrid == null)
+            throw new Error(`healpixGrid is ${this.healpixGrid}`);
+        return FoVUtils.getFoVPolygon(this._camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl, this._perspectiveMatrixManager.pMatrix);
+    }
+    changeFoV(deg) {
+        const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg);
+        this._camera.translate(distance);
+        this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+    }
+    changeFoV2(deg) {
+        const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
+        this._camera.setCameraPosition(newCameraPos);
+    }
+    changeFoV3(deg) {
+        const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
+        this._camera.setCameraPosition(newPos);
+        // Recompute projection after moving the camera
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, false);
+    }
+    getInsideSphere() {
+        return src_Global.insideSphere;
+    }
+    toggleInsideSphere() {
+        src_Global.insideSphere = !src_Global.insideSphere;
+        console.log(src_Global.insideSphere);
+        this._camera.toggleInsideSphere();
+    }
+    // imposta posizione camera
+    setCameraPosition(pos) {
+        this._camera.setCameraPosition(pos);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
+    }
+    // imposta orientamento camera tramite view matrix
+    setCameraMatrix(viewMatrix) {
+        this._camera.setCameraMatrix(viewMatrix);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
+    }
+    _refreshingStatus = false;
+    // set completo camera (pos + orientamento)
+    applyFullCameraState(detail, applyColor) {
+        this._refreshingStatus = true;
+        this._camera = detail.camera;
+        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
+        this._healpixGrid.setModelMatrix(detail.mMatrix);
+        this._perspectiveMatrixManager.pMatrix = detail.pMatrix;
+        this.setCameraMatrix(detail.vMatrix);
+        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
+        if (applyColor) {
+            this._activeHiPS?.changeColorMap(detail.colorMap);
+        }
+        this._refreshingStatus = false;
+    }
+    getCurrentStatus() {
+        const centralradeg = this.centralPoinCoords?.astroDeg.ra;
+        const centraldecdeg = this.centralPoinCoords?.astroDeg.dec;
+        if (this._rotating && centraldecdeg && centralradeg) {
+            const detail = {
+                fovDeg: this.fov.minFoV,
+                position: this._camera.getCameraPosition(),
+                vMatrix: this._camera.getCameraMatrix(),
+                pMatrix: this._perspectiveMatrixManager.pMatrix,
+                mMatrix: this._healpixGrid.getModelMatrix(),
+                camera: this._camera,
+                timestamp: performance.now(),
+                centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
+                mouseHoverPoint: this.mousePointCoords,
+                colorMap: this._selectedColorMap
+            };
+            return detail;
+        }
+        return null;
+    }
+    changeColorMap(cm) {
+        if (!this._activeHiPS)
+            return;
+        this._selectedColorMap = cm;
+        this._activeHiPS?.changeColorMap(cm);
+    }
+    prevFov = 0;
+    prevCentralRaDeg = null;
+    prevCentralDecDeg = null;
+    get activeHiPS() {
+        return this._activeHiPS;
+    }
+    draw(canvas) {
+        if (this._refreshingStatus)
+            return;
+        if (!this._webgl)
+            return;
+        if (!this._activeHiPS)
+            return;
+        if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
+            return;
+        if (this._healpixGrid.fovObj === undefined)
+            return;
+        // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
+        // global.gl.getExtension('OES_element_index_uint')
+        // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
+        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
+        let cameraRotated = false;
+        let THETA = 0;
+        let PHI = 0;
+        this._webgl.viewport(0, 0, this._webgl.drawingBufferWidth, this._webgl.drawingBufferHeight);
+        this._webgl.clear(this._webgl.COLOR_BUFFER_BIT | this._webgl.DEPTH_BUFFER_BIT);
+        // Zoom inertia
+        if (this._healpixGrid.fovObj.minFoV > 0.1 || this.zoomInertia > 0) {
+            if (Math.abs(this.zoomInertia) > 0.0001) {
+                this._camera.zoom(this.zoomInertia);
+                this.zoomInertia *= 0.95;
+                this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (this.prevFov != this.fov.minFoV) {
+                    if (!this.centralPoinCoords) {
+                        this.centralPoinCoords = this.updateCentralPoint();
+                    }
+                    // const detail: CameraChangedDetail = {
+                    //   fovDeg: this.fov.minFoV,
+                    //   position: this._camera.getCameraPosition(),
+                    //   vMatrix: this._camera.getCameraMatrix() as Float32Array,
+                    //   pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
+                    //   mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
+                    //   camera: this._camera,
+                    //   timestamp: performance.now(),
+                    //   centralPoint: new Point({ raDeg: this.centralPoinCoords.astroDeg.ra, decDeg: this.centralPoinCoords.astroDeg.dec }, CoordsType.ASTRO),
+                    //   mouseHoverPoint: this.mousePointCoords,
+                    //   colorMap: this._selectedColorMap
+                    // };
+                    // this.canvas.dispatchEvent(new CustomEvent<CameraChangedDetail>(
+                    //   'camera-changed',
+                    //   { detail, bubbles: true, composed: true }
+                    // ));
+                    this.prevFov = this.fov.minFoV;
+                }
+            }
+        }
+        // Rotation inertia
+        if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
+            this._rotating = true;
+            cameraRotated = true;
+            THETA = this.inertiaY;
+            PHI = this.inertiaX;
+            this.inertiaX *= 0.95;
+            this.inertiaY *= 0.95;
+            this._camera.rotate(PHI, THETA);
+            this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, src_Global.insideSphere);
+        }
+        else {
+            this.inertiaY = 0;
+            this.inertiaX = 0;
+            this._rotating = false;
+        }
+        // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
+        if (cameraRotated) {
+            // Ricalcola il punto centrale
+            const center = this.updateCentralPoint();
+            const centralRaDeg = center.astroDeg.ra;
+            const centralDecDeg = center.astroDeg.dec;
+            // Evita spam: emetti solo se è cambiato abbastanza
+            const raChanged = this.prevCentralRaDeg === null ||
+                Math.abs(centralRaDeg - this.prevCentralRaDeg) > 1e-5;
+            const decChanged = this.prevCentralDecDeg === null ||
+                Math.abs(centralDecDeg - this.prevCentralDecDeg) > 1e-5;
+            if (raChanged || decChanged) {
+                // const detail: CameraChangedDetail = {
+                //   fovDeg: this.fov.minFoV,
+                //   position: this._camera.getCameraPosition(),
+                //   vMatrix: this._camera.getCameraMatrix() as Float32Array,
+                //   pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,
+                //   mMatrix: this._healpixGrid.getModelMatrix() as Float32Array,
+                //   camera: this._camera,
+                //   timestamp: performance.now(),
+                //   centralPoint: new Point(
+                //     { raDeg: centralRaDeg, decDeg: centralDecDeg },
+                //     CoordsType.ASTRO
+                //   ),
+                //   mouseHoverPoint: this.mousePointCoords,
+                //   colorMap: this._selectedColorMap
+                // };
+                // this.canvas.dispatchEvent(
+                //   new CustomEvent<CameraChangedDetail>('camera-changed', {
+                //     detail,
+                //     bubbles: true, composed: true,
+                //   })
+                // );
+                this.prevCentralRaDeg = centralRaDeg;
+                this.prevCentralDecDeg = centralDecDeg;
+            }
+        }
+        // GL state
+        this._webgl.disable(this._webgl.DEPTH_TEST);
+        this._webgl.enable(this._webgl.BLEND);
+        this._webgl.enable(this._webgl.CULL_FACE);
+        this._webgl.cullFace(src_Global.insideSphere ? this._webgl.BACK : this._webgl.FRONT);
+        this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
+        this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        // DRAW HiPS
+        const skyEntityDrawInput = {
+            fovDeg: this._healpixGrid.getMinFoV(),
+            camera: this._camera,
+            pMatrix: this._perspectiveMatrixManager.pMatrix
+        };
+        this._activeHiPS.draw(skyEntityDrawInput);
+        this._healpixGrid.draw(skyEntityDrawInput);
+        this._equatorialGrid.draw(skyEntityDrawInput);
+        this._webgl.enable(this._webgl.DEPTH_TEST);
+        this._webgl.disable(this._webgl.CULL_FACE);
+        if (this.startup) {
+            this.startup = false;
+            const phiTheta = this.getPhiThetaDeg(canvas);
+            const raDecDeg = sphericalToAstroDeg(phiTheta.phi, phiTheta.theta);
+            const raHMS = raDegToHMS(raDecDeg.ra);
+            const decDMS = decDegToDMS(raDecDeg.dec);
+            this.prevFov = this._healpixGrid.getMinFoV();
+            console.log('(startup coords)', {
+                raDeg: raDecDeg.ra,
+                decDeg: raDecDeg.dec,
+                raHMS,
+                decDMS,
+            });
+        }
+        this.activeCatalogues.forEach(cat => {
+            if (this._activeHiPS) {
+                cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activeFootprintSets.forEach(fst => {
+            if (this._activeHiPS) {
+                fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+    }
+}
+/* harmony default export */ const src_AstroSphere = (AstroSphere);
+
+;// ./src/model/hips/HiPSDescriptor.ts
+// HiPSDescriptor.ts
+
+class HiPSDescriptor {
+    _minOrder = 3;
+    _imgformats = [];
+    _datarange = { min: undefined, max: undefined };
+    _maxOrder;
+    _tilewidth;
+    _hipsFrame;
+    _hipsName = 'NONAME';
+    _hipsurl;
+    _emMin;
+    _emMax;
+    _isGalctic = false;
+    _propertiesRawText;
+    constructor(hipsproperties, hipsurl) {
+        this._hipsurl = hipsurl;
+        this._propertiesRawText = hipsproperties;
+        const lines = hipsproperties.split(/\r\n|\n/);
+        for (const raw of lines) {
+            const line = raw.trim();
+            if (!line || line.startsWith('#'))
+                continue;
+            if (line.startsWith('hips_tile_format') || line.startsWith('format')) {
+                // normalize jpeg→jpg
+                const list = this.getValue(line)?.replace(/jpeg/gi, 'jpg') ?? '';
+                this._imgformats = list.split(/\s+/).filter(Boolean);
+            }
+            else if (line.startsWith('hips_data_range')) {
+                const v = this.getValue(line);
+                if (v) {
+                    const [minStr, maxStr] = v.split(/\s+/);
+                    this._datarange.min = parseFloat(minStr);
+                    this._datarange.max = parseFloat(maxStr);
+                }
+            }
+            else if (line.startsWith('hips_tile_width')) {
+                const n = Number(this.getValue(line));
+                this._tilewidth = Number.isFinite(n) ? n : undefined;
+            }
+            else if (line.startsWith('hips_order_min')) {
+                const n = Number(this.getValue(line));
+                this._minOrder = Number.isFinite(n) ? n : this._minOrder;
+            }
+            else if (line.startsWith('hips_order') || line.startsWith('maxOrder')) {
+                const n = Number(this.getValue(line));
+                this._maxOrder = Number.isFinite(n) ? n : this._maxOrder;
+            }
+            else if (line.startsWith('hips_frame') || line.startsWith('frame')) {
+                this._hipsFrame = this.getValue(line);
+            }
+            else if (line.startsWith('obs_collection') || line.startsWith('label')) {
+                this._hipsName = this.getValue(line) ?? this._hipsName;
+            }
+            else if (line.startsWith('em_min')) {
+                const n = Number(this.getValue(line));
+                this._emMin = Number.isFinite(n) ? n : undefined;
+            }
+            else if (line.startsWith('em_max')) {
+                const n = Number(this.getValue(line));
+                this._emMax = Number.isFinite(n) ? n : undefined;
+            }
+        }
+        if (!this._hipsName) {
+            console.warn(`[HiPSDescriptor] hipsName not defined in properties of ${this._hipsurl}. Defaulting to 'NONAME'.`);
+        }
+        if (!this._hipsFrame) {
+            console.warn(`[HiPSDescriptor] hips_frame not defined in properties of ${this._hipsurl}. Defaulting to 'equatorial'.`);
+            this._hipsFrame = 'equatorial';
+        }
+        this._isGalctic = this._hipsFrame.toLowerCase().includes('gal');
+        if (this._maxOrder === undefined || this._imgformats.length === 0) {
+            throw new Error(`[HiPSDescriptor] Invalid properties for ${this._hipsurl}. maxOrder=${this._maxOrder}, imgFormats.length=${this._imgformats.length}`);
+        }
+    }
+    getValue(line) {
+        const idx = line.indexOf('=');
+        if (idx < 0)
+            return undefined;
+        return line.slice(idx + 1).trim();
+    }
+    // --- Getters ---
+    get propertiesRawText() {
+        return this._propertiesRawText;
+    }
+    get surveyName() {
+        return this._hipsName;
+    }
+    get url() {
+        return this._hipsurl;
+    }
+    get maxOrder() {
+        return this._maxOrder;
+    }
+    get minOrder() {
+        return this._minOrder;
+    }
+    get imgFormats() {
+        return this._imgformats;
+    }
+    get hipsFrame() {
+        return this._hipsFrame;
+    }
+    get isGalactic() {
+        return this._isGalctic;
+    }
+    get emMin() {
+        return this._emMin;
+    }
+    get emMax() {
+        return this._emMax;
+    }
+    get tileWidth() {
+        return this._tilewidth;
+    }
+    get dataRange() {
+        return this._datarange;
+    }
+}
+
+;// ./src/model/Source.ts
+
+
+
+class Source {
+    _point;
+    _name;
+    _details;
+    _h_pix;
+    _shapesize;
+    _brightnessFactor;
+    /**
+     * @param in_point Point.js (Cartesian/RA-Dec wrapper)
+     * @param in_details Optional array of key/value metadata
+     */
+    constructor(in_point, in_details = []) {
+        this._point = in_point;
+        this._details = in_details;
+        this._shapesize = 8.0;
+        this._brightnessFactor = -99;
+        this.computeHealpixPixel();
+    }
+    getDetailByindex(index) {
+        if (index < 0 || index >= this._details.length) {
+            return undefined;
+        }
+        return this._details[index];
+    }
+    get details() {
+        return this._details;
+    }
+    computeHealpixPixel() {
+        // Get Healpix instance from global
+        const healpix = src_Global.getHealpix(src_Global.nsideForSelection);
+        const vec3 = new Vec3(this._point.x, this._point.y, this._point.z);
+        const ptg = new Pointing(vec3, false);
+        this._h_pix = healpix.ang2pix(ptg, false);
+    }
+    get point() {
+        return this._point;
+    }
+    get name() {
+        return this._name;
+    }
+    get healpixPixel() {
+        return this._h_pix;
+    }
+    get shapeSize() {
+        return this._shapesize;
+    }
+    set shapeSize(size) {
+        this._shapesize = size;
+    }
+    get brightnessFactor() {
+        return this._brightnessFactor;
+    }
+    /**
+     * @param factor Must be in [-1..1]
+     */
+    set brightnessFactor(factor) {
+        this._brightnessFactor = factor;
+    }
+}
+/* harmony default export */ const model_Source = (Source);
+
+;// ./src/shader/CatalogueShaderProgram.ts
 // HiPSShaderProgram.ts
 
 
@@ -12226,7 +11535,7 @@ class CatalogueShaderProgram {
     initShaders() {
         // const gl = global.gl as GL
         const gl = this._webgl;
-        const fragmentShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_1__["default"].catalogueFS();
+        const fragmentShaderStr = ShaderManager.catalogueFS();
         this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this._fragmentShader, fragmentShaderStr);
         gl.compileShader(this._fragmentShader);
@@ -12235,7 +11544,7 @@ class CatalogueShaderProgram {
             alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
             return;
         }
-        const vertexShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_1__["default"].catalogueVS();
+        const vertexShaderStr = ShaderManager.catalogueVS();
         this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(this._vertexShader, vertexShaderStr);
         gl.compileShader(this._vertexShader);
@@ -12265,29 +11574,1134 @@ class CatalogueShaderProgram {
         gl.useProgram(this.shaderProgram);
         this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
         this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
-        let mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.multiply(mvMatrix, viewMatrix, modelMatrix);
+        let mvMatrix = mat4_create();
+        mvMatrix = mat4_multiply(mvMatrix, viewMatrix, modelMatrix);
         gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
         gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
     }
 }
 // export const catalogueShaderProgram = new CatalogueShaderProgram()
 
+;// ./src/model/MetadataColumn.ts
 
-/***/ }),
+var ColumnType;
+(function (ColumnType) {
+    ColumnType["STRING"] = "STRING";
+    ColumnType["NUMBER"] = "NUMBER";
+    ColumnType["GEOM_RA"] = "GEOM_RA";
+    ColumnType["GEOM_DEC"] = "GEOM_DEC";
+    ColumnType["GEOM_FOOTPRINT"] = "GEOM_FOOTPRINT";
+    ColumnType["MAIN_NAME"] = "MAIN_NAME";
+})(ColumnType || (ColumnType = {}));
+class MetadataColumn {
+    _index; // mandatory
+    _name; // mandatory
+    _description = ""; // mandatory default ""
+    _columnType; // mandatory
+    _unit; // mandatory
+    _details = new Map();
+    constructor(init) {
+        if (!init.name)
+            throw new Error(`No name column defined.`);
+        this._name = init.name;
+        if (init.index < 0 || isNaN(init.index))
+            throw new Error(`No index column defined.`);
+        this._index = init.index;
+        this._columnType = init.columnType ?? ColumnType.STRING;
+        this._unit = init.unit ?? "";
+        this._description = init.description ?? "";
+        if (init.details)
+            this._details = new Map(init.details);
+    }
+    get details() {
+        return new Map(this._details);
+    }
+    /** Get any detail; optional fallback. */
+    getDetail(key, fallback) {
+        return this._details.has(key) ? this._details.get(key) : fallback;
+    }
+    /** Type-leaning getters with fallbacks. */
+    getString(key, fallback = "") {
+        const v = this._details.get(key);
+        return typeof v === "string" ? v : fallback;
+    }
+    getNumber(key, fallback = NaN) {
+        const v = this._details.get(key);
+        return typeof v === "number" ? v : fallback;
+    }
+    /** Set or update a detail. */
+    setDetail(key, value) {
+        this._details.set(key, value);
+    }
+    /** Add many details at once. */
+    setDetails(details) {
+        const entries = details instanceof Map ? details.entries() : Object.entries(details);
+        for (const [k, v] of entries)
+            this._details.set(k, v);
+    }
+    /** Keys, values, entries (as arrays). */
+    detailKeys() {
+        return Array.from(this._details.keys());
+    }
+    detailValues() {
+        return Array.from(this._details.values());
+    }
+    detailEntries() {
+        return Array.from(this._details.entries());
+    }
+    // ---------- core getters/setters ----------
+    get name() {
+        return this._name;
+    }
+    get description() {
+        return this._description;
+    }
+    get columnType() {
+        return this._columnType;
+    }
+    get index() {
+        return this._index;
+    }
+    get unit() {
+        return this._unit;
+    }
+    // ---------- serialisation ----------
+    toJSON() {
+        return {
+            name: this._name,
+            description: this._description,
+            columnType: this._columnType,
+            index: this._index,
+            unit: this._unit,
+            details: Object.fromEntries(this._details),
+        };
+    }
+}
 
-/***/ "./src/shader/FootprintShaderProgram.ts":
-/*!**********************************************!*\
-  !*** ./src/shader/FootprintShaderProgram.ts ***!
-  \**********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
+;// ./src/model/MetadataManager.ts
 
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   FootprintShaderProgram: () => (/* binding */ FootprintShaderProgram)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var _ShaderManager_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./ShaderManager.js */ "./src/shader/ShaderManager.ts");
+class MetadataManager {
+    static STANDARD_SIZE = "STANDARD_SIZE";
+    static STANDARD_HUE = "STANDARD_HUE";
+    _outlineColumnList = [];
+    _raColumnList = [];
+    _decColumnList = [];
+    _shapeColumnList = [];
+    _hueColumnList = [];
+    _selectedOutlineColumn;
+    _selectedRaColumn;
+    _selectedDecColumn;
+    _selectedShapeColumn;
+    _selectedHueColumn;
+    _selectedNameColumn;
+    _columns = [];
+    constructor(metadataColumns) {
+        metadataColumns.forEach(c => {
+            if (c.columnType == ColumnType.NUMBER) {
+                this.addHueColumn(c);
+                this.addShapeColumn(c);
+            }
+            if (c.columnType == ColumnType.GEOM_RA) {
+                this.addRaColumn(c);
+            }
+            if (c.columnType == ColumnType.GEOM_DEC) {
+                this.addDecColumn(c);
+            }
+            if (c.columnType == ColumnType.GEOM_FOOTPRINT) {
+                this.addOutlineColumn(c);
+            }
+            if (c.columnType == ColumnType.MAIN_NAME) {
+                this._selectedNameColumn = c;
+            }
+            this._columns.push(c);
+        });
+        // if (!this._selectedNameColumn) {
+        //     throw new Error("No name column found")
+        // }
+    }
+    addOutlineColumn(outlineColumn) {
+        this._outlineColumnList.push(outlineColumn);
+        this._selectedOutlineColumn = outlineColumn;
+    }
+    addRaColumn(column) {
+        this._selectedRaColumn = this._selectedRaColumn || column;
+        this._raColumnList.push(column);
+    }
+    addDecColumn(column) {
+        this._selectedDecColumn = this._selectedDecColumn || column;
+        this._decColumnList.push(column);
+    }
+    addHueColumn(column) {
+        this._hueColumnList.push(column);
+    }
+    addShapeColumn(column) {
+        this._shapeColumnList.push(column);
+    }
+    get selectedRaColumn() {
+        return this._selectedRaColumn;
+    }
+    get selectedDecColumn() {
+        return this._selectedDecColumn;
+    }
+    get selectedHueColumn() {
+        return this._selectedHueColumn;
+    }
+    get selectedShapeColumn() {
+        return this._selectedShapeColumn;
+    }
+    get selectedOutlineColumn() {
+        return this._selectedOutlineColumn;
+    }
+    get selectedNameColumn() {
+        return this._selectedNameColumn;
+    }
+    get columns() {
+        return this._columns;
+    }
+    get raColumnList() {
+        return this._raColumnList;
+    }
+    get decColumnList() {
+        return this._decColumnList;
+    }
+    get outlineColumnList() {
+        return this._outlineColumnList;
+    }
+    get hueColumnList() {
+        return this._hueColumnList;
+    }
+    get shapeColumnList() {
+        return this._shapeColumnList;
+    }
+    set selectedRaColumn(columnName) {
+        this._selectedRaColumn = this._raColumnList.find(c => c.name === columnName) || this._selectedRaColumn;
+    }
+    set selectedDecColumn(columnName) {
+        this._selectedDecColumn = this._decColumnList.find(c => c.name === columnName) || this._selectedDecColumn;
+    }
+    set selectedHueColumn(columnName) {
+        this._selectedHueColumn = this._hueColumnList.find(c => c.name === columnName);
+    }
+    set selectedShapeColumn(columnName) {
+        this._selectedShapeColumn = this._shapeColumnList.find(c => c.name === columnName);
+    }
+    set selectedNameColumn(columnName) {
+        this._selectedNameColumn = this._shapeColumnList.find(c => c.name === columnName);
+    }
+    resetShapeColumn() {
+        this._selectedShapeColumn = undefined;
+    }
+    resetHueColumn() {
+        this._selectedHueColumn = undefined;
+    }
+}
+
+;// ./src/model/catalogues/CatalogueGL.ts
+// import global from '../../Global.js';
+// import CatalogueProps from './CatalogueProps.js';
+
+
+// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
+
+
+// import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
+
+// import { TapMetadata } from '../tap/TapMetadata.js';
+
+// `Source` is assumed to expose at least these:
+class CatalogueGL {
+    _kind = "CatalogueGL";
+    static ELEM_SIZE = 6;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    static STANDARD_SHAPE_SIZE = 8.0;
+    static STANDARD_SHAPE_HUE = 3.0;
+    _ready;
+    _name;
+    _description;
+    // Data
+    sources;
+    // gl: GL;
+    // Buffers & arrays
+    vertexCataloguePositionBuffer = null;
+    vertexhoveredCataloguePositionBuffer = null;
+    vertexCataloguePosition;
+    _bufferInitialised = false;
+    _webgl;
+    // Index/selection bookkeeping
+    hoveredIndexes;
+    selectedIndexes;
+    extHoveredIndexes;
+    _oldMouseCoords;
+    _metadataManager;
+    _isVisible = true;
+    _shapeColor = '#8F00FF';
+    _healpixDensityMap;
+    _providerUrl;
+    _catalogueShaderProgram;
+    _visibleTilesManager;
+    constructor(catalogueName, catalogueDescription, providerUrl, metadataManager, webgl, visibleTilesManager) {
+        this._webgl = webgl;
+        this._ready = false;
+        this._visibleTilesManager = visibleTilesManager;
+        this.TYPE = 'SOURCE_CATALOGUE';
+        this._name = catalogueName;
+        this._description = catalogueDescription;
+        this._providerUrl = providerUrl;
+        this._metadataManager = metadataManager;
+        this.sources = [];
+        // GL init
+        // this.gl = global.gl as GL;
+        // this.vertexCataloguePositionBuffer = this.gl.createBuffer();
+        // this.vertexhoveredCataloguePositionBuffer = this.gl.createBuffer();
+        this.vertexCataloguePosition = new Float32Array(0);
+        this.hoveredIndexes = [];
+        this.selectedIndexes = [];
+        this.extHoveredIndexes = [];
+        this._oldMouseCoords = null;
+        this._healpixDensityMap = new Map();
+        // this.catalogueProps = new CatalogueProps(metadataManager, defaultColor);
+        // call catalogueShaderProgram to init shaders if they are not yet initialised 
+        this._catalogueShaderProgram = new CatalogueShaderProgram(this._webgl);
+        this._catalogueShaderProgram.shaderProgram;
+        // catalogueShaderProgram.shaderProgram
+        this._isVisible = true;
+    }
+    setIsVisible(visibility) {
+        this._isVisible = visibility;
+    }
+    get shapeColor() {
+        return this._shapeColor;
+    }
+    get providerUrl() {
+        return this._providerUrl;
+    }
+    get name() {
+        return this._name;
+    }
+    get isVisible() {
+        return this._isVisible;
+    }
+    minMax(columnindex) {
+        if (!this.sources.length)
+            return { min: 0, max: 0 };
+        let min = this.sources[0].details[columnindex];
+        if (isNaN(Number(min))) {
+            // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`)
+            console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain only number values`);
+            return { min: 0, max: 0 };
+        }
+        let max = min;
+        for (const source of this.sources) {
+            const v = source.details[columnindex];
+            if (isNaN(Number(v))) {
+                // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
+                console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain number only values`);
+                return { min: 0, max: 0 };
+            }
+            if (v < min)
+                min = v;
+            if (v > max)
+                max = v;
+        }
+        return {
+            min: Number(min),
+            max: Number(max)
+        };
+    }
+    get metadataManager() {
+        return this._metadataManager;
+    }
+    changeMetaRA(raColumnName) {
+        this._metadataManager.selectedRaColumn = raColumnName;
+    }
+    changeMetaDec(decColumnName) {
+        this._metadataManager.selectedDecColumn = decColumnName;
+    }
+    changeColor(color) {
+        this._shapeColor = color;
+    }
+    changeMetaShapeSize(metacolumnName) {
+        if (!this._webgl)
+            return;
+        if (metacolumnName == MetadataManager.STANDARD_SIZE) {
+            this._metadataManager.resetShapeColumn();
+            for (const source of this.sources) {
+                const size = CatalogueGL.STANDARD_SHAPE_SIZE;
+                source.shapeSize = size;
+            }
+            this._bufferInitialised = false;
+            // this.initBuffer(this._webgl);
+            return;
+        }
+        // const oldShapeSizeName = this.catalogueProps.shapeSizeColumn?.name
+        // this.catalogueProps.changeCatalogueMetaShapeSize(metacolumnName);
+        // const idx = this.catalogueProps.shapeSizeColumn?.index ?? this.catalogueProps.shapeSizeColumn?.index;
+        const oldShapeSizeName = this._metadataManager.selectedShapeColumn?.name;
+        this._metadataManager.selectedShapeColumn = metacolumnName;
+        const idx = this._metadataManager.selectedShapeColumn?.index ?? -1;
+        if (idx < 0) {
+            // if (oldShapeSizeName) this.catalogueProps.changeCatalogueMetaShapeSize(oldShapeSizeName);
+            if (oldShapeSizeName)
+                this._metadataManager.selectedShapeColumn = oldShapeSizeName;
+            return;
+        }
+        const minmax = this.minMax(idx);
+        if (minmax.min == minmax.max) {
+            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
+            return;
+        }
+        for (const source of this.sources) {
+            const raw = Number(source.getDetailByindex(idx));
+            const min = Number(minmax.min);
+            const max = Number(minmax.max);
+            const norm = (raw - min) / Math.max(1e-12, (max - min));
+            const size = norm * (20 - 8) + 8;
+            source.shapeSize = size;
+        }
+        this._bufferInitialised = false;
+        // this.initBuffer(this._webgl);
+    }
+    changeMetaShapeHue(metacolumnName) {
+        if (!this._webgl)
+            return;
+        if (metacolumnName == MetadataManager.STANDARD_HUE) {
+            this._metadataManager.resetHueColumn();
+            for (const source of this.sources) {
+                const hue = CatalogueGL.STANDARD_SHAPE_HUE;
+                source.brightnessFactor = hue;
+            }
+            this._bufferInitialised = false;
+            // this.initBuffer(this._webgl);
+            return;
+        }
+        const oldHueSizeName = this._metadataManager.selectedShapeColumn?.name;
+        this._metadataManager.selectedHueColumn = metacolumnName;
+        const idx = this._metadataManager.selectedHueColumn?.index ?? -1;
+        if (idx < 0) {
+            if (oldHueSizeName)
+                this._metadataManager.selectedHueColumn = oldHueSizeName;
+            return;
+        }
+        const minmax = this.minMax(idx);
+        if (minmax.min == minmax.max) {
+            console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
+            return;
+        }
+        for (const source of this.sources) {
+            const raw = Number(source.getDetailByindex(idx));
+            const min = Number(minmax.min);
+            const max = Number(minmax.max);
+            const norm = (raw - min) / Math.max(1e-12, (max - min));
+            // map [0,1] -> [1,-1]
+            source.brightnessFactor = -(norm * 2 - 1);
+        }
+        this._bufferInitialised = false;
+        // this.initBuffer(this._webgl);
+    }
+    addSource(source) {
+        this.sources.push(source);
+    }
+    /**
+     * @param in_data Rows of TAP results
+     * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
+     */
+    addSources(in_data, columnsmeta) {
+        this._ready = false;
+        this.sources = [];
+        this._metadataManager = new MetadataManager(columnsmeta);
+        // const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
+        // const decDataIndex = (this.catalogueProps.decColumn as any).index ?? (this.catalogueProps.decColumn as any)._index;
+        const raDataIndex = this._metadataManager.selectedRaColumn?.index ?? -1;
+        const decDataIndex = this._metadataManager.selectedDecColumn?.index ?? -1;
+        if (raDataIndex < 0 || decDataIndex < 0)
+            throw new Error(`(ra, dec) idx not defined (${raDataIndex}, ${decDataIndex}) `);
+        for (let j = 0; j < in_data.length; j++) {
+            const point = new Point({
+                raDeg: in_data[j][raDataIndex],
+                decDeg: in_data[j][decDataIndex]
+            }, CoordsType.ASTRO);
+            const source = new model_Source(point, in_data[j]);
+            // Ensure optional fields exist
+            source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            source.brightnessFactor = 3;
+            this.addSource(source);
+            // if (this.catalogueProps.shapeHueColumn?.name) {
+            if (this._metadataManager.selectedHueColumn?.name) {
+                // this.changeCatalogueMetaShapeHue(this.catalogueProps.shapeHueColumn.name)
+                this.changeMetaShapeHue(this._metadataManager.selectedHueColumn.name);
+            }
+            // if (this.catalogueProps.shapeSizeColumn?.name) {
+            if (this._metadataManager.selectedShapeColumn?.name) {
+                // this.changeCatalogueMetaShapeSize(this.shapeSizeColumn.name)
+                this.changeMetaShapeSize(this._metadataManager.selectedShapeColumn.name);
+            }
+        }
+        // this.initBuffer();
+        this._ready = true;
+        this._bufferInitialised = false;
+    }
+    clearSources() {
+        this.sources = [];
+        this.hoveredIndexes = [];
+        this._healpixDensityMap.clear();
+        this.vertexCataloguePosition = new Float32Array(0);
+    }
+    extHighlightSource(source, highlighted) {
+        const sIdx = this.sources.indexOf(source);
+        if (sIdx < 0)
+            return;
+        if (highlighted) {
+            if (!this.extHoveredIndexes.includes(sIdx)) {
+                this.extHoveredIndexes.push(sIdx);
+            }
+        }
+        else {
+            const i = this.extHoveredIndexes.indexOf(sIdx);
+            if (i >= 0)
+                this.extHoveredIndexes.splice(i, 1);
+        }
+    }
+    extAddSources2Selected(sources) {
+        for (const s of sources) {
+            const sIdx = this.sources.indexOf(s);
+            if (sIdx >= 0 && !this.selectedIndexes.includes(sIdx)) {
+                this.selectedIndexes.push(sIdx);
+            }
+        }
+    }
+    extRemoveSourceFromSelection(source) {
+        const indexOfObject = this.sources.indexOf(source);
+        if (indexOfObject < 0)
+            return;
+        const sidx = this.selectedIndexes.indexOf(indexOfObject);
+        if (sidx >= 0)
+            this.selectedIndexes.splice(sidx, 1);
+        const eidx = this.extHoveredIndexes.indexOf(indexOfObject);
+        if (eidx >= 0)
+            this.extHoveredIndexes.splice(eidx, 1);
+        // Clear hovered flag in buffer view (if present)
+        if (this.vertexCataloguePosition.length >= (indexOfObject + 1) * CatalogueGL.ELEM_SIZE) {
+            this.vertexCataloguePosition[indexOfObject * CatalogueGL.ELEM_SIZE + 3] = 0.0;
+        }
+    }
+    initBuffer() {
+        // this._webgl = webgl
+        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
+        this.vertexhoveredCataloguePositionBuffer = this._webgl.createBuffer();
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        const nSources = this.sources.length;
+        this.vertexCataloguePosition = new Float32Array(nSources * CatalogueGL.ELEM_SIZE);
+        let positionIndex = 0;
+        for (let j = 0; j < nSources; j++) {
+            const currSource = this.sources[j];
+            const currPix = currSource.healpixPixel;
+            // density map
+            const bucket = this._healpixDensityMap.get(currPix);
+            if (bucket) {
+                if (!bucket.includes(j))
+                    bucket.push(j);
+            }
+            else {
+                this._healpixDensityMap.set(currPix, [j]);
+            }
+            // position
+            this.vertexCataloguePosition[positionIndex + 0] = currSource.point.x;
+            this.vertexCataloguePosition[positionIndex + 1] = currSource.point.y;
+            this.vertexCataloguePosition[positionIndex + 2] = currSource.point.z;
+            // hovered flag
+            this.vertexCataloguePosition[positionIndex + 3] = 0.0;
+            // size
+            this.vertexCataloguePosition[positionIndex + 4] = currSource.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            // brightness
+            this.vertexCataloguePosition[positionIndex + 5] = currSource.brightnessFactor ?? 0.0;
+            positionIndex += CatalogueGL.ELEM_SIZE;
+        }
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        this._bufferInitialised = true;
+    }
+    getSelectionRadius() {
+        const order = this._visibleTilesManager.getVisibleOrder();
+        switch (order) {
+            case 0:
+            case 1:
+            case 2:
+                return 0.005;
+            case 3:
+                return 0.001;
+            case 4:
+                return 0.0009;
+            case 5:
+                return 0.0005;
+            case 6:
+                return 0.0001;
+            case 7:
+                return 0.00009;
+            case 8:
+                return 0.00005;
+            case 9:
+                return 0.00001;
+            default:
+                return 0.000005;
+        }
+    }
+    checkSelection(in_mouseHelper) {
+        if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
+            console.log('CatalogueGL.checkSelection: missing mouse coords');
+            return [];
+        }
+        const hoveredIndexes = [];
+        const sourcesHovered = [];
+        const mousePix = in_mouseHelper.computeNpix();
+        if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
+            const candidates = this._healpixDensityMap.get(mousePix);
+            const selR = this.getSelectionRadius();
+            for (let i = 0; i < candidates.length; i++) {
+                const sourceIdx = candidates[i];
+                const source = this.sources[sourceIdx];
+                if (!source)
+                    continue;
+                const dx = source.point.x - in_mouseHelper.x;
+                const dy = source.point.y - in_mouseHelper.y;
+                const dz = source.point.z - in_mouseHelper.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (dist <= selR) {
+                    hoveredIndexes.push(sourceIdx);
+                    sourcesHovered.push(source);
+                }
+            }
+        }
+        return hoveredIndexes;
+    }
+    /**
+     * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
+     */
+    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
+        if (!this.isVisible)
+            return;
+        if (!this._ready)
+            return;
+        if (!vMatrix)
+            return;
+        if (!this._bufferInitialised)
+            this.initBuffer();
+        if (!this._webgl)
+            return;
+        this._catalogueShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        // positions
+        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.position, 3, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, 0);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.position);
+        // hovered flag
+        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.hovered, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 3);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.hovered);
+        // point size
+        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.pointSize, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 4);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.pointSize);
+        // brightness
+        this._webgl.vertexAttribPointer(this._catalogueShaderProgram.locations.brightness, 1, this._webgl.FLOAT, false, CatalogueGL.BYTES_X_ELEM * CatalogueGL.ELEM_SIZE, CatalogueGL.BYTES_X_ELEM * 5);
+        this._webgl.enableVertexAttribArray(this._catalogueShaderProgram.locations.brightness);
+        // color
+        const rgb = colorHex2RGB(this._shapeColor);
+        if (this._catalogueShaderProgram.locations.color) {
+            this._webgl.uniform4f(this._catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+        // Hover logic on mouse move
+        if (in_mouseHelper != null && in_mouseHelper.xyz !== this._oldMouseCoords) {
+            // clear old hovered
+            for (let k = 0; k < this.hoveredIndexes.length; k++) {
+                const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
+                this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
+                this.vertexCataloguePosition[base + 4] = this.sources[this.hoveredIndexes[k]].shapeSize; // size
+            }
+            this.hoveredIndexes = this.checkSelection(in_mouseHelper);
+            // new hovered
+            for (let i = 0; i < this.hoveredIndexes.length; i++) {
+                const idx = this.hoveredIndexes[i];
+                const base = idx * CatalogueGL.ELEM_SIZE;
+                this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+                this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+            }
+        }
+        // selected flags
+        for (let s = 0; s < this.selectedIndexes.length; s++) {
+            const idx = this.selectedIndexes[s];
+            const base = idx * CatalogueGL.ELEM_SIZE;
+            this.vertexCataloguePosition[base + 3] = 2.0; // selected
+            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+        }
+        // external hovered
+        for (let e = 0; e < this.extHoveredIndexes.length; e++) {
+            const idx = this.extHoveredIndexes[e];
+            const base = idx * CatalogueGL.ELEM_SIZE;
+            this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+        }
+        // upload buffer
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        // draw
+        const numItems = this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
+        this._webgl.drawArrays(this._webgl.POINTS, 0, numItems);
+        this._oldMouseCoords = in_mouseHelper.xyz;
+    }
+}
+// export default CatalogueGL;
+
+;// ./src/AstroViewer.ts
+// import global from './Global.js'
+
+
+
+
+
+// & {
+//   viewportWidth: number
+//   viewportHeight: number
+// }
+class AstroViewer {
+    astroSphere;
+    canvas;
+    webgl;
+    rafId = null;
+    webglContextList = new Map();
+    // API
+    run() {
+        return this.tick();
+    }
+    // CATALOGUES
+    createCatalogue(catalogueName, catalogueDescription, providerUrl, metadataManager) {
+        return new CatalogueGL(catalogueName, catalogueDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showCatalogue(catalogue) {
+        this.astroSphere.showCatalogue(catalogue);
+    }
+    hideCatalogue(catalogue, isVisible) {
+        catalogue.setIsVisible(isVisible);
+    }
+    deleteCatalogue(catalogue) {
+        this.astroSphere.deleteCatalogue(catalogue);
+    }
+    changeCatalogueRA(catalogue, raColumnName) {
+        catalogue.changeMetaRA(raColumnName);
+        // catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
+        return catalogue;
+    }
+    changeCatalogueDec(catalogue, decColumnName) {
+        catalogue.changeMetaDec(decColumnName);
+        // catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
+        return catalogue;
+    }
+    changeCatalogueColor(catalogue, hexColor) {
+        catalogue.changeColor(hexColor);
+        // catalogue.catalogueProps.changeColor(hexColor)
+        return catalogue;
+    }
+    setCatalogueShapeHue(catalogue, metadataColumnName) {
+        catalogue.changeMetaShapeHue(metadataColumnName);
+        return catalogue;
+    }
+    setCatalogueShapeSize(catalogue, metadataColumnName) {
+        catalogue.changeMetaShapeSize(metadataColumnName);
+        return catalogue;
+    }
+    //FOOTPRINT
+    showFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    changeFootprintSetColor(footprintSet, hexColor) {
+        // footprintSet.footprintsetProps.changeColor(hexColor)
+        footprintSet.changeColor(hexColor);
+    }
+    getHoveredFootprints() {
+        return this.astroSphere.getHoveredFootprints();
+    }
+    // HIPS
+    getDefaultHiPSURL() {
+        return bootSetup.defaultHipsUrl;
+    }
+    activateHiPS(hipsDescriptor) {
+        this.astroSphere.activateHiPS(hipsDescriptor);
+    }
+    async loadHiPS(baseUrl) {
+        const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+        const resp = await fetch(hipsUrl + 'properties');
+        if (!resp.ok)
+            throw new Error(`HTTP ${resp.status} fetching properties`);
+        const propsText = await resp.text();
+        const desc = new HiPSDescriptor(propsText, hipsUrl);
+        this.astroSphere.activateHiPS(desc);
+        return desc.surveyName;
+        // this.activateHiPS(desc);
+    }
+    // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
+    changeColorMap(colorMapName) {
+        const colorMap = model_ColorMaps[colorMapName];
+        // hips.changeColorMap(colorMap)
+        this.astroSphere.changeColorMap(colorMap);
+    }
+    getActiveHiPS() {
+        return this.astroSphere.activeHiPS;
+    }
+    // Camera: GOTOs and COORDS
+    setCamera(camera) {
+        this.astroSphere.setCamera(camera);
+    }
+    setCameraPosition(pos) {
+        this.astroSphere.setCameraPosition(pos);
+    }
+    setCameraMatrix(viewMatrix) {
+        this.astroSphere.setCameraMatrix(viewMatrix);
+    }
+    restoreAstroViewerState(detail, applyColorMap) {
+        this.astroSphere.applyFullCameraState(detail, applyColorMap);
+    }
+    getCurrentAstroViewerStatus() {
+        return this.astroSphere.getCurrentStatus();
+    }
+    goTo(raDeg, decDeg) {
+        // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
+        this.astroSphere.goTo(raDeg, decDeg);
+    }
+    getCenterCoordinates() {
+        return this.astroSphere.getCentralPointCoordinates();
+    }
+    getCoordinatesFromMouse() {
+        return this.astroSphere.getLastMousePointCoordinates();
+    }
+    // GRIDs
+    setModelMatrix(modelMatrix) {
+        this.astroSphere.healpixGrid.setModelMatrix(modelMatrix);
+    }
+    toggleHealpixGrid() {
+        // healpixGridSingleton.toggleShowGrid()
+        this.astroSphere.healpixGrid.toggleShowGrid();
+    }
+    isHealpixGridVisible() {
+        // return healpixGridSingleton.isVisible()
+        return this.astroSphere.healpixGrid.isVisible();
+    }
+    toggleEquatorialGrid() {
+        // equatorialGridSingleton.toggleShowGrid()
+        return this.astroSphere.equatorialGrid.toggleShowGrid();
+    }
+    isEquatorialGridVisible() {
+        // return equatorialGridSingleton.isVisible()
+        return this.astroSphere.equatorialGrid.isVisible();
+    }
+    // FOV
+    getFoV() {
+        return this.astroSphere.getFoV();
+    }
+    getFoVPolygon() {
+        return this.astroSphere.getFoVPolygon();
+    }
+    changeFoV(deg) {
+        this, this.astroSphere.changeFoV(deg);
+    }
+    changeFoV2(deg) {
+        this, this.astroSphere.changeFoV2(deg);
+    }
+    changeFoV3(deg) {
+        this, this.astroSphere.changeFoV3(deg);
+    }
+    getInsideSphere() {
+        return this.astroSphere.getInsideSphere();
+    }
+    toggleInsideSphere() {
+        this.astroSphere.toggleInsideSphere();
+    }
+    // Internal
+    constructor(canvasEl) {
+        this.init(canvasEl);
+        this.webglContextList = new Map();
+    }
+    init(canvasEl) {
+        console.log('init webgl');
+        this.canvas = canvasEl;
+        const gl = this.canvas.getContext('webgl2', { alpha: false });
+        if (!gl) {
+            alert('Could not initialise WebGL, sorry :-(');
+            throw new Error('WebGL2 not available');
+        }
+        // Extend with custom fields used elsewhere
+        this.webgl = gl;
+        // this.webgl.viewportWidth = this.canvas.width
+        // this.webgl.viewportHeight = this.canvas.height
+        try {
+            // 1/255 = 0.00392156862
+            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
+        }
+        catch (e) {
+            console.log('Error instantiating WebGL context');
+        }
+        this.initListeners();
+        // ; (global as any).gl = this.webgl
+        this.astroSphere = new src_AstroSphere(this.canvas, this.webgl);
+    }
+    initListeners() {
+        console.log('inside initListeners');
+        const resizeCanvas = () => {
+            console.log('[resizeCanvas]');
+            const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const newWidth = Math.max(1, Math.floor(rect.width * dpr));
+            const newHeight = Math.max(1, Math.floor(rect.height * dpr));
+            if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
+                this.canvas.width = newWidth;
+                this.canvas.height = newHeight;
+                // this.webgl.viewportWidth = this.canvas.width
+                // this.webgl.viewportHeight = this.canvas.height
+                this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            }
+        };
+        const handleContextLost = (event) => {
+            console.log('[handleContextLost]');
+            event.preventDefault();
+            if (this.rafId !== null) {
+                cancelAnimationFrame(this.rafId);
+                this.rafId = null;
+            }
+        };
+        const handleContextRestored = (_event) => {
+            console.log('[handleContextRestored]');
+            // this.webgl.viewportWidth = this.canvas.width
+            // this.webgl.viewportHeight = this.canvas.height
+            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
+            this.webgl.enable(this.webgl.DEPTH_TEST);
+            this.rafId = requestAnimationFrame(() => this.tick());
+        };
+        // 🔥 ResizeObserver per pannelli / split / layout dinamici
+        if ('ResizeObserver' in window) {
+            const ro = new ResizeObserver(() => {
+                resizeCanvas();
+            });
+            // Osserva il canvas o il suo parent (a tua scelta)
+            ro.observe(this.canvas);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
+        this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+        resizeCanvas();
+    }
+    tick() {
+        this.drawScene();
+        this.rafId = requestAnimationFrame(() => this.tick());
+        return this.rafId;
+    }
+    drawScene() {
+        this.astroSphere.draw(this.canvas);
+    }
+}
+
+;// ./src/utils/STCSParser.ts
+/**
+ * @author Fabrizio Giordano (Fab77)
+ */
+
+
+
+class STCSParser {
+    static parseSTCS(stcs) {
+        const stcsParsed = STCSParser.cleanStcs(stcs);
+        let totPoints = 0;
+        const polygons = [];
+        if (stcsParsed.includes("POLYGON")) {
+            return STCSParser.parsePolygon(stcsParsed);
+        }
+        else if (stcsParsed.includes("CIRCLE")) {
+            return STCSParser.parseCircle(stcsParsed);
+        }
+        else {
+            console.warn("STCS not recognised");
+        }
+        return { totpoints: totPoints, polygons };
+    }
+    static cleanStcs(stcs) {
+        // Uppercase once
+        let s = stcs.toUpperCase();
+        // Remove tokens
+        s = s
+            .replace(/'ICRS'/g, '')
+            .replace(/\bICRS\b/g, '')
+            .replace(/\bJ2000\b/g, '')
+            .replace(/\bUNION\b/g, '')
+            .replace(/\bTOPOCENTER\b/g, '');
+        // Remove parentheses
+        s = s.replace(/[()]/g, '');
+        // Collapse extra spaces and trim
+        s = s.replace(/ {2,}/g, ' ').trim();
+        return s;
+    }
+    static parsePolygon(stcs) {
+        let totPoints = 0;
+        const polygons = [];
+        const MAX_DECIMALS = src_Global.MAX_DECIMALS ?? 12;
+        const polys = stcs.split("POLYGON ");
+        for (let i = 1; i < polys.length; i++) {
+            const currPoly = [];
+            const points = polys[i].trim().split(" ");
+            // If first point is repeated as last, remove the duplicate
+            const p0 = Number(parseFloat(points[0]).toFixed(MAX_DECIMALS));
+            const p1 = Number(parseFloat(points[1]).toFixed(MAX_DECIMALS));
+            const plast0 = Number(parseFloat(points[points.length - 2]).toFixed(MAX_DECIMALS));
+            const plast1 = Number(parseFloat(points[points.length - 1]).toFixed(MAX_DECIMALS));
+            if (p0 === plast0 && p1 === plast1) {
+                points.splice(points.length - 2, 2);
+            }
+            if (points.length > 2) {
+                for (let p = 0; p < points.length - 1; p += 2) {
+                    const raDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
+                    const decDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
+                    const point = new Point({ raDeg, decDeg }, CoordsType.ASTRO);
+                    currPoly.push(point);
+                    totPoints += 1;
+                }
+                polygons.push(currPoly);
+            }
+        }
+        return { totpoints: totPoints, polygons };
+    }
+    // Example format: "CIRCLE ICRS 8.739685 4.38147 0.027833"
+    static parseCircle(stcs) {
+        let totPoints = 0;
+        const polygons = [];
+        const polys = stcs.split("CIRCLE ");
+        for (let i = 1; i < polys.length; i++) {
+            const currPoly = [];
+            const tokens = polys[i].trim().split(" ");
+            const ra = Number(tokens[0]);
+            const dec = Number(tokens[1]);
+            const radius = Number(tokens[2]);
+            const POINTS_PER_QUADRANT = 6;
+            const npoints = POINTS_PER_QUADRANT * 4;
+            const alpha = (2 * Math.PI) / npoints;
+            // Generate points around the circle
+            for (let p = npoints; p > 0; p--) {
+                const curra = radius * Math.cos(p * alpha) + ra;
+                const curdec = radius * Math.sin(p * alpha) + dec;
+                const point = new Point({ raDeg: curra, decDeg: curdec }, CoordsType.ASTRO);
+                currPoly.push(point);
+                totPoints += 1;
+            }
+            polygons.push(currPoly);
+        }
+        return { totpoints: totPoints, polygons };
+    }
+}
+/* harmony default export */ const utils_STCSParser = (STCSParser);
+
+;// ./src/model/footprints/Footprint.ts
+
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+// import { Pointing, Healpix } from 'healpixjs';
+// import { degToRad } from '../../utils/Utils.js';
+
+// import global from '../../Global.js';
+
+// export interface ParsedSTCS {
+//   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
+//   totpoints: number;
+// }
+class Footprint {
+    _polygons = []; // array of polygons (-> array of points)
+    _convexPolygons = []; // convex polygons
+    _stcs; // STC-S string
+    _valid = false;
+    _details;
+    _totPoints = 0;
+    _totConvexPoints = 0;
+    _npix256;
+    _footprintsPointsOrder;
+    _selectionObj;
+    _identifier;
+    _center; // could be typed if you have a Point type
+    /**
+     * @param in_stcs STC-S representation of the footprint
+     * @param in_details optional metadata
+     * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
+     */
+    constructor(in_stcs, in_details = [], footprintsPointsOrder) {
+        if (in_stcs) {
+            this._stcs = in_stcs.toUpperCase();
+            this._details = in_details;
+            this._totPoints = 0;
+            this._totConvexPoints = 0;
+            this._footprintsPointsOrder = footprintsPointsOrder;
+            this.computePoints();
+            this._selectionObj = this.computeSelectionObject();
+            this._valid = true;
+        }
+        else {
+            this._details = [];
+        }
+    }
+    computeSelectionObject() {
+        return utils_GeomUtils.computeSelectionObject(this._polygons);
+    }
+    // /**
+    //  * Return array of HEALPix pixels covering the footprint
+    //  * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
+    //  */
+    // private computeNpix256(): number[] {
+    //   const healpix256 = new Healpix(global.nsideForSelection);
+    //   const points: Pointing[] = [];
+    //   for (const poly of this._convexPolygons) {
+    //     for (const currPoint of poly) {
+    //       const phiTheta = currPoint.computeHealpixPhiTheta();
+    //       const phiRad = degToRad(phiTheta.phi);
+    //       const thetaRad = degToRad(phiTheta.theta);
+    //       points.push(new Pointing(null, false, thetaRad, phiRad));
+    //     }
+    //   }
+    //   const rangeSet = healpix256.queryPolygonInclusive(points, 32);
+    //   return Array.from(rangeSet.r);
+    // }
+    computePoints() {
+        const res = utils_STCSParser.parseSTCS(this._stcs);
+        this._polygons = res.polygons;
+        this._totPoints = res.totpoints;
+    }
+    get valid() {
+        return this._valid;
+    }
+    get totPoints() {
+        return this._totPoints;
+    }
+    get totConvexPoints() {
+        return this._totConvexPoints;
+    }
+    get polygons() {
+        return this._polygons;
+    }
+    get convexPolygons() {
+        return this._convexPolygons;
+    }
+    get identifier() {
+        return this._identifier;
+    }
+    get center() {
+        return this._center;
+    }
+    get pixels() {
+        return this._npix256;
+    }
+    get details() {
+        return this._details;
+    }
+    get selectionObj() {
+        return this._selectionObj;
+    }
+}
+/* harmony default export */ const footprints_Footprint = (Footprint);
+
+;// ./src/shader/FootprintShaderProgram.ts
 // HiPSShaderProgram.ts
 
 
@@ -12331,7 +12745,7 @@ class FootprintShaderProgram {
     initShaders() {
         const gl = this._webgl;
         // const gl = global.gl as GL
-        const fragmentShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_1__["default"].footprintFS();
+        const fragmentShaderStr = ShaderManager.footprintFS();
         this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
         gl.shaderSource(this._fragmentShader, fragmentShaderStr);
         gl.compileShader(this._fragmentShader);
@@ -12340,7 +12754,7 @@ class FootprintShaderProgram {
             alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
             return;
         }
-        const vertexShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_1__["default"].footprintVS();
+        const vertexShaderStr = ShaderManager.footprintVS();
         this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(this._vertexShader, vertexShaderStr);
         gl.compileShader(this._vertexShader);
@@ -12366,1811 +12780,465 @@ class FootprintShaderProgram {
         gl.useProgram(this.shaderProgram);
         this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
         this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
-        let mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        mvMatrix = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.multiply(mvMatrix, viewMatrix, modelMatrix);
+        let mvMatrix = mat4_create();
+        mvMatrix = mat4_multiply(mvMatrix, viewMatrix, modelMatrix);
         gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
         gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
     }
 }
 // export const footprintShaderProgram = new FootprintShaderProgram()
 
+;// ./src/model/footprints/FootprintSetGL.ts
 
-/***/ }),
+// import global from '../../Global.js'
 
-/***/ "./src/shader/GridShaderManager.ts":
-/*!*****************************************!*\
-  !*** ./src/shader/GridShaderManager.ts ***!
-  \*****************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-// GridShaderManager.ts
-
-class GridShaderManager {
-    static healpixGridVS() {
-        return `#version 300 es
-        in vec4 aCatPosition;
-        uniform mat4 uMVMatrix;
-        uniform mat4 uPMatrix;
-
-        void main() {
-            gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-            gl_PointSize = 7.0;
-        }`;
-    }
-    static healpixGridFS() {
-        return `#version 300 es
-        precision mediump float;
-
-        uniform vec4 u_fragcolor;
-        out vec4 fragColor;
-
-        void main() {
-            // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-            fragColor = u_fragcolor;
-        }`;
-    }
-}
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (GridShaderManager);
+// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
+// import { TapRepo } from '../tap/TapRepo.js'
+// import {TapMetadataList} from '../tap/TapMetadataList.js'
+// import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
 
 
-/***/ }),
-
-/***/ "./src/shader/HiPSShaderProgram.ts":
-/*!*****************************************!*\
-  !*** ./src/shader/HiPSShaderProgram.ts ***!
-  \*****************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   HiPSShaderProgram: () => (/* binding */ HiPSShaderProgram)
-/* harmony export */ });
-/* harmony import */ var _ShaderManager_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./ShaderManager.js */ "./src/shader/ShaderManager.ts");
-/* harmony import */ var _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../model/ColorMaps.js */ "./src/model/ColorMaps.ts");
-// HiPSShaderProgram.ts
 
 
-// export default class HiPSShaderProgram {
-class HiPSShaderProgram {
-    _colorMapBlockIndex = null;
-    _shaderProgram;
-    _vertexShader;
-    _fragmentShader;
-    _UBO_colorMapBuffer = null;
-    _UBO_colorMapVariableInfo = {
-        r_palette: { index: 0, offset: 0 },
-        g_palette: { index: 0, offset: 0 },
-        b_palette: { index: 0, offset: 0 }
-    };
-    gl_uniforms;
-    gl_attributes;
-    locations;
+
+class FootprintSetGL {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    static CONVEXPOLY_ELEM_SIZE = 3;
+    _kind = "FootprintSetGL";
+    _ready;
+    // footprintsetProps: FootprintProps
+    _name;
+    _description;
+    // tapRepo: TapRepo
+    extHoveredIndexes;
+    oldMouseCoords;
+    healpixDensityMap;
+    _providerUrl;
+    totConvexPoints;
+    // footprintsInPix256: Map<number, Footprint[]>
+    // gl: GL;
+    // shaderProgram: WebGLProgram
+    vertexCataloguePositionBuffer;
+    indexBuffer;
+    hoveredVertexPositionBuffer;
+    hoveredIndexBuffer;
+    selectedVertexPositionBuffer;
+    selectedIndexBuffer;
+    indexes;
+    footprintPolygons = [];
+    vertexCataloguePosition;
+    totPoints;
+    nPrimitiveFlags = 0;
+    hoveredIndexes;
+    _hoveredFootprints = [];
+    hoveredVertexPosition;
+    totHoveredPoints;
+    nHoveredPrimitiveFlags = 0;
+    selectedIndexes;
+    _selectedFootprints = [];
+    selectedVertexPosition;
+    totSelectedPoints;
+    nSlectedPrimitiveFlags = 0;
+    _shapeColor = '#00fff2ff';
+    _bufferInitialised = false;
     _webgl;
-    constructor(webgl) {
+    _footprintShaderProgram;
+    _isVisible = true;
+    _metadataManager;
+    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl) {
         this._webgl = webgl;
-        this.gl_uniforms = {
-            sampler: 'uSampler0',
-            factor: 'uFactor0',
-            m_perspective: 'uPMatrix',
-            m_model: 'uMMatrix',
-            m_view: 'uVMatrix',
-            colormapIdx: 'cmapIdx',
-            colormap_red: 'r',
-            colormap_green: 'g',
-            colormap_blue: 'b'
-        };
-        this.gl_attributes = {
-            vertex_pos: 'aVertexPosition',
-            text_coords: 'aTextureCoord'
-        };
-        this.locations = {
-            pMatrix: null,
-            mMatrix: null,
-            vMatrix: null,
-            sampler: null,
-            textureAlpha: null,
-            clorMapIdx: null,
-            vertexPositionAttribute: -1,
-            textureCoordAttribute: -1
-        };
+        this._ready = false;
+        this.TYPE = 'FOOTPRINT_SET';
+        this._name = fsetName;
+        this._description = fsetDescription;
+        this._providerUrl = providerUrl;
+        this._metadataManager = metadataManager;
+        this.initFootprintArrays();
+        this.oldMouseCoords = null;
+        this._footprintShaderProgram = new FootprintShaderProgram(this._webgl);
+        this._footprintShaderProgram.shaderProgram;
     }
-    get shaderProgram() {
-        const gl = this._webgl;
-        if (!this._shaderProgram) {
-            // const gl = global.gl as GL
-            this._shaderProgram = gl.createProgram();
-            this.initShaders();
-        }
-        ;
-        gl.useProgram(this._shaderProgram);
-        return this._shaderProgram;
+    initFootprintArrays() {
+        this.footprintPolygons = [];
+        this.indexes = new Uint32Array();
+        this.vertexCataloguePosition = new Float32Array();
+        this.totPoints = 0;
+        this.totConvexPoints = 0;
+        this.extHoveredIndexes = new Uint32Array;
+        this._hoveredFootprints = [];
+        this.hoveredVertexPosition = new Float32Array();
+        this.totHoveredPoints = 0;
+        this.hoveredIndexes = new Uint32Array;
+        this._selectedFootprints = [];
+        this.selectedVertexPosition = new Float32Array();
+        this.totSelectedPoints = 0;
+        this.selectedIndexes = new Uint32Array;
     }
-    initShaders() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        const fragmentShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_0__["default"].hipsNativeFS();
-        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
-        gl.compileShader(this._fragmentShader);
-        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
+    initGLBuffers() {
+        if (!this._webgl)
             return;
+        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
+        this.indexBuffer = this._webgl.createBuffer();
+        this.hoveredVertexPositionBuffer = this._webgl.createBuffer();
+        this.hoveredIndexBuffer = this._webgl.createBuffer();
+        this.selectedVertexPositionBuffer = this._webgl.createBuffer();
+        this.selectedIndexBuffer = this._webgl.createBuffer();
+    }
+    setIsVisible(visibility) {
+        this._isVisible = visibility;
+    }
+    get isVisible() {
+        return this._isVisible;
+    }
+    get shapeColor() {
+        return this._shapeColor;
+    }
+    get providerUrl() {
+        return this._providerUrl;
+    }
+    get name() {
+        return this._name;
+    }
+    get metadataManager() {
+        return this._metadataManager;
+    }
+    addFootprint(in_footprint) {
+        this.footprintPolygons.push(in_footprint);
+    }
+    // addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void {
+    addFootprints(in_data, columnsmeta) {
+        this._ready = false;
+        this._metadataManager = new MetadataManager(columnsmeta);
+        // const geomDataIndex = this.footprintsetProps.geomColumn?.index
+        const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
+        if (geomDataIndex < 0) {
+            throw new Error('geomColumn or its index is undefined in footprintsetProps');
         }
-        const vertexShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_0__["default"].hipsVS();
-        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(this._vertexShader, vertexShaderStr);
-        gl.compileShader(this._vertexShader);
-        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
-            return;
-        }
-        gl.attachShader(this._shaderProgram, this._vertexShader);
-        gl.attachShader(this._shaderProgram, this._fragmentShader);
-        gl.linkProgram(this._shaderProgram);
-        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-    }
-    enableProgram() {
-        // (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
-        this._webgl.useProgram(this.shaderProgram);
-    }
-    setGrayscaleShader() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        gl.detachShader(this.shaderProgram, this._fragmentShader);
-        const fragmentShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_0__["default"].hipsGrayscaleFS();
-        this.changeFSShader(fragmentShaderStr);
-    }
-    setNativeShader() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        gl.detachShader(this.shaderProgram, this._fragmentShader);
-        const fragmentShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_0__["default"].hipsNativeFS();
-        this.changeFSShader(fragmentShaderStr);
-    }
-    setColorMapShader() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        // Swap fragment shader
-        gl.detachShader(this.shaderProgram, this._fragmentShader);
-        const fragmentShaderStr = _ShaderManager_js__WEBPACK_IMPORTED_MODULE_0__["default"].hipsColorMapFS();
-        this.changeFSShader(fragmentShaderStr);
-        // UBO discovery for the "colormap" block
-        const blockIndex = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
-        // INVALID_INDEX == 0xFFFFFFFF in WebGL2
-        if (blockIndex === gl.INVALID_INDEX) {
-            console.warn('HiPSShaderProgram: uniform block "colormap" not found in hipsColorMapFS()');
-            this._colorMapBlockIndex = null;
-            this._UBO_colorMapBuffer = null;
-            return; // do NOT proceed with UBO setup
-        }
-        this._colorMapBlockIndex = blockIndex;
-        // const blockSize = gl.getActiveUniformBlockParameter(
-        //   this.shaderProgram as WebGLProgram,
-        //   blockIndex,
-        //   gl.UNIFORM_BLOCK_DATA_SIZE
-        // ) as number
-        const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'];
-        const uboVariableIndices = gl.getUniformIndices(this.shaderProgram, uboVariableNames);
-        const uboVariableOffsets = gl.getActiveUniforms(this.shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
-        // Create buffer only once
-        if (!this._UBO_colorMapBuffer) {
-            this._UBO_colorMapBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
-            // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
-            const BYTES = 12288; // 3 * 4096
-            gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW);
-            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-            gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer);
-        }
-        // Store offsets
-        uboVariableNames.forEach((name, index) => {
-            this._UBO_colorMapVariableInfo[name] = {
-                index: uboVariableIndices[index],
-                offset: uboVariableOffsets[index]
-            };
-        });
-    }
-    changeFSShader(fragmentShaderStr) {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
-        gl.compileShader(this._fragmentShader);
-        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
-            return;
-        }
-        gl.attachShader(this.shaderProgram, this._fragmentShader);
-        gl.linkProgram(this.shaderProgram);
-        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        gl.useProgram(this.shaderProgram);
-    }
-    enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        gl.useProgram(this.shaderProgram);
-        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
-        this.locations.mMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model);
-        this.locations.vMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_view);
-        this.locations.sampler = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.sampler);
-        this.locations.textureAlpha = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.factor);
-        this.locations.clorMapIdx = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.colormapIdx);
-        // NEW
-        // if (this.locations.clorMapIdx) {
-        gl.uniform1i(this.locations.clorMapIdx, colorMapIdx);
-        // }
-        // Make sampler explicit: we always use TEXTURE0 in your draw code
-        if (this.locations.sampler) {
-            gl.uniform1i(this.locations.sampler, 0);
-        }
-        // END NEW
-        this.locations.vertexPositionAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.textureCoordAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.text_coords);
-        if (colorMapIdx >= 2 && this._UBO_colorMapBuffer && this._colorMapBlockIndex !== null) {
-            gl.uniformBlockBinding(this.shaderProgram, this._colorMapBlockIndex, 0);
-            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
-            let currentColorMap;
-            if (colorMapIdx === 2) {
-                currentColorMap = {
-                    r: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.planck.r,
-                    g: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.planck.g,
-                    b: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.planck.b,
-                };
-            }
-            else if (colorMapIdx === 3) {
-                currentColorMap = {
-                    r: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.cmb.r,
-                    g: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.cmb.g,
-                    b: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.cmb.b,
-                };
-            }
-            else if (colorMapIdx === 4) {
-                currentColorMap = {
-                    r: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.rainbow.r,
-                    g: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.rainbow.g,
-                    b: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.rainbow.b,
-                };
-            }
-            else if (colorMapIdx === 5) {
-                currentColorMap = {
-                    r: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.eosb.r,
-                    g: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.eosb.g,
-                    b: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.eosb.b,
-                };
-            }
-            else if (colorMapIdx === 6) {
-                currentColorMap = {
-                    r: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.cubehelix.r,
-                    g: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.cubehelix.g,
-                    b: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.cubehelix.b,
-                };
-            }
-            else if (colorMapIdx === 7) {
-                currentColorMap = {
-                    r: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.hot.r,
-                    g: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.hot.g,
-                    b: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.hot.b,
-                };
-            }
-            else if (colorMapIdx === 8) {
-                currentColorMap = {
-                    r: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.gray.r,
-                    g: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.gray.g,
-                    b: _model_ColorMaps_js__WEBPACK_IMPORTED_MODULE_1__.ColorMaps.gray.b,
-                };
-            }
-            if (currentColorMap) {
-                const info = this._UBO_colorMapVariableInfo;
-                gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0);
-            }
-            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-        }
-        gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
-        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
-        gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/shader/ShaderManager.ts":
-/*!*************************************!*\
-  !*** ./src/shader/ShaderManager.ts ***!
-  \*************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (/* binding */ ShaderManager)
-/* harmony export */ });
-// ShaderManager.ts
-class ShaderManager {
-    static catalogueVS() {
-        return `#version 300 es
-    in vec4 aCatPosition;
-    in float a_selected;
-    in float a_pointsize;
-    in float a_brightness;
-
-    out float v_selected;
-    out float v_brightness;
-    out lowp vec4 vColor;  // not used
-
-    uniform mat4 uPMatrix;
-    uniform mat4 uMVMatrix;
-
-    void main() {
-
-      gl_Position = (uPMatrix * uMVMatrix * aCatPosition);
-      gl_PointSize = a_pointsize;
-      v_selected = a_selected;
-      v_brightness = a_brightness;
-    }`;
-    }
-    static catalogueFS() {
-        return `#version 300 es
-    precision mediump float;
-    
-    #ifdef GL_OES_standard_derivatives
-    #extension GL_OES_standard_derivatives : enable
-    #endif
-
-    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
-
-    // precision mediump float;
-
-    in float v_selected;
-    in float v_brightness;
-
-    uniform vec4 u_fragcolor;
-
-    out vec4 fragColor;
-
-    // varying float v_selected;
-    // varying float v_brightness;
-
-    const float EPSILON = 1e-10;
-    
-    vec3 RGBtoHCV(in vec3 rgb) {
-      // RGB [0..1] to Hue-Chroma-Value [0..1]
-      // Based on work by Sam Hocevar and Emil Persson
-      vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
-      vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
-      float c = q.x - min(q.w, q.y);
-      float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
-      return vec3(h, c, q.x);
-    }
-
-    vec3 RGBtoHSL(in vec3 rgb) {
-      // RGB [0..1] to Hue-Saturation-Lightness [0..1]
-      vec3 hcv = RGBtoHCV(rgb);
-      //vec3 hcv = vec3(1., 1., 1.);
-      float z = hcv.z - hcv.y * 0.5;
-      float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
-      return vec3(hcv.x, s, z);
-    }
-
-    vec3 HUEtoRGB(in float hue){
-      // Hue [0..1] to RGB [0..1]
-      // See http://www.chilliant.com/rgb2hsv.html
-      vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
-      return clamp(rgb, 0., 1.);
-    }
-
-    vec3 HSLtoRGB(in vec3 hsl) {
-      // Hue-Saturation-Lightness [0..1] to RGB [0..1]
-      vec3 rgb = HUEtoRGB(hsl.x);
-      float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
-      return (rgb - 0.5) * c + hsl.z;
-    }
-  
-    void main() {
-
-      float r = 0.0, delta = 0.0, alpha = 1.0;
-      vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-      r = dot(cxy, cxy);
-      if (r > 1.0) {
-        discard;
-      }
-
-      #ifdef GL_OES_standard_derivatives
-        delta = fwidth(r);
-        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-      #endif
-
-      if (v_selected == 1.0){
-        // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-        fragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-      } else if (v_selected == 2.0){
-        // gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
-        fragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
-      }else{
-        if (r < 0.4) {
-          discard;
-        }
-        if ( v_brightness >= -1.0 && v_brightness <= 1.0) {
-          // Round-trip RGB->HSL->RGB with time-dependent lightness
-          vec3 hsl = RGBtoHSL(vec3(u_fragcolor));
-          //hsl.z = pow(hsl.z, sin(iTime) + 1.5);
-          // hsl.z = pow(hsl.z, v_brightness + 1.5);
-          hsl.z = pow(hsl.z, v_brightness + 1.5);
-          vec3 hslcolor = HSLtoRGB(hsl);
-          // gl_FragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
-          fragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
-        } else {
-          // gl_FragColor = u_fragcolor * (alpha);
-          fragColor = u_fragcolor * (alpha);
-        }
-      }
-    }`;
-    }
-    static footprintVS() {
-        return `#version 300 es
-    precision highp float;
-
-    layout(location = 0) in vec4 aCatPosition;
-
-    uniform float u_pointsize;
-    uniform mat4 uMVMatrix;
-    uniform mat4 uPMatrix;
-
-    void main() {
-      gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-      gl_PointSize = u_pointsize;   // Works in WebGL2
-    }`;
-    }
-    static footprintFS() {
-        return `#version 300 es
-    precision mediump float;
-
-    uniform vec4 u_fragcolor;
-    out vec4 fragColor;
-
-    void main() {
-      fragColor = u_fragcolor;
-    }`;
-    }
-    static hipsVS() {
-        return `#version 300 es
-    in vec3 aVertexPosition;
-    in vec2 aTextureCoord;
-
-    uniform mat4 uMMatrix;
-    uniform mat4 uVMatrix;
-    uniform mat4 uPMatrix;
-
-    out vec2 vTextureCoord;
-
-    void main() {
-      gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
-      vTextureCoord = aTextureCoord;
-    }`;
-    }
-    static hipsNativeFS() {
-        return `#version 300 es
-    precision mediump float;
-
-    in vec2 vTextureCoord;
-
-    uniform sampler2D uSampler0;
-    uniform sampler2D uSampler1;
-    uniform sampler2D uSampler2;
-    uniform sampler2D uSampler3;
-    uniform sampler2D uSampler4;
-    uniform sampler2D uSampler5;
-    uniform sampler2D uSampler6;
-    uniform sampler2D uSampler7;
-
-    uniform float uFactor0;
-    uniform float uFactor1;
-    uniform float uFactor2;
-    uniform float uFactor3;
-    uniform float uFactor4;
-    uniform float uFactor5;
-    uniform float uFactor6;
-    uniform float uFactor7;
-
-    out vec4 fragColor;
-
-    void main() {
-      vec3 finalColor = vec3(0.0);
-
-      if (uFactor0 >= 0.0){
-        vec4 mycolor;
-        #if __VERSION__ > 120
-          vec4 color0 = texture(uSampler0, vTextureCoord);
-        #else
-          vec4 color0 = texture2D(uSampler0, vTextureCoord);
-        #endif
-        mycolor = color0;
-        finalColor += mycolor.rgb * uFactor0;
-      } else if (uFactor7 >= 0.0){
-        finalColor = vec3(1.0, 0.0, 0.0);
-      }
-      fragColor = vec4(finalColor, 1.0);
-    }`;
-    }
-    static hipsGrayscaleFS() {
-        return `#version 300 es
-    precision mediump float;
-
-    in vec2 vTextureCoord;
-
-    uniform sampler2D uSampler0;
-    uniform sampler2D uSampler1;
-    uniform sampler2D uSampler2;
-    uniform sampler2D uSampler3;
-    uniform sampler2D uSampler4;
-    uniform sampler2D uSampler5;
-    uniform sampler2D uSampler6;
-    uniform sampler2D uSampler7;
-
-    uniform float uFactor0;
-    uniform float uFactor1;
-    uniform float uFactor2;
-    uniform float uFactor3;
-    uniform float uFactor4;
-    uniform float uFactor5;
-    uniform float uFactor6;
-    uniform float uFactor7;
-
-    out vec4 fragColor;
-
-    void main() {
-      vec3 finalColor = vec3(0.0);
-
-      if (uFactor0 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color0 = texture(uSampler0, vTextureCoord);
-        #else
-          vec4 color0 = texture2D(uSampler0, vTextureCoord);
-        #endif
-        float gray = 0.21 * color0.r + 0.71 * color0.g + 0.07 * color0.b;
-        finalColor = color0.rgb * (1.0 - uFactor0) + vec3(gray) * uFactor0;
-      }
-      if (uFactor1 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color1 = texture(uSampler1, vTextureCoord);
-        #else
-          vec4 color1 = texture2D(uSampler1, vTextureCoord);
-        #endif
-        finalColor += color1.rgb * uFactor1;
-      }
-      if (uFactor2 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color2 = texture(uSampler2, vTextureCoord);
-        #else
-          vec4 color2 = texture2D(uSampler2, vTextureCoord);
-        #endif
-        finalColor += color2.rgb * uFactor2;
-      }
-      if (uFactor3 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color3 = texture(uSampler3, vTextureCoord);
-        #else
-          vec4 color3 = texture2D(uSampler3, vTextureCoord);
-        #endif
-        finalColor += color3.rgb * uFactor3;
-      }
-      if (uFactor4 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color4 = texture(uSampler4, vTextureCoord);
-        #else
-          vec4 color4 = texture2D(uSampler4, vTextureCoord);
-        #endif
-        finalColor += color4.rgb * uFactor4;
-      }
-      if (uFactor5 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color5 = texture(uSampler5, vTextureCoord);
-        #else
-          vec4 color5 = texture2D(uSampler5, vTextureCoord);
-        #endif
-        finalColor += color5.rgb * uFactor5;
-      }
-      if (uFactor6 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color6 = texture(uSampler6, vTextureCoord);
-        #else
-          vec4 color6 = texture2D(uSampler6, vTextureCoord);
-        #endif
-        finalColor += color6.rgb * uFactor6;
-      }
-      if (uFactor7 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color7 = texture(uSampler7, vTextureCoord);
-        #else
-          vec4 color7 = texture2D(uSampler7, vTextureCoord);
-        #endif
-        finalColor += color7.rgb * uFactor7;
-      }
-      fragColor = vec4(finalColor, 1.0);
-    }`;
-    }
-    static hipsColorMapFS() {
-        return `#version 300 es
-    precision mediump float;
-
-    in vec2 vTextureCoord;
-
-    // UBO
-    layout (std140) uniform colormap {
-      float r_palette[256];
-      float g_palette[256];
-      float b_palette[256];
-    };
-
-    uniform sampler2D uSampler0;
-    uniform float uFactor0;
-
-    out vec4 fragColor;
-
-    void main() {
-      #if __VERSION__ > 120
-        vec4 color0 = texture(uSampler0, vTextureCoord);
-      #else
-        vec4 color0 = texture2D(uSampler0, vTextureCoord);
-      #endif
-
-      int x = int(color0.r * 255.0);
-      float px = r_palette[x] / 256.0;
-
-      int y = int(color0.g * 255.0);
-      float py = g_palette[y] / 256.0;
-
-      int z = int(color0.b * 255.0);
-      float pz = b_palette[z] / 256.0;
-
-      // uFactor0 reserved for future blending if needed
-      fragColor = vec4(px, py, pz, 1.0);
-    }`;
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/utils/CoordsType.ts":
-/*!*********************************!*\
-  !*** ./src/utils/CoordsType.ts ***!
-  \*********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   CoordsType: () => (/* binding */ CoordsType)
-/* harmony export */ });
-/**
- * Enum for coordinate types.
- * @author Fabrizio Giordano (Fab77)
- */
-var CoordsType;
-(function (CoordsType) {
-    CoordsType["CARTESIAN"] = "cartesian";
-    CoordsType["SPHERICAL"] = "spherical";
-    CoordsType["ASTRO"] = "astro";
-})(CoordsType || (CoordsType = {}));
-// export default CoordsType;
-
-
-/***/ }),
-
-/***/ "./src/utils/FoVUtils.ts":
-/*!*******************************!*\
-  !*** ./src/utils/FoVUtils.ts ***!
-  \*******************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   FoVUtils: () => (/* binding */ FoVUtils)
-/* harmony export */ });
-/* harmony import */ var _model_Point_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../model/Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./RayPickingUtils.js */ "./src/utils/RayPickingUtils.ts");
-/* harmony import */ var _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-
-/**
- * @author Fabrizio Giordano (Fab)
- */
-
-
-
-
-class FoVUtils {
-    /**
-     * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
-     * (Kept here for parity; this class doesn’t maintain those fields.)
-     */
-    getMinFoV() {
-        return this._fovY_deg <= this._fovX_deg ? this._fovY_deg : this._fovX_deg;
-    }
-    /**
-     * Compute the FoV polygon as a list of Points (clockwise).
-     * Uses ray picking + frustum planes against a unit sphere.
-     */
-    static getFoVPolygon(
-    // _pMatrix: ReadonlyMat4 | null,
-    camera, canvas, model, healpixGrid, webgl, pMatrix) {
-        // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
-        //   _pMatrix) as ReadonlyMat4;
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4 
-        const vMatrix = camera.getCameraMatrix();
-        const mMatrix = model.getModelMatrix();
-        const canvasWidth = canvas.clientWidth;
-        const canvasHeight = canvas.clientHeight;
-        let points = [];
-        // First check: does the sphere cover the whole screen?
-        const intersectionWithModel = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
-        if (intersectionWithModel.length > 0) {
-            // Fully covered → grab corners + midpoints (CASE C)
-            const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
-            points = cornersPoints;
-        }
-        else {
-            // Partial coverage: build frustum planes
-            let M = gl_matrix__WEBPACK_IMPORTED_MODULE_3__.create();
-            M = gl_matrix__WEBPACK_IMPORTED_MODULE_3__.multiply(M, vMatrix, mMatrix);
-            M = gl_matrix__WEBPACK_IMPORTED_MODULE_3__.multiply(M, pMatrix, M);
-            const topPlane = [M[3] - M[1], M[7] - M[5], M[11] - M[9], M[15] - M[13]]; // m41-m21, ...
-            const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
-            const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
-            const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
-            const intersectionTopMiddle = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera, pMatrix);
-            const intersectionRightMiddle = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera, pMatrix);
-            // CASE A: zoomed out, hemisphere fully visible
-            if (intersectionTopMiddle.length === 0 &&
-                intersectionRightMiddle.length === 0) {
-                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
-                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
-                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
-                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
-                points.push(topPoints[0], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], middleLeftTop);
-            }
-            // CASE E: no intersection on top/bottom planes
-            else if (intersectionTopMiddle.length === 0) {
-                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
-                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
-                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
-                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[1], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[1], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
-                points.push(topPoints[0], middleTopRight, rightPoints[0], rightPoints[1], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], leftPoints[1], middleLeftTop);
-            }
-            // CASE D: no intersection on right/left planes
-            else if (intersectionRightMiddle.length === 0) {
-                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
-                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
-                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
-                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[1], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[1], leftPoints[0])[0];
-                points.push(topPoints[0], topPoints[1], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], bottomPoints[1], middleBottomLeft, leftPoints[0], middleLeftTop);
-            }
-            // CASE B: all frustum planes intersect
-            else {
-                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
-                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
-                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
-                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
-                points.push(topPoints[0], topPoints[1], rightPoints[0], rightPoints[1], bottomPoints[0], bottomPoints[1], leftPoints[0], leftPoints[1]);
-            }
-        }
-        return points;
-    }
-    /**
-     * Ray pick against 8 key screen positions (corners + midpoints).
-     * Returns Points in clockwise order starting from top-left.
-     */
-    static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const topLeft = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
-        const middleTop = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera, pMatrix);
-        const topRight = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera, pMatrix);
-        const middleRight = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera, pMatrix);
-        const bottomRight = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera, pMatrix);
-        const middleBottom = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera, pMatrix);
-        const bottomLeft = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera, pMatrix);
-        const middleLeft = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera, pMatrix);
-        const out = [];
-        const pushIf = (ip) => {
-            if (ip.length > 0) {
-                out.push(new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ x: ip[0], y: ip[1], z: ip[2] }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN));
-            }
-        };
-        pushIf(topLeft);
-        pushIf(middleTop);
-        pushIf(topRight);
-        pushIf(middleRight);
-        pushIf(bottomRight);
-        pushIf(middleBottom);
-        pushIf(bottomLeft);
-        pushIf(middleLeft);
-        return out;
-    }
-    /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas, healpixGrid, webgl, camera, pMatrix) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const center = _RayPickingUtils_js__WEBPACK_IMPORTED_MODULE_1__["default"].getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera, pMatrix);
-        if (center.length <= 0)
-            throw Error(`Central point is null`);
-        return new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ x: center[0], y: center[1], z: center[2] }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN);
-    }
-    /** Middle point on the unit sphere along the arc between two 3D points. */
-    static computeMiddlePoint(p1, p2) {
-        // midpoint of segment
-        const xm = (p1.x + p2.x) / 2;
-        const ym = (p1.y + p2.y) / 2;
-        const zm = (p1.z + p2.z) / 2;
-        // project the midpoint back to unit sphere
-        const len = Math.hypot(xm, ym, zm) || 1;
-        const x = xm / len;
-        const y = ym / len;
-        const z = zm / len;
-        return [new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ x, y, z }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN)];
-    }
-    /**
-     * Nearest intersection point between a frustum plane and the unit sphere,
-     * using the plane normal.
-     */
-    static getNearestSpherePoint(plane) {
-        const [A, B, C, D] = plane;
-        const R = 1;
-        const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
-        const t1 = R * invLen;
-        const t2 = -R * invLen;
-        const P1 = [A * t1, B * t1, C * t1];
-        const P2 = [A * t2, B * t2, C * t2];
-        const den = Math.sqrt(A * A + B * B + C * C) || 1;
-        const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
-        const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
-        const P = dist1 <= dist2 ? P1 : P2;
-        return [new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ x: P[0], y: P[1], z: P[2] }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN)];
-    }
-    /**
-     * Intersections between a frustum plane and the unit sphere,
-     * computed via two perpendicular planes.
-     * Returns two points (first from `plane4Circle_1`, second from `plane4Circle_2`).
-     */
-    static getFrustumIntersectionWithSphere(_M, plane4Sphere, plane4Circle_1, plane4Circle_2) {
-        const [A0, B0, C0, D0] = plane4Sphere;
-        // center of the circle (projection of sphere center onto plane)
-        const denom0 = (A0 * A0 + B0 * B0 + C0 * C0) || 1;
-        const x_c = -(A0 * D0) / denom0;
-        const y_c = -(B0 * D0) / denom0;
-        const z_c = -(C0 * D0) / denom0;
-        const d = Math.abs(D0) / Math.sqrt(denom0); // distance from sphere center (0,0,0)
-        const R = 1;
-        const out = [];
-        if (R > d) {
-            const r = Math.sqrt(R * R - d * d);
-            const pick = (plane) => {
-                const [A, B, C, D] = plane;
-                const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
-                const t1 = r * invLen;
-                const t2 = -r * invLen;
-                const P1 = [x_c + A * t1, y_c + B * t1, z_c + C * t1];
-                const P2 = [x_c + A * t2, y_c + B * t2, z_c + C * t2];
-                const den = Math.sqrt(A * A + B * B + C * C) || 1;
-                const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
-                const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
-                return dist1 <= dist2 ? P1 : P2;
-            };
-            const P_intersection_1 = pick(plane4Circle_1);
-            const P_intersection_2 = pick(plane4Circle_2);
-            out.push(new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ x: P_intersection_1[0], y: P_intersection_1[1], z: P_intersection_1[2] }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN), new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ x: P_intersection_2[0], y: P_intersection_2[1], z: P_intersection_2[2] }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN));
-        }
-        else if (R === d) {
-            // Tangent: both intersections collapse to the circle center on the plane
-            out.push(new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ x: x_c, y: y_c, z: z_c }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN), new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ x: x_c, y: y_c, z: z_c }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.CARTESIAN));
-        }
-        else {
-            // No intersection; return empty to avoid pushing undefined values
-            // console.log('Frustum plane not intersecting the sphere');
-        }
-        return out;
-    }
-    /** Build ADQL string from an array of Points (ra,dec pairs). */
-    static getAstroFoVPolygon(points) {
-        return points.map(p => p.toADQL()).join(',');
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/utils/GeomUtils.ts":
-/*!********************************!*\
-  !*** ./src/utils/GeomUtils.ts ***!
-  \********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var _model_Point_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../model/Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _model_Point2D_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../model/Point2D.js */ "./src/model/Point2D.ts");
-/* harmony import */ var _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./CoordsType.js */ "./src/utils/CoordsType.ts");
-
-
-
-class GeomUtils {
-    // Orthodromic (great-circle) distance in radians
-    static orthodromicDistance(p1, p2) {
-        return Math.acos(Math.sin(p1.decDeg * Math.PI / 180) * Math.sin(p2.decDeg * Math.PI / 180) +
-            Math.cos(p1.decDeg * Math.PI / 180) * Math.cos(p2.decDeg * Math.PI / 180) *
-                Math.cos((p2.raDeg - p1.raDeg) * Math.PI / 180));
-    }
-    /**
-     * Decide the 2D projection strategy and pre-project polygons for point-in-polygon tests.
-     * Returns the projected polygons + bbox + a flag describing the projection used:
-     * 0 → all points in same hemisphere with |Dec| > 10 → stereographic-like projection using x,y from 3D
-     * 1 → all points in equatorial belt (|Dec| < 10) → use RA/Dec directly
-     * 2 → equatorial belt and polygon crosses RA=0 → shift RA>180 by -360
-     */
-    static computeSelectionObject(polygons) {
-        let poly4selection = [];
-        let flag = 0;
-        let maxx;
-        let maxy;
-        let minx;
-        let miny;
-        const DEC_THRESHOLD = 10;
-        //  1 → northern hemisphere (Dec > +10), -1 → southern (Dec < -10), 0 → equatorial belt
-        let hemisphere = 0;
-        if (polygons[0][0].decDeg >= DEC_THRESHOLD) {
-            hemisphere = 1;
-        }
-        else if (polygons[0][0].decDeg <= -DEC_THRESHOLD) {
-            hemisphere = -1;
-        }
-        else {
-            flag = 1;
-        }
-        // Case flag = 0 → stereographic-like projection using x,y,z from 3D point
-        if (flag === 0) {
-            const first = GeomUtils.projectIn2D(polygons[0][0]);
-            maxx = minx = first.x;
-            maxy = miny = first.y;
-            for (const currpoly of polygons) {
-                const selpoly = [];
-                for (const point of currpoly) {
-                    // If a point violates the hemisphere constraint, fall back to belt logic
-                    if ((point.decDeg > hemisphere * DEC_THRESHOLD && hemisphere === -1) ||
-                        (point.decDeg < hemisphere * DEC_THRESHOLD && hemisphere === 1)) {
-                        flag = 1;
-                        poly4selection = [];
-                        break;
-                    }
-                    const p = GeomUtils.projectIn2D(point);
-                    selpoly.push(p);
-                    if (p.x > maxx)
-                        maxx = p.x;
-                    if (p.y > maxy)
-                        maxy = p.y;
-                    if (p.x < minx)
-                        minx = p.x;
-                    if (p.y < miny)
-                        miny = p.y;
-                }
-                poly4selection.push(selpoly);
-            }
-        }
-        if (flag === 0) {
-            return {
-                poly4selection,
-                flag,
-                maxx: maxx,
-                maxy: maxy,
-                minx: minx,
-                miny: miny,
-            };
-        }
-        // Case flag = 1 or 2 → work directly in (RA,Dec)
-        const RA_THRESHOLD = 180;
-        let belowThreshold = polygons[0][0].raDeg < RA_THRESHOLD;
-        maxx = minx = polygons[0][0].raDeg;
-        maxy = miny = polygons[0][0].decDeg;
-        for (const currpoly of polygons) {
-            const selpoly = [];
-            for (const point of currpoly) {
-                const p = new _model_Point2D_js__WEBPACK_IMPORTED_MODULE_1__["default"](point.raDeg, point.decDeg);
-                selpoly.push(p);
-                if (point.raDeg > maxx)
-                    maxx = point.raDeg;
-                if (point.decDeg > maxy)
-                    maxy = point.decDeg;
-                if (point.raDeg < minx)
-                    minx = point.raDeg;
-                if (point.decDeg < miny)
-                    miny = point.decDeg;
-                // Detect crossing of RA=0 meridian
-                if ((point.raDeg >= RA_THRESHOLD && belowThreshold) ||
-                    (point.raDeg <= RA_THRESHOLD && !belowThreshold)) {
-                    flag = 2;
-                    poly4selection = [];
-                    break;
+        for (let j = 0; j < in_data.length; j++) {
+            if (in_data[j][0] !== null) {
+                const footprint = new footprints_Footprint(in_data[j][geomDataIndex], in_data[j]);
+                if (footprint._valid) {
+                    this.addFootprint(footprint);
+                    this.totPoints += footprint.totPoints;
+                    this.totConvexPoints += footprint.totConvexPoints;
                 }
             }
-            poly4selection.push(selpoly);
         }
-        if (flag === 1) {
-            return {
-                poly4selection,
-                flag,
-                maxx,
-                maxy,
-                minx,
-                miny,
-            };
+        // this.initBuffer()
+        this._ready = true;
+        this._bufferInitialised = false;
+    }
+    clearFootprints() {
+        this.initFootprintArrays();
+    }
+    initBuffer() {
+        // this._webgl = webgl
+        if (!this._webgl)
+            return;
+        this.initGLBuffers();
+        const nFootprints = this.footprintPolygons.length;
+        let npolygons = nFootprints - 1;
+        for (let j = 0; j < nFootprints; j++) {
+            npolygons += this.footprintPolygons[j].polygons.length - 1;
         }
-        // Case flag = 2 → shift RA>180 by -360 to unwrap around RA=0
-        let startRA = polygons[0][0].raDeg;
-        maxx = startRA >= RA_THRESHOLD ? startRA - 360 : startRA;
-        maxy = polygons[0][0].decDeg;
-        minx = maxx;
-        miny = maxy;
-        for (const currpoly of polygons) {
-            const selpoly = [];
-            for (const point of currpoly) {
-                const curra = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
-                if (curra > maxx)
-                    maxx = curra;
-                if (point.decDeg > maxy)
-                    maxy = point.decDeg;
-                if (curra < minx)
-                    minx = curra;
-                if (point.decDeg < miny)
-                    miny = point.decDeg;
-                selpoly.push(new _model_Point2D_js__WEBPACK_IMPORTED_MODULE_1__["default"](curra, point.decDeg));
+        this.indexes = new Uint32Array(this.totPoints + npolygons + 1);
+        const MAX_UNSIGNED_INT = 0xffffffff;
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this.vertexCataloguePosition = new Float32Array(3 * this.totPoints);
+        let positionIndex = 0;
+        let vIdx = 0;
+        const R = 1.0;
+        this.nPrimitiveFlags = 0;
+        for (let j = 0; j < nFootprints; j++) {
+            const footprint = this.footprintPolygons[j];
+            const footprintPoly = footprint.polygons;
+            if (j > 0) {
+                this.indexes[vIdx++] = MAX_UNSIGNED_INT;
+                this.nPrimitiveFlags++;
             }
-            poly4selection.push(selpoly);
+            for (const poly of footprintPoly) {
+                if (poly !== footprintPoly[0]) {
+                    this.indexes[vIdx++] = MAX_UNSIGNED_INT;
+                    this.nPrimitiveFlags++;
+                }
+                for (const point of poly) {
+                    this.vertexCataloguePosition[positionIndex++] = R * point.x;
+                    this.vertexCataloguePosition[positionIndex++] = R * point.y;
+                    this.vertexCataloguePosition[positionIndex++] = R * point.z;
+                    this.indexes[vIdx++] = Math.floor((positionIndex - 1) / 3);
+                }
+            }
         }
+        this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
+        console.log('Buffer initialized');
+    }
+    checkSelection(mouseHelper) {
+        if (!mouseHelper.x || !mouseHelper.y || !mouseHelper.z)
+            return;
+        let mousePix = mouseHelper.computeNpix();
+        if (!mousePix)
+            return;
+        this._hoveredFootprints = [];
+        this.totHoveredPoints = 0;
+        const mousePoint = new Point({ x: mouseHelper.x, y: mouseHelper.y, z: mouseHelper.z }, CoordsType.CARTESIAN);
+        for (let i = 0; i < this.footprintPolygons.length; i++) {
+            const footprint = this.footprintPolygons[i];
+            if (!footprint.selectionObj)
+                continue;
+            if (utils_GeomUtils.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
+                const details = [...footprint.details];
+                // const geomDataIndex = this.footprintsetProps.geomColumn?.index
+                const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
+                if (geomDataIndex < 0)
+                    continue;
+                details.splice(geomDataIndex, 1);
+                this._hoveredFootprints.push(footprint);
+                this.totHoveredPoints += footprint.totPoints;
+            }
+        }
+        this.initHoveringBuffer();
+    }
+    get hoveredFootprints() {
         return {
-            poly4selection,
-            flag,
-            maxx,
-            maxy,
-            minx,
-            miny,
+            // metadata: this.footprintsetProps.tapMetadataList,
+            metadata: this._metadataManager,
+            footprints: this._hoveredFootprints,
+            tableName: this._name,
+            description: this._description,
+            // provider: this.tapRepo.tapBaseUrl
+            provider: this._providerUrl
         };
     }
-    /** Stereographic projection from 3D point on unit sphere onto plane */
-    static stereographic(point) {
-        const x = Number(point.xyz[0]);
-        const y = Number(point.xyz[1]);
-        const z = Number(point.xyz[2]);
-        return {
-            x: (2 * x) / (1 - z),
-            y: (2 * y) / (1 - z),
-        };
+    get selectedFootprints() {
+        return this._selectedFootprints;
     }
-    static projectIn2D(point) {
-        const p = GeomUtils.stereographic(point);
-        return new _model_Point2D_js__WEBPACK_IMPORTED_MODULE_1__["default"](p.x, p.y);
-    }
+    // highlightFootprint(footprint: Footprint, highlighted: boolean) {
+    //   if (highlighted) {
+    //     this._hoveredFootprints.push(footprint)
+    //     this.totHoveredPoints += footprint.totPoints
+    //   } else {
+    //     const indexOfFootprint = this._hoveredFootprints.indexOf(footprint)
+    //     this._hoveredFootprints.splice(indexOfFootprint, 1)
+    //     this.totHoveredPoints -= footprint.totPoints
+    //   }
+    //   this.initHoveringBuffer()
+    // }
     /**
-     * Robust point-in-polygon (ray casting) using the precomputed selection object.
-     * Works with any of the three flags (0,1,2).
+     *
+     * @param {Footprint[]} footprints
      */
-    static checkPointInsidePolygon5(selectionObj, point) {
-        let p0;
-        if (selectionObj.flag === 0) {
-            p0 = GeomUtils.projectIn2D(point);
+    // addFootprint2Selected(footprints: Footprint[]) {
+    //   let refreshBuffer = false
+    //   for (let f of footprints) {
+    //     if (!this._selectedFootprints.includes(f)) {
+    //       this._selectedFootprints.push(f)
+    //       this.totSelectedPoints += f.totPoints
+    //       refreshBuffer = true
+    //     }
+    //   }
+    //   if (refreshBuffer) {
+    //     this.initSelectionBuffer()
+    //   }
+    // }
+    /**
+     *
+     * @param {Footprint} footprint
+     */
+    // removeFootprintFromSelection(footprint: Footprint) {
+    //   const indexOfObject = this._selectedFootprints.indexOf(footprint)
+    //   if (indexOfObject >= 0) {
+    //     this._selectedFootprints.splice(indexOfObject, 1)
+    //     this.totSelectedPoints -= footprint.totPoints
+    //     if (this._selectedFootprints.length > 0) {
+    //       this.initSelectionBuffer()
+    //     }
+    //   }
+    // }
+    initHoveringBuffer() {
+        /*
+                TODO better approach. when creating the indexbuffer of footprints,
+                add 1 extra position for the selection (set to 0 == not selected),
+                and save the position "positionIndex" in an array (selectionIndexes).
+                When checking the selection, I get the index of the footprint, which
+                matches with the index in the selectionIndexes to retrieve the position
+                of the flag to be set to 1 in the vertexposition
+                This will ease checking the selection in the vertex/fragment shader and
+                set the pointsize and shape color.
+                */
+        if (!this._webgl)
+            return;
+        if (this._hoveredFootprints.length == 0) {
+            return;
         }
-        else if (selectionObj.flag === 1) {
-            p0 = new _model_Point2D_js__WEBPACK_IMPORTED_MODULE_1__["default"](point.raDeg, point.decDeg);
+        let nFootprints = this._hoveredFootprints.length;
+        let npolygons = nFootprints - 1;
+        for (let j = 0; j < nFootprints; j++) {
+            npolygons += this._hoveredFootprints[j].polygons.length - 1;
         }
-        else {
-            const RA_THRESHOLD = 180;
-            const raShifted = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
-            p0 = new _model_Point2D_js__WEBPACK_IMPORTED_MODULE_1__["default"](raShifted, point.decDeg);
-        }
-        const p1 = new _model_Point2D_js__WEBPACK_IMPORTED_MODULE_1__["default"](p0.x, p0.y + 2 * Math.abs(selectionObj.maxy - selectionObj.miny));
-        // quick reject by bbox
-        if (p0.x > selectionObj.maxx ||
-            p0.x < selectionObj.minx ||
-            p0.y > selectionObj.maxy ||
-            p0.y < selectionObj.miny) {
-            return false;
-        }
-        // Ray casting against each sub-polygon
-        for (const currpoly of selectionObj.poly4selection) {
-            let intersections = 0;
-            for (let i = 0; i < currpoly.length - 1; i++) {
-                const p2 = currpoly[i];
-                const p3 = currpoly[i + 1];
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
+        // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
+        // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+        this.hoveredIndexes = new Uint32Array(this.totHoveredPoints + npolygons);
+        const MAX_UNSIGNED_INT = 0xffffffff; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+        // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
+        this.hoveredVertexPosition = new Float32Array(3 * this.totHoveredPoints);
+        let positionIndex = 0;
+        let vIdx = 0;
+        let R = 1.0;
+        this.nHoveredPrimitiveFlags = 0;
+        for (let j = 0; j < nFootprints; j++) {
+            let hoveredFootprintPoly = this._hoveredFootprints[j].polygons;
+            if (j > 0) {
+                this.hoveredIndexes[vIdx] = MAX_UNSIGNED_INT;
+                this.nHoveredPrimitiveFlags += 1;
+                vIdx += 1;
+            }
+            for (let polyIdx = 0; polyIdx < hoveredFootprintPoly.length; polyIdx++) {
+                if (polyIdx > 0) {
+                    this.hoveredIndexes[vIdx] = MAX_UNSIGNED_INT;
+                    this.nHoveredPrimitiveFlags += 1;
+                    vIdx += 1;
+                }
+                const poly = hoveredFootprintPoly[polyIdx];
+                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+                    const p = poly[pointIdx];
+                    this.hoveredVertexPosition[positionIndex] = R * p.x;
+                    this.hoveredVertexPosition[positionIndex + 1] = R * p.y;
+                    this.hoveredVertexPosition[positionIndex + 2] = R * p.z;
+                    this.hoveredIndexes[vIdx] = Math.floor(positionIndex / 3);
+                    vIdx += 1;
+                    positionIndex += 3;
                 }
             }
-            // close the polygon: last with first
-            {
-                const p2 = currpoly[currpoly.length - 1];
-                const p3 = currpoly[0];
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            if (intersections % 2 === 1) {
-                return true; // inside this subpolygon
-            }
-        }
-        return false;
-    }
-    // Legacy version kept for reference; now typed and using getters
-    static checkPointInsidePolygon4(polygons, point) {
-        const p0 = GeomUtils.projectIn2D(point);
-        let maxdist = point.raDeg + 15;
-        if (maxdist > 360)
-            maxdist = point.raDeg - 15;
-        const p1point = new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ raDeg: maxdist, decDeg: point.decDeg }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_2__.CoordsType.ASTRO);
-        const p1 = GeomUtils.projectIn2D(p1point);
-        for (const currpoly of polygons) {
-            let intersections = 0;
-            for (let i = 0; i < currpoly.length - 1; i++) {
-                const p2 = GeomUtils.projectIn2D(currpoly[i]);
-                const p3 = GeomUtils.projectIn2D(currpoly[i + 1]);
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            {
-                const p2 = GeomUtils.projectIn2D(currpoly[currpoly.length - 1]);
-                const p3 = GeomUtils.projectIn2D(currpoly[0]);
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            if (intersections % 2 === 1)
-                return true;
-        }
-        return false;
-    }
-}
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (GeomUtils);
-
-
-/***/ }),
-
-/***/ "./src/utils/MouseHelper.ts":
-/*!**********************************!*\
-  !*** ./src/utils/MouseHelper.ts ***!
-  \**********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec3.js");
-/* harmony import */ var healpixjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! healpixjs */ "./node_modules/healpixjs/lib-esm/index.js");
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../Global.js */ "./src/Global.ts");
-/* harmony import */ var _Utils_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Utils.js */ "./src/utils/Utils.ts");
-/**
- * @author Fabrizio Giordano (Fab)
- */
-
-
-
-
-function toVec3(p) {
-    return Array.isArray(p) ? gl_matrix__WEBPACK_IMPORTED_MODULE_0__.fromValues(p[0], p[1], p[2]) : p;
-}
-class MouseHelper {
-    _xyz = null;
-    _raDecDeg = null;
-    _phiThetaDeg = null;
-    raHMS;
-    decDMS;
-    /**
-     * @param in_xyz [x, y, z]
-     * @param in_raDecDeg { ra, dec } in degrees (ICRS/J2000)
-     * @param in_phiThetaDeg { phi, theta } in degrees (spherical)
-     */
-    constructor(in_xyz, in_raDecDeg, in_phiThetaDeg) {
-        if (in_xyz != null)
-            this._xyz = in_xyz;
-        if (in_raDecDeg != null)
-            this._raDecDeg = in_raDecDeg;
-        if (in_phiThetaDeg != null)
-            this._phiThetaDeg = in_phiThetaDeg;
-        if (this._raDecDeg) {
-            this.raHMS = (0,_Utils_js__WEBPACK_IMPORTED_MODULE_3__.raDegToHMS)(this._raDecDeg.ra);
-            this.decDMS = (0,_Utils_js__WEBPACK_IMPORTED_MODULE_3__.decDegToDMS)(this._raDecDeg.dec);
         }
     }
-    /** (Formerly `computeNpix256`) Uses global.nsideForSelection. */
-    computeNpix() {
-        if (!this._xyz)
-            return null;
-        const hp = _Global_js__WEBPACK_IMPORTED_MODULE_2__["default"].getHealpix(_Global_js__WEBPACK_IMPORTED_MODULE_2__["default"].nsideForSelection);
-        const v = new healpixjs__WEBPACK_IMPORTED_MODULE_1__.Vec3(this._xyz[0], this._xyz[1], this._xyz[2]);
-        const ptg = new healpixjs__WEBPACK_IMPORTED_MODULE_1__.Pointing(v, false);
-        return hp.ang2pix(ptg, false);
+    // initSelectionBuffer() {
+    //   /*
+    //           TODO better approach. when creating the indexbuffer of footprints, 
+    //           add 1 extra position for the selection (set to 0 == not selected), 
+    //           and save the position "positionIndex" in an array (selectionIndexes).
+    //           When checking the selection, I get the index of the footprint, which
+    //           matches with the index in the selectionIndexes to retrieve the position 
+    //           of the flag to be set to 1 in the vertexposition
+    //           This will ease checking the selection in the vertex/fragment shader and
+    //           set the pointsize and shape color.
+    //           */
+    //   let nFootprints = this._selectedFootprints.length
+    //   let npolygons = nFootprints - 1
+    //   for (let j = 0; j < nFootprints; j++) {
+    //     npolygons += this._selectedFootprints[j].polygons.length - 1
+    //   }
+    //   // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
+    //   // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+    //   this.selectedIndexes = new Uint32Array(this.totSelectedPoints + npolygons)
+    //   const MAX_UNSIGNED_INT = 0xffffffff // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+    //   // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
+    //   this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer)
+    //   this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints)
+    //   let positionIndex = 0
+    //   let vIdx = 0
+    //   let R = 1.0
+    //   this.nSlectedPrimitiveFlags = 0
+    //   for (let j = 0; j < nFootprints; j++) {
+    //     let footprintPoly = this._selectedFootprints[j].polygons
+    //     if (j > 0) {
+    //       this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT
+    //       this.nSlectedPrimitiveFlags += 1
+    //       vIdx += 1
+    //     }
+    //     for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
+    //       if (polyIdx > 0) {
+    //         this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
+    //         this.nSlectedPrimitiveFlags += 1;
+    //         vIdx += 1;
+    //       }
+    //       const poly = footprintPoly[polyIdx];
+    //       for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+    //         const p = poly[pointIdx];
+    //         this.selectedVertexPosition[positionIndex] = R * p.x;
+    //         this.selectedVertexPosition[positionIndex + 1] = R * p.y;
+    //         this.selectedVertexPosition[positionIndex + 2] = R * p.z;
+    //         this.selectedIndexes[vIdx] = Math.floor(positionIndex / 3);
+    //         vIdx += 1;
+    //         positionIndex += 3;
+    //       }
+    //     }
+    //   }
+    // }
+    changeColor(color) {
+        this._shapeColor = color;
     }
-    /** Update helper state from a world-space 3D point on the unit sphere. */
-    update(mousePoint) {
-        const mp = toVec3(mousePoint);
-        const sph = (0,_Utils_js__WEBPACK_IMPORTED_MODULE_3__.cartesianToSpherical)(mp);
-        const radec = (0,_Utils_js__WEBPACK_IMPORTED_MODULE_3__.sphericalToAstroDeg)(sph.phi, sph.theta);
-        this._xyz = [mp[0], mp[1], mp[2]];
-        this._phiThetaDeg = sph;
-        this._raDecDeg = radec;
-        this.raHMS = (0,_Utils_js__WEBPACK_IMPORTED_MODULE_3__.raDegToHMS)(radec.ra);
-        this.decDMS = (0,_Utils_js__WEBPACK_IMPORTED_MODULE_3__.decDegToDMS)(radec.dec);
-    }
-    clear() {
-        this._xyz = null;
-        this._raDecDeg = null;
-        this._phiThetaDeg = null;
-        this.raHMS = undefined;
-        this.decDMS = undefined;
-    }
-    // --- getters ---
-    get xyz() {
-        return this._xyz;
-    }
-    get x() {
-        return this._xyz ? this._xyz[0] : null;
-    }
-    get y() {
-        return this._xyz ? this._xyz[1] : null;
-    }
-    get z() {
-        return this._xyz ? this._xyz[2] : null;
-    }
-    get ra() {
-        return this._raDecDeg ? this._raDecDeg.ra : null;
-    }
-    get dec() {
-        return this._raDecDeg ? this._raDecDeg.dec : null;
-    }
-    get phi() {
-        return this._phiThetaDeg ? this._phiThetaDeg.phi : null;
-    }
-    get theta() {
-        return this._phiThetaDeg ? this._phiThetaDeg.theta : null;
-    }
-    get raDecDeg() {
-        return this._raDecDeg;
-    }
-    get phiThetaDeg() {
-        return this._phiThetaDeg;
-    }
-}
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (MouseHelper);
-
-
-/***/ }),
-
-/***/ "./src/utils/PerspectiveMatrixManager.ts":
-/*!***********************************************!*\
-  !*** ./src/utils/PerspectiveMatrixManager.ts ***!
-  \***********************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   PerspectiveMatrixManager: () => (/* binding */ PerspectiveMatrixManager)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-
-class PerspectiveMatrixManager {
-    _pMatrix;
-    _aspectRatio = 1;
-    constructor(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
-        this._pMatrix = this.computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane, insideSphere);
-    }
-    get pMatrix() {
-        return this._pMatrix;
-    }
-    set pMatrix(pMatrix) {
-        this._pMatrix = pMatrix;
-    }
-    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
-        this._aspectRatio = canvas.width / canvas.height;
-        const p = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        let farPlane;
-        if (insideSphere) {
-            // Inside the sphere: cap slightly beyond radius
-            farPlane = 1.1;
+    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
+        if (!this.isVisible)
+            return;
+        if (!this._ready)
+            return;
+        if (!vMatrix)
+            return;
+        // if (!global.camera) return
+        if (!this._bufferInitialised)
+            this.initBuffer();
+        if (!this._webgl)
+            return;
+        this._footprintShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
+        // this._footprintShaderProgram.enableShaders(
+        //   computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+        //   in_mMatrix,
+        //   vMatrix
+        // )
+        if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
+            this.checkSelection(in_mouseHelper);
         }
-        else {
-            const camMat = camera.getCameraMatrix();
-            const distCamera = -Number(camMat[14]); // camera z translation
-            const r = 1; // HiPS sphere radius (inject real value if available)
-            // Guard against negative due to rounding/logic
-            const c2 = Math.sqrt(Math.max(distCamera ** 2 - r ** 2, 0));
-            const beta = Math.atan2(c2, r);
-            const cf = c2 * Math.sin(beta);
-            farPlane = cf > 0 ? cf : r;
+        if (this._hoveredFootprints.length > 0) {
+            // TODO POINT_SIZE doesn't have any effect on line thickness!! it only applies to points
+            const rgb = colorHex2RGB('#00FF00');
+            const alpha = 1.0;
+            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
+            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
+            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.hoveredVertexPosition, this._webgl.STATIC_DRAW);
+            // setting footprint position
+            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer);
+            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexes, this._webgl.STATIC_DRAW);
+            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
+            this._webgl.drawElements(this._webgl.LINE_LOOP, this.hoveredVertexPosition.length / 3 + this.nHoveredPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
         }
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
-        this._pMatrix = p;
-        return p;
-    }
-}
-
-
-/***/ }),
-
-/***/ "./src/utils/RayPickingUtils.ts":
-/*!**************************************!*\
-  !*** ./src/utils/RayPickingUtils.ts ***!
-  \**************************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/mat4.js");
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec3.js");
-/**
- * @author Fabrizio Giordano (Fab)
- */
-
-
-class RayPickingUtils {
-    static lastNearestVisibleObjectIdx = -1;
-    /** Get index of the last object found under the mouse (if any). */
-    static getNearestVisibleObjectIdx() {
-        return this.lastNearestVisibleObjectIdx;
-    }
-    /**
-     * Builds a world-space ray from mouse coords.
-     * @param mouseX ClientX (page pixels)
-     * @param mouseY ClientY (page pixels)
-     * @param pMatrix Projection matrix
-     * @returns World-space direction (normalized) as a vec3
-     */
-    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
-        const gl = webgl;
-        const canvas = gl.canvas;
-        const rect = canvas.getBoundingClientRect();
-        // mouseX / mouseY are already local to the canvas (CSS pixels)
-        const canvasMX = mouseX;
-        const canvasMY = mouseY;
-        // Use rect.width / rect.height (CSS) for NDC
-        const x = (2.0 * canvasMX) / rect.width - 1.0;
-        const y = 1.0 - (2.0 * canvasMY) / rect.height;
-        const z = -1.0;
-        const rayClip = [x, y, z, 1.0];
-        const pInv = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(pInv, pMatrix);
-        const rayEye4 = [0, 0, 0, 0];
-        RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
-        // direction in eye space
-        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
-        const vInv = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_0__.invert(vInv, vMatrix);
-        const rayWorld4 = [0, 0, 0, 0];
-        RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
-        const rayWorld = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
-        gl_matrix__WEBPACK_IMPORTED_MODULE_1__.normalize(rayWorld, rayWorld);
-        return rayWorld;
-    }
-    /** a*b (4x4 * vec4) → vec4 (in `out`) */
-    static mat4MultiplyVec4(a, b, out) {
-        const d = b[0], e = b[1], g = b[2], w = b[3];
-        out[0] = a[0] * d + a[4] * e + a[8] * g + a[12] * w;
-        out[1] = a[1] * d + a[5] * e + a[9] * g + a[13] * w;
-        out[2] = a[2] * d + a[6] * e + a[10] * g + a[14] * w;
-        out[3] = a[3] * d + a[7] * e + a[11] * g + a[15] * w;
-        return out;
-    }
-    /**
-     * Ray–sphere intersection (world space).
-     * @returns distance `t` along the ray to the first hit, or `-1` if no hit.
-     */
-    static raySphere(rayOrigWorld, rayDirectionWorld, healpixGridSingleton) {
-        let intersectionDistance = -1;
-        const L = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-        gl_matrix__WEBPACK_IMPORTED_MODULE_1__.subtract(L, rayOrigWorld, healpixGridSingleton.center);
-        const b = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.dot(rayDirectionWorld, L);
-        const c = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.dot(L, L) - healpixGridSingleton.radius * healpixGridSingleton.radius;
-        const disc = b * b - c;
-        if (disc > 0.0) {
-            const s = Math.sqrt(disc);
-            const ta = -b + s;
-            const tb = -b - s;
-            if (ta < 0.0 && tb < 0.0) {
-                // behind camera
-            }
-            else if (tb < 0.0) {
-                intersectionDistance = ta;
-            }
-            else {
-                intersectionDistance = Math.min(ta, tb);
-            }
+        if (this._selectedFootprints.length > 0) {
+            const rgb = colorHex2RGB('#ECB462');
+            const alpha = 1.0;
+            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
+            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
+            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.selectedVertexPosition, this._webgl.STATIC_DRAW);
+            // setting footprint position
+            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer);
+            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexes, this._webgl.STATIC_DRAW);
+            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
+            this._webgl.drawElements(this._webgl.LINE_LOOP, this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
         }
-        else if (disc === 0.0) {
-            const t = -b; // tangent
-            if (t >= 0.0) {
-                intersectionDistance = t;
-            }
-        }
-        return intersectionDistance;
-    }
-    /**
-     * Compute intersection with a single model (defaults to the Healpix grid).
-     * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
-     */
-    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera, pMatrix) {
-        const vMatrix = camera.getCameraMatrix();
-        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
-        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
-        let intersectionModelPoint = [];
-        if (t >= 0) {
-            // world intersection
-            const worldHit = gl_matrix__WEBPACK_IMPORTED_MODULE_1__.create();
-            gl_matrix__WEBPACK_IMPORTED_MODULE_1__.scale(worldHit, rayWorld, t);
-            gl_matrix__WEBPACK_IMPORTED_MODULE_1__.add(worldHit, camera.getCameraPosition(), worldHit);
-            // world → model
-            const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
-            const modelHit4 = [0, 0, 0, 0];
-            // RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
-            RayPickingUtils.mat4MultiplyVec4(healpixGrid.getModelMatrixInverse(), worldHit4, modelHit4);
-            intersectionModelPoint = [modelHit4[0], modelHit4[1], modelHit4[2]];
-        }
-        return intersectionModelPoint;
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+        this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexes, this._webgl.STATIC_DRAW);
+        // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
+        const shapeColor = [...colorHex2RGB(this._shapeColor), 1.0];
+        this._webgl.uniform4f(this._footprintShaderProgram.locations.color, ...shapeColor);
+        this._webgl.drawElements(this._webgl.LINE_LOOP, this.indexes.length, this._webgl.UNSIGNED_INT, 0);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, null);
+        this.oldMouseCoords = in_mouseHelper.xyz;
     }
 }
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (RayPickingUtils);
+// export default FootprintSetGL
 
-
-/***/ }),
-
-/***/ "./src/utils/STCSParser.ts":
-/*!*********************************!*\
-  !*** ./src/utils/STCSParser.ts ***!
-  \*********************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
-/* harmony export */ });
-/* harmony import */ var _model_Point_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../model/Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _CoordsType_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var _Global_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../Global.js */ "./src/Global.ts");
-/**
- * @author Fabrizio Giordano (Fab77)
- */
-
-
-
-class STCSParser {
-    static parseSTCS(stcs) {
-        const stcsParsed = STCSParser.cleanStcs(stcs);
-        let totPoints = 0;
-        const polygons = [];
-        if (stcsParsed.includes("POLYGON")) {
-            return STCSParser.parsePolygon(stcsParsed);
-        }
-        else if (stcsParsed.includes("CIRCLE")) {
-            return STCSParser.parseCircle(stcsParsed);
-        }
-        else {
-            console.warn("STCS not recognised");
-        }
-        return { totpoints: totPoints, polygons };
-    }
-    static cleanStcs(stcs) {
-        // Uppercase once
-        let s = stcs.toUpperCase();
-        // Remove tokens
-        s = s
-            .replace(/'ICRS'/g, '')
-            .replace(/\bICRS\b/g, '')
-            .replace(/\bJ2000\b/g, '')
-            .replace(/\bUNION\b/g, '')
-            .replace(/\bTOPOCENTER\b/g, '');
-        // Remove parentheses
-        s = s.replace(/[()]/g, '');
-        // Collapse extra spaces and trim
-        s = s.replace(/ {2,}/g, ' ').trim();
-        return s;
-    }
-    static parsePolygon(stcs) {
-        let totPoints = 0;
-        const polygons = [];
-        const MAX_DECIMALS = _Global_js__WEBPACK_IMPORTED_MODULE_2__["default"].MAX_DECIMALS ?? 12;
-        const polys = stcs.split("POLYGON ");
-        for (let i = 1; i < polys.length; i++) {
-            const currPoly = [];
-            const points = polys[i].trim().split(" ");
-            // If first point is repeated as last, remove the duplicate
-            const p0 = Number(parseFloat(points[0]).toFixed(MAX_DECIMALS));
-            const p1 = Number(parseFloat(points[1]).toFixed(MAX_DECIMALS));
-            const plast0 = Number(parseFloat(points[points.length - 2]).toFixed(MAX_DECIMALS));
-            const plast1 = Number(parseFloat(points[points.length - 1]).toFixed(MAX_DECIMALS));
-            if (p0 === plast0 && p1 === plast1) {
-                points.splice(points.length - 2, 2);
-            }
-            if (points.length > 2) {
-                for (let p = 0; p < points.length - 1; p += 2) {
-                    const raDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
-                    const decDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
-                    const point = new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ raDeg, decDeg }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_1__.CoordsType.ASTRO);
-                    currPoly.push(point);
-                    totPoints += 1;
-                }
-                polygons.push(currPoly);
-            }
-        }
-        return { totpoints: totPoints, polygons };
-    }
-    // Example format: "CIRCLE ICRS 8.739685 4.38147 0.027833"
-    static parseCircle(stcs) {
-        let totPoints = 0;
-        const polygons = [];
-        const polys = stcs.split("CIRCLE ");
-        for (let i = 1; i < polys.length; i++) {
-            const currPoly = [];
-            const tokens = polys[i].trim().split(" ");
-            const ra = Number(tokens[0]);
-            const dec = Number(tokens[1]);
-            const radius = Number(tokens[2]);
-            const POINTS_PER_QUADRANT = 6;
-            const npoints = POINTS_PER_QUADRANT * 4;
-            const alpha = (2 * Math.PI) / npoints;
-            // Generate points around the circle
-            for (let p = npoints; p > 0; p--) {
-                const curra = radius * Math.cos(p * alpha) + ra;
-                const curdec = radius * Math.sin(p * alpha) + dec;
-                const point = new _model_Point_js__WEBPACK_IMPORTED_MODULE_0__.Point({ raDeg: curra, decDeg: curdec }, _CoordsType_js__WEBPACK_IMPORTED_MODULE_1__.CoordsType.ASTRO);
-                currPoly.push(point);
-                totPoints += 1;
-            }
-            polygons.push(currPoly);
-        }
-        return { totpoints: totPoints, polygons };
-    }
-}
-/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (STCSParser);
-
-
-/***/ }),
-
-/***/ "./src/utils/Utils.ts":
-/*!****************************!*\
-  !*** ./src/utils/Utils.ts ***!
-  \****************************/
-/***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
-
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   astroDegToSpherical: () => (/* binding */ astroDegToSpherical),
-/* harmony export */   cartesianToSpherical: () => (/* binding */ cartesianToSpherical),
-/* harmony export */   colorHex2RGB: () => (/* binding */ colorHex2RGB),
-/* harmony export */   decDegToDMS: () => (/* binding */ decDegToDMS),
-/* harmony export */   degToRad: () => (/* binding */ degToRad),
-/* harmony export */   raDegToHMS: () => (/* binding */ raDegToHMS),
-/* harmony export */   radToDeg: () => (/* binding */ radToDeg),
-/* harmony export */   sphericalToAstroDeg: () => (/* binding */ sphericalToAstroDeg),
-/* harmony export */   sphericalToCartesian: () => (/* binding */ sphericalToCartesian)
-/* harmony export */ });
-/* harmony import */ var gl_matrix__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! gl-matrix */ "./node_modules/gl-matrix/esm/vec3.js");
-/**
- * @author Fabrizio Giordano (Fab)
- */
-
-// results in degrees
-function cartesianToSpherical(xyz) {
-    const dotXYZ = gl_matrix__WEBPACK_IMPORTED_MODULE_0__.dot(xyz, xyz);
-    const r = Math.sqrt(dotXYZ);
-    let theta = Math.acos(xyz[2] / r);
-    theta = radToDeg(theta);
-    // NB: in atan(y/x) is written with params switched atan2(x, y)
-    let phi = Math.atan2(xyz[1], xyz[0]);
-    phi = radToDeg(phi);
-    if (phi < 0) {
-        phi += 360;
-    }
-    return { phi, theta };
-}
-function colorHex2RGB(hexColor) {
-    const hex1 = hexColor.substring(1, 3);
-    const hex2 = hexColor.substring(3, 5);
-    const hex3 = hexColor.substring(5, 7);
-    const dec1 = parseInt(hex1, 16);
-    const dec2 = parseInt(hex2, 16);
-    const dec3 = parseInt(hex3, 16);
-    const rgb1 = (dec1 / 255).toFixed(2);
-    const rgb2 = (dec2 / 255).toFixed(2);
-    const rgb3 = (dec3 / 255).toFixed(2);
-    return [parseFloat(rgb1), parseFloat(rgb2), parseFloat(rgb3)];
-}
-function degToRad(degrees) {
-    return (degrees / 180) * Math.PI;
-}
-function radToDeg(radians) {
-    return (radians * 180) / Math.PI;
-}
-function sphericalToAstroDeg(phiDeg, thetaDeg) {
-    let raDeg = phiDeg;
-    if (raDeg < 0) {
-        raDeg += 360;
-    }
-    const decDeg = 90 - thetaDeg;
-    return { ra: raDeg, dec: decDeg };
-}
-function sphericalToCartesian(phiDeg, thetaDeg, r = 1) {
-    const x = r * Math.sin(degToRad(thetaDeg)) * Math.cos(degToRad(phiDeg));
-    const y = r * Math.sin(degToRad(thetaDeg)) * Math.sin(degToRad(phiDeg));
-    const z = r * Math.cos(degToRad(thetaDeg));
-    return [x, y, z];
-}
-function astroDegToSpherical(raDeg, decDeg) {
-    let phiDeg = raDeg;
-    if (phiDeg < 0) {
-        phiDeg += 360;
-    }
-    const thetaDeg = 90 - decDeg;
-    return { phi: phiDeg, theta: thetaDeg };
-}
-function raDegToHMS(raDeg) {
-    const h = Math.floor(raDeg / 15);
-    const m = Math.floor((raDeg / 15 - h) * 60);
-    const s = (raDeg / 15 - h - m / 60) * 3600;
-    return { h, m, s };
-}
-function decDegToDMS(decDeg) {
-    let sign = 1;
-    if (decDeg < 0) {
-        sign = -1;
-    }
-    const decDegAbs = Math.abs(decDeg);
-    let d = Math.trunc(decDegAbs);
-    const m = Math.trunc((decDegAbs - d) * 60);
-    const s = (decDegAbs - d - m / 60) * 3600;
-    d = d * sign;
-    return { d, m, s };
-}
-
-
-/***/ })
-
-/******/ 	});
-/************************************************************************/
-/******/ 	// The module cache
-/******/ 	var __webpack_module_cache__ = {};
-/******/ 	
-/******/ 	// The require function
-/******/ 	function __webpack_require__(moduleId) {
-/******/ 		// Check if module is in cache
-/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
-/******/ 		if (cachedModule !== undefined) {
-/******/ 			return cachedModule.exports;
-/******/ 		}
-/******/ 		// Create a new module (and put it into the cache)
-/******/ 		var module = __webpack_module_cache__[moduleId] = {
-/******/ 			// no module.id needed
-/******/ 			// no module.loaded needed
-/******/ 			exports: {}
-/******/ 		};
-/******/ 	
-/******/ 		// Execute the module function
-/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
-/******/ 	
-/******/ 		// Return the exports of the module
-/******/ 		return module.exports;
-/******/ 	}
-/******/ 	
-/************************************************************************/
-/******/ 	/* webpack/runtime/define property getters */
-/******/ 	(() => {
-/******/ 		// define getter functions for harmony exports
-/******/ 		__webpack_require__.d = (exports, definition) => {
-/******/ 			for(var key in definition) {
-/******/ 				if(__webpack_require__.o(definition, key) && !__webpack_require__.o(exports, key)) {
-/******/ 					Object.defineProperty(exports, key, { enumerable: true, get: definition[key] });
-/******/ 				}
-/******/ 			}
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/hasOwnProperty shorthand */
-/******/ 	(() => {
-/******/ 		__webpack_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
-/******/ 	})();
-/******/ 	
-/******/ 	/* webpack/runtime/make namespace object */
-/******/ 	(() => {
-/******/ 		// define __esModule on exports
-/******/ 		__webpack_require__.r = (exports) => {
-/******/ 			if(typeof Symbol !== 'undefined' && Symbol.toStringTag) {
-/******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
-/******/ 			}
-/******/ 			Object.defineProperty(exports, '__esModule', { value: true });
-/******/ 		};
-/******/ 	})();
-/******/ 	
-/************************************************************************/
-var __webpack_exports__ = {};
-// This entry needs to be wrapped in an IIFE because it needs to be isolated against other modules in the chunk.
-(() => {
-/*!**********************!*\
-  !*** ./src/index.ts ***!
-  \**********************/
-__webpack_require__.r(__webpack_exports__);
-/* harmony export */ __webpack_require__.d(__webpack_exports__, {
-/* harmony export */   AstroViewer: () => (/* reexport safe */ _AstroViewer_js__WEBPACK_IMPORTED_MODULE_0__.AstroViewer),
-/* harmony export */   CatalogueGL: () => (/* reexport safe */ _model_catalogues_CatalogueGL_js__WEBPACK_IMPORTED_MODULE_4__.CatalogueGL),
-/* harmony export */   ColumnType: () => (/* reexport safe */ _model_MetadataColumn_js__WEBPACK_IMPORTED_MODULE_6__.ColumnType),
-/* harmony export */   CoordsType: () => (/* reexport safe */ _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_9__.CoordsType),
-/* harmony export */   FoV: () => (/* reexport safe */ _model_FoV_js__WEBPACK_IMPORTED_MODULE_2__.FoV),
-/* harmony export */   FoVUtils: () => (/* reexport safe */ _utils_FoVUtils_js__WEBPACK_IMPORTED_MODULE_8__.FoVUtils),
-/* harmony export */   FootprintSetGL: () => (/* reexport safe */ _model_footprints_FootprintSetGL_js__WEBPACK_IMPORTED_MODULE_3__.FootprintSetGL),
-/* harmony export */   HiPS: () => (/* reexport safe */ _model_hips_HiPS_js__WEBPACK_IMPORTED_MODULE_10__.HiPS),
-/* harmony export */   HiPSDescriptor: () => (/* reexport safe */ _model_hips_HiPSDescriptor_js__WEBPACK_IMPORTED_MODULE_1__.HiPSDescriptor),
-/* harmony export */   MetadataColumn: () => (/* reexport safe */ _model_MetadataColumn_js__WEBPACK_IMPORTED_MODULE_6__.MetadataColumn),
-/* harmony export */   MetadataManager: () => (/* reexport safe */ _model_MetadataManager_js__WEBPACK_IMPORTED_MODULE_5__.MetadataManager),
-/* harmony export */   Point: () => (/* reexport safe */ _model_Point_js__WEBPACK_IMPORTED_MODULE_7__.Point)
-/* harmony export */ });
-/* harmony import */ var _AstroViewer_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./AstroViewer.js */ "./src/AstroViewer.ts");
-/* harmony import */ var _model_hips_HiPSDescriptor_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./model/hips/HiPSDescriptor.js */ "./src/model/hips/HiPSDescriptor.ts");
-/* harmony import */ var _model_FoV_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./model/FoV.js */ "./src/model/FoV.ts");
-/* harmony import */ var _model_footprints_FootprintSetGL_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./model/footprints/FootprintSetGL.js */ "./src/model/footprints/FootprintSetGL.ts");
-/* harmony import */ var _model_catalogues_CatalogueGL_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./model/catalogues/CatalogueGL.js */ "./src/model/catalogues/CatalogueGL.ts");
-/* harmony import */ var _model_MetadataManager_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./model/MetadataManager.js */ "./src/model/MetadataManager.ts");
-/* harmony import */ var _model_MetadataColumn_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./model/MetadataColumn.js */ "./src/model/MetadataColumn.ts");
-/* harmony import */ var _model_Point_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./model/Point.js */ "./src/model/Point.ts");
-/* harmony import */ var _utils_FoVUtils_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./utils/FoVUtils.js */ "./src/utils/FoVUtils.ts");
-/* harmony import */ var _utils_CoordsType_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./utils/CoordsType.js */ "./src/utils/CoordsType.ts");
-/* harmony import */ var _model_hips_HiPS_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./model/hips/HiPS.js */ "./src/model/hips/HiPS.ts");
+;// ./src/index.ts
 
 
 
@@ -14185,8 +13253,6 @@ __webpack_require__.r(__webpack_exports__);
 
 
 console.log('astroviewer UMD loaded');
-
-})();
 
 module.exports = __webpack_exports__;
 /******/ })()
