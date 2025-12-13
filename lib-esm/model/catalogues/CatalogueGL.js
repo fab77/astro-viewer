@@ -1,6 +1,6 @@
 // import global from '../../Global.js';
 // import CatalogueProps from './CatalogueProps.js';
-import Source from '../Source.js';
+import { Source } from '../Source.js';
 import { Point } from '../Point.js';
 // import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { CoordsType } from '../..//utils/CoordsType.js';
@@ -20,7 +20,7 @@ export class CatalogueGL {
     _name;
     _description;
     // Data
-    sources;
+    _sources;
     // gl: GL;
     // Buffers & arrays
     vertexCataloguePositionBuffer = null;
@@ -49,7 +49,7 @@ export class CatalogueGL {
         this._description = catalogueDescription;
         this._providerUrl = providerUrl;
         this._metadataManager = metadataManager;
-        this.sources = [];
+        this._sources = [];
         // GL init
         // this.gl = global.gl as GL;
         // this.vertexCataloguePositionBuffer = this.gl.createBuffer();
@@ -83,16 +83,16 @@ export class CatalogueGL {
         return this._isVisible;
     }
     minMax(columnindex) {
-        if (!this.sources.length)
+        if (!this._sources.length)
             return { min: 0, max: 0 };
-        let min = this.sources[0].details[columnindex];
+        let min = this._sources[0].details[columnindex];
         if (isNaN(Number(min))) {
             // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain only number values`)
             console.warn(`${this._metadataManager.columns[columnindex].name} doesn't contain only number values`);
             return { min: 0, max: 0 };
         }
         let max = min;
-        for (const source of this.sources) {
+        for (const source of this._sources) {
             const v = source.details[columnindex];
             if (isNaN(Number(v))) {
                 // console.warn(`${this.catalogueProps.tapMetadataList.metadataList[columnindex].name} doesn't contain number only values`)
@@ -126,7 +126,7 @@ export class CatalogueGL {
             return;
         if (metacolumnName == MetadataManager.STANDARD_SIZE) {
             this._metadataManager.resetShapeColumn();
-            for (const source of this.sources) {
+            for (const source of this._sources) {
                 const size = CatalogueGL.STANDARD_SHAPE_SIZE;
                 source.shapeSize = size;
             }
@@ -151,7 +151,7 @@ export class CatalogueGL {
             console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
             return;
         }
-        for (const source of this.sources) {
+        for (const source of this._sources) {
             const raw = Number(source.getDetailByindex(idx));
             const min = Number(minmax.min);
             const max = Number(minmax.max);
@@ -167,7 +167,7 @@ export class CatalogueGL {
             return;
         if (metacolumnName == MetadataManager.STANDARD_HUE) {
             this._metadataManager.resetHueColumn();
-            for (const source of this.sources) {
+            for (const source of this._sources) {
                 const hue = CatalogueGL.STANDARD_SHAPE_HUE;
                 source.brightnessFactor = hue;
             }
@@ -188,7 +188,7 @@ export class CatalogueGL {
             console.warn(`${minmax} min and max are equals. No resizing will be applied.`);
             return;
         }
-        for (const source of this.sources) {
+        for (const source of this._sources) {
             const raw = Number(source.getDetailByindex(idx));
             const min = Number(minmax.min);
             const max = Number(minmax.max);
@@ -199,8 +199,11 @@ export class CatalogueGL {
         this._bufferInitialised = false;
         // this.initBuffer(this._webgl);
     }
+    get sources() {
+        return this._sources;
+    }
     addSource(source) {
-        this.sources.push(source);
+        this._sources.push(source);
     }
     /**
      * @param in_data Rows of TAP results
@@ -208,7 +211,7 @@ export class CatalogueGL {
      */
     addSources(in_data, columnsmeta) {
         this._ready = false;
-        this.sources = [];
+        this._sources = [];
         this._metadataManager = new MetadataManager(columnsmeta);
         // const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
         // const decDataIndex = (this.catalogueProps.decColumn as any).index ?? (this.catalogueProps.decColumn as any)._index;
@@ -242,13 +245,13 @@ export class CatalogueGL {
         this._bufferInitialised = false;
     }
     clearSources() {
-        this.sources = [];
+        this._sources = [];
         this.hoveredIndexes = [];
         this._healpixDensityMap.clear();
         this.vertexCataloguePosition = new Float32Array(0);
     }
     extHighlightSource(source, highlighted) {
-        const sIdx = this.sources.indexOf(source);
+        const sIdx = this._sources.indexOf(source);
         if (sIdx < 0)
             return;
         if (highlighted) {
@@ -264,14 +267,14 @@ export class CatalogueGL {
     }
     extAddSources2Selected(sources) {
         for (const s of sources) {
-            const sIdx = this.sources.indexOf(s);
+            const sIdx = this._sources.indexOf(s);
             if (sIdx >= 0 && !this.selectedIndexes.includes(sIdx)) {
                 this.selectedIndexes.push(sIdx);
             }
         }
     }
     extRemoveSourceFromSelection(source) {
-        const indexOfObject = this.sources.indexOf(source);
+        const indexOfObject = this._sources.indexOf(source);
         if (indexOfObject < 0)
             return;
         const sidx = this.selectedIndexes.indexOf(indexOfObject);
@@ -290,11 +293,11 @@ export class CatalogueGL {
         this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
         this.vertexhoveredCataloguePositionBuffer = this._webgl.createBuffer();
         this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        const nSources = this.sources.length;
+        const nSources = this._sources.length;
         this.vertexCataloguePosition = new Float32Array(nSources * CatalogueGL.ELEM_SIZE);
         let positionIndex = 0;
         for (let j = 0; j < nSources; j++) {
-            const currSource = this.sources[j];
+            const currSource = this._sources[j];
             const currPix = currSource.healpixPixel;
             // density map
             const bucket = this._healpixDensityMap.get(currPix);
@@ -358,7 +361,7 @@ export class CatalogueGL {
             const selR = this.getSelectionRadius();
             for (let i = 0; i < candidates.length; i++) {
                 const sourceIdx = candidates[i];
-                const source = this.sources[sourceIdx];
+                const source = this._sources[sourceIdx];
                 if (!source)
                     continue;
                 const dx = source.point.x - in_mouseHelper.x;
@@ -412,7 +415,7 @@ export class CatalogueGL {
             for (let k = 0; k < this.hoveredIndexes.length; k++) {
                 const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
                 this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-                this.vertexCataloguePosition[base + 4] = this.sources[this.hoveredIndexes[k]].shapeSize; // size
+                this.vertexCataloguePosition[base + 4] = this._sources[this.hoveredIndexes[k]].shapeSize; // size
             }
             this.hoveredIndexes = this.checkSelection(in_mouseHelper);
             // new hovered
@@ -420,7 +423,7 @@ export class CatalogueGL {
                 const idx = this.hoveredIndexes[i];
                 const base = idx * CatalogueGL.ELEM_SIZE;
                 this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-                this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+                this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
             }
         }
         // selected flags
@@ -428,14 +431,14 @@ export class CatalogueGL {
             const idx = this.selectedIndexes[s];
             const base = idx * CatalogueGL.ELEM_SIZE;
             this.vertexCataloguePosition[base + 3] = 2.0; // selected
-            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+            this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
         }
         // external hovered
         for (let e = 0; e < this.extHoveredIndexes.length; e++) {
             const idx = this.extHoveredIndexes[e];
             const base = idx * CatalogueGL.ELEM_SIZE;
             this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-            this.vertexCataloguePosition[base + 4] = this.sources[idx].shapeSize; // size
+            this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
         }
         // upload buffer
         this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);

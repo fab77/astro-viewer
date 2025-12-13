@@ -49,6 +49,7 @@ export type CameraChangedDetail = {
   timestamp: number;
   centralPoint: Point,
   mouseHoverPoint: PointCoordinates | undefined,
+  getFoVPolygon: Point[],
 };
 
 
@@ -272,7 +273,8 @@ class AstroSphere {
           timestamp: performance.now(),
           centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
           mouseHoverPoint: this.mousePointCoords,
-          colorMap: this._selectedColorMap
+          colorMap: this._selectedColorMap,
+          getFoVPolygon: this.getFoVPolygon(),
         };
 
         // if (this._rotating) {
@@ -515,7 +517,8 @@ class AstroSphere {
         timestamp: performance.now(),
         centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
         mouseHoverPoint: this.mousePointCoords,
-        colorMap: this._selectedColorMap
+        colorMap: this._selectedColorMap,
+        getFoVPolygon: this.getFoVPolygon(),
       };
       return detail
     }

@@ -5,7 +5,7 @@ export interface SourceDetail {
     valueType?: string;
     unit?: string;
 }
-declare class Source {
+export declare class Source {
     private _point;
     private _name?;
     private _details;
@@ -31,5 +31,4 @@ declare class Source {
      */
     set brightnessFactor(factor: number);
 }
-export default Source;
 //# sourceMappingURL=Source.d.ts.map

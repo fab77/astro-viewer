@@ -1,4 +1,4 @@
-import Footprint from './Footprint.js';
+import { Footprint } from './Footprint.js';
 import MouseHelper from '../../utils/MouseHelper.js';
 import { MetadataManager } from '../MetadataManager.js';
 import { MetadataColumn } from '../MetadataColumn.js';

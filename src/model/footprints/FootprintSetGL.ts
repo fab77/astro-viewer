@@ -1,12 +1,7 @@
-import Footprint from './Footprint.js'
-// import FootprintProps from './FootprintProps.js'
+import {Footprint} from './Footprint.js'
 import { mat4 } from 'gl-matrix'
-// import global from '../../Global.js'
 import { colorHex2RGB } from '../../utils/Utils.js'
-// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
-// import { TapRepo } from '../tap/TapRepo.js'
-// import {TapMetadataList} from '../tap/TapMetadataList.js'
-// import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
+
 import { FootprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
 
 import MouseHelper from '../../utils/MouseHelper.js'

@@ -9,7 +9,7 @@ export interface FootprintDetail {
     valueType?: string;
     unit?: string;
 }
-declare class Footprint {
+export declare class Footprint {
     private _polygons;
     private _convexPolygons;
     private _stcs?;
@@ -41,5 +41,4 @@ declare class Footprint {
     get details(): FootprintDetail[];
     get selectionObj(): SelectionObj | undefined;
 }
-export default Footprint;
 //# sourceMappingURL=Footprint.d.ts.map

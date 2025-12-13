@@ -1,4 +1,4 @@
-import Source from '../Source.js';
+import { Source } from '../Source.js';
 import MouseHelper from '../../utils/MouseHelper.js';
 import { CatalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 import { MetadataManager } from '../MetadataManager.js';
@@ -13,7 +13,7 @@ export declare class CatalogueGL {
     _ready: boolean;
     _name: string;
     _description: string;
-    sources: Source[];
+    _sources: Source[];
     vertexCataloguePositionBuffer: WebGLBuffer | null;
     vertexhoveredCataloguePositionBuffer: WebGLBuffer | null;
     vertexCataloguePosition: Float32Array;
@@ -43,6 +43,7 @@ export declare class CatalogueGL {
     changeColor(color: string): void;
     changeMetaShapeSize(metacolumnName: string): void;
     changeMetaShapeHue(metacolumnName: string): void;
+    get sources(): Source[];
     addSource(source: Source): void;
     /**
      * @param in_data Rows of TAP results

@@ -11,7 +11,7 @@ import STCSParser from '../../utils/STCSParser.js';
 //   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
 //   totpoints: number;
 // }
-class Footprint {
+export class Footprint {
     _polygons = []; // array of polygons (-> array of points)
     _convexPolygons = []; // convex polygons
     _stcs; // STC-S string
@@ -101,5 +101,4 @@ class Footprint {
         return this._selectionObj;
     }
 }
-export default Footprint;
 //# sourceMappingURL=Footprint.js.map

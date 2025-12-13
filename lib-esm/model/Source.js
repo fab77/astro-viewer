@@ -1,7 +1,7 @@
 'use strict';
 import { Vec3, Pointing } from 'healpixjs';
 import global from '../Global.js';
-class Source {
+export class Source {
     _point;
     _name;
     _details;
@@ -60,5 +60,4 @@ class Source {
         this._brightnessFactor = factor;
     }
 }
-export default Source;
 //# sourceMappingURL=Source.js.map

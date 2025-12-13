@@ -1,10 +1,5 @@
-import Footprint from './Footprint.js';
-// import global from '../../Global.js'
+import { Footprint } from './Footprint.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
-// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
-// import { TapRepo } from '../tap/TapRepo.js'
-// import {TapMetadataList} from '../tap/TapMetadataList.js'
-// import { footprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
 import { FootprintShaderProgram } from '../../shader/FootprintShaderProgram.js';
 import { Point } from '../Point.js';
 import GeomUtils from '../../utils/GeomUtils.js';

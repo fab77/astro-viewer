@@ -11,7 +11,7 @@ export interface SourceDetail {
   unit?: string;
 }
 
-class Source {
+export class Source {
   private _point: Point;
   private _name?: string;
   private _details: any[];
@@ -79,5 +79,3 @@ class Source {
     this._brightnessFactor = factor;
   }
 }
-
-export default Source;

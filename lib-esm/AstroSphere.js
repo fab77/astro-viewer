@@ -181,7 +181,8 @@ class AstroSphere {
                     timestamp: performance.now(),
                     centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
                     mouseHoverPoint: this.mousePointCoords,
-                    colorMap: this._selectedColorMap
+                    colorMap: this._selectedColorMap,
+                    getFoVPolygon: this.getFoVPolygon(),
                 };
                 // if (this._rotating) {
                 this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
@@ -351,7 +352,8 @@ class AstroSphere {
                 timestamp: performance.now(),
                 centralPoint: new Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType.ASTRO),
                 mouseHoverPoint: this.mousePointCoords,
-                colorMap: this._selectedColorMap
+                colorMap: this._selectedColorMap,
+                getFoVPolygon: this.getFoVPolygon(),
             };
             return detail;
         }

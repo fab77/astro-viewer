@@ -26,6 +26,7 @@ export type CameraChangedDetail = {
     timestamp: number;
     centralPoint: Point;
     mouseHoverPoint: PointCoordinates | undefined;
+    getFoVPolygon: Point[];
 };
 /**
  * AstroSphere — main WebGL scene controller (TS port)
