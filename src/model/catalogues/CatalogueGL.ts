@@ -1,23 +1,12 @@
-// import global from '../../Global.js';
-// import CatalogueProps from './CatalogueProps.js';
 import {Source} from '../Source.js';
 import { Point } from '../Point.js';
-// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { CoordsType } from '../..//utils/CoordsType.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
-// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import MouseHelper from '../../utils/MouseHelper.js';
-// import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 import { CatalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
-// import { TapMetadata } from '../tap/TapMetadata.js';
 import { MetadataManager } from '../MetadataManager.js';
 import { MetadataColumn } from '../MetadataColumn.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
-
-// ---- Minimal typings for external classes you already have ----
-type GL = WebGL2RenderingContext;
-
-// `Source` is assumed to expose at least these:
 
 export class CatalogueGL {
 

@@ -1,5 +1,4 @@
 import {Footprint} from './Footprint.js'
-import { mat4 } from 'gl-matrix'
 import { colorHex2RGB } from '../../utils/Utils.js'
 
 import { FootprintShaderProgram } from '../../shader/FootprintShaderProgram.js'
@@ -11,8 +10,6 @@ import { CoordsType } from '../../utils/CoordsType.js'
 import { MetadataManager } from '../MetadataManager.js'
 import { MetadataColumn } from '../MetadataColumn.js'
 
-type GL = WebGL2RenderingContext;
-
 export interface HoveredFootprintDetail {
   // metadata: TapMetadataList
   metadata: MetadataManager
@@ -21,8 +18,6 @@ export interface HoveredFootprintDetail {
   description: string
   provider: string
 }
-
-
 
 export class FootprintSetGL {
   static ELEM_SIZE = 3
