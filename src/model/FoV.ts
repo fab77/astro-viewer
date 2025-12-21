@@ -51,13 +51,20 @@ export class FoV {
 
     // horizontal FoV: ray through (centerY)
     // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
-    const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix)
+    const canvas = gl.canvas as HTMLCanvasElement;
+    const rect = canvas.getBoundingClientRect();
+    const canvasWidth = rect.width;
+    const canvasHeight = rect.height;
+
+    // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix)
+    const xFoVComputed = this.computeAngle(0, canvasHeight / 2, insideSphere, healpixGridSingleton, camera, pMatrix)
     this.fovXDeg = xFoVComputed.angleDeg
 
-
     // vertical FoV: ray through (centerX)
-    const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix)
+    // const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix)
+    const yFoVComputed = this.computeAngle(canvasWidth / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix)
     this.fovYDeg = yFoVComputed.angleDeg
+
     this._minFoV = this.minFoV
     this.ratio = this.computeRatio(camera)
     return this

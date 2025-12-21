@@ -19,7 +19,7 @@ export declare class HealpixGrid extends AbstractSkyEntity {
     private _indexBuffer;
     private _vertexCataloguePosition;
     private _indexes;
-    private fovObj;
+    private _fovObj;
     static INITIAL_FOV: number;
     static RADIUS: number;
     static INITIAL_POSITION: [number, number, number];
@@ -28,6 +28,7 @@ export declare class HealpixGrid extends AbstractSkyEntity {
     private _visibleTilesManager;
     constructor(webgl: WebGL2RenderingContext);
     init(): void;
+    get fovObj(): FoV;
     get RADIUS(): number;
     get INITIAL_POSITION(): [number, number, number];
     get INITIAL_PhiRad(): number;

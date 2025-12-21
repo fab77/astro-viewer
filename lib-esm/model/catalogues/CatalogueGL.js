@@ -1,15 +1,9 @@
-// import global from '../../Global.js';
-// import CatalogueProps from './CatalogueProps.js';
 import { Source } from '../Source.js';
 import { Point } from '../Point.js';
-// import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { CoordsType } from '../..//utils/CoordsType.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
-// import { catalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 import { CatalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
-// import { TapMetadata } from '../tap/TapMetadata.js';
 import { MetadataManager } from '../MetadataManager.js';
-// `Source` is assumed to expose at least these:
 export class CatalogueGL {
     _kind = "CatalogueGL";
     static ELEM_SIZE = 6;

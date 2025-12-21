@@ -60,7 +60,7 @@ export class HealpixGrid extends AbstractSkyEntity {
   private _vertexCataloguePosition: Float32Array = new Float32Array(0);
   private _indexes: Uint32Array = new Uint32Array(0);
 
-  private fovObj!: FoV;
+  private _fovObj!: FoV;
 
   static INITIAL_FOV = 180;
   static RADIUS = 1;
@@ -94,7 +94,11 @@ export class HealpixGrid extends AbstractSkyEntity {
 
     this._vertexCataloguePosition = new Float32Array(0);
 
-    this.fovObj = new FoV(super.webgl);
+    this._fovObj = new FoV(super.webgl);
+  }
+
+  get fovObj(): FoV {
+    return this._fovObj
   }
 
   get RADIUS(): number {
@@ -114,15 +118,15 @@ export class HealpixGrid extends AbstractSkyEntity {
   }
 
   refreshFoV(camera: Camera, pMatrix: ReadonlyMat4) {
-    return this.fovObj.getFoV(global.insideSphere, this, camera, pMatrix) ;
+    return this._fovObj.getFoV(global.insideSphere, this, camera, pMatrix) ;
   }
 
   getFoV(): FoV {
-    return this.fovObj
+    return this._fovObj
   }
 
   getMinFoV() {
-    return this.fovObj.minFoV;
+    return this._fovObj.minFoV;
   }
 
   private initShaders(): void {

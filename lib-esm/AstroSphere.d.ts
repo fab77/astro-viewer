@@ -53,6 +53,7 @@ declare class AstroSphere {
     private activeFootprintSets;
     private _webgl;
     private _selectedColorMap;
+    private _cameraStatusChanged;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private initCamera;
     setCamera(camera: Camera): void;
@@ -62,7 +63,7 @@ declare class AstroSphere {
     private updateLastMousePoint;
     getCentralPointCoordinates(): PointCoordinates | undefined;
     getLastMousePointCoordinates(): PointCoordinates | undefined;
-    private _rotating;
+    private emitCameraChanged;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;

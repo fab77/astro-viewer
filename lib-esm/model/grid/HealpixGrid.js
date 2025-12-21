@@ -35,7 +35,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     _indexBuffer;
     _vertexCataloguePosition = new Float32Array(0);
     _indexes = new Uint32Array(0);
-    fovObj;
+    _fovObj;
     static INITIAL_FOV = 180;
     static RADIUS = 1;
     static INITIAL_POSITION = [0.0, 0.0, 0.0];
@@ -59,7 +59,10 @@ export class HealpixGrid extends AbstractSkyEntity {
         this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
         this._indexBuffer = super.webgl.createBuffer();
         this._vertexCataloguePosition = new Float32Array(0);
-        this.fovObj = new FoV(super.webgl);
+        this._fovObj = new FoV(super.webgl);
+    }
+    get fovObj() {
+        return this._fovObj;
     }
     get RADIUS() {
         return HealpixGrid.RADIUS;
@@ -74,13 +77,13 @@ export class HealpixGrid extends AbstractSkyEntity {
         return HealpixGrid.INITIAL_ThetaRad;
     }
     refreshFoV(camera, pMatrix) {
-        return this.fovObj.getFoV(global.insideSphere, this, camera, pMatrix);
+        return this._fovObj.getFoV(global.insideSphere, this, camera, pMatrix);
     }
     getFoV() {
-        return this.fovObj;
+        return this._fovObj;
     }
     getMinFoV() {
-        return this.fovObj.minFoV;
+        return this._fovObj.minFoV;
     }
     initShaders() {
         const gl = super.webgl;
