@@ -15,7 +15,7 @@ export class Source {
     constructor(in_point, in_details = []) {
         this._point = in_point;
         this._details = in_details;
-        this._shapesize = 8.0;
+        this._shapesize = 16.0;
         this._brightnessFactor = -99;
         this.computeHealpixPixel();
     }

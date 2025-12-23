@@ -11432,7 +11432,7 @@ class Source {
     constructor(in_point, in_details = []) {
         this._point = in_point;
         this._details = in_details;
-        this._shapesize = 8.0;
+        this._shapesize = 16.0;
         this._brightnessFactor = -99;
         this.computeHealpixPixel();
     }
@@ -11798,7 +11798,7 @@ class CatalogueGL {
     _kind = "CatalogueGL";
     static ELEM_SIZE = 6;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    static STANDARD_SHAPE_SIZE = 8.0;
+    static STANDARD_SHAPE_SIZE = 10.0;
     static STANDARD_SHAPE_HUE = 3.0;
     _ready;
     _name;
@@ -12113,23 +12113,26 @@ class CatalogueGL {
             case 0:
             case 1:
             case 2:
-                return 0.005;
+                // return 0.005;
+                return 0.01;
             case 3:
-                return 0.001;
+            // return 0.001;
             case 4:
-                return 0.0009;
+            // return 0.0009;
             case 5:
-                return 0.0005;
+                // return 0.0005;
+                return 0.005;
             case 6:
-                return 0.0001;
+            // return 0.0001;
             case 7:
-                return 0.00009;
+            // return 0.00009;
             case 8:
-                return 0.00005;
+                // return 0.00005;
+                return 0.001;
             case 9:
-                return 0.00001;
+                return 0.0005;
             default:
-                return 0.000005;
+                return 0.0001;
         }
     }
     checkSelection(in_mouseHelper) {
@@ -12155,6 +12158,8 @@ class CatalogueGL {
                 if (dist <= selR) {
                     hoveredIndexes.push(sourceIdx);
                     sourcesHovered.push(source);
+                    const hoverEvent = new CustomEvent('source-hovered', { detail: { source: source }, bubbles: true, composed: true, });
+                    this._webgl.canvas.dispatchEvent(hoverEvent);
                 }
             }
         }
