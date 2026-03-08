@@ -41,6 +41,8 @@ class AstroSphere {
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
+    lastHoveredSource = null;
+    lastHoveredCatalogue = null;
     constructor(canvas, webgl) {
         console.log('[AstroSphere] new instance for canvas', canvas.id);
         // Keep global GL context (as in original JS)
@@ -520,11 +522,35 @@ class AstroSphere {
                 cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
+        this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach(fst => {
             if (this._activeHiPS) {
                 fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
+    }
+    emitHoveredSourceIfChanged() {
+        let nextHoveredSource = null;
+        let nextHoveredCatalogue = null;
+        for (const cat of this.activeCatalogues) {
+            const hovered = cat.getPrimaryHoveredSource();
+            if (!hovered)
+                continue;
+            nextHoveredSource = hovered;
+            nextHoveredCatalogue = cat;
+            break;
+        }
+        const unchanged = nextHoveredSource === this.lastHoveredSource
+            && nextHoveredCatalogue === this.lastHoveredCatalogue;
+        if (unchanged)
+            return;
+        this.lastHoveredSource = nextHoveredSource;
+        this.lastHoveredCatalogue = nextHoveredCatalogue;
+        this._webgl.canvas.dispatchEvent(new CustomEvent('source-hovered', {
+            detail: { source: nextHoveredSource, catalogue: nextHoveredCatalogue },
+            bubbles: true,
+            composed: true,
+        }));
     }
 }
 export default AstroSphere;

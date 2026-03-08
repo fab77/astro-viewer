@@ -481,6 +481,12 @@ export class CatalogueGL {
         this.setSelectedIndexes([selectedIdx]);
         return this._sources[selectedIdx] ?? null;
     }
+
+    getPrimaryHoveredSource(): Source | null {
+        if (!this.hoveredIndexes.length) return null;
+        const idx = this.hoveredIndexes[0];
+        return this._sources[idx] ?? null;
+    }
     
     private checkHovering(in_mouseHelper: MouseHelper): number[] {
 
@@ -490,7 +496,6 @@ export class CatalogueGL {
         }
 
         const hoveredIndexes: number[] = [];
-        const sourcesHovered: Source[] = [];
         const mousePix = in_mouseHelper.computeNpix();
 
         if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
@@ -509,12 +514,6 @@ export class CatalogueGL {
 
                 if (dist <= selR) {
                     hoveredIndexes.push(sourceIdx);
-                    sourcesHovered.push(source);
-                    
-                    const hoverEvent = new CustomEvent('source-hovered', { detail: { source: source }, bubbles: true, composed: true,});
-                    this._webgl.canvas.dispatchEvent(hoverEvent);
-                            
-
                 }
             }
         }

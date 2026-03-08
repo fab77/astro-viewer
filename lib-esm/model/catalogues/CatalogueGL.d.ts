@@ -63,6 +63,7 @@ export declare class CatalogueGL {
      * Returns the selected source or null if no source was hit.
      */
     selectPrimarySourceFromClick(in_mouseHelper: MouseHelper): Source | null;
+    getPrimaryHoveredSource(): Source | null;
     private checkHovering;
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)

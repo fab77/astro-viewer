@@ -10835,6 +10835,8 @@ class AstroSphere {
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
+    lastHoveredSource = null;
+    lastHoveredCatalogue = null;
     constructor(canvas, webgl) {
         console.log('[AstroSphere] new instance for canvas', canvas.id);
         // Keep global GL context (as in original JS)
@@ -11314,11 +11316,35 @@ class AstroSphere {
                 cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
+        this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach(fst => {
             if (this._activeHiPS) {
                 fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
+    }
+    emitHoveredSourceIfChanged() {
+        let nextHoveredSource = null;
+        let nextHoveredCatalogue = null;
+        for (const cat of this.activeCatalogues) {
+            const hovered = cat.getPrimaryHoveredSource();
+            if (!hovered)
+                continue;
+            nextHoveredSource = hovered;
+            nextHoveredCatalogue = cat;
+            break;
+        }
+        const unchanged = nextHoveredSource === this.lastHoveredSource
+            && nextHoveredCatalogue === this.lastHoveredCatalogue;
+        if (unchanged)
+            return;
+        this.lastHoveredSource = nextHoveredSource;
+        this.lastHoveredCatalogue = nextHoveredCatalogue;
+        this._webgl.canvas.dispatchEvent(new CustomEvent('source-hovered', {
+            detail: { source: nextHoveredSource, catalogue: nextHoveredCatalogue },
+            bubbles: true,
+            composed: true,
+        }));
     }
 }
 /* harmony default export */ const src_AstroSphere = (AstroSphere);
@@ -12223,13 +12249,18 @@ class CatalogueGL {
         this.setSelectedIndexes([selectedIdx]);
         return this._sources[selectedIdx] ?? null;
     }
+    getPrimaryHoveredSource() {
+        if (!this.hoveredIndexes.length)
+            return null;
+        const idx = this.hoveredIndexes[0];
+        return this._sources[idx] ?? null;
+    }
     checkHovering(in_mouseHelper) {
         if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
             console.log('CatalogueGL.checkHovering: missing mouse coords');
             return [];
         }
         const hoveredIndexes = [];
-        const sourcesHovered = [];
         const mousePix = in_mouseHelper.computeNpix();
         if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
             const candidates = this._healpixDensityMap.get(mousePix);
@@ -12245,9 +12276,6 @@ class CatalogueGL {
                 const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 if (dist <= selR) {
                     hoveredIndexes.push(sourceIdx);
-                    sourcesHovered.push(source);
-                    const hoverEvent = new CustomEvent('source-hovered', { detail: { source: source }, bubbles: true, composed: true, });
-                    this._webgl.canvas.dispatchEvent(hoverEvent);
                 }
             }
         }

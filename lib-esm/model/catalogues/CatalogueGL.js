@@ -403,13 +403,18 @@ export class CatalogueGL {
         this.setSelectedIndexes([selectedIdx]);
         return this._sources[selectedIdx] ?? null;
     }
+    getPrimaryHoveredSource() {
+        if (!this.hoveredIndexes.length)
+            return null;
+        const idx = this.hoveredIndexes[0];
+        return this._sources[idx] ?? null;
+    }
     checkHovering(in_mouseHelper) {
         if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
             console.log('CatalogueGL.checkHovering: missing mouse coords');
             return [];
         }
         const hoveredIndexes = [];
-        const sourcesHovered = [];
         const mousePix = in_mouseHelper.computeNpix();
         if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
             const candidates = this._healpixDensityMap.get(mousePix);
@@ -425,9 +430,6 @@ export class CatalogueGL {
                 const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 if (dist <= selR) {
                     hoveredIndexes.push(sourceIdx);
-                    sourcesHovered.push(source);
-                    const hoverEvent = new CustomEvent('source-hovered', { detail: { source: source }, bubbles: true, composed: true, });
-                    this._webgl.canvas.dispatchEvent(hoverEvent);
                 }
             }
         }

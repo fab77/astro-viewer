@@ -24,6 +24,7 @@ import { Point } from './model/Point.js'
 import { FoVUtils } from './utils/FoVUtils.js'
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js'
+import { Source } from './model/Source.js'
 
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js'
 import { HealpixGrid } from './model/grid/HealpixGrid.js'
@@ -91,6 +92,8 @@ class AstroSphere {
   private _webgl: WebGL2RenderingContext
   private _selectedColorMap: any
   private _cameraStatusChanged: boolean = false
+  private lastHoveredSource: Source | null = null
+  private lastHoveredCatalogue: CatalogueGL | null = null
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     console.log('[AstroSphere] new instance for canvas', canvas.id);
@@ -747,6 +750,7 @@ class AstroSphere {
         cat.draw(this._activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }
     })
+    this.emitHoveredSourceIfChanged();
     this.activeFootprintSets.forEach(fst => {
       if (this._activeHiPS) {
         fst.draw(this._activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
@@ -755,8 +759,35 @@ class AstroSphere {
 
 
   }
+
+  private emitHoveredSourceIfChanged() {
+    let nextHoveredSource: Source | null = null;
+    let nextHoveredCatalogue: CatalogueGL | null = null;
+
+    for (const cat of this.activeCatalogues) {
+      const hovered = cat.getPrimaryHoveredSource();
+      if (!hovered) continue;
+      nextHoveredSource = hovered;
+      nextHoveredCatalogue = cat;
+      break;
+    }
+
+    const unchanged = nextHoveredSource === this.lastHoveredSource
+      && nextHoveredCatalogue === this.lastHoveredCatalogue;
+    if (unchanged) return;
+
+    this.lastHoveredSource = nextHoveredSource;
+    this.lastHoveredCatalogue = nextHoveredCatalogue;
+
+    this._webgl.canvas.dispatchEvent(
+      new CustomEvent('source-hovered', {
+        detail: { source: nextHoveredSource, catalogue: nextHoveredCatalogue },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
 }
 export default AstroSphere
-
 
 

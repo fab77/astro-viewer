@@ -57,6 +57,8 @@ declare class AstroSphere {
     private _webgl;
     private _selectedColorMap;
     private _cameraStatusChanged;
+    private lastHoveredSource;
+    private lastHoveredCatalogue;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private initCamera;
     setCamera(camera: Camera): void;
@@ -94,6 +96,7 @@ declare class AstroSphere {
     private prevCentralDecDeg;
     get activeHiPS(): HiPS | null;
     draw(canvas: HTMLCanvasElement): void;
+    private emitHoveredSourceIfChanged;
 }
 export default AstroSphere;
 //# sourceMappingURL=AstroSphere.d.ts.map
