@@ -30,6 +30,9 @@ class AstroSphere {
     inertiaX = 0.0;
     inertiaY = 0.0;
     zoomInertia = 0.0;
+    pointerDownX = null;
+    pointerDownY = null;
+    pointerDownAt = 0;
     _activeHiPS = null;
     startup = true;
     fov;
@@ -130,6 +133,8 @@ class AstroSphere {
         if (global.debug) {
             console.log('[AstroSphere::addEventListeners]');
         }
+        const CLICK_MAX_DISTANCE_PX = 4;
+        const CLICK_MAX_DURATION_MS = 250;
         const rect = canvas.getBoundingClientRect();
         this.lastMouseX = rect.left; // locale al canvas
         this.lastMouseY = rect.top;
@@ -139,6 +144,9 @@ class AstroSphere {
             const rect = canvas.getBoundingClientRect();
             this.lastMouseX = event.clientX - rect.left; // locale al canvas
             this.lastMouseY = event.clientY - rect.top; // locale al canvas
+            this.pointerDownX = this.lastMouseX;
+            this.pointerDownY = this.lastMouseY;
+            this.pointerDownAt = Date.now();
             const mousePoint = RayPickingUtils.getIntersectionPointWithSingleModel(this.lastMouseX, this.lastMouseY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
             if (mousePoint && mousePoint.length > 0) {
                 this.mouseHelper.update(mousePoint);
@@ -152,8 +160,30 @@ class AstroSphere {
             this.mouseDown = false;
             document.body.style.cursor = 'auto';
             const rect = canvas.getBoundingClientRect();
-            this.lastMouseX = event.clientX - rect.left;
-            this.lastMouseY = event.clientY - rect.top;
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            this.lastMouseX = localX;
+            this.lastMouseY = localY;
+            const moveDist = Math.hypot(localX - (this.pointerDownX ?? localX), localY - (this.pointerDownY ?? localY));
+            const elapsedMs = Date.now() - this.pointerDownAt;
+            const isClick = moveDist <= CLICK_MAX_DISTANCE_PX && elapsedMs <= CLICK_MAX_DURATION_MS;
+            if (isClick) {
+                const mousePoint = RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (mousePoint && mousePoint.length > 0) {
+                    this.mouseHelper.update(mousePoint);
+                    this.updateLastMousePoint();
+                    for (const cat of this.activeCatalogues) {
+                        const selectedSource = cat.selectPrimarySourceFromClick(this.mouseHelper);
+                        if (!selectedSource)
+                            continue;
+                        this._webgl.canvas.dispatchEvent(new CustomEvent('source-clicked', {
+                            detail: { source: selectedSource, catalogue: cat },
+                            bubbles: true,
+                            composed: true,
+                        }));
+                    }
+                }
+            }
         };
         const handleMouseMove = (event) => {
             const rect = canvas.getBoundingClientRect();

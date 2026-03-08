@@ -46,6 +46,9 @@ declare class AstroSphere {
     private inertiaX;
     private inertiaY;
     private zoomInertia;
+    private pointerDownX;
+    private pointerDownY;
+    private pointerDownAt;
     private _activeHiPS;
     private startup;
     private fov;

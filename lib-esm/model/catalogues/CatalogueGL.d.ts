@@ -56,7 +56,14 @@ export declare class CatalogueGL {
     extRemoveSourceFromSelection(source: Source): void;
     private initBuffer;
     private getSelectionRadius;
-    private checkSelection;
+    private checkClicking;
+    private setSelectedIndexes;
+    /**
+     * Run click-picking and update selection with the nearest candidate in current pixel.
+     * Returns the selected source or null if no source was hit.
+     */
+    selectPrimarySourceFromClick(in_mouseHelper: MouseHelper): Source | null;
+    private checkHovering;
     /**
      * @param in_mMatrix Model matrix the current catalogue is associated to (e.g. HiPS matrix)
      */

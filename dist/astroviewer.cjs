@@ -10824,6 +10824,9 @@ class AstroSphere {
     inertiaX = 0.0;
     inertiaY = 0.0;
     zoomInertia = 0.0;
+    pointerDownX = null;
+    pointerDownY = null;
+    pointerDownAt = 0;
     _activeHiPS = null;
     startup = true;
     fov;
@@ -10924,6 +10927,8 @@ class AstroSphere {
         if (src_Global.debug) {
             console.log('[AstroSphere::addEventListeners]');
         }
+        const CLICK_MAX_DISTANCE_PX = 4;
+        const CLICK_MAX_DURATION_MS = 250;
         const rect = canvas.getBoundingClientRect();
         this.lastMouseX = rect.left; // locale al canvas
         this.lastMouseY = rect.top;
@@ -10933,6 +10938,9 @@ class AstroSphere {
             const rect = canvas.getBoundingClientRect();
             this.lastMouseX = event.clientX - rect.left; // locale al canvas
             this.lastMouseY = event.clientY - rect.top; // locale al canvas
+            this.pointerDownX = this.lastMouseX;
+            this.pointerDownY = this.lastMouseY;
+            this.pointerDownAt = Date.now();
             const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(this.lastMouseX, this.lastMouseY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
             if (mousePoint && mousePoint.length > 0) {
                 this.mouseHelper.update(mousePoint);
@@ -10946,8 +10954,30 @@ class AstroSphere {
             this.mouseDown = false;
             document.body.style.cursor = 'auto';
             const rect = canvas.getBoundingClientRect();
-            this.lastMouseX = event.clientX - rect.left;
-            this.lastMouseY = event.clientY - rect.top;
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            this.lastMouseX = localX;
+            this.lastMouseY = localY;
+            const moveDist = Math.hypot(localX - (this.pointerDownX ?? localX), localY - (this.pointerDownY ?? localY));
+            const elapsedMs = Date.now() - this.pointerDownAt;
+            const isClick = moveDist <= CLICK_MAX_DISTANCE_PX && elapsedMs <= CLICK_MAX_DURATION_MS;
+            if (isClick) {
+                const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (mousePoint && mousePoint.length > 0) {
+                    this.mouseHelper.update(mousePoint);
+                    this.updateLastMousePoint();
+                    for (const cat of this.activeCatalogues) {
+                        const selectedSource = cat.selectPrimarySourceFromClick(this.mouseHelper);
+                        if (!selectedSource)
+                            continue;
+                        this._webgl.canvas.dispatchEvent(new CustomEvent('source-clicked', {
+                            detail: { source: selectedSource, catalogue: cat },
+                            bubbles: true,
+                            composed: true,
+                        }));
+                    }
+                }
+            }
         };
         const handleMouseMove = (event) => {
             const rect = canvas.getBoundingClientRect();
@@ -12135,9 +12165,67 @@ class CatalogueGL {
                 return 0.0001;
         }
     }
-    checkSelection(in_mouseHelper) {
+    checkClicking(in_mouseHelper) {
         if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
-            console.log('CatalogueGL.checkSelection: missing mouse coords');
+            console.log('CatalogueGL.checkClicking: missing mouse coords');
+            return [];
+        }
+        const clickedIndexes = [];
+        const mousePix = in_mouseHelper.computeNpix();
+        if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
+            const candidates = this._healpixDensityMap.get(mousePix);
+            const selR = this.getSelectionRadius();
+            for (let i = 0; i < candidates.length; i++) {
+                const sourceIdx = candidates[i];
+                const source = this._sources[sourceIdx];
+                if (!source)
+                    continue;
+                const dx = source.point.x - in_mouseHelper.x;
+                const dy = source.point.y - in_mouseHelper.y;
+                const dz = source.point.z - in_mouseHelper.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (dist <= selR) {
+                    clickedIndexes.push(sourceIdx);
+                }
+            }
+        }
+        return clickedIndexes;
+    }
+    setSelectedIndexes(nextSelected) {
+        const deduped = Array.from(new Set(nextSelected))
+            .filter((idx) => idx >= 0 && idx < this._sources.length);
+        if (this.vertexCataloguePosition.length) {
+            for (const prevIdx of this.selectedIndexes) {
+                if (deduped.includes(prevIdx))
+                    continue;
+                const base = prevIdx * CatalogueGL.ELEM_SIZE;
+                if (base + 4 >= this.vertexCataloguePosition.length)
+                    continue;
+                if (!this.hoveredIndexes.includes(prevIdx) && !this.extHoveredIndexes.includes(prevIdx)) {
+                    this.vertexCataloguePosition[base + 3] = 0.0;
+                }
+                this.vertexCataloguePosition[base + 4] = this._sources[prevIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            }
+        }
+        this.selectedIndexes = deduped;
+    }
+    /**
+     * Run click-picking and update selection with the nearest candidate in current pixel.
+     * Returns the selected source or null if no source was hit.
+     */
+    selectPrimarySourceFromClick(in_mouseHelper) {
+        const clickedIndexes = this.checkClicking(in_mouseHelper);
+        if (!clickedIndexes.length) {
+            this.setSelectedIndexes([]);
+            return null;
+        }
+        const selectedIdx = clickedIndexes[0];
+        this.setSelectedIndexes([selectedIdx]);
+        return this._sources[selectedIdx] ?? null;
+    }
+    checkHovering(in_mouseHelper) {
+        if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
+            console.log('CatalogueGL.checkHovering: missing mouse coords');
             return [];
         }
         const hoveredIndexes = [];
@@ -12206,7 +12294,7 @@ class CatalogueGL {
                 this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
                 this.vertexCataloguePosition[base + 4] = this._sources[this.hoveredIndexes[k]].shapeSize; // size
             }
-            this.hoveredIndexes = this.checkSelection(in_mouseHelper);
+            this.hoveredIndexes = this.checkHovering(in_mouseHelper);
             // new hovered
             for (let i = 0; i < this.hoveredIndexes.length; i++) {
                 const idx = this.hoveredIndexes[i];

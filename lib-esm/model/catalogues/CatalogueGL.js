@@ -345,9 +345,67 @@ export class CatalogueGL {
                 return 0.0001;
         }
     }
-    checkSelection(in_mouseHelper) {
+    checkClicking(in_mouseHelper) {
         if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
-            console.log('CatalogueGL.checkSelection: missing mouse coords');
+            console.log('CatalogueGL.checkClicking: missing mouse coords');
+            return [];
+        }
+        const clickedIndexes = [];
+        const mousePix = in_mouseHelper.computeNpix();
+        if (mousePix != null && this._healpixDensityMap.has(mousePix)) {
+            const candidates = this._healpixDensityMap.get(mousePix);
+            const selR = this.getSelectionRadius();
+            for (let i = 0; i < candidates.length; i++) {
+                const sourceIdx = candidates[i];
+                const source = this._sources[sourceIdx];
+                if (!source)
+                    continue;
+                const dx = source.point.x - in_mouseHelper.x;
+                const dy = source.point.y - in_mouseHelper.y;
+                const dz = source.point.z - in_mouseHelper.z;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (dist <= selR) {
+                    clickedIndexes.push(sourceIdx);
+                }
+            }
+        }
+        return clickedIndexes;
+    }
+    setSelectedIndexes(nextSelected) {
+        const deduped = Array.from(new Set(nextSelected))
+            .filter((idx) => idx >= 0 && idx < this._sources.length);
+        if (this.vertexCataloguePosition.length) {
+            for (const prevIdx of this.selectedIndexes) {
+                if (deduped.includes(prevIdx))
+                    continue;
+                const base = prevIdx * CatalogueGL.ELEM_SIZE;
+                if (base + 4 >= this.vertexCataloguePosition.length)
+                    continue;
+                if (!this.hoveredIndexes.includes(prevIdx) && !this.extHoveredIndexes.includes(prevIdx)) {
+                    this.vertexCataloguePosition[base + 3] = 0.0;
+                }
+                this.vertexCataloguePosition[base + 4] = this._sources[prevIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            }
+        }
+        this.selectedIndexes = deduped;
+    }
+    /**
+     * Run click-picking and update selection with the nearest candidate in current pixel.
+     * Returns the selected source or null if no source was hit.
+     */
+    selectPrimarySourceFromClick(in_mouseHelper) {
+        const clickedIndexes = this.checkClicking(in_mouseHelper);
+        if (!clickedIndexes.length) {
+            this.setSelectedIndexes([]);
+            return null;
+        }
+        const selectedIdx = clickedIndexes[0];
+        this.setSelectedIndexes([selectedIdx]);
+        return this._sources[selectedIdx] ?? null;
+    }
+    checkHovering(in_mouseHelper) {
+        if (in_mouseHelper.x == null || in_mouseHelper.y == null || in_mouseHelper.z == null) {
+            console.log('CatalogueGL.checkHovering: missing mouse coords');
             return [];
         }
         const hoveredIndexes = [];
@@ -416,7 +474,7 @@ export class CatalogueGL {
                 this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
                 this.vertexCataloguePosition[base + 4] = this._sources[this.hoveredIndexes[k]].shapeSize; // size
             }
-            this.hoveredIndexes = this.checkSelection(in_mouseHelper);
+            this.hoveredIndexes = this.checkHovering(in_mouseHelper);
             // new hovered
             for (let i = 0; i < this.hoveredIndexes.length; i++) {
                 const idx = this.hoveredIndexes[i];

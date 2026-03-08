@@ -76,6 +76,9 @@ class AstroSphere {
   private inertiaX = 0.0
   private inertiaY = 0.0
   private zoomInertia = 0.0
+  private pointerDownX: number | null = null
+  private pointerDownY: number | null = null
+  private pointerDownAt = 0
 
   private _activeHiPS: HiPS | null = null
 
@@ -205,6 +208,9 @@ class AstroSphere {
       console.log('[AstroSphere::addEventListeners]')
     }
 
+    const CLICK_MAX_DISTANCE_PX = 4;
+    const CLICK_MAX_DURATION_MS = 250;
+
     const rect = canvas.getBoundingClientRect();
     this.lastMouseX = rect.left;  // locale al canvas
     this.lastMouseY = rect.top;
@@ -216,6 +222,9 @@ class AstroSphere {
       const rect = canvas.getBoundingClientRect();
       this.lastMouseX = event.clientX - rect.left;  // locale al canvas
       this.lastMouseY = event.clientY - rect.top;   // locale al canvas
+      this.pointerDownX = this.lastMouseX;
+      this.pointerDownY = this.lastMouseY;
+      this.pointerDownAt = Date.now();
 
       const mousePoint = RayPickingUtils.getIntersectionPointWithSingleModel(
         this.lastMouseX,
@@ -244,8 +253,45 @@ class AstroSphere {
       document.body.style.cursor = 'auto'
 
       const rect = canvas.getBoundingClientRect();
-      this.lastMouseX = event.clientX - rect.left;
-      this.lastMouseY = event.clientY - rect.top;
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      this.lastMouseX = localX;
+      this.lastMouseY = localY;
+
+      const moveDist = Math.hypot(
+        localX - (this.pointerDownX ?? localX),
+        localY - (this.pointerDownY ?? localY)
+      );
+      const elapsedMs = Date.now() - this.pointerDownAt;
+      const isClick = moveDist <= CLICK_MAX_DISTANCE_PX && elapsedMs <= CLICK_MAX_DURATION_MS;
+
+      if (isClick) {
+        const mousePoint = RayPickingUtils.getIntersectionPointWithSingleModel(
+          localX,
+          localY,
+          this._healpixGrid,
+          this._webgl,
+          this._camera,
+          this._perspectiveMatrixManager.pMatrix
+        );
+
+        if (mousePoint && mousePoint.length > 0) {
+          this.mouseHelper.update(mousePoint);
+          this.updateLastMousePoint();
+
+          for (const cat of this.activeCatalogues) {
+            const selectedSource = cat.selectPrimarySourceFromClick(this.mouseHelper);
+            if (!selectedSource) continue;
+            this._webgl.canvas.dispatchEvent(
+              new CustomEvent('source-clicked', {
+                detail: { source: selectedSource, catalogue: cat },
+                bubbles: true,
+                composed: true,
+              })
+            );
+          }
+        }
+      }
     }
 
     const handleMouseMove = (event: PointerEvent) => {
@@ -711,7 +757,6 @@ class AstroSphere {
   }
 }
 export default AstroSphere
-
 
 
 
