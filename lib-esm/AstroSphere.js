@@ -175,11 +175,11 @@ class AstroSphere {
                     this.mouseHelper.update(mousePoint);
                     this.updateLastMousePoint();
                     for (const cat of this.activeCatalogues) {
-                        const selectedSource = cat.selectPrimarySourceFromClick(this.mouseHelper);
-                        if (!selectedSource)
+                        const selectedSources = cat.selectPrimarySourceFromClick(this.mouseHelper);
+                        if (!selectedSources?.length)
                             continue;
                         this._webgl.canvas.dispatchEvent(new CustomEvent('source-clicked', {
-                            detail: { source: selectedSource, catalogue: cat },
+                            detail: { source: selectedSources, catalogue: cat },
                             bubbles: true,
                             composed: true,
                         }));

@@ -52,8 +52,7 @@ export declare class CatalogueGL {
     addSources(in_data: any[][], columnsmeta: MetadataColumn[]): void;
     clearSources(): void;
     extHighlightSource(source: Source, highlighted: boolean): void;
-    extAddSources2Selected(sources: Source[]): void;
-    extRemoveSourceFromSelection(source: Source): void;
+    extAddSources2Selected(source: Source): void;
     private initBuffer;
     private getSelectionRadius;
     private checkClicking;
@@ -62,7 +61,7 @@ export declare class CatalogueGL {
      * Run click-picking and update selection with the nearest candidate in current pixel.
      * Returns the selected source or null if no source was hit.
      */
-    selectPrimarySourceFromClick(in_mouseHelper: MouseHelper): Source | null;
+    selectPrimarySourceFromClick(in_mouseHelper: MouseHelper): Source[] | null;
     getPrimaryHoveredSource(): Source | null;
     private checkHovering;
     /**

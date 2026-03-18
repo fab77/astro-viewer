@@ -26,6 +26,7 @@ export class CatalogueGL {
     hoveredIndexes;
     selectedIndexes;
     extHoveredIndexes;
+    // extSelectedIndexes: number[];
     _oldMouseCoords;
     _metadataManager;
     _isVisible = true;
@@ -52,6 +53,7 @@ export class CatalogueGL {
         this.hoveredIndexes = [];
         this.selectedIndexes = [];
         this.extHoveredIndexes = [];
+        // this.extSelectedIndexes = [];
         this._oldMouseCoords = null;
         this._healpixDensityMap = new Map();
         // this.catalogueProps = new CatalogueProps(metadataManager, defaultColor);
@@ -248,38 +250,47 @@ export class CatalogueGL {
         const sIdx = this._sources.indexOf(source);
         if (sIdx < 0)
             return;
+        const base = sIdx * CatalogueGL.ELEM_SIZE;
         if (highlighted) {
             if (!this.extHoveredIndexes.includes(sIdx)) {
                 this.extHoveredIndexes.push(sIdx);
+                this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+                this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             }
         }
         else {
+            if (base + 4 >= this.vertexCataloguePosition.length)
+                return;
             const i = this.extHoveredIndexes.indexOf(sIdx);
-            if (i >= 0)
+            if (i >= 0) {
                 this.extHoveredIndexes.splice(i, 1);
-        }
-    }
-    extAddSources2Selected(sources) {
-        for (const s of sources) {
-            const sIdx = this._sources.indexOf(s);
-            if (sIdx >= 0 && !this.selectedIndexes.includes(sIdx)) {
-                this.selectedIndexes.push(sIdx);
+                this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
+                this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             }
         }
     }
-    extRemoveSourceFromSelection(source) {
-        const indexOfObject = this._sources.indexOf(source);
-        if (indexOfObject < 0)
+    extAddSources2Selected(source) {
+        if (!this._bufferInitialised) {
+            this.initBuffer();
+        }
+        const sIdx = this._sources.indexOf(source);
+        if (sIdx < 0)
             return;
-        const sidx = this.selectedIndexes.indexOf(indexOfObject);
-        if (sidx >= 0)
-            this.selectedIndexes.splice(sidx, 1);
-        const eidx = this.extHoveredIndexes.indexOf(indexOfObject);
-        if (eidx >= 0)
-            this.extHoveredIndexes.splice(eidx, 1);
-        // Clear hovered flag in buffer view (if present)
-        if (this.vertexCataloguePosition.length >= (indexOfObject + 1) * CatalogueGL.ELEM_SIZE) {
-            this.vertexCataloguePosition[indexOfObject * CatalogueGL.ELEM_SIZE + 3] = 0.0;
+        const base = sIdx * CatalogueGL.ELEM_SIZE;
+        if (!this.selectedIndexes.includes(sIdx)) {
+            this.selectedIndexes.push(sIdx);
+            this.vertexCataloguePosition[base + 3] = 2.0; // selected
+            this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+        }
+        else {
+            if (base + 4 >= this.vertexCataloguePosition.length)
+                return;
+            const i = this.selectedIndexes.indexOf(sIdx);
+            if (i >= 0) {
+                this.selectedIndexes.splice(i, 1);
+                this.vertexCataloguePosition[base + 3] = 0.0; // not selected
+                this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            }
         }
     }
     initBuffer() {
@@ -371,23 +382,40 @@ export class CatalogueGL {
         }
         return clickedIndexes;
     }
-    setSelectedIndexes(nextSelected) {
-        const deduped = Array.from(new Set(nextSelected))
-            .filter((idx) => idx >= 0 && idx < this._sources.length);
-        if (this.vertexCataloguePosition.length) {
-            for (const prevIdx of this.selectedIndexes) {
-                if (deduped.includes(prevIdx))
-                    continue;
-                const base = prevIdx * CatalogueGL.ELEM_SIZE;
-                if (base + 4 >= this.vertexCataloguePosition.length)
-                    continue;
-                if (!this.hoveredIndexes.includes(prevIdx) && !this.extHoveredIndexes.includes(prevIdx)) {
-                    this.vertexCataloguePosition[base + 3] = 0.0;
-                }
-                this.vertexCataloguePosition[base + 4] = this._sources[prevIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+    // private setSelectedIndexes(nextSelected: number[]) {
+    //     const deduped = Array.from(new Set(nextSelected))
+    //         .filter((idx) => idx >= 0 && idx < this._sources.length);
+    //     if (this.vertexCataloguePosition.length) {
+    //         for (const prevIdx of this.selectedIndexes) {
+    //             if (deduped.includes(prevIdx)) continue;
+    //             const base = prevIdx * CatalogueGL.ELEM_SIZE;
+    //             if (base + 4 >= this.vertexCataloguePosition.length) continue;
+    //             if (!this.hoveredIndexes.includes(prevIdx) && !this.extHoveredIndexes.includes(prevIdx)) {
+    //                 this.vertexCataloguePosition[base + 3] = 0.0;
+    //             }
+    //             this.vertexCataloguePosition[base + 4] = this._sources[prevIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+    //         }
+    //     }
+    //     this.selectedIndexes = deduped;
+    // }
+    setSelectedIndexes(selectedIndex) {
+        selectedIndex.forEach(idx => {
+            if (idx < 0 || idx >= this._sources.length)
+                return;
+            const base = idx * CatalogueGL.ELEM_SIZE;
+            if (base + 4 >= this.vertexCataloguePosition.length)
+                return;
+            if (this.selectedIndexes.includes(idx)) {
+                this.selectedIndexes.splice(this.selectedIndexes.indexOf(idx), 1);
+                this.vertexCataloguePosition[base + 3] = 0.0; // not selected
+                this.vertexCataloguePosition[base + 4] = this._sources[idx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             }
-        }
-        this.selectedIndexes = deduped;
+            else {
+                this.selectedIndexes.push(idx);
+                this.vertexCataloguePosition[base + 3] = 2.0; // selected
+                this.vertexCataloguePosition[base + 4] = this._sources[idx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            }
+        });
     }
     /**
      * Run click-picking and update selection with the nearest candidate in current pixel.
@@ -395,13 +423,23 @@ export class CatalogueGL {
      */
     selectPrimarySourceFromClick(in_mouseHelper) {
         const clickedIndexes = this.checkClicking(in_mouseHelper);
-        if (!clickedIndexes.length) {
-            this.setSelectedIndexes([]);
-            return null;
-        }
-        const selectedIdx = clickedIndexes[0];
-        this.setSelectedIndexes([selectedIdx]);
-        return this._sources[selectedIdx] ?? null;
+        // if (!clickedIndexes.length) {
+        //     this.setSelectedIndexes([]);
+        //     return null;
+        // }
+        // const selectedIdx = clickedIndexes[0];
+        // this.setSelectedIndexes([selectedIdx]);
+        // return this._sources[selectedIdx] ?? null;
+        this.setSelectedIndexes(clickedIndexes);
+        if (!clickedIndexes.length)
+            return [];
+        let selectedSources = [];
+        clickedIndexes.forEach(idx => {
+            const source = this._sources[idx];
+            if (source)
+                selectedSources.push(source);
+        });
+        return selectedSources.length ? selectedSources : null;
     }
     getPrimaryHoveredSource() {
         if (!this.hoveredIndexes.length)
@@ -473,6 +511,8 @@ export class CatalogueGL {
             // clear old hovered
             for (let k = 0; k < this.hoveredIndexes.length; k++) {
                 const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
+                if (this.vertexCataloguePosition[base + 3] == 2.0)
+                    continue; // selected, skip hover
                 this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
                 this.vertexCataloguePosition[base + 4] = this._sources[this.hoveredIndexes[k]].shapeSize; // size
             }
@@ -481,6 +521,8 @@ export class CatalogueGL {
             for (let i = 0; i < this.hoveredIndexes.length; i++) {
                 const idx = this.hoveredIndexes[i];
                 const base = idx * CatalogueGL.ELEM_SIZE;
+                if (this.vertexCataloguePosition[base + 3] == 2.0)
+                    continue; // selected, skip hover
                 this.vertexCataloguePosition[base + 3] = 1.0; // hovered
                 this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
             }
@@ -490,13 +532,6 @@ export class CatalogueGL {
             const idx = this.selectedIndexes[s];
             const base = idx * CatalogueGL.ELEM_SIZE;
             this.vertexCataloguePosition[base + 3] = 2.0; // selected
-            this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
-        }
-        // external hovered
-        for (let e = 0; e < this.extHoveredIndexes.length; e++) {
-            const idx = this.extHoveredIndexes[e];
-            const base = idx * CatalogueGL.ELEM_SIZE;
-            this.vertexCataloguePosition[base + 3] = 1.0; // hovered
             this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
         }
         // upload buffer
