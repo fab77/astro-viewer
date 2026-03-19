@@ -750,7 +750,9 @@ class AstroSphere {
         cat.draw(this._activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }
     })
+    
     this.emitHoveredSourceIfChanged();
+
     this.activeFootprintSets.forEach(fst => {
       if (this._activeHiPS) {
         fst.draw(this._activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)

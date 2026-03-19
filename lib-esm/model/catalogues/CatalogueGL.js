@@ -252,22 +252,35 @@ export class CatalogueGL {
             return;
         const base = sIdx * CatalogueGL.ELEM_SIZE;
         if (highlighted) {
-            if (!this.extHoveredIndexes.includes(sIdx)) {
-                this.extHoveredIndexes.push(sIdx);
-                this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-                this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            if (!this.hoveredIndexes.includes(sIdx)) {
+                this.hoveredIndexes.push(sIdx);
             }
         }
         else {
             if (base + 4 >= this.vertexCataloguePosition.length)
                 return;
-            const i = this.extHoveredIndexes.indexOf(sIdx);
+            const i = this.hoveredIndexes.indexOf(sIdx);
             if (i >= 0) {
-                this.extHoveredIndexes.splice(i, 1);
+                this.hoveredIndexes.splice(i, 1);
                 this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-                this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+                this.vertexCataloguePosition[base + 4] = this._sources[i].shapeSize; // size
             }
         }
+        // if (highlighted) {
+        //     if (!this.extHoveredIndexes.includes(sIdx)) {
+        //         this.extHoveredIndexes.push(sIdx);
+        //         this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+        //         this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+        //     }
+        // } else {
+        //     if (base + 4 >= this.vertexCataloguePosition.length) return;
+        //     const i = this.extHoveredIndexes.indexOf(sIdx);
+        //     if (i >= 0) {
+        //         this.extHoveredIndexes.splice(i, 1);
+        //         this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
+        //         this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+        //     }
+        // }
     }
     extAddSources2Selected(source) {
         if (!this._bufferInitialised) {
@@ -506,32 +519,45 @@ export class CatalogueGL {
         if (this._catalogueShaderProgram.locations.color) {
             this._webgl.uniform4f(this._catalogueShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
         }
-        // Hover logic on mouse move
-        if (in_mouseHelper != null && in_mouseHelper.xyz !== this._oldMouseCoords) {
-            // clear old hovered
-            for (let k = 0; k < this.hoveredIndexes.length; k++) {
-                const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
-                if (this.vertexCataloguePosition[base + 3] == 2.0)
-                    continue; // selected, skip hover
-                this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-                this.vertexCataloguePosition[base + 4] = this._sources[this.hoveredIndexes[k]].shapeSize; // size
-            }
-            this.hoveredIndexes = this.checkHovering(in_mouseHelper);
-            // new hovered
-            for (let i = 0; i < this.hoveredIndexes.length; i++) {
-                const idx = this.hoveredIndexes[i];
-                const base = idx * CatalogueGL.ELEM_SIZE;
-                if (this.vertexCataloguePosition[base + 3] == 2.0)
-                    continue; // selected, skip hover
-                this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-                this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
-            }
-        }
         // selected flags
         for (let s = 0; s < this.selectedIndexes.length; s++) {
             const idx = this.selectedIndexes[s];
             const base = idx * CatalogueGL.ELEM_SIZE;
             this.vertexCataloguePosition[base + 3] = 2.0; // selected
+            this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
+        }
+        // clear old hovered
+        for (let k = 0; k < this.hoveredIndexes.length; k++) {
+            const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
+            // if (this.vertexCataloguePosition[base + 3] == 2.0) continue; // selected, skip hover
+            this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
+            this.vertexCataloguePosition[base + 4] = this._sources[this.hoveredIndexes[k]].shapeSize; // size
+        }
+        // Hover logic on mouse move
+        if (in_mouseHelper != null && in_mouseHelper.xyz !== this._oldMouseCoords) {
+            // // clear old hovered
+            // for (let k = 0; k < this.hoveredIndexes.length; k++) {
+            //     const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
+            //     if (this.vertexCataloguePosition[base + 3] == 2.0) continue; // selected, skip hover
+            //     this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
+            //     this.vertexCataloguePosition[base + 4] = this._sources[this.hoveredIndexes[k]].shapeSize; // size
+            // }
+            this.hoveredIndexes = this.checkHovering(in_mouseHelper);
+            // // new hovered
+            // for (let i = 0; i < this.hoveredIndexes.length; i++) {
+            //     const idx = this.hoveredIndexes[i];
+            //     const base = idx * CatalogueGL.ELEM_SIZE;
+            //     if (this.vertexCataloguePosition[base + 3] == 2.0) continue; // selected, skip hover
+            //     this.vertexCataloguePosition[base + 3] = 1.0; // hovered
+            //     this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
+            // }
+        }
+        // new hovered
+        for (let i = 0; i < this.hoveredIndexes.length; i++) {
+            const idx = this.hoveredIndexes[i];
+            const base = idx * CatalogueGL.ELEM_SIZE;
+            // if (this.vertexCataloguePosition[base + 3] == 2.0) continue; // selected, skip hover
+            this.vertexCataloguePosition[base + 3] = 1.0; // hovered
             this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
         }
         // upload buffer
