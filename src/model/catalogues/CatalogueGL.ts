@@ -304,8 +304,42 @@ export class CatalogueGL {
         this.vertexCataloguePosition = new Float32Array(0);
     }
 
+    private sourceMatches(left: Source, right: Source): boolean {
+        if (left === right) return true;
+
+        const leftPoint = left.point;
+        const rightPoint = right.point;
+        if (
+            leftPoint.raDeg !== rightPoint.raDeg ||
+            leftPoint.decDeg !== rightPoint.decDeg
+        ) {
+            return false;
+        }
+
+        if (left.details.length !== right.details.length) {
+            return false;
+        }
+
+        for (let i = 0; i < left.details.length; i++) {
+            if (!Object.is(left.details[i], right.details[i])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private findSourceIndex(source: Source): number {
+        const sourceIndex = this._sources.indexOf(source);
+        if (sourceIndex >= 0) {
+            return sourceIndex;
+        }
+
+        return this._sources.findIndex((candidate) => this.sourceMatches(candidate, source));
+    }
+
     extHighlightSource(source: Source, highlighted: boolean) {
-        const sIdx = this._sources.indexOf(source);
+        const sIdx = this.findSourceIndex(source);
         if (sIdx < 0) return;
         const base = sIdx * CatalogueGL.ELEM_SIZE;
         if (highlighted) {
@@ -319,7 +353,7 @@ export class CatalogueGL {
             if (i >= 0) {
                 this.hoveredIndexes.splice(i, 1);
                 this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-                this.vertexCataloguePosition[base + 4] = this._sources[i].shapeSize; // size
+                this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             }
         }
         // if (highlighted) {
@@ -345,7 +379,7 @@ export class CatalogueGL {
         if (!this._bufferInitialised) {
             this.initBuffer();
         }
-        const sIdx = this._sources.indexOf(source);
+        const sIdx = this.findSourceIndex(source);
         if (sIdx < 0) return;
         const base = sIdx * CatalogueGL.ELEM_SIZE;
         

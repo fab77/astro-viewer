@@ -51,6 +51,8 @@ export declare class CatalogueGL {
      */
     addSources(in_data: any[][], columnsmeta: MetadataColumn[]): void;
     clearSources(): void;
+    private sourceMatches;
+    private findSourceIndex;
     extHighlightSource(source: Source, highlighted: boolean): void;
     extAddSources2Selected(source: Source): void;
     private initBuffer;

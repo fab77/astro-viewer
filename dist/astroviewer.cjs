@@ -12092,8 +12092,34 @@ class CatalogueGL {
         this._healpixDensityMap.clear();
         this.vertexCataloguePosition = new Float32Array(0);
     }
+    sourceMatches(left, right) {
+        if (left === right)
+            return true;
+        const leftPoint = left.point;
+        const rightPoint = right.point;
+        if (leftPoint.raDeg !== rightPoint.raDeg ||
+            leftPoint.decDeg !== rightPoint.decDeg) {
+            return false;
+        }
+        if (left.details.length !== right.details.length) {
+            return false;
+        }
+        for (let i = 0; i < left.details.length; i++) {
+            if (!Object.is(left.details[i], right.details[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    findSourceIndex(source) {
+        const sourceIndex = this._sources.indexOf(source);
+        if (sourceIndex >= 0) {
+            return sourceIndex;
+        }
+        return this._sources.findIndex((candidate) => this.sourceMatches(candidate, source));
+    }
     extHighlightSource(source, highlighted) {
-        const sIdx = this._sources.indexOf(source);
+        const sIdx = this.findSourceIndex(source);
         if (sIdx < 0)
             return;
         const base = sIdx * CatalogueGL.ELEM_SIZE;
@@ -12109,7 +12135,7 @@ class CatalogueGL {
             if (i >= 0) {
                 this.hoveredIndexes.splice(i, 1);
                 this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-                this.vertexCataloguePosition[base + 4] = this._sources[i].shapeSize; // size
+                this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             }
         }
         // if (highlighted) {
@@ -12132,14 +12158,14 @@ class CatalogueGL {
         if (!this._bufferInitialised) {
             this.initBuffer();
         }
-        const sIdx = this._sources.indexOf(source);
+        const sIdx = this.findSourceIndex(source);
         if (sIdx < 0)
             return;
         const base = sIdx * CatalogueGL.ELEM_SIZE;
         if (!this.selectedIndexes.includes(sIdx)) {
             this.selectedIndexes.push(sIdx);
-            this.vertexCataloguePosition[base + 3] = 2.0; // selected
-            this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+            // this.vertexCataloguePosition[base + 3] = 2.0; // selected
+            // this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
         }
         else {
             if (base + 4 >= this.vertexCataloguePosition.length)
