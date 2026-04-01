@@ -11078,7 +11078,10 @@ class AstroSphere {
         return cat;
     }
     deleteCatalogue(catalogue) {
-        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
+        // this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
+        this.activeCatalogues = this.activeCatalogues.filter(c => {
+            return (c.name !== catalogue.name && c.providerUrl !== catalogue.providerUrl);
+        });
     }
     // End Catalogue section
     // Footprint section
