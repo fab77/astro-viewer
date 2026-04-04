@@ -470,15 +470,25 @@ export class CatalogueGL {
         // this.setSelectedIndexes([selectedIdx]);
         // return this._sources[selectedIdx] ?? null;
         this.setSelectedIndexes(clickedIndexes);
-        if (!clickedIndexes.length)
-            return [];
-        let selectedSources = [];
+        if (!clickedIndexes.length) {
+            return {
+                sources: [],
+                selectionState: [],
+            };
+        }
+        const selectionState = [];
+        const selectedSources = [];
         clickedIndexes.forEach(idx => {
             const source = this._sources[idx];
-            if (source)
-                selectedSources.push(source);
+            if (!source)
+                return;
+            const selected = this.selectedIndexes.includes(idx);
+            selectionState.push({ source, selected });
+            selectedSources.push(source);
         });
-        return selectedSources.length ? selectedSources : null;
+        return selectedSources.length
+            ? { sources: selectedSources, selectionState }
+            : null;
     }
     getPrimaryHoveredSource() {
         if (!this.hoveredIndexes.length)

@@ -8,6 +8,16 @@ import { MetadataManager } from '../MetadataManager.js';
 import { MetadataColumn } from '../MetadataColumn.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 
+export type ClickedSourceState = {
+    source: Source;
+    selected: boolean;
+};
+
+export type CatalogueClickResult = {
+    sources: Source[];
+    selectionState: ClickedSourceState[];
+};
+
 export class CatalogueGL {
 
     _kind: string = "CatalogueGL"
@@ -545,7 +555,7 @@ export class CatalogueGL {
      * Run click-picking and update selection with the nearest candidate in current pixel.
      * Returns the selected source or null if no source was hit.
      */
-    selectPrimarySourceFromClick(in_mouseHelper: MouseHelper): Source[] | null {
+    selectPrimarySourceFromClick(in_mouseHelper: MouseHelper): CatalogueClickResult | null {
         const clickedIndexes = this.checkClicking(in_mouseHelper);
         // if (!clickedIndexes.length) {
         //     this.setSelectedIndexes([]);
@@ -555,13 +565,28 @@ export class CatalogueGL {
         // this.setSelectedIndexes([selectedIdx]);
         // return this._sources[selectedIdx] ?? null;
         this.setSelectedIndexes(clickedIndexes);
-        if (!clickedIndexes.length) return [];
-        let selectedSources: Source[] = [];
+        if (!clickedIndexes.length) {
+            return {
+                sources: [],
+                selectionState: [],
+            };
+        }
+
+        const selectionState: ClickedSourceState[] = [];
+        const selectedSources: Source[] = [];
+
         clickedIndexes.forEach(idx => {
             const source = this._sources[idx];
-            if (source) selectedSources.push(source);
+            if (!source) return;
+
+            const selected = this.selectedIndexes.includes(idx);
+            selectionState.push({ source, selected });
+            selectedSources.push(source);
         })
-        return selectedSources.length ? selectedSources : null;
+
+        return selectedSources.length
+            ? { sources: selectedSources, selectionState }
+            : null;
     }
 
     getPrimaryHoveredSource(): Source | null {

@@ -283,11 +283,15 @@ class AstroSphere {
           this.updateLastMousePoint();
 
           for (const cat of this.activeCatalogues) {
-            const selectedSources = cat.selectPrimarySourceFromClick(this.mouseHelper);
-            if (!selectedSources?.length) continue;
+            const clickResult = cat.selectPrimarySourceFromClick(this.mouseHelper);
+            if (!clickResult?.sources.length) continue;
             this._webgl.canvas.dispatchEvent(
               new CustomEvent('source-clicked', {
-                detail: { source: selectedSources, catalogue: cat },
+                detail: {
+                  source: clickResult.sources,
+                  selectionState: clickResult.selectionState,
+                  catalogue: cat,
+                },
                 bubbles: true,
                 composed: true,
               })
@@ -370,6 +374,10 @@ class AstroSphere {
 
 
     const onKeyDown = (evt: KeyboardEvent) => {
+      if (!evt.ctrlKey) {
+        return;
+      }
+
       // console.log('[AstroSphere::onKeyDown] key=', evt.key)
       switch (evt.key) {
         case '1':
@@ -447,10 +455,7 @@ class AstroSphere {
   }
 
   deleteCatalogue(catalogue: CatalogueGL) {
-    // this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
-    this.activeCatalogues = this.activeCatalogues.filter(c => { 
-      return ( c.name !== catalogue.name && c.providerUrl !== catalogue.providerUrl )
-    });
+    this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
   }
   // End Catalogue section
 
@@ -794,5 +799,3 @@ class AstroSphere {
   }
 }
 export default AstroSphere
-
-

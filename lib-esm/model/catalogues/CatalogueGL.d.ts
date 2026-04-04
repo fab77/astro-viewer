@@ -4,6 +4,14 @@ import { CatalogueShaderProgram } from '../../shader/CatalogueShaderProgram.js';
 import { MetadataManager } from '../MetadataManager.js';
 import { MetadataColumn } from '../MetadataColumn.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
+export type ClickedSourceState = {
+    source: Source;
+    selected: boolean;
+};
+export type CatalogueClickResult = {
+    sources: Source[];
+    selectionState: ClickedSourceState[];
+};
 export declare class CatalogueGL {
     _kind: string;
     static ELEM_SIZE: number;
@@ -63,7 +71,7 @@ export declare class CatalogueGL {
      * Run click-picking and update selection with the nearest candidate in current pixel.
      * Returns the selected source or null if no source was hit.
      */
-    selectPrimarySourceFromClick(in_mouseHelper: MouseHelper): Source[] | null;
+    selectPrimarySourceFromClick(in_mouseHelper: MouseHelper): CatalogueClickResult | null;
     getPrimaryHoveredSource(): Source | null;
     private checkHovering;
     /**
