@@ -12,6 +12,10 @@ export type CatalogueClickResult = {
     sources: Source[];
     selectionState: ClickedSourceState[];
 };
+export type CataloguePickResult = {
+    sources: Source[];
+    pickedIndexes: number[];
+};
 export declare class CatalogueGL {
     _kind: string;
     static ELEM_SIZE: number;
@@ -67,6 +71,11 @@ export declare class CatalogueGL {
     private getSelectionRadius;
     private checkClicking;
     private setSelectedIndexes;
+    /**
+     * Run click-picking and update selection with the nearest candidate in current pixel.
+     * Returns the selected source or null if no source was hit.
+     */
+    getSourcesFromPointer(in_mouseHelper: MouseHelper): CataloguePickResult | null;
     /**
      * Run click-picking and update selection with the nearest candidate in current pixel.
      * Returns the selected source or null if no source was hit.

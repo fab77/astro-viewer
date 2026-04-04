@@ -372,6 +372,51 @@ class AstroSphere {
       event.preventDefault()
     }
 
+    const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+
+      const mousePoint = RayPickingUtils.getIntersectionPointWithSingleModel(
+        localX,
+        localY,
+        this._healpixGrid,
+        this._webgl,
+        this._camera,
+        this._perspectiveMatrixManager.pMatrix
+      );
+
+      if (!mousePoint || mousePoint.length === 0) {
+        return false;
+      }
+
+      this.mouseHelper.update(mousePoint);
+      this.updateLastMousePoint();
+
+      for (const cat of this.activeCatalogues) {
+        const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
+        if (!pickResult?.sources.length) continue;
+
+        this._webgl.canvas.dispatchEvent(
+          new CustomEvent('source-contextmenu', {
+            detail: {
+              source: pickResult.sources,
+              catalogue: cat,
+              clientX: event.clientX,
+              clientY: event.clientY,
+            },
+            bubbles: true,
+            composed: true,
+          })
+        );
+        break;
+      }
+
+      return false;
+    }
+
 
     const onKeyDown = (evt: KeyboardEvent) => {
       if (!evt.ctrlKey) {
@@ -409,6 +454,7 @@ class AstroSphere {
 
     console.log('[AstroSphere] adding wheel event listener with passive: false');
     canvas.addEventListener('wheel', handleMouseWheel, { passive: false })
+    canvas.addEventListener('contextmenu', handleContextMenu)
 
 
     console.log('[AstroSphere] registering global keydown listener on document');

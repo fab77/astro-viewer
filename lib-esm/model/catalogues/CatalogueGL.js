@@ -460,8 +460,29 @@ export class CatalogueGL {
      * Run click-picking and update selection with the nearest candidate in current pixel.
      * Returns the selected source or null if no source was hit.
      */
+    getSourcesFromPointer(in_mouseHelper) {
+        const pickedIndexes = this.checkClicking(in_mouseHelper);
+        if (!pickedIndexes.length) {
+            return {
+                sources: [],
+                pickedIndexes: [],
+            };
+        }
+        const sources = [];
+        pickedIndexes.forEach(idx => {
+            const source = this._sources[idx];
+            if (source)
+                sources.push(source);
+        });
+        return sources.length ? { sources, pickedIndexes } : null;
+    }
+    /**
+     * Run click-picking and update selection with the nearest candidate in current pixel.
+     * Returns the selected source or null if no source was hit.
+     */
     selectPrimarySourceFromClick(in_mouseHelper) {
-        const clickedIndexes = this.checkClicking(in_mouseHelper);
+        const picked = this.getSourcesFromPointer(in_mouseHelper);
+        const clickedIndexes = picked?.pickedIndexes ?? [];
         // if (!clickedIndexes.length) {
         //     this.setSelectedIndexes([]);
         //     return null;
