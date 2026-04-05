@@ -161,6 +161,10 @@ class AstroSphere {
             canvas.releasePointerCapture(event.pointerId);
             this.mouseDown = false;
             document.body.style.cursor = 'auto';
+            if (event.button !== 0) {
+                event.preventDefault();
+                return false;
+            }
             const rect = canvas.getBoundingClientRect();
             const localX = event.clientX - rect.left;
             const localY = event.clientY - rect.top;
