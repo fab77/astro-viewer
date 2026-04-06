@@ -18,7 +18,6 @@ export class FootprintSetGL {
     extHoveredIndexes;
     oldMouseCoords;
     healpixDensityMap;
-    _providerUrl;
     totConvexPoints;
     // footprintsInPix256: Map<number, Footprint[]>
     // gl: GL;
@@ -47,12 +46,15 @@ export class FootprintSetGL {
     _shapeColor = '#00fff2ff';
     _bufferInitialised = false;
     _webgl;
-    _footprintShaderProgram;
     _isVisible = true;
     _metadataManager;
-    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl) {
+    _providerUrl;
+    _footprintShaderProgram;
+    _visibleTilesManager;
+    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl, visibleTilesManager) {
         this._webgl = webgl;
         this._ready = false;
+        this._visibleTilesManager = visibleTilesManager;
         this.TYPE = 'FOOTPRINT_SET';
         this._name = fsetName;
         this._description = fsetDescription;
@@ -259,6 +261,12 @@ export class FootprintSetGL {
     //     }
     //   }
     // }
+    extHighlightFootprint(footprint, highlighted) {
+        throw new Error('Method not implemented yet');
+    }
+    extAddPolygons2Selected(footprint) {
+        throw new Error('Method not implemented yet');
+    }
     initHoveringBuffer() {
         /*
                 TODO better approach. when creating the indexbuffer of footprints,

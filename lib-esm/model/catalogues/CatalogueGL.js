@@ -292,21 +292,6 @@ export class CatalogueGL {
                 this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             }
         }
-        // if (highlighted) {
-        //     if (!this.extHoveredIndexes.includes(sIdx)) {
-        //         this.extHoveredIndexes.push(sIdx);
-        //         this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-        //         this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
-        //     }
-        // } else {
-        //     if (base + 4 >= this.vertexCataloguePosition.length) return;
-        //     const i = this.extHoveredIndexes.indexOf(sIdx);
-        //     if (i >= 0) {
-        //         this.extHoveredIndexes.splice(i, 1);
-        //         this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-        //         this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
-        //     }
-        // }
     }
     extAddSources2Selected(source) {
         if (!this._bufferInitialised) {

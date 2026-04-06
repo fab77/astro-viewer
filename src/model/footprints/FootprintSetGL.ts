@@ -9,6 +9,7 @@ import GeomUtils from '../../utils/GeomUtils.js'
 import { CoordsType } from '../../utils/CoordsType.js'
 import { MetadataManager } from '../MetadataManager.js'
 import { MetadataColumn } from '../MetadataColumn.js'
+import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 
 export interface HoveredFootprintDetail {
   // metadata: TapMetadataList
@@ -36,7 +37,6 @@ export class FootprintSetGL {
   oldMouseCoords: any
   healpixDensityMap: any
 
-  _providerUrl: string;
 
 
   totConvexPoints!: number
@@ -78,11 +78,14 @@ export class FootprintSetGL {
 
   private _bufferInitialised = false
   private _webgl: WebGL2RenderingContext
-  private _footprintShaderProgram: FootprintShaderProgram
+  
 
   _isVisible: boolean = true
   private _metadataManager: MetadataManager
-
+  
+  _providerUrl: string;
+  private _footprintShaderProgram: FootprintShaderProgram
+  private _visibleTilesManager: VisibleTilesManager;
 
 
   constructor(
@@ -90,10 +93,13 @@ export class FootprintSetGL {
     fsetDescription: string,
     providerUrl: string,
     metadataManager: MetadataManager,
-    webgl: WebGL2RenderingContext,) {
+    webgl: WebGL2RenderingContext,
+    visibleTilesManager: VisibleTilesManager) {
 
     this._webgl = webgl
     this._ready = false;
+    this._visibleTilesManager = visibleTilesManager;
+
     (this as any).TYPE = 'FOOTPRINT_SET';
 
     this._name = fsetName
@@ -353,6 +359,15 @@ export class FootprintSetGL {
   //   }
 
   // }
+
+  extHighlightFootprint(footprint: Footprint, highlighted: boolean) {
+    throw new Error('Method not implemented yet')
+  }
+
+  extAddPolygons2Selected(footprint: Footprint) {
+    throw new Error('Method not implemented yet')
+  }
+
 
   initHoveringBuffer() {
     /*

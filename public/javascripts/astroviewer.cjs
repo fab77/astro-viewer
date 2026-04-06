@@ -10955,6 +10955,10 @@ class AstroSphere {
             canvas.releasePointerCapture(event.pointerId);
             this.mouseDown = false;
             document.body.style.cursor = 'auto';
+            if (event.button !== 0) {
+                event.preventDefault();
+                return false;
+            }
             const rect = canvas.getBoundingClientRect();
             const localX = event.clientX - rect.left;
             const localY = event.clientY - rect.top;
@@ -10969,11 +10973,15 @@ class AstroSphere {
                     this.mouseHelper.update(mousePoint);
                     this.updateLastMousePoint();
                     for (const cat of this.activeCatalogues) {
-                        const selectedSources = cat.selectPrimarySourceFromClick(this.mouseHelper);
-                        if (!selectedSources?.length)
+                        const clickResult = cat.selectPrimarySourceFromClick(this.mouseHelper);
+                        if (!clickResult?.sources.length)
                             continue;
                         this._webgl.canvas.dispatchEvent(new CustomEvent('source-clicked', {
-                            detail: { source: selectedSources, catalogue: cat },
+                            detail: {
+                                source: clickResult.sources,
+                                selectionState: clickResult.selectionState,
+                                catalogue: cat,
+                            },
                             bubbles: true,
                             composed: true,
                         }));
@@ -11029,7 +11037,39 @@ class AstroSphere {
             this.emitCameraChanged('wheel');
             event.preventDefault();
         };
+        const handleContextMenu = (event) => {
+            event.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            const mousePoint = utils_RayPickingUtils.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+            if (!mousePoint || mousePoint.length === 0) {
+                return false;
+            }
+            this.mouseHelper.update(mousePoint);
+            this.updateLastMousePoint();
+            for (const cat of this.activeCatalogues) {
+                const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
+                if (!pickResult?.sources.length)
+                    continue;
+                this._webgl.canvas.dispatchEvent(new CustomEvent('source-contextmenu', {
+                    detail: {
+                        source: pickResult.sources,
+                        catalogue: cat,
+                        clientX: event.clientX,
+                        clientY: event.clientY,
+                    },
+                    bubbles: true,
+                    composed: true,
+                }));
+                break;
+            }
+            return false;
+        };
         const onKeyDown = (evt) => {
+            if (!evt.ctrlKey) {
+                return;
+            }
             // console.log('[AstroSphere::onKeyDown] key=', evt.key)
             switch (evt.key) {
                 case '1':
@@ -11056,6 +11096,7 @@ class AstroSphere {
         canvas.onpointermove = handleMouseMove;
         console.log('[AstroSphere] adding wheel event listener with passive: false');
         canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
+        canvas.addEventListener('contextmenu', handleContextMenu);
         console.log('[AstroSphere] registering global keydown listener on document');
         document.addEventListener('keydown', onKeyDown, { capture: true });
     }
@@ -11078,10 +11119,7 @@ class AstroSphere {
         return cat;
     }
     deleteCatalogue(catalogue) {
-        // this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
-        this.activeCatalogues = this.activeCatalogues.filter(c => {
-            return (c.name !== catalogue.name && c.providerUrl !== catalogue.providerUrl);
-        });
+        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
     }
     // End Catalogue section
     // Footprint section
@@ -12141,21 +12179,6 @@ class CatalogueGL {
                 this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
             }
         }
-        // if (highlighted) {
-        //     if (!this.extHoveredIndexes.includes(sIdx)) {
-        //         this.extHoveredIndexes.push(sIdx);
-        //         this.vertexCataloguePosition[base + 3] = 1.0; // hovered
-        //         this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
-        //     }
-        // } else {
-        //     if (base + 4 >= this.vertexCataloguePosition.length) return;
-        //     const i = this.extHoveredIndexes.indexOf(sIdx);
-        //     if (i >= 0) {
-        //         this.extHoveredIndexes.splice(i, 1);
-        //         this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
-        //         this.vertexCataloguePosition[base + 4] = this._sources[sIdx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
-        //     }
-        // }
     }
     extAddSources2Selected(source) {
         if (!this._bufferInitialised) {
@@ -12309,8 +12332,29 @@ class CatalogueGL {
      * Run click-picking and update selection with the nearest candidate in current pixel.
      * Returns the selected source or null if no source was hit.
      */
+    getSourcesFromPointer(in_mouseHelper) {
+        const pickedIndexes = this.checkClicking(in_mouseHelper);
+        if (!pickedIndexes.length) {
+            return {
+                sources: [],
+                pickedIndexes: [],
+            };
+        }
+        const sources = [];
+        pickedIndexes.forEach(idx => {
+            const source = this._sources[idx];
+            if (source)
+                sources.push(source);
+        });
+        return sources.length ? { sources, pickedIndexes } : null;
+    }
+    /**
+     * Run click-picking and update selection with the nearest candidate in current pixel.
+     * Returns the selected source or null if no source was hit.
+     */
     selectPrimarySourceFromClick(in_mouseHelper) {
-        const clickedIndexes = this.checkClicking(in_mouseHelper);
+        const picked = this.getSourcesFromPointer(in_mouseHelper);
+        const clickedIndexes = picked?.pickedIndexes ?? [];
         // if (!clickedIndexes.length) {
         //     this.setSelectedIndexes([]);
         //     return null;
@@ -12319,15 +12363,25 @@ class CatalogueGL {
         // this.setSelectedIndexes([selectedIdx]);
         // return this._sources[selectedIdx] ?? null;
         this.setSelectedIndexes(clickedIndexes);
-        if (!clickedIndexes.length)
-            return [];
-        let selectedSources = [];
+        if (!clickedIndexes.length) {
+            return {
+                sources: [],
+                selectionState: [],
+            };
+        }
+        const selectionState = [];
+        const selectedSources = [];
         clickedIndexes.forEach(idx => {
             const source = this._sources[idx];
-            if (source)
-                selectedSources.push(source);
+            if (!source)
+                return;
+            const selected = this.selectedIndexes.includes(idx);
+            selectionState.push({ source, selected });
+            selectedSources.push(source);
         });
-        return selectedSources.length ? selectedSources : null;
+        return selectedSources.length
+            ? { sources: selectedSources, selectionState }
+            : null;
     }
     getPrimaryHoveredSource() {
         if (!this.hoveredIndexes.length)
@@ -12444,258 +12498,6 @@ class CatalogueGL {
     }
 }
 // export default CatalogueGL;
-
-;// ./src/AstroViewer.ts
-// import global from './Global.js'
-
-
-
-
-
-// & {
-//   viewportWidth: number
-//   viewportHeight: number
-// }
-class AstroViewer {
-    astroSphere;
-    canvas;
-    webgl;
-    rafId = null;
-    webglContextList = new Map();
-    // API
-    run() {
-        return this.tick();
-    }
-    // CATALOGUES
-    createCatalogue(catalogueName, catalogueDescription, providerUrl, metadataManager) {
-        return new CatalogueGL(catalogueName, catalogueDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
-    }
-    showCatalogue(catalogue) {
-        this.astroSphere.showCatalogue(catalogue);
-    }
-    hideCatalogue(catalogue, isVisible) {
-        catalogue.setIsVisible(isVisible);
-    }
-    deleteCatalogue(catalogue) {
-        this.astroSphere.deleteCatalogue(catalogue);
-    }
-    changeCatalogueRA(catalogue, raColumnName) {
-        catalogue.changeMetaRA(raColumnName);
-        // catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
-        return catalogue;
-    }
-    changeCatalogueDec(catalogue, decColumnName) {
-        catalogue.changeMetaDec(decColumnName);
-        // catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
-        return catalogue;
-    }
-    changeCatalogueColor(catalogue, hexColor) {
-        catalogue.changeColor(hexColor);
-        // catalogue.catalogueProps.changeColor(hexColor)
-        return catalogue;
-    }
-    setCatalogueShapeHue(catalogue, metadataColumnName) {
-        catalogue.changeMetaShapeHue(metadataColumnName);
-        return catalogue;
-    }
-    setCatalogueShapeSize(catalogue, metadataColumnName) {
-        catalogue.changeMetaShapeSize(metadataColumnName);
-        return catalogue;
-    }
-    //FOOTPRINT
-    showFootprintSet(footprintSet) {
-        this.astroSphere.showFootprintSet(footprintSet);
-    }
-    hideFootprintSet(footprintSet, isVisible) {
-        footprintSet.setIsVisible(isVisible);
-    }
-    deleteFootprintSet(footprintSet) {
-        this.astroSphere.deleteFootprintSet(footprintSet);
-    }
-    changeFootprintSetColor(footprintSet, hexColor) {
-        // footprintSet.footprintsetProps.changeColor(hexColor)
-        footprintSet.changeColor(hexColor);
-    }
-    getHoveredFootprints() {
-        return this.astroSphere.getHoveredFootprints();
-    }
-    // HIPS
-    getDefaultHiPSURL() {
-        return bootSetup.defaultHipsUrl;
-    }
-    activateHiPS(hipsDescriptor) {
-        this.astroSphere.activateHiPS(hipsDescriptor);
-    }
-    async loadHiPS(baseUrl) {
-        const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-        const resp = await fetch(hipsUrl + 'properties');
-        if (!resp.ok)
-            throw new Error(`HTTP ${resp.status} fetching properties`);
-        const propsText = await resp.text();
-        const desc = new HiPSDescriptor(propsText, hipsUrl);
-        this.astroSphere.activateHiPS(desc);
-        return desc.surveyName;
-        // this.activateHiPS(desc);
-    }
-    // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
-    changeColorMap(colorMapName) {
-        const colorMap = model_ColorMaps[colorMapName];
-        // hips.changeColorMap(colorMap)
-        this.astroSphere.changeColorMap(colorMap);
-    }
-    getActiveHiPS() {
-        return this.astroSphere.activeHiPS;
-    }
-    // Camera: GOTOs and COORDS
-    setCamera(camera) {
-        this.astroSphere.setCamera(camera);
-    }
-    setCameraPosition(pos) {
-        this.astroSphere.setCameraPosition(pos);
-    }
-    setCameraMatrix(viewMatrix) {
-        this.astroSphere.setCameraMatrix(viewMatrix);
-    }
-    restoreAstroViewerState(detail, applyColorMap) {
-        this.astroSphere.applyFullCameraState(detail, applyColorMap);
-    }
-    getCurrentAstroViewerStatus() {
-        return this.astroSphere.getCurrentStatus();
-    }
-    goTo(raDeg, decDeg) {
-        // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
-        this.astroSphere.goTo(raDeg, decDeg);
-    }
-    getCenterCoordinates() {
-        return this.astroSphere.getCentralPointCoordinates();
-    }
-    getCoordinatesFromMouse() {
-        return this.astroSphere.getLastMousePointCoordinates();
-    }
-    // GRIDs
-    setModelMatrix(modelMatrix) {
-        this.astroSphere.healpixGrid.setModelMatrix(modelMatrix);
-    }
-    toggleHealpixGrid() {
-        // healpixGridSingleton.toggleShowGrid()
-        this.astroSphere.healpixGrid.toggleShowGrid();
-    }
-    isHealpixGridVisible() {
-        // return healpixGridSingleton.isVisible()
-        return this.astroSphere.healpixGrid.isVisible();
-    }
-    toggleEquatorialGrid() {
-        // equatorialGridSingleton.toggleShowGrid()
-        return this.astroSphere.equatorialGrid.toggleShowGrid();
-    }
-    isEquatorialGridVisible() {
-        // return equatorialGridSingleton.isVisible()
-        return this.astroSphere.equatorialGrid.isVisible();
-    }
-    // FOV
-    getFoV() {
-        return this.astroSphere.getFoV();
-    }
-    getFoVPolygon() {
-        return this.astroSphere.getFoVPolygon();
-    }
-    changeFoV(deg) {
-        this, this.astroSphere.changeFoV(deg);
-    }
-    changeFoV2(deg) {
-        this, this.astroSphere.changeFoV2(deg);
-    }
-    changeFoV3(deg) {
-        this, this.astroSphere.changeFoV3(deg);
-    }
-    getInsideSphere() {
-        return this.astroSphere.getInsideSphere();
-    }
-    toggleInsideSphere() {
-        this.astroSphere.toggleInsideSphere();
-    }
-    // Internal
-    constructor(canvasEl) {
-        this.init(canvasEl);
-        this.webglContextList = new Map();
-    }
-    init(canvasEl) {
-        console.log('init webgl');
-        this.canvas = canvasEl;
-        const gl = this.canvas.getContext('webgl2', { alpha: false });
-        if (!gl) {
-            alert('Could not initialise WebGL, sorry :-(');
-            throw new Error('WebGL2 not available');
-        }
-        // Extend with custom fields used elsewhere
-        this.webgl = gl;
-        // this.webgl.viewportWidth = this.canvas.width
-        // this.webgl.viewportHeight = this.canvas.height
-        try {
-            // 1/255 = 0.00392156862
-            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
-        }
-        catch (e) {
-            console.log('Error instantiating WebGL context');
-        }
-        this.initListeners();
-        // ; (global as any).gl = this.webgl
-        this.astroSphere = new src_AstroSphere(this.canvas, this.webgl);
-    }
-    initListeners() {
-        console.log('inside initListeners');
-        const resizeCanvas = () => {
-            console.log('[resizeCanvas]');
-            const rect = this.canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            const newWidth = Math.max(1, Math.floor(rect.width * dpr));
-            const newHeight = Math.max(1, Math.floor(rect.height * dpr));
-            if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
-                this.canvas.width = newWidth;
-                this.canvas.height = newHeight;
-                // this.webgl.viewportWidth = this.canvas.width
-                // this.webgl.viewportHeight = this.canvas.height
-                this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
-            }
-        };
-        const handleContextLost = (event) => {
-            console.log('[handleContextLost]');
-            event.preventDefault();
-            if (this.rafId !== null) {
-                cancelAnimationFrame(this.rafId);
-                this.rafId = null;
-            }
-        };
-        const handleContextRestored = (_event) => {
-            console.log('[handleContextRestored]');
-            // this.webgl.viewportWidth = this.canvas.width
-            // this.webgl.viewportHeight = this.canvas.height
-            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
-            this.webgl.enable(this.webgl.DEPTH_TEST);
-            this.rafId = requestAnimationFrame(() => this.tick());
-        };
-        // 🔥 ResizeObserver per pannelli / split / layout dinamici
-        if ('ResizeObserver' in window) {
-            const ro = new ResizeObserver(() => {
-                resizeCanvas();
-            });
-            // Osserva il canvas o il suo parent (a tua scelta)
-            ro.observe(this.canvas);
-        }
-        window.addEventListener('resize', resizeCanvas);
-        this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
-        this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
-        resizeCanvas();
-    }
-    tick() {
-        this.drawScene();
-        this.rafId = requestAnimationFrame(() => this.tick());
-        return this.rafId;
-    }
-    drawScene() {
-        this.astroSphere.draw(this.canvas);
-    }
-}
 
 ;// ./src/utils/STCSParser.ts
 /**
@@ -13007,7 +12809,6 @@ class FootprintSetGL {
     extHoveredIndexes;
     oldMouseCoords;
     healpixDensityMap;
-    _providerUrl;
     totConvexPoints;
     // footprintsInPix256: Map<number, Footprint[]>
     // gl: GL;
@@ -13036,12 +12837,15 @@ class FootprintSetGL {
     _shapeColor = '#00fff2ff';
     _bufferInitialised = false;
     _webgl;
-    _footprintShaderProgram;
     _isVisible = true;
     _metadataManager;
-    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl) {
+    _providerUrl;
+    _footprintShaderProgram;
+    _visibleTilesManager;
+    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl, visibleTilesManager) {
         this._webgl = webgl;
         this._ready = false;
+        this._visibleTilesManager = visibleTilesManager;
         this.TYPE = 'FOOTPRINT_SET';
         this._name = fsetName;
         this._description = fsetDescription;
@@ -13248,6 +13052,12 @@ class FootprintSetGL {
     //     }
     //   }
     // }
+    extHighlightFootprint(footprint, highlighted) {
+        throw new Error('Method not implemented yet');
+    }
+    extAddPolygons2Selected(footprint) {
+        throw new Error('Method not implemented yet');
+    }
     initHoveringBuffer() {
         /*
                 TODO better approach. when creating the indexbuffer of footprints,
@@ -13430,6 +13240,262 @@ class FootprintSetGL {
     }
 }
 // export default FootprintSetGL
+
+;// ./src/AstroViewer.ts
+// import global from './Global.js'
+
+
+
+
+
+
+// & {
+//   viewportWidth: number
+//   viewportHeight: number
+// }
+class AstroViewer {
+    astroSphere;
+    canvas;
+    webgl;
+    rafId = null;
+    webglContextList = new Map();
+    // API
+    run() {
+        return this.tick();
+    }
+    // CATALOGUES
+    createCatalogue(catalogueName, catalogueDescription, providerUrl, metadataManager) {
+        return new CatalogueGL(catalogueName, catalogueDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showCatalogue(catalogue) {
+        this.astroSphere.showCatalogue(catalogue);
+    }
+    hideCatalogue(catalogue, isVisible) {
+        catalogue.setIsVisible(isVisible);
+    }
+    deleteCatalogue(catalogue) {
+        this.astroSphere.deleteCatalogue(catalogue);
+    }
+    changeCatalogueRA(catalogue, raColumnName) {
+        catalogue.changeMetaRA(raColumnName);
+        // catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
+        return catalogue;
+    }
+    changeCatalogueDec(catalogue, decColumnName) {
+        catalogue.changeMetaDec(decColumnName);
+        // catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
+        return catalogue;
+    }
+    changeCatalogueColor(catalogue, hexColor) {
+        catalogue.changeColor(hexColor);
+        // catalogue.catalogueProps.changeColor(hexColor)
+        return catalogue;
+    }
+    setCatalogueShapeHue(catalogue, metadataColumnName) {
+        catalogue.changeMetaShapeHue(metadataColumnName);
+        return catalogue;
+    }
+    setCatalogueShapeSize(catalogue, metadataColumnName) {
+        catalogue.changeMetaShapeSize(metadataColumnName);
+        return catalogue;
+    }
+    //FOOTPRINT
+    createFootprintSet(footprintSetName, footprintSetDescription, providerUrl, metadataManager) {
+        return new FootprintSetGL(footprintSetName, footprintSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    changeFootprintSetColor(footprintSet, hexColor) {
+        // footprintSet.footprintsetProps.changeColor(hexColor)
+        footprintSet.changeColor(hexColor);
+    }
+    getHoveredFootprints() {
+        return this.astroSphere.getHoveredFootprints();
+    }
+    // HIPS
+    getDefaultHiPSURL() {
+        return bootSetup.defaultHipsUrl;
+    }
+    activateHiPS(hipsDescriptor) {
+        this.astroSphere.activateHiPS(hipsDescriptor);
+    }
+    async loadHiPS(baseUrl) {
+        const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+        const resp = await fetch(hipsUrl + 'properties');
+        if (!resp.ok)
+            throw new Error(`HTTP ${resp.status} fetching properties`);
+        const propsText = await resp.text();
+        const desc = new HiPSDescriptor(propsText, hipsUrl);
+        this.astroSphere.activateHiPS(desc);
+        return desc.surveyName;
+        // this.activateHiPS(desc);
+    }
+    // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
+    changeColorMap(colorMapName) {
+        const colorMap = model_ColorMaps[colorMapName];
+        // hips.changeColorMap(colorMap)
+        this.astroSphere.changeColorMap(colorMap);
+    }
+    getActiveHiPS() {
+        return this.astroSphere.activeHiPS;
+    }
+    // Camera: GOTOs and COORDS
+    setCamera(camera) {
+        this.astroSphere.setCamera(camera);
+    }
+    setCameraPosition(pos) {
+        this.astroSphere.setCameraPosition(pos);
+    }
+    setCameraMatrix(viewMatrix) {
+        this.astroSphere.setCameraMatrix(viewMatrix);
+    }
+    restoreAstroViewerState(detail, applyColorMap) {
+        this.astroSphere.applyFullCameraState(detail, applyColorMap);
+    }
+    getCurrentAstroViewerStatus() {
+        return this.astroSphere.getCurrentStatus();
+    }
+    goTo(raDeg, decDeg) {
+        // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
+        this.astroSphere.goTo(raDeg, decDeg);
+    }
+    getCenterCoordinates() {
+        return this.astroSphere.getCentralPointCoordinates();
+    }
+    getCoordinatesFromMouse() {
+        return this.astroSphere.getLastMousePointCoordinates();
+    }
+    // GRIDs
+    setModelMatrix(modelMatrix) {
+        this.astroSphere.healpixGrid.setModelMatrix(modelMatrix);
+    }
+    toggleHealpixGrid() {
+        // healpixGridSingleton.toggleShowGrid()
+        this.astroSphere.healpixGrid.toggleShowGrid();
+    }
+    isHealpixGridVisible() {
+        // return healpixGridSingleton.isVisible()
+        return this.astroSphere.healpixGrid.isVisible();
+    }
+    toggleEquatorialGrid() {
+        // equatorialGridSingleton.toggleShowGrid()
+        return this.astroSphere.equatorialGrid.toggleShowGrid();
+    }
+    isEquatorialGridVisible() {
+        // return equatorialGridSingleton.isVisible()
+        return this.astroSphere.equatorialGrid.isVisible();
+    }
+    // FOV
+    getFoV() {
+        return this.astroSphere.getFoV();
+    }
+    getFoVPolygon() {
+        return this.astroSphere.getFoVPolygon();
+    }
+    changeFoV(deg) {
+        this, this.astroSphere.changeFoV(deg);
+    }
+    changeFoV2(deg) {
+        this, this.astroSphere.changeFoV2(deg);
+    }
+    changeFoV3(deg) {
+        this, this.astroSphere.changeFoV3(deg);
+    }
+    getInsideSphere() {
+        return this.astroSphere.getInsideSphere();
+    }
+    toggleInsideSphere() {
+        this.astroSphere.toggleInsideSphere();
+    }
+    // Internal
+    constructor(canvasEl) {
+        this.init(canvasEl);
+        this.webglContextList = new Map();
+    }
+    init(canvasEl) {
+        console.log('init webgl');
+        this.canvas = canvasEl;
+        const gl = this.canvas.getContext('webgl2', { alpha: false });
+        if (!gl) {
+            alert('Could not initialise WebGL, sorry :-(');
+            throw new Error('WebGL2 not available');
+        }
+        // Extend with custom fields used elsewhere
+        this.webgl = gl;
+        // this.webgl.viewportWidth = this.canvas.width
+        // this.webgl.viewportHeight = this.canvas.height
+        try {
+            // 1/255 = 0.00392156862
+            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
+        }
+        catch (e) {
+            console.log('Error instantiating WebGL context');
+        }
+        this.initListeners();
+        // ; (global as any).gl = this.webgl
+        this.astroSphere = new src_AstroSphere(this.canvas, this.webgl);
+    }
+    initListeners() {
+        console.log('inside initListeners');
+        const resizeCanvas = () => {
+            console.log('[resizeCanvas]');
+            const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const newWidth = Math.max(1, Math.floor(rect.width * dpr));
+            const newHeight = Math.max(1, Math.floor(rect.height * dpr));
+            if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
+                this.canvas.width = newWidth;
+                this.canvas.height = newHeight;
+                // this.webgl.viewportWidth = this.canvas.width
+                // this.webgl.viewportHeight = this.canvas.height
+                this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            }
+        };
+        const handleContextLost = (event) => {
+            console.log('[handleContextLost]');
+            event.preventDefault();
+            if (this.rafId !== null) {
+                cancelAnimationFrame(this.rafId);
+                this.rafId = null;
+            }
+        };
+        const handleContextRestored = (_event) => {
+            console.log('[handleContextRestored]');
+            // this.webgl.viewportWidth = this.canvas.width
+            // this.webgl.viewportHeight = this.canvas.height
+            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
+            this.webgl.enable(this.webgl.DEPTH_TEST);
+            this.rafId = requestAnimationFrame(() => this.tick());
+        };
+        // 🔥 ResizeObserver per pannelli / split / layout dinamici
+        if ('ResizeObserver' in window) {
+            const ro = new ResizeObserver(() => {
+                resizeCanvas();
+            });
+            // Osserva il canvas o il suo parent (a tua scelta)
+            ro.observe(this.canvas);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
+        this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+        resizeCanvas();
+    }
+    tick() {
+        this.drawScene();
+        this.rafId = requestAnimationFrame(() => this.tick());
+        return this.rafId;
+    }
+    drawScene() {
+        this.astroSphere.draw(this.canvas);
+    }
+}
 
 ;// ./src/index.ts
 

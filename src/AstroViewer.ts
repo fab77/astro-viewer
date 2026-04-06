@@ -85,6 +85,15 @@ export class AstroViewer {
   }
 
   //FOOTPRINT
+createFootprintSet(footprintSetName: string,
+    footprintSetDescription: string,
+    providerUrl: string,
+    metadataManager: MetadataManager,
+  ): FootprintSetGL {
+    return new FootprintSetGL(footprintSetName, footprintSetDescription,
+      providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager)
+  }
+
   showFootprintSet(footprintSet: FootprintSetGL) {
     this.astroSphere.showFootprintSet(footprintSet)
   }

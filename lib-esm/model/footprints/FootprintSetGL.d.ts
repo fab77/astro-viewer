@@ -2,6 +2,7 @@ import { Footprint } from './Footprint.js';
 import MouseHelper from '../../utils/MouseHelper.js';
 import { MetadataManager } from '../MetadataManager.js';
 import { MetadataColumn } from '../MetadataColumn.js';
+import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 export interface HoveredFootprintDetail {
     metadata: MetadataManager;
     footprints: Footprint[];
@@ -20,7 +21,6 @@ export declare class FootprintSetGL {
     extHoveredIndexes: Uint32Array;
     oldMouseCoords: any;
     healpixDensityMap: any;
-    _providerUrl: string;
     totConvexPoints: number;
     vertexCataloguePositionBuffer: WebGLBuffer;
     indexBuffer: WebGLBuffer;
@@ -46,10 +46,12 @@ export declare class FootprintSetGL {
     _shapeColor: string;
     private _bufferInitialised;
     private _webgl;
-    private _footprintShaderProgram;
     _isVisible: boolean;
     private _metadataManager;
-    constructor(fsetName: string, fsetDescription: string, providerUrl: string, metadataManager: MetadataManager, webgl: WebGL2RenderingContext);
+    _providerUrl: string;
+    private _footprintShaderProgram;
+    private _visibleTilesManager;
+    constructor(fsetName: string, fsetDescription: string, providerUrl: string, metadataManager: MetadataManager, webgl: WebGL2RenderingContext, visibleTilesManager: VisibleTilesManager);
     private initFootprintArrays;
     private initGLBuffers;
     setIsVisible(visibility: boolean): void;
@@ -73,6 +75,8 @@ export declare class FootprintSetGL {
      *
      * @param {Footprint} footprint
      */
+    extHighlightFootprint(footprint: Footprint, highlighted: boolean): void;
+    extAddPolygons2Selected(footprint: Footprint): void;
     initHoveringBuffer(): void;
     changeColor(color: string): void;
     draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, vMatrix: Float32Array, pMatrix: Float32Array): void;

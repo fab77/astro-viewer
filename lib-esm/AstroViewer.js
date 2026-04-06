@@ -2,6 +2,7 @@
 import AstroSphere from './AstroSphere.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
+import { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 import { bootSetup } from './Config.js';
 import ColorMaps from './model/ColorMaps.js';
 // & {
@@ -55,6 +56,9 @@ export class AstroViewer {
         return catalogue;
     }
     //FOOTPRINT
+    createFootprintSet(footprintSetName, footprintSetDescription, providerUrl, metadataManager) {
+        return new FootprintSetGL(footprintSetName, footprintSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
     showFootprintSet(footprintSet) {
         this.astroSphere.showFootprintSet(footprintSet);
     }

@@ -25,6 +25,7 @@ export declare class AstroViewer {
     changeCatalogueColor(catalogue: CatalogueGL, hexColor: string): CatalogueGL;
     setCatalogueShapeHue(catalogue: CatalogueGL, metadataColumnName: string): CatalogueGL;
     setCatalogueShapeSize(catalogue: CatalogueGL, metadataColumnName: string): CatalogueGL;
+    createFootprintSet(footprintSetName: string, footprintSetDescription: string, providerUrl: string, metadataManager: MetadataManager): FootprintSetGL;
     showFootprintSet(footprintSet: FootprintSetGL): void;
     hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean): void;
     deleteFootprintSet(footprintSet: FootprintSetGL): void;
