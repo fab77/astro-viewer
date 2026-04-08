@@ -1,8 +1,8 @@
-import { Footprint } from './Footprint.js';
-import MouseHelper from '../../utils/MouseHelper.js';
-import { MetadataManager } from '../MetadataManager.js';
-import { MetadataColumn } from '../MetadataColumn.js';
-import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
+import { Footprint } from "./Footprint.js";
+import MouseHelper from "../../utils/MouseHelper.js";
+import { MetadataManager } from "../MetadataManager.js";
+import { MetadataColumn } from "../MetadataColumn.js";
+import { VisibleTilesManager } from "../hips/VisibleTilesManager.js";
 export interface HoveredFootprintDetail {
     metadata: MetadataManager;
     footprints: Footprint[];
@@ -33,12 +33,14 @@ export declare class FootprintSetGL {
     vertexCataloguePosition: Float32Array;
     totPoints: number;
     nPrimitiveFlags: number;
-    hoveredIndexes: Uint32Array;
+    hoveredIndexes: number[];
+    hoveredElementIndexes: Uint32Array;
     private _hoveredFootprints;
     hoveredVertexPosition: Float32Array;
     totHoveredPoints: number;
     nHoveredPrimitiveFlags: number;
-    selectedIndexes: Uint32Array;
+    selectedIndexes: number[];
+    selectedElementIndexes: Uint32Array;
     private _selectedFootprints;
     selectedVertexPosition: Float32Array;
     totSelectedPoints: number;
@@ -75,6 +77,8 @@ export declare class FootprintSetGL {
      *
      * @param {Footprint} footprint
      */
+    private FootprintPolygonMatches;
+    private findFootprintPolygonIndex;
     extHighlightFootprint(footprint: Footprint, highlighted: boolean): void;
     extAddPolygons2Selected(footprint: Footprint): void;
     initHoveringBuffer(): void;
