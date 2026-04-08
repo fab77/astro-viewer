@@ -10,6 +10,18 @@ export interface HoveredFootprintDetail {
     description: string;
     provider: string;
 }
+export type ClickedFootprintState = {
+    footprint: Footprint;
+    selected: boolean;
+};
+export type FootprintPickResult = {
+    footprints: Footprint[];
+    pickedIndexes: number[];
+};
+export type FootprintClickResult = {
+    footprints: Footprint[];
+    selectionState: ClickedFootprintState[];
+};
 export declare class FootprintSetGL {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
@@ -69,6 +81,11 @@ export declare class FootprintSetGL {
     checkSelection(mouseHelper: MouseHelper): void;
     get hoveredFootprints(): HoveredFootprintDetail;
     get selectedFootprints(): Footprint[];
+    private checkClicking;
+    private setSelectedIndexes;
+    private refreshSelectedFootprints;
+    getFootprintsFromPointer(in_mouseHelper: MouseHelper): FootprintPickResult | null;
+    selectPrimaryFootprintFromClick(in_mouseHelper: MouseHelper): FootprintClickResult | null;
     /**
      *
      * @param {Footprint[]} footprints
@@ -82,6 +99,7 @@ export declare class FootprintSetGL {
     extHighlightFootprint(footprint: Footprint, highlighted: boolean): void;
     extAddPolygons2Selected(footprint: Footprint): void;
     initHoveringBuffer(): void;
+    initSelectionBuffer(): void;
     changeColor(color: string): void;
     draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, vMatrix: Float32Array, pMatrix: Float32Array): void;
 }

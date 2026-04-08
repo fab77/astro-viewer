@@ -20,6 +20,21 @@ export interface HoveredFootprintDetail {
   provider: string;
 }
 
+export type ClickedFootprintState = {
+  footprint: Footprint;
+  selected: boolean;
+};
+
+export type FootprintPickResult = {
+  footprints: Footprint[];
+  pickedIndexes: number[];
+};
+
+export type FootprintClickResult = {
+  footprints: Footprint[];
+  selectionState: ClickedFootprintState[];
+};
+
 export class FootprintSetGL {
   static ELEM_SIZE = 3;
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -315,6 +330,119 @@ export class FootprintSetGL {
     return this._selectedFootprints;
   }
 
+  private checkClicking(in_mouseHelper: MouseHelper): number[] {
+    if (
+      in_mouseHelper.x == null ||
+      in_mouseHelper.y == null ||
+      in_mouseHelper.z == null
+    ) {
+      return [];
+    }
+
+    const clickedIndexes: number[] = [];
+    const mousePoint = new Point(
+      { x: in_mouseHelper.x, y: in_mouseHelper.y, z: in_mouseHelper.z },
+      CoordsType.CARTESIAN,
+    );
+
+    for (let i = 0; i < this.footprintPolygons.length; i++) {
+      const footprint = this.footprintPolygons[i];
+      if (!footprint.selectionObj) continue;
+
+      if (
+        GeomUtils.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)
+      ) {
+        clickedIndexes.push(i);
+      }
+    }
+
+    return clickedIndexes;
+  }
+
+  private setSelectedIndexes(selectedIndex: number[]) {
+    selectedIndex.forEach((idx) => {
+      if (idx < 0 || idx >= this.footprintPolygons.length) return;
+
+      if (this.selectedIndexes.includes(idx)) {
+        this.selectedIndexes.splice(this.selectedIndexes.indexOf(idx), 1);
+      } else {
+        this.selectedIndexes.push(idx);
+      }
+    });
+
+    this.refreshSelectedFootprints();
+  }
+
+  private refreshSelectedFootprints() {
+    this._selectedFootprints = this.selectedIndexes
+      .map((idx) => this.footprintPolygons[idx])
+      .filter((footprint): footprint is Footprint => Boolean(footprint));
+    this.totSelectedPoints = this._selectedFootprints.reduce(
+      (total, footprint) => total + footprint.totPoints,
+      0,
+    );
+
+    if (this._selectedFootprints.length === 0) {
+      this.selectedVertexPosition = new Float32Array();
+      this.selectedElementIndexes = new Uint32Array();
+      this.nSlectedPrimitiveFlags = 0;
+      return;
+    }
+
+    this.initSelectionBuffer();
+  }
+
+  getFootprintsFromPointer(
+    in_mouseHelper: MouseHelper,
+  ): FootprintPickResult | null {
+    const pickedIndexes = this.checkClicking(in_mouseHelper);
+    if (!pickedIndexes.length) {
+      return {
+        footprints: [],
+        pickedIndexes: [],
+      };
+    }
+
+    const footprints: Footprint[] = [];
+    pickedIndexes.forEach((idx) => {
+      const footprint = this.footprintPolygons[idx];
+      if (footprint) footprints.push(footprint);
+    });
+
+    return footprints.length ? { footprints, pickedIndexes } : null;
+  }
+
+  selectPrimaryFootprintFromClick(
+    in_mouseHelper: MouseHelper,
+  ): FootprintClickResult | null {
+    const picked = this.getFootprintsFromPointer(in_mouseHelper);
+    const clickedIndexes = picked?.pickedIndexes ?? [];
+
+    this.setSelectedIndexes(clickedIndexes);
+    if (!clickedIndexes.length) {
+      return {
+        footprints: [],
+        selectionState: [],
+      };
+    }
+
+    const selectionState: ClickedFootprintState[] = [];
+    const selectedFootprints: Footprint[] = [];
+
+    clickedIndexes.forEach((idx) => {
+      const footprint = this.footprintPolygons[idx];
+      if (!footprint) return;
+
+      const selected = this.selectedIndexes.includes(idx);
+      selectionState.push({ footprint, selected });
+      selectedFootprints.push(footprint);
+    });
+
+    return selectedFootprints.length
+      ? { footprints: selectedFootprints, selectionState }
+      : null;
+  }
+
   // highlightFootprint(footprint: Footprint, highlighted: boolean) {
   //   if (highlighted) {
   //     this._hoveredFootprints.push(footprint)
@@ -434,6 +562,7 @@ export class FootprintSetGL {
                 this.selectedIndexes.splice(i, 1);
             }
         }
+        this.refreshSelectedFootprints();
   }
 
   initHoveringBuffer() {
@@ -510,70 +639,65 @@ export class FootprintSetGL {
     }
   }
 
-  // initSelectionBuffer() {
-  //   /*
-  //           TODO better approach. when creating the indexbuffer of footprints,
-  //           add 1 extra position for the selection (set to 0 == not selected),
-  //           and save the position "positionIndex" in an array (selectionIndexes).
-  //           When checking the selection, I get the index of the footprint, which
-  //           matches with the index in the selectionIndexes to retrieve the position
-  //           of the flag to be set to 1 in the vertexposition
-  //           This will ease checking the selection in the vertex/fragment shader and
-  //           set the pointsize and shape color.
-  //           */
+  initSelectionBuffer() {
+    if (!this._webgl) return;
+    if (this._selectedFootprints.length == 0) {
+      return;
+    }
 
-  //   let nFootprints = this._selectedFootprints.length
+    const nFootprints = this._selectedFootprints.length;
+    let npolygons = nFootprints - 1;
+    for (let j = 0; j < nFootprints; j++) {
+      npolygons += this._selectedFootprints[j].polygons.length - 1;
+    }
 
-  //   let npolygons = nFootprints - 1
-  //   for (let j = 0; j < nFootprints; j++) {
-  //     npolygons += this._selectedFootprints[j].polygons.length - 1
-  //   }
-  //   // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
-  //   // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+    this.selectedElementIndexes = new Uint32Array(
+      this.totSelectedPoints + npolygons,
+    );
+    const MAX_UNSIGNED_INT = 0xffffffff;
 
-  //   this.selectedIndexes = new Uint32Array(this.totSelectedPoints + npolygons)
-  //   const MAX_UNSIGNED_INT = 0xffffffff // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-  //   // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
+    this._webgl.bindBuffer(
+      this._webgl.ARRAY_BUFFER,
+      this.selectedVertexPositionBuffer,
+    );
 
-  //   this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer)
+    this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints);
+    let positionIndex = 0;
+    let vIdx = 0;
 
-  //   this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints)
-  //   let positionIndex = 0
-  //   let vIdx = 0
+    const R = 1.0;
+    this.nSlectedPrimitiveFlags = 0;
 
-  //   let R = 1.0
-  //   this.nSlectedPrimitiveFlags = 0
+    for (let j = 0; j < nFootprints; j++) {
+      const footprintPoly = this._selectedFootprints[j].polygons;
 
-  //   for (let j = 0; j < nFootprints; j++) {
-  //     let footprintPoly = this._selectedFootprints[j].polygons
+      if (j > 0) {
+        this.selectedElementIndexes[vIdx] = MAX_UNSIGNED_INT;
+        this.nSlectedPrimitiveFlags += 1;
+        vIdx += 1;
+      }
 
-  //     if (j > 0) {
-  //       this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT
-  //       this.nSlectedPrimitiveFlags += 1
-  //       vIdx += 1
-  //     }
+      for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
+        if (polyIdx > 0) {
+          this.selectedElementIndexes[vIdx] = MAX_UNSIGNED_INT;
+          this.nSlectedPrimitiveFlags += 1;
+          vIdx += 1;
+        }
+        const poly = footprintPoly[polyIdx];
+        for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+          const p = poly[pointIdx];
+          this.selectedVertexPosition[positionIndex] = R * p.x;
+          this.selectedVertexPosition[positionIndex + 1] = R * p.y;
+          this.selectedVertexPosition[positionIndex + 2] = R * p.z;
 
-  //     for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
-  //       if (polyIdx > 0) {
-  //         this.selectedIndexes[vIdx] = MAX_UNSIGNED_INT;
-  //         this.nSlectedPrimitiveFlags += 1;
-  //         vIdx += 1;
-  //       }
-  //       const poly = footprintPoly[polyIdx];
-  //       for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
-  //         const p = poly[pointIdx];
-  //         this.selectedVertexPosition[positionIndex] = R * p.x;
-  //         this.selectedVertexPosition[positionIndex + 1] = R * p.y;
-  //         this.selectedVertexPosition[positionIndex + 2] = R * p.z;
+          this.selectedElementIndexes[vIdx] = Math.floor(positionIndex / 3);
 
-  //         this.selectedIndexes[vIdx] = Math.floor(positionIndex / 3);
-
-  //         vIdx += 1;
-  //         positionIndex += 3;
-  //       }
-  //     }
-  //   }
-  // }
+          vIdx += 1;
+          positionIndex += 3;
+        }
+      }
+    }
+  }
 
   changeColor(color: string): void {
     this._shapeColor = color;

@@ -302,6 +302,23 @@ class AstroSphere {
               })
             );
           }
+
+          for (const fset of this.activeFootprintSets) {
+            const clickResult =
+              fset.selectPrimaryFootprintFromClick(this.mouseHelper);
+            if (!clickResult?.footprints.length) continue;
+            this._webgl.canvas.dispatchEvent(
+              new CustomEvent('footprint-clicked', {
+                detail: {
+                  footprint: clickResult.footprints,
+                  selectionState: clickResult.selectionState,
+                  footprintSet: fset,
+                },
+                bubbles: true,
+                composed: true,
+              })
+            );
+          }
         }
       }
     }
@@ -409,6 +426,25 @@ class AstroSphere {
             detail: {
               source: pickResult.sources,
               catalogue: cat,
+              clientX: event.clientX,
+              clientY: event.clientY,
+            },
+            bubbles: true,
+            composed: true,
+          })
+        );
+        break;
+      }
+
+      for (const fset of this.activeFootprintSets) {
+        const pickResult = fset.getFootprintsFromPointer(this.mouseHelper);
+        if (!pickResult?.footprints.length) continue;
+
+        this._webgl.canvas.dispatchEvent(
+          new CustomEvent('footprint-contextmenu', {
+            detail: {
+              footprint: pickResult.footprints,
+              footprintSet: fset,
               clientX: event.clientX,
               clientY: event.clientY,
             },
