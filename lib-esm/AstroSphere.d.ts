@@ -70,6 +70,7 @@ declare class AstroSphere {
     get equatorialGrid(): EquatorialGrid;
     private updateCentralPoint;
     private updateLastMousePoint;
+    private clearLastMousePoint;
     getCentralPointCoordinates(): PointCoordinates | undefined;
     getLastMousePointCoordinates(): PointCoordinates | undefined;
     private clamp;

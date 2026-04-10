@@ -182,6 +182,10 @@ class AstroSphere {
     return this.mousePointCoords
   }
 
+  private clearLastMousePoint(): void {
+    this.mousePointCoords = undefined
+  }
+
   // This should call FoVUtils.getJ200Centre(this.canvas)
   getCentralPointCoordinates(): PointCoordinates | undefined {
     return this.centralPoinCoords
@@ -272,7 +276,8 @@ class AstroSphere {
         this.mouseHelper.update(mousePoint);
 
         this.updateLastMousePoint();
-
+      } else {
+        this.clearLastMousePoint();
       }
 
       event.preventDefault()
@@ -313,9 +318,9 @@ class AstroSphere {
           this._perspectiveMatrixManager.pMatrix
         );
 
-        if (mousePoint && mousePoint.length > 0) {
-          this.mouseHelper.update(mousePoint);
-          this.updateLastMousePoint();
+      if (mousePoint && mousePoint.length > 0) {
+        this.mouseHelper.update(mousePoint);
+        this.updateLastMousePoint();
 
           for (const cat of this.activeCatalogues) {
             const clickResult = cat.selectPrimarySourceFromClick(this.mouseHelper);
@@ -350,6 +355,8 @@ class AstroSphere {
             );
           }
         }
+      } else {
+        this.clearLastMousePoint();
       }
     }
 
@@ -393,7 +400,8 @@ class AstroSphere {
           this.mouseHelper.update(mousePoint);
 
           this.updateLastMousePoint();
-
+        } else {
+          this.clearLastMousePoint();
         }
       }
 
@@ -524,6 +532,11 @@ class AstroSphere {
     canvas.onpointerdown = handleMouseDown
     canvas.onpointerup = handleMouseUp
     canvas.onpointermove = handleMouseMove
+    canvas.onpointerleave = () => {
+      this.clearLastMousePoint();
+      this._cameraStatusChanged = true;
+      this.emitCameraChanged('pointerleave');
+    }
 
     console.log('[AstroSphere] adding wheel event listener with passive: false');
     canvas.addEventListener('wheel', handleMouseWheel, { passive: false })
