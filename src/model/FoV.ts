@@ -24,6 +24,7 @@ type FoVComputed = {
 
 
 export class FoV {
+  private static readonly MIN_FOV_DEG = 1e-6
 
   private fovXDeg = 180
   private fovYDeg = 180
@@ -96,7 +97,8 @@ export class FoV {
 
 
   get minFoV(): number {
-    this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg
+    const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg
+    this._minFoV = Math.max(minFov, FoV.MIN_FOV_DEG)
     return this._minFoV
   }
 

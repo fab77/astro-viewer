@@ -96,15 +96,12 @@ class Camera {
             }
         }
         else {
-            if (this.cam_pos[2] < 1.005) {
-                this.move[2] *= this.cam_pos[2] / 100;
-            }
-            else if (this.cam_pos[2] < 1.05) {
-                this.move[2] *= this.cam_pos[2] / 20;
-            }
-            else if (this.cam_pos[2] < 1.3) {
-                this.move[2] *= this.cam_pos[2] / 3;
-            }
+            // Keep zoom responsive near the sphere surface without the abrupt
+            // threshold jumps that made the 0.2 -> 0.05 deg range feel sticky.
+            const distanceFromSurface = Math.max(this.cam_pos[2] - 1, 1e-6);
+            const normalizedDistance = Math.min(1, distanceFromSurface / 0.3);
+            const zoomScale = 0.015 + 0.985 * Math.pow(normalizedDistance, 1.2);
+            this.move[2] *= zoomScale;
             if (this.cam_pos[2] + this.move[2] <= 1.000001 && inertia < 0) {
                 this.cam_pos[2] = 1.000001;
             }
@@ -210,7 +207,13 @@ class Camera {
         }
         const pos = this.getCameraPosition();
         const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-        const usedRot = (totRot * (dist2Center - 1)) / 3.0;
+        const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
+        const normalizedDistance = Math.min(1, distanceFromSurface / 0.35);
+        const distanceFactor = 0.04 + 0.96 * Math.pow(normalizedDistance, 1.35);
+        // Keep tiny FoV controlled, but let wide FoV regain some responsiveness.
+        const normalizedFoV = Math.min(1, this.FoV / 20);
+        const fovFactor = 0.12 + 1.45 * Math.pow(normalizedFoV, 0.4);
+        const usedRot = (totRot * distanceFactor * fovFactor) / 1.85;
         // Build an axis from phi/theta, but zero components that are locked
         let axisX = this.lockRotX ? 0 : theta;
         let axisY = this.lockRotY ? 0 : phi;

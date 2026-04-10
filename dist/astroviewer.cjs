@@ -4555,15 +4555,12 @@ class Camera {
             }
         }
         else {
-            if (this.cam_pos[2] < 1.005) {
-                this.move[2] *= this.cam_pos[2] / 100;
-            }
-            else if (this.cam_pos[2] < 1.05) {
-                this.move[2] *= this.cam_pos[2] / 20;
-            }
-            else if (this.cam_pos[2] < 1.3) {
-                this.move[2] *= this.cam_pos[2] / 3;
-            }
+            // Keep zoom responsive near the sphere surface without the abrupt
+            // threshold jumps that made the 0.2 -> 0.05 deg range feel sticky.
+            const distanceFromSurface = Math.max(this.cam_pos[2] - 1, 1e-6);
+            const normalizedDistance = Math.min(1, distanceFromSurface / 0.3);
+            const zoomScale = 0.015 + 0.985 * Math.pow(normalizedDistance, 1.2);
+            this.move[2] *= zoomScale;
             if (this.cam_pos[2] + this.move[2] <= 1.000001 && inertia < 0) {
                 this.cam_pos[2] = 1.000001;
             }
@@ -4669,7 +4666,13 @@ class Camera {
         }
         const pos = this.getCameraPosition();
         const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-        const usedRot = (totRot * (dist2Center - 1)) / 3.0;
+        const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
+        const normalizedDistance = Math.min(1, distanceFromSurface / 0.35);
+        const distanceFactor = 0.04 + 0.96 * Math.pow(normalizedDistance, 1.35);
+        // Keep tiny FoV controlled, but let wide FoV regain some responsiveness.
+        const normalizedFoV = Math.min(1, this.FoV / 20);
+        const fovFactor = 0.12 + 1.45 * Math.pow(normalizedFoV, 0.4);
+        const usedRot = (totRot * distanceFactor * fovFactor) / 1.85;
         // Build an axis from phi/theta, but zero components that are locked
         let axisX = this.lockRotX ? 0 : theta;
         let axisY = this.lockRotY ? 0 : phi;
@@ -7016,7 +7019,7 @@ class FoVHelper {
             return 10;
         if (fov >= 0.06)
             return 11;
-        if (fov < 0.015)
+        if (fov >= 0.015)
             return 12;
         return 13;
     }
@@ -8988,6 +8991,7 @@ class GridTextHelper {
 
 
 class FoV {
+    static MIN_FOV_DEG = 1e-6;
     fovXDeg = 180;
     fovYDeg = 180;
     ratio = +0;
@@ -9047,8 +9051,15 @@ class FoV {
         // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
     }
     get minFoV() {
-        this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        this._minFoV = Math.max(minFov, FoV.MIN_FOV_DEG);
         return this._minFoV;
+    }
+    get xFoV() {
+        return this.fovXDeg;
+    }
+    get yFoV() {
+        return this.fovYDeg;
     }
     computeDistanceFromAngle(angleDeg) {
         const desiredFoV = angleDeg;
@@ -10810,6 +10821,8 @@ class EquatorialGrid extends AbstractSkyEntity {
  * AstroSphere — main WebGL scene controller (TS port)
  */
 class AstroSphere {
+    static MIN_WHEEL_SCALE = 0.85;
+    static MAX_WHEEL_SCALE = 1.8;
     _camera;
     _perspectiveMatrixManager;
     centralPoinCoords;
@@ -10856,6 +10869,7 @@ class AstroSphere {
         this.startup = true;
         this.addEventListeners(canvas);
         this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this._camera.refreshFoV(this.fov.minFoV);
     }
     initCamera() {
         if (bootSetup.insideSphere) {
@@ -10907,6 +10921,18 @@ class AstroSphere {
     }
     getLastMousePointCoordinates() {
         return this.mousePointCoords;
+    }
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+    computeZoomStep(currentFov, deltaY) {
+        const direction = deltaY < 0 ? -1 : 1;
+        const wheelScale = this.clamp(Math.abs(deltaY) / 120, AstroSphere.MIN_WHEEL_SCALE, AstroSphere.MAX_WHEEL_SCALE);
+        // Continuous wheel response:
+        // - broad FoV stays responsive without large jumps
+        // - narrow FoV keeps a usable floor to avoid the 0.1 -> 0.02 deg stall
+        const baseMagnitude = this.clamp(0.0012 + 0.0025 * Math.sqrt(Math.max(currentFov, 0)), 0.0012, 0.04);
+        return direction * baseMagnitude * wheelScale;
     }
     emitCameraChanged(reason) {
         // avoid dispatch before scene is ready
@@ -11040,13 +11066,14 @@ class AstroSphere {
             event.preventDefault();
         };
         const handleMouseWheel = (event) => {
-            if (event.deltaY < 0) {
-                this.zoomInertia -= 0.001;
-            }
-            else {
-                this.zoomInertia += 0.001;
-            }
+            const currentFov = this._healpixGrid.getMinFoV();
+            const zoomStep = this.computeZoomStep(currentFov, event.deltaY);
+            // Apply wheel zoom immediately and discard any queued inertia so reversing
+            // direction feels responsive instead of "buffered".
+            this.zoomInertia = 0;
+            this._camera.zoom(zoomStep);
             this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+            this._camera.refreshFoV(this.fov.minFoV);
             this._cameraStatusChanged = true;
             this.emitCameraChanged('wheel');
             event.preventDefault();
@@ -11184,7 +11211,8 @@ class AstroSphere {
     changeFoV(deg) {
         const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg);
         this._camera.translate(distance);
-        this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this._camera.refreshFoV(this.fov.minFoV);
     }
     changeFoV2(deg) {
         const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
@@ -11240,6 +11268,8 @@ class AstroSphere {
         // if (this._rotating && centraldecdeg && centralradeg) {
         const detail = {
             fovDeg: this.fov.minFoV,
+            fovXDeg: this.fov.xFoV,
+            fovYDeg: this.fov.yFoV,
             position: this._camera.getCameraPosition(),
             vMatrix: this._camera.getCameraMatrix(),
             pMatrix: this._perspectiveMatrixManager.pMatrix,
@@ -11288,11 +11318,12 @@ class AstroSphere {
         this._webgl.viewport(0, 0, this._webgl.drawingBufferWidth, this._webgl.drawingBufferHeight);
         this._webgl.clear(this._webgl.COLOR_BUFFER_BIT | this._webgl.DEPTH_BUFFER_BIT);
         // Zoom inertia
-        if (this._healpixGrid.fovObj.minFoV > 0.1 && this.zoomInertia !== 0) {
+        if (this.zoomInertia !== 0) {
             if (Math.abs(this.zoomInertia) > 0.0001) {
                 this._camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
                 this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+                this._camera.refreshFoV(this.fov.minFoV);
                 if (this.prevFov !== this.fov.minFoV) {
                     if (!this.centralPoinCoords) {
                         this.centralPoinCoords = this.updateCentralPoint();
@@ -11355,7 +11386,8 @@ class AstroSphere {
         this._webgl.enable(this._webgl.CULL_FACE);
         this._webgl.cullFace(src_Global.insideSphere ? this._webgl.BACK : this._webgl.FRONT);
         this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
+        this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         // DRAW HiPS
         const skyEntityDrawInput = {
             fovDeg: this._healpixGrid.getMinFoV(),

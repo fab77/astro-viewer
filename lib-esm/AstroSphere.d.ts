@@ -34,6 +34,8 @@ export type CameraChangedDetail = {
  * AstroSphere — main WebGL scene controller (TS port)
  */
 declare class AstroSphere {
+    private static readonly MIN_WHEEL_SCALE;
+    private static readonly MAX_WHEEL_SCALE;
     private _camera;
     private _perspectiveMatrixManager;
     private centralPoinCoords;
@@ -70,6 +72,8 @@ declare class AstroSphere {
     private updateLastMousePoint;
     getCentralPointCoordinates(): PointCoordinates | undefined;
     getLastMousePointCoordinates(): PointCoordinates | undefined;
+    private clamp;
+    private computeZoomStep;
     private emitCameraChanged;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;

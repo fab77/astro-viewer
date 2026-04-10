@@ -10,6 +10,7 @@ import { vec3, mat4 } from 'gl-matrix';
 import RayPickingUtils from '../utils/RayPickingUtils.js';
 import { radToDeg } from '../utils/Utils.js';
 export class FoV {
+    static MIN_FOV_DEG = 1e-6;
     fovXDeg = 180;
     fovYDeg = 180;
     ratio = +0;
@@ -69,7 +70,8 @@ export class FoV {
         // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
     }
     get minFoV() {
-        this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        this._minFoV = Math.max(minFov, FoV.MIN_FOV_DEG);
         return this._minFoV;
     }
     get xFoV() {

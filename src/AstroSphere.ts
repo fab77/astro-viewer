@@ -60,6 +60,9 @@ export type CameraChangedDetail = {
  * AstroSphere — main WebGL scene controller (TS port)
  */
 class AstroSphere {
+  private static readonly MIN_WHEEL_SCALE = 0.85
+  private static readonly MAX_WHEEL_SCALE = 1.8
+
   private _camera!: Camera
   private _perspectiveMatrixManager: PerspectiveMatrixManager
 
@@ -122,6 +125,7 @@ class AstroSphere {
     this.startup = true
     this.addEventListeners(canvas)
     this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix)
+    this._camera.refreshFoV(this.fov.minFoV)
 
   }
 
@@ -185,6 +189,30 @@ class AstroSphere {
 
   getLastMousePointCoordinates(): PointCoordinates | undefined {
     return this.mousePointCoords
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value))
+  }
+
+  private computeZoomStep(currentFov: number, deltaY: number): number {
+    const direction = deltaY < 0 ? -1 : 1
+    const wheelScale = this.clamp(
+      Math.abs(deltaY) / 120,
+      AstroSphere.MIN_WHEEL_SCALE,
+      AstroSphere.MAX_WHEEL_SCALE,
+    )
+
+    // Continuous wheel response:
+    // - broad FoV stays responsive without large jumps
+    // - narrow FoV keeps a usable floor to avoid the 0.1 -> 0.02 deg stall
+    const baseMagnitude = this.clamp(
+      0.0012 + 0.0025 * Math.sqrt(Math.max(currentFov, 0)),
+      0.0012,
+      0.04,
+    )
+
+    return direction * baseMagnitude * wheelScale
   }
 
 
@@ -382,14 +410,16 @@ class AstroSphere {
     };
 
     const handleMouseWheel = (event: WheelEvent) => {
+      const currentFov = this._healpixGrid.getMinFoV()
+      const zoomStep = this.computeZoomStep(currentFov, event.deltaY)
 
-      if (event.deltaY < 0) {
-        this.zoomInertia -= 0.001
-      } else {
-        this.zoomInertia += 0.001
-      }
+      // Apply wheel zoom immediately and discard any queued inertia so reversing
+      // direction feels responsive instead of "buffered".
+      this.zoomInertia = 0
+      this._camera.zoom(zoomStep)
 
       this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix)
+      this._camera.refreshFoV(this.fov.minFoV)
       
       this._cameraStatusChanged = true
       this.emitCameraChanged('wheel');
@@ -585,7 +615,8 @@ class AstroSphere {
   changeFoV(deg: number) {
     const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg)
     this._camera.translate(distance)
-    this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix)
+    this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix)
+    this._camera.refreshFoV(this.fov.minFoV)
   }
 
   changeFoV2(deg: number) {
@@ -728,12 +759,13 @@ class AstroSphere {
     this._webgl.clear(this._webgl.COLOR_BUFFER_BIT | this._webgl.DEPTH_BUFFER_BIT)
 
     // Zoom inertia
-    if (this._healpixGrid.fovObj.minFoV > 0.1 && this.zoomInertia !== 0) {
+    if (this.zoomInertia !== 0) {
       if (Math.abs(this.zoomInertia) > 0.0001) {
         this._camera.zoom(this.zoomInertia)
         this.zoomInertia *= 0.95
 
         this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix)
+        this._camera.refreshFoV(this.fov.minFoV)
         if (this.prevFov !== this.fov.minFoV) {
 
           if (!this.centralPoinCoords) {
@@ -811,7 +843,16 @@ class AstroSphere {
     this._webgl.cullFace(global.insideSphere ? this._webgl.BACK : this._webgl.FRONT)
     this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA)
 
-    this._healpixGrid.visibleTilesManager.computeVisiblePixels(this._healpixGrid.visibleorder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix)
+    const visibleOrder = Math.min(
+      this._healpixGrid.visibleorder,
+      this._activeHiPS.maxOrder,
+    )
+    this._healpixGrid.visibleTilesManager.computeVisiblePixels(
+      visibleOrder,
+      this._webgl,
+      this._camera,
+      this._perspectiveMatrixManager.pMatrix,
+    )
 
     // DRAW HiPS
     const skyEntityDrawInput: SkyEntityDrawInput = {

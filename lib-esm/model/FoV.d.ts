@@ -9,6 +9,7 @@ import { ReadonlyMat4 } from 'gl-matrix';
 import { HealpixGrid } from './grid/HealpixGrid.js';
 import Camera from '../Camera.js';
 export declare class FoV {
+    private static readonly MIN_FOV_DEG;
     private fovXDeg;
     private fovYDeg;
     private ratio;
