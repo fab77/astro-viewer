@@ -100,6 +100,14 @@ export class FoV {
     return this._minFoV
   }
 
+  get xFoV(): number {
+    return this.fovXDeg
+  }
+
+  get yFoV(): number {
+    return this.fovYDeg
+  }
+
   public computeDistanceFromAngle(angleDeg: number): number {
     const desiredFoV = angleDeg
     const distance = desiredFoV * this.ratio

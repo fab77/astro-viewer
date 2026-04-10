@@ -18,6 +18,8 @@ export type PointCoordinates = {
 export type CameraChangedDetail = {
     colorMap: ColorMap;
     fovDeg: number;
+    fovXDeg: number;
+    fovYDeg: number;
     position: [number, number, number];
     vMatrix: Float32Array;
     pMatrix: Float32Array;

@@ -20,6 +20,8 @@ export declare class FoV {
     private computeRatio;
     changeMinFov(deg: number): void;
     get minFoV(): number;
+    get xFoV(): number;
+    get yFoV(): number;
     computeDistanceFromAngle(angleDeg: number): number;
     /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
     private computeAngle;

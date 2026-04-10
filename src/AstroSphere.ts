@@ -42,6 +42,8 @@ export type PointCoordinates = {
 export type CameraChangedDetail = {
   colorMap: ColorMap
   fovDeg: number;
+  fovXDeg: number;
+  fovYDeg: number;
   position: [number, number, number];
   vMatrix: Float32Array;
   pMatrix: Float32Array;
@@ -671,6 +673,8 @@ class AstroSphere {
     // if (this._rotating && centraldecdeg && centralradeg) {
     const detail: CameraChangedDetail = {
       fovDeg: this.fov.minFoV,
+      fovXDeg: this.fov.xFoV,
+      fovYDeg: this.fov.yFoV,
       position: this._camera.getCameraPosition(),
       vMatrix: this._camera.getCameraMatrix() as Float32Array,
       pMatrix: this._perspectiveMatrixManager.pMatrix as Float32Array,

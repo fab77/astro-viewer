@@ -72,6 +72,12 @@ export class FoV {
         this._minFoV = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
         return this._minFoV;
     }
+    get xFoV() {
+        return this.fovXDeg;
+    }
+    get yFoV() {
+        return this.fovYDeg;
+    }
     computeDistanceFromAngle(angleDeg) {
         const desiredFoV = angleDeg;
         const distance = desiredFoV * this.ratio;

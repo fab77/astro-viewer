@@ -446,6 +446,8 @@ class AstroSphere {
         // if (this._rotating && centraldecdeg && centralradeg) {
         const detail = {
             fovDeg: this.fov.minFoV,
+            fovXDeg: this.fov.xFoV,
+            fovYDeg: this.fov.yFoV,
             position: this._camera.getCameraPosition(),
             vMatrix: this._camera.getCameraMatrix(),
             pMatrix: this._perspectiveMatrixManager.pMatrix,
