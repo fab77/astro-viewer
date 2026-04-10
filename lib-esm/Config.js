@@ -27,5 +27,6 @@ export const bootSetup = {
     version: "Astrobrowser v1.0.0",
     debug: false,
     insideView: false,
+    showViewfinder: false,
 };
 //# sourceMappingURL=Config.js.map

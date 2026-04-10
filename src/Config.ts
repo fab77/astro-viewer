@@ -29,6 +29,7 @@ export interface BootSetup {
   version: string;
   debug: boolean;
   insideView: boolean;
+  showViewfinder: boolean;
 }
 
 export const bootSetup: BootSetup = {
@@ -46,4 +47,5 @@ export const bootSetup: BootSetup = {
   version: "Astrobrowser v1.0.0",
   debug: false,
   insideView: false,
+  showViewfinder: false,
 };

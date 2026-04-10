@@ -85,6 +85,7 @@ const bootSetup = {
     version: "Astrobrowser v1.0.0",
     debug: false,
     insideView: false,
+    showViewfinder: false,
 };
 
 ;// ./node_modules/gl-matrix/esm/common.js
@@ -13461,6 +13462,9 @@ class AstroViewer {
     webgl;
     rafId = null;
     webglContextList = new Map();
+    viewfinderEl = null;
+    viewfinderVisible = bootSetup.showViewfinder;
+    viewfinderColor = 'rgba(255,255,255,0.68)';
     // API
     run() {
         return this.tick();
@@ -13616,6 +13620,25 @@ class AstroViewer {
     toggleInsideSphere() {
         this.astroSphere.toggleInsideSphere();
     }
+    toggleViewfinder() {
+        this.viewfinderVisible = !this.viewfinderVisible;
+        this.syncViewfinderVisibility();
+        return this.viewfinderVisible;
+    }
+    setViewfinderVisible(visible) {
+        this.viewfinderVisible = visible;
+        this.syncViewfinderVisibility();
+    }
+    isViewfinderVisible() {
+        return this.viewfinderVisible;
+    }
+    setViewfinderColor(color) {
+        this.viewfinderColor = color;
+        this.syncViewfinderColor();
+    }
+    getViewfinderColor() {
+        return this.viewfinderColor;
+    }
     // Internal
     constructor(canvasEl) {
         this.init(canvasEl);
@@ -13624,6 +13647,7 @@ class AstroViewer {
     init(canvasEl) {
         console.log('init webgl');
         this.canvas = canvasEl;
+        this.initViewfinder();
         const gl = this.canvas.getContext('webgl2', { alpha: false });
         if (!gl) {
             alert('Could not initialise WebGL, sorry :-(');
@@ -13643,6 +13667,61 @@ class AstroViewer {
         this.initListeners();
         // ; (global as any).gl = this.webgl
         this.astroSphere = new src_AstroSphere(this.canvas, this.webgl);
+    }
+    initViewfinder() {
+        const parent = this.canvas.parentElement;
+        if (!parent)
+            return;
+        if (window.getComputedStyle(parent).position === 'static') {
+            parent.style.position = 'relative';
+        }
+        const viewfinder = document.createElement('div');
+        viewfinder.setAttribute('data-astro-viewfinder', 'true');
+        viewfinder.setAttribute('aria-hidden', 'true');
+        viewfinder.style.position = 'absolute';
+        viewfinder.style.left = '50%';
+        viewfinder.style.top = '50%';
+        viewfinder.style.width = '44px';
+        viewfinder.style.height = '44px';
+        viewfinder.style.transform = 'translate(-50%, -50%)';
+        viewfinder.style.pointerEvents = 'none';
+        viewfinder.style.zIndex = '20';
+        viewfinder.style.boxSizing = 'border-box';
+        const segments = [
+            { left: '50%', top: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
+            { left: '50%', bottom: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
+            { left: '7px', top: '50%', width: '11px', height: '1px', transform: 'translateY(-50%)' },
+            { right: '7px', top: '50%', width: '11px', height: '1px', transform: 'translateY(-50%)' },
+        ];
+        for (const segmentDef of segments) {
+            const segment = document.createElement('div');
+            segment.style.position = 'absolute';
+            segment.style.left = segmentDef.left ?? 'auto';
+            segment.style.right = segmentDef.right ?? 'auto';
+            segment.style.top = segmentDef.top ?? 'auto';
+            segment.style.bottom = segmentDef.bottom ?? 'auto';
+            segment.style.width = segmentDef.width;
+            segment.style.height = segmentDef.height;
+            segment.style.transform = segmentDef.transform;
+            segment.style.background = 'currentColor';
+            segment.style.borderRadius = '999px';
+            segment.style.boxShadow = '0 0 0 1px rgba(0, 0, 0, 0.14)';
+            viewfinder.appendChild(segment);
+        }
+        parent.appendChild(viewfinder);
+        this.viewfinderEl = viewfinder;
+        this.syncViewfinderVisibility();
+        this.syncViewfinderColor();
+    }
+    syncViewfinderVisibility() {
+        if (!this.viewfinderEl)
+            return;
+        this.viewfinderEl.style.display = this.viewfinderVisible ? 'block' : 'none';
+    }
+    syncViewfinderColor() {
+        if (!this.viewfinderEl)
+            return;
+        this.viewfinderEl.style.color = this.viewfinderColor;
     }
     initListeners() {
         console.log('inside initListeners');

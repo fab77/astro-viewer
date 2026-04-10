@@ -26,6 +26,9 @@ export class AstroViewer {
   private webgl!: GL2WithViewport
   private rafId: number | null = null
   private webglContextList: Map<string, GL2WithViewport> = new Map<string, GL2WithViewport>()
+  private viewfinderEl: HTMLDivElement | null = null
+  private viewfinderVisible = bootSetup.showViewfinder
+  private viewfinderColor = 'rgba(255,255,255,0.68)'
 
 
 
@@ -231,6 +234,30 @@ createFootprintSet(footprintSetName: string,
     this.astroSphere.toggleInsideSphere()
   }
 
+  toggleViewfinder(): boolean {
+    this.viewfinderVisible = !this.viewfinderVisible
+    this.syncViewfinderVisibility()
+    return this.viewfinderVisible
+  }
+
+  setViewfinderVisible(visible: boolean): void {
+    this.viewfinderVisible = visible
+    this.syncViewfinderVisibility()
+  }
+
+  isViewfinderVisible(): boolean {
+    return this.viewfinderVisible
+  }
+
+  setViewfinderColor(color: string): void {
+    this.viewfinderColor = color
+    this.syncViewfinderColor()
+  }
+
+  getViewfinderColor(): string {
+    return this.viewfinderColor
+  }
+
   // Internal
   constructor(canvasEl: HTMLCanvasElement) {
     this.init(canvasEl)
@@ -240,6 +267,7 @@ createFootprintSet(footprintSetName: string,
   private init(canvasEl: HTMLCanvasElement): void {
     console.log('init webgl')
     this.canvas = canvasEl
+    this.initViewfinder()
 
     const gl = this.canvas.getContext('webgl2', { alpha: false })
     if (!gl) {
@@ -262,6 +290,74 @@ createFootprintSet(footprintSetName: string,
     this.initListeners()
       // ; (global as any).gl = this.webgl
     this.astroSphere = new AstroSphere(this.canvas, this.webgl)
+  }
+
+  private initViewfinder(): void {
+    const parent = this.canvas.parentElement
+    if (!parent) return
+
+    if (window.getComputedStyle(parent).position === 'static') {
+      parent.style.position = 'relative'
+    }
+
+    const viewfinder = document.createElement('div')
+    viewfinder.setAttribute('data-astro-viewfinder', 'true')
+    viewfinder.setAttribute('aria-hidden', 'true')
+    viewfinder.style.position = 'absolute'
+    viewfinder.style.left = '50%'
+    viewfinder.style.top = '50%'
+    viewfinder.style.width = '44px'
+    viewfinder.style.height = '44px'
+    viewfinder.style.transform = 'translate(-50%, -50%)'
+    viewfinder.style.pointerEvents = 'none'
+    viewfinder.style.zIndex = '20'
+    viewfinder.style.boxSizing = 'border-box'
+
+    const segments: Array<{
+      left?: string;
+      right?: string;
+      top?: string;
+      bottom?: string;
+      width: string;
+      height: string;
+      transform: string;
+    }> = [
+      { left: '50%', top: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
+      { left: '50%', bottom: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
+      { left: '7px', top: '50%', width: '11px', height: '1px', transform: 'translateY(-50%)' },
+      { right: '7px', top: '50%', width: '11px', height: '1px', transform: 'translateY(-50%)' },
+    ]
+
+    for (const segmentDef of segments) {
+      const segment = document.createElement('div')
+      segment.style.position = 'absolute'
+      segment.style.left = segmentDef.left ?? 'auto'
+      segment.style.right = segmentDef.right ?? 'auto'
+      segment.style.top = segmentDef.top ?? 'auto'
+      segment.style.bottom = segmentDef.bottom ?? 'auto'
+      segment.style.width = segmentDef.width
+      segment.style.height = segmentDef.height
+      segment.style.transform = segmentDef.transform
+      segment.style.background = 'currentColor'
+      segment.style.borderRadius = '999px'
+      segment.style.boxShadow = '0 0 0 1px rgba(0, 0, 0, 0.14)'
+      viewfinder.appendChild(segment)
+    }
+    parent.appendChild(viewfinder)
+
+    this.viewfinderEl = viewfinder
+    this.syncViewfinderVisibility()
+    this.syncViewfinderColor()
+  }
+
+  private syncViewfinderVisibility(): void {
+    if (!this.viewfinderEl) return
+    this.viewfinderEl.style.display = this.viewfinderVisible ? 'block' : 'none'
+  }
+
+  private syncViewfinderColor(): void {
+    if (!this.viewfinderEl) return
+    this.viewfinderEl.style.color = this.viewfinderColor
   }
 
   private initListeners(): void {

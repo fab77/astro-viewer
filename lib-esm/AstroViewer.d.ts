@@ -15,6 +15,9 @@ export declare class AstroViewer {
     private webgl;
     private rafId;
     private webglContextList;
+    private viewfinderEl;
+    private viewfinderVisible;
+    private viewfinderColor;
     run(): number;
     createCatalogue(catalogueName: string, catalogueDescription: string, providerUrl: string, metadataManager: MetadataManager): CatalogueGL;
     showCatalogue(catalogue: CatalogueGL): void;
@@ -56,8 +59,16 @@ export declare class AstroViewer {
     changeFoV3(deg: number): void;
     getInsideSphere(): boolean;
     toggleInsideSphere(): void;
+    toggleViewfinder(): boolean;
+    setViewfinderVisible(visible: boolean): void;
+    isViewfinderVisible(): boolean;
+    setViewfinderColor(color: string): void;
+    getViewfinderColor(): string;
     constructor(canvasEl: HTMLCanvasElement);
     private init;
+    private initViewfinder;
+    private syncViewfinderVisibility;
+    private syncViewfinderColor;
     private initListeners;
     private tick;
     private drawScene;

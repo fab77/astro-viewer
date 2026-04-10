@@ -14,6 +14,7 @@ export interface BootSetup {
     version: string;
     debug: boolean;
     insideView: boolean;
+    showViewfinder: boolean;
 }
 export declare const bootSetup: BootSetup;
 //# sourceMappingURL=Config.d.ts.map
