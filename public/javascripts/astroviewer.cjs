@@ -4668,12 +4668,13 @@ class Camera {
         const pos = this.getCameraPosition();
         const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
         const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
-        const normalizedDistance = Math.min(1, distanceFromSurface / 0.35);
-        const distanceFactor = 0.04 + 0.96 * Math.pow(normalizedDistance, 1.35);
-        // Keep tiny FoV controlled, but let wide FoV regain some responsiveness.
-        const normalizedFoV = Math.min(1, this.FoV / 20);
-        const fovFactor = 0.12 + 1.45 * Math.pow(normalizedFoV, 0.4);
-        const usedRot = (totRot * distanceFactor * fovFactor) / 1.85;
+        const normalizedDistance = Math.min(1, distanceFromSurface / 0.45);
+        const distanceFactor = 0.02 + 0.98 * Math.pow(normalizedDistance, 1.55);
+        // Keep tiny FoV more stable and predictable while preserving responsiveness
+        // at medium and wide fields of view.
+        const normalizedFoV = Math.min(1, this.FoV / 18);
+        const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
+        const usedRot = (totRot * distanceFactor * fovFactor) / 1.9;
         // Build an axis from phi/theta, but zero components that are locked
         let axisX = this.lockRotX ? 0 : theta;
         let axisY = this.lockRotY ? 0 : phi;
