@@ -66,6 +66,9 @@ export class TileBuffer {
   /** Preload/add tile for every registered equatorial HiPS. */
   addTile(order: number, tileno: number): void {
     for (const hips of this._activeHiPS.keys()) {
+      if (order > hips.maxOrder) {
+        continue
+      }
       this.getTile(tileno, order, hips)
     }
   }
@@ -73,6 +76,9 @@ export class TileBuffer {
   /** Preload/add tile for every registered galactic HiPS. */
   addGalTile(order: number, tileno: number): void {
     for (const hips of this._galActiveHiPS.keys()) {
+      if (order > hips.maxOrder) {
+        continue
+      }
       this.getGalTile(tileno, order, hips)
     }
   }

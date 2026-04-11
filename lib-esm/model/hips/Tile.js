@@ -63,6 +63,13 @@ export default class Tile {
         this._cacheTime0 = new Date().getTime();
     }
     initImage() {
+        if (this._order > this._maxorder) {
+            this._ready = false;
+            this._abort = true;
+            this.destroyIntervals();
+            console.warn(`[Tile] Skipping tile request above max order: requested order ${this._order}, max order ${this._maxorder}, url ${this._baseurl}`);
+            return;
+        }
         this._image = new Image();
         const dirnumber = Math.floor(this._tileno / 10000) * 10000;
         this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;

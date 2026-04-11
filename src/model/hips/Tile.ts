@@ -108,6 +108,16 @@ export default class Tile {
   }
 
   private initImage(): void {
+    if (this._order > this._maxorder) {
+      this._ready = false
+      this._abort = true
+      this.destroyIntervals()
+      console.warn(
+        `[Tile] Skipping tile request above max order: requested order ${this._order}, max order ${this._maxorder}, url ${this._baseurl}`
+      )
+      return
+    }
+
     this._image = new Image()
 
     const dirnumber = Math.floor(this._tileno / 10000) * 10000

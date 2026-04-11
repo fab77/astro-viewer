@@ -49,12 +49,18 @@ export class TileBuffer {
     /** Preload/add tile for every registered equatorial HiPS. */
     addTile(order, tileno) {
         for (const hips of this._activeHiPS.keys()) {
+            if (order > hips.maxOrder) {
+                continue;
+            }
             this.getTile(tileno, order, hips);
         }
     }
     /** Preload/add tile for every registered galactic HiPS. */
     addGalTile(order, tileno) {
         for (const hips of this._galActiveHiPS.keys()) {
+            if (order > hips.maxOrder) {
+                continue;
+            }
             this.getGalTile(tileno, order, hips);
         }
     }

@@ -9606,6 +9606,13 @@ class Tile {
         this._cacheTime0 = new Date().getTime();
     }
     initImage() {
+        if (this._order > this._maxorder) {
+            this._ready = false;
+            this._abort = true;
+            this.destroyIntervals();
+            console.warn(`[Tile] Skipping tile request above max order: requested order ${this._order}, max order ${this._maxorder}, url ${this._baseurl}`);
+            return;
+        }
         this._image = new Image();
         const dirnumber = Math.floor(this._tileno / 10000) * 10000;
         this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
@@ -9941,12 +9948,18 @@ class TileBuffer {
     /** Preload/add tile for every registered equatorial HiPS. */
     addTile(order, tileno) {
         for (const hips of this._activeHiPS.keys()) {
+            if (order > hips.maxOrder) {
+                continue;
+            }
             this.getTile(tileno, order, hips);
         }
     }
     /** Preload/add tile for every registered galactic HiPS. */
     addGalTile(order, tileno) {
         for (const hips of this._galActiveHiPS.keys()) {
+            if (order > hips.maxOrder) {
+                continue;
+            }
             this.getGalTile(tileno, order, hips);
         }
     }
@@ -13702,7 +13715,7 @@ class AstroViewer {
         viewfinder.style.height = '44px';
         viewfinder.style.transform = 'translate(-50%, -50%)';
         viewfinder.style.pointerEvents = 'none';
-        viewfinder.style.zIndex = '20';
+        viewfinder.style.zIndex = '1';
         viewfinder.style.boxSizing = 'border-box';
         const segments = [
             { left: '50%', top: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },

@@ -238,7 +238,7 @@ export class AstroViewer {
         viewfinder.style.height = '44px';
         viewfinder.style.transform = 'translate(-50%, -50%)';
         viewfinder.style.pointerEvents = 'none';
-        viewfinder.style.zIndex = '20';
+        viewfinder.style.zIndex = '1';
         viewfinder.style.boxSizing = 'border-box';
         const segments = [
             { left: '50%', top: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
