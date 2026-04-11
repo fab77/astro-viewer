@@ -1,3 +1,43 @@
+export const COLOR_MAP_SAMPLE_COUNT = 256;
+function validateColorChannel(name, values) {
+    if (!Array.isArray(values)) {
+        throw new Error(`Channel "${name}" must be an array.`);
+    }
+    if (values.length !== COLOR_MAP_SAMPLE_COUNT) {
+        throw new Error(`Channel "${name}" must contain exactly ${COLOR_MAP_SAMPLE_COUNT} samples.`);
+    }
+    for (let i = 0; i < values.length; i += 1) {
+        const value = values[i];
+        if (!Number.isFinite(value)) {
+            throw new Error(`Channel "${name}" contains a non-finite value at index ${i}.`);
+        }
+        if (value < 0 || value > 255) {
+            throw new Error(`Channel "${name}" contains an out-of-range value at index ${i}. Expected 0..255.`);
+        }
+    }
+}
+function packColorChannel(values) {
+    const packed = new Float32Array(COLOR_MAP_SAMPLE_COUNT * 4);
+    for (let i = 0; i < COLOR_MAP_SAMPLE_COUNT; i += 1) {
+        packed[i * 4] = values[i];
+    }
+    return packed;
+}
+export function createColorMapFromSamples(name, channels) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+        throw new Error("Color map name must not be empty.");
+    }
+    validateColorChannel("r", channels.r);
+    validateColorChannel("g", channels.g);
+    validateColorChannel("b", channels.b);
+    return {
+        name: trimmedName,
+        r: packColorChannel(channels.r),
+        g: packColorChannel(channels.g),
+        b: packColorChannel(channels.b),
+    };
+}
 export const ColorMaps = {
     grayscale: {
         name: 'grayscale',

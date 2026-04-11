@@ -145,6 +145,10 @@ createFootprintSet(footprintSetName: string,
     this.astroSphere.changeColorMap(colorMap)
   }
 
+  changeCustomColorMap(colorMap: ColorMap) {
+    this.astroSphere.changeColorMap(colorMap)
+  }
+
   getActiveHiPS(): HiPS | null {
     return this.astroSphere.activeHiPS
   }

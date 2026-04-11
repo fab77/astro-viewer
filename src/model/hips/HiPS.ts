@@ -182,11 +182,15 @@ export class HiPS extends AbstractSkyEntity {
         super.hipsShaderProgram.setColorMapShader()
         // hipsShaderProgram.setColorMapShader()
         break
-      default:
+      case 'native':
         this.colorMapIdx = 0
         this.colorMap = ColorMaps['native']
         super.hipsShaderProgram.setNativeShader()
-        // hipsShaderProgram.setNativeShader()
+        break
+      default:
+        this.colorMapIdx = 9
+        this.colorMap = colorMap
+        super.hipsShaderProgram.setColorMapShader()
     }
   }
 
@@ -219,6 +223,7 @@ export class HiPS extends AbstractSkyEntity {
     
     // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
     const mMatrix = this.getModelMatrix() as Float32Array
+    super.hipsShaderProgram.setRuntimeColorMap(this.colorMap)
 
     if (this._allSky && this._allSkyTile) {
       if (this.isGalacticHips) {

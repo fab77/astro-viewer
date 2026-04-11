@@ -35,6 +35,9 @@ type Locations = {
 // export default class HiPSShaderProgram {
 export class HiPSShaderProgram {
   private _colorMapBlockIndex: number | null = null;
+  private _runtimeColorMap:
+    | { r: Float32Array; g: Float32Array; b: Float32Array }
+    | undefined;
 
   private _shaderProgram: WebGLProgram | undefined
   private _vertexShader!: WebGLShader
@@ -95,6 +98,14 @@ export class HiPSShaderProgram {
     }
     ; gl.useProgram(this._shaderProgram)
     return this._shaderProgram
+  }
+
+  setRuntimeColorMap(
+    colorMap:
+      | { r: Float32Array; g: Float32Array; b: Float32Array }
+      | undefined,
+  ): void {
+    this._runtimeColorMap = colorMap
   }
 
   private initShaders(): void {
@@ -347,6 +358,10 @@ export class HiPSShaderProgram {
           g: ColorMaps.gray.g,
           b: ColorMaps.gray.b,
         };
+      }
+
+      if (!currentColorMap) {
+        currentColorMap = this._runtimeColorMap
       }
 
       if (currentColorMap) {

@@ -102,6 +102,9 @@ export class AstroViewer {
         // hips.changeColorMap(colorMap)
         this.astroSphere.changeColorMap(colorMap);
     }
+    changeCustomColorMap(colorMap) {
+        this.astroSphere.changeColorMap(colorMap);
+    }
     getActiveHiPS() {
         return this.astroSphere.activeHiPS;
     }

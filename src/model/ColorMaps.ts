@@ -10,13 +10,71 @@ export type ColorMapName =
   | 'gray';
 
 export interface ColorMap {
-  name: ColorMapName;
+  name: string;
   r: Float32Array;
   g: Float32Array;
   b: Float32Array;
   // r: number[];
   // g: number[];
   // b: number[];
+}
+
+export const COLOR_MAP_SAMPLE_COUNT = 256;
+
+type ColorChannelSamples = {
+  r: number[];
+  g: number[];
+  b: number[];
+};
+
+function validateColorChannel(name: string, values: number[]): void {
+  if (!Array.isArray(values)) {
+    throw new Error(`Channel "${name}" must be an array.`);
+  }
+  if (values.length !== COLOR_MAP_SAMPLE_COUNT) {
+    throw new Error(
+      `Channel "${name}" must contain exactly ${COLOR_MAP_SAMPLE_COUNT} samples.`,
+    );
+  }
+
+  for (let i = 0; i < values.length; i += 1) {
+    const value = values[i];
+    if (!Number.isFinite(value)) {
+      throw new Error(`Channel "${name}" contains a non-finite value at index ${i}.`);
+    }
+    if (value < 0 || value > 255) {
+      throw new Error(`Channel "${name}" contains an out-of-range value at index ${i}. Expected 0..255.`);
+    }
+  }
+}
+
+function packColorChannel(values: number[]): Float32Array {
+  const packed = new Float32Array(COLOR_MAP_SAMPLE_COUNT * 4);
+  for (let i = 0; i < COLOR_MAP_SAMPLE_COUNT; i += 1) {
+    packed[i * 4] = values[i];
+  }
+  return packed;
+}
+
+export function createColorMapFromSamples(
+  name: string,
+  channels: ColorChannelSamples,
+): ColorMap {
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    throw new Error("Color map name must not be empty.");
+  }
+
+  validateColorChannel("r", channels.r);
+  validateColorChannel("g", channels.g);
+  validateColorChannel("b", channels.b);
+
+  return {
+    name: trimmedName,
+    r: packColorChannel(channels.r),
+    g: packColorChannel(channels.g),
+    b: packColorChannel(channels.b),
+  };
 }
 
 export const ColorMaps: Record<ColorMapName, ColorMap> = {

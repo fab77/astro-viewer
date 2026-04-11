@@ -4,6 +4,7 @@ import { ColorMaps } from '../model/ColorMaps.js';
 // export default class HiPSShaderProgram {
 export class HiPSShaderProgram {
     _colorMapBlockIndex = null;
+    _runtimeColorMap;
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
@@ -55,6 +56,9 @@ export class HiPSShaderProgram {
         ;
         gl.useProgram(this._shaderProgram);
         return this._shaderProgram;
+    }
+    setRuntimeColorMap(colorMap) {
+        this._runtimeColorMap = colorMap;
     }
     initShaders() {
         // const gl = global.gl as GL
@@ -233,6 +237,9 @@ export class HiPSShaderProgram {
                     g: ColorMaps.gray.g,
                     b: ColorMaps.gray.b,
                 };
+            }
+            if (!currentColorMap) {
+                currentColorMap = this._runtimeColorMap;
             }
             if (currentColorMap) {
                 const info = this._UBO_colorMapVariableInfo;

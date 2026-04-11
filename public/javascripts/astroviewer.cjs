@@ -40,6 +40,7 @@ __webpack_require__.r(__webpack_exports__);
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
   AstroViewer: () => (/* reexport */ AstroViewer),
+  COLOR_MAP_SAMPLE_COUNT: () => (/* reexport */ COLOR_MAP_SAMPLE_COUNT),
   CatalogueGL: () => (/* reexport */ CatalogueGL),
   ColorMaps: () => (/* reexport */ ColorMaps),
   ColumnType: () => (/* reexport */ ColumnType),
@@ -53,7 +54,8 @@ __webpack_require__.d(__webpack_exports__, {
   MetadataColumn: () => (/* reexport */ MetadataColumn),
   MetadataManager: () => (/* reexport */ MetadataManager),
   Point: () => (/* reexport */ Point),
-  Source: () => (/* reexport */ Source)
+  Source: () => (/* reexport */ Source),
+  createColorMapFromSamples: () => (/* reexport */ createColorMapFromSamples)
 });
 
 ;// ./src/Config.ts
@@ -5340,6 +5342,46 @@ class ShaderManager {
 }
 
 ;// ./src/model/ColorMaps.ts
+const COLOR_MAP_SAMPLE_COUNT = 256;
+function validateColorChannel(name, values) {
+    if (!Array.isArray(values)) {
+        throw new Error(`Channel "${name}" must be an array.`);
+    }
+    if (values.length !== COLOR_MAP_SAMPLE_COUNT) {
+        throw new Error(`Channel "${name}" must contain exactly ${COLOR_MAP_SAMPLE_COUNT} samples.`);
+    }
+    for (let i = 0; i < values.length; i += 1) {
+        const value = values[i];
+        if (!Number.isFinite(value)) {
+            throw new Error(`Channel "${name}" contains a non-finite value at index ${i}.`);
+        }
+        if (value < 0 || value > 255) {
+            throw new Error(`Channel "${name}" contains an out-of-range value at index ${i}. Expected 0..255.`);
+        }
+    }
+}
+function packColorChannel(values) {
+    const packed = new Float32Array(COLOR_MAP_SAMPLE_COUNT * 4);
+    for (let i = 0; i < COLOR_MAP_SAMPLE_COUNT; i += 1) {
+        packed[i * 4] = values[i];
+    }
+    return packed;
+}
+function createColorMapFromSamples(name, channels) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+        throw new Error("Color map name must not be empty.");
+    }
+    validateColorChannel("r", channels.r);
+    validateColorChannel("g", channels.g);
+    validateColorChannel("b", channels.b);
+    return {
+        name: trimmedName,
+        r: packColorChannel(channels.r),
+        g: packColorChannel(channels.g),
+        b: packColorChannel(channels.b),
+    };
+}
 const ColorMaps = {
     grayscale: {
         name: 'grayscale',
@@ -6595,6 +6637,7 @@ const ColorMaps = {
 // export default class HiPSShaderProgram {
 class HiPSShaderProgram {
     _colorMapBlockIndex = null;
+    _runtimeColorMap;
     _shaderProgram;
     _vertexShader;
     _fragmentShader;
@@ -6646,6 +6689,9 @@ class HiPSShaderProgram {
         ;
         gl.useProgram(this._shaderProgram);
         return this._shaderProgram;
+    }
+    setRuntimeColorMap(colorMap) {
+        this._runtimeColorMap = colorMap;
     }
     initShaders() {
         // const gl = global.gl as GL
@@ -6824,6 +6870,9 @@ class HiPSShaderProgram {
                     g: ColorMaps.gray.g,
                     b: ColorMaps.gray.b,
                 };
+            }
+            if (!currentColorMap) {
+                currentColorMap = this._runtimeColorMap;
             }
             if (currentColorMap) {
                 const info = this._UBO_colorMapVariableInfo;
@@ -7598,6 +7647,7 @@ class AllSky {
 class HiPS extends AbstractSkyEntity {
     _ancestorTiles;
     _allSkyTile;
+    _descriptor;
     _format;
     _baseurl;
     _maxorder;
@@ -7613,8 +7663,11 @@ class HiPS extends AbstractSkyEntity {
     get minOrder() { return this._minorder; }
     get baseURL() { return this._baseurl; }
     get format() { return this._format; }
+    get propertiesRawText() { return this._descriptor.propertiesRawText; }
+    get properties() { return this._descriptor.properties; }
     constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
         super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
+        this._descriptor = descriptor;
         // this.initGL((global as any).gl as WebGL2RenderingContext)
         this.initGL(webgl);
         this._healpixGrid = healpixGrid;
@@ -7646,6 +7699,9 @@ class HiPS extends AbstractSkyEntity {
                 this._ancestorTiles.push(new hips_AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl));
             }
         }
+    }
+    getProperty(key) {
+        return this._descriptor.getProperty(key);
     }
     changeFormat(format) {
         this._format = format;
@@ -7731,11 +7787,15 @@ class HiPS extends AbstractSkyEntity {
                 super.hipsShaderProgram.setColorMapShader();
                 // hipsShaderProgram.setColorMapShader()
                 break;
-            default:
+            case 'native':
                 this.colorMapIdx = 0;
                 this.colorMap = model_ColorMaps['native'];
                 super.hipsShaderProgram.setNativeShader();
-            // hipsShaderProgram.setNativeShader()
+                break;
+            default:
+                this.colorMapIdx = 9;
+                this.colorMap = colorMap;
+                super.hipsShaderProgram.setColorMapShader();
         }
     }
     initShaders() {
@@ -7762,6 +7822,7 @@ class HiPS extends AbstractSkyEntity {
         this.refresh();
         // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
         const mMatrix = this.getModelMatrix();
+        super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
         if (this._allSky && this._allSkyTile) {
             if (this.isGalacticHips) {
                 this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.galAncestorsMap, 
@@ -11501,6 +11562,7 @@ class HiPSDescriptor {
     _emMax;
     _isGalctic = false;
     _propertiesRawText;
+    _propertiesMap = new Map();
     constructor(hipsproperties, hipsurl) {
         this._hipsurl = hipsurl;
         this._propertiesRawText = hipsproperties;
@@ -11509,6 +11571,11 @@ class HiPSDescriptor {
             const line = raw.trim();
             if (!line || line.startsWith('#'))
                 continue;
+            const maybeKey = line.slice(0, line.indexOf('=')).trim();
+            const maybeValue = this.getValue(line);
+            if (maybeKey && maybeValue !== undefined) {
+                this._propertiesMap.set(maybeKey, maybeValue);
+            }
             if (line.startsWith('hips_tile_format') || line.startsWith('format')) {
                 // normalize jpeg→jpg
                 const list = this.getValue(line)?.replace(/jpeg/gi, 'jpg') ?? '';
@@ -11570,6 +11637,12 @@ class HiPSDescriptor {
     // --- Getters ---
     get propertiesRawText() {
         return this._propertiesRawText;
+    }
+    get properties() {
+        return new Map(this._propertiesMap);
+    }
+    getProperty(key) {
+        return this._propertiesMap.get(key);
     }
     get surveyName() {
         return this._hipsName;
@@ -13579,6 +13652,9 @@ class AstroViewer {
     changeColorMap(colorMapName) {
         const colorMap = model_ColorMaps[colorMapName];
         // hips.changeColorMap(colorMap)
+        this.astroSphere.changeColorMap(colorMap);
+    }
+    changeCustomColorMap(colorMap) {
         this.astroSphere.changeColorMap(colorMap);
     }
     getActiveHiPS() {

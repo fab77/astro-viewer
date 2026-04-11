@@ -25,6 +25,7 @@ type Locations = {
 };
 export declare class HiPSShaderProgram {
     private _colorMapBlockIndex;
+    private _runtimeColorMap;
     private _shaderProgram;
     private _vertexShader;
     private _fragmentShader;
@@ -36,6 +37,11 @@ export declare class HiPSShaderProgram {
     private _webgl;
     constructor(webgl: WebGL2RenderingContext);
     get shaderProgram(): WebGLProgram;
+    setRuntimeColorMap(colorMap: {
+        r: Float32Array;
+        g: Float32Array;
+        b: Float32Array;
+    } | undefined): void;
     private initShaders;
     enableProgram(): void;
     setGrayscaleShader(): void;
