@@ -17,7 +17,7 @@ export class AstroViewer {
     webglContextList = new Map();
     viewfinderEl = null;
     viewfinderVisible = bootSetup.showViewfinder;
-    viewfinderColor = 'rgba(255,255,255,0.68)';
+    viewfinderColor = 'rgba(75,148,226,0.68)';
     // API
     run() {
         return this.tick();

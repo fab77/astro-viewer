@@ -28,7 +28,7 @@ export class AstroViewer {
   private webglContextList: Map<string, GL2WithViewport> = new Map<string, GL2WithViewport>()
   private viewfinderEl: HTMLDivElement | null = null
   private viewfinderVisible = bootSetup.showViewfinder
-  private viewfinderColor = 'rgba(255,255,255,0.68)'
+  private viewfinderColor = 'rgba(75,148,226,0.68)'
 
 
 
