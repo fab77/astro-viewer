@@ -41,6 +41,7 @@ __webpack_require__.r(__webpack_exports__);
 __webpack_require__.d(__webpack_exports__, {
   AstroViewer: () => (/* reexport */ AstroViewer),
   CatalogueGL: () => (/* reexport */ CatalogueGL),
+  ColorMaps: () => (/* reexport */ ColorMaps),
   ColumnType: () => (/* reexport */ ColumnType),
   CoordsType: () => (/* reexport */ CoordsType),
   FoV: () => (/* reexport */ FoV),
@@ -13810,6 +13811,7 @@ class AstroViewer {
 }
 
 ;// ./src/index.ts
+
 
 
 

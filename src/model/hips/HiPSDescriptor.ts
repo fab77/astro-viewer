@@ -21,6 +21,7 @@ export class HiPSDescriptor {
   private _emMax: number | undefined
   private _isGalctic: boolean = false
   private _propertiesRawText: string
+  private _propertiesMap: Map<string, string> = new Map()
 
   constructor(hipsproperties: string, hipsurl: string) {
     this._hipsurl = hipsurl
@@ -30,6 +31,12 @@ export class HiPSDescriptor {
     for (const raw of lines) {
       const line = raw.trim()
       if (!line || line.startsWith('#')) continue
+
+      const maybeKey = line.slice(0, line.indexOf('=')).trim()
+      const maybeValue = this.getValue(line)
+      if (maybeKey && maybeValue !== undefined) {
+        this._propertiesMap.set(maybeKey, maybeValue)
+      }
 
       if (line.startsWith('hips_tile_format') || line.startsWith('format')) {
         // normalize jpeg→jpg
@@ -92,6 +99,14 @@ export class HiPSDescriptor {
   // --- Getters ---
   get propertiesRawText(){
     return this._propertiesRawText
+  }
+
+  get properties(): ReadonlyMap<string, string> {
+    return new Map(this._propertiesMap)
+  }
+
+  getProperty(key: string): string | undefined {
+    return this._propertiesMap.get(key)
   }
 
   get surveyName(): string {

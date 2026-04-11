@@ -8,6 +8,7 @@ import { HealpixGrid } from '../grid/HealpixGrid.js';
 export declare class HiPS extends AbstractSkyEntity {
     private _ancestorTiles;
     private _allSkyTile;
+    private _descriptor;
     private _format;
     private _baseurl;
     private _maxorder;
@@ -22,7 +23,10 @@ export declare class HiPS extends AbstractSkyEntity {
     get minOrder(): number;
     get baseURL(): string;
     get format(): string;
+    get propertiesRawText(): string;
+    get properties(): ReadonlyMap<string, string>;
     constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, descriptor: HiPSDescriptor, webgl: WebGL2RenderingContext, healpixGrid: HealpixGrid);
+    getProperty(key: string): string | undefined;
     changeFormat(format: string): void;
     /**
      * Shader colormap switcher

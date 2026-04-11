@@ -21,6 +21,7 @@ export class HiPS extends AbstractSkyEntity {
   
   private _ancestorTiles: AncestorTile[]
   private _allSkyTile: AllSky | null
+  private _descriptor: HiPSDescriptor
 
   private _format: string
   private _baseurl: string
@@ -40,6 +41,8 @@ export class HiPS extends AbstractSkyEntity {
   get minOrder(): number { return this._minorder }
   get baseURL(): string { return this._baseurl }
   get format(): string { return this._format }
+  get propertiesRawText(): string { return this._descriptor.propertiesRawText }
+  get properties(): ReadonlyMap<string, string> { return this._descriptor.properties }
 
   constructor(
     radius: number,
@@ -51,6 +54,7 @@ export class HiPS extends AbstractSkyEntity {
     healpixGrid: HealpixGrid
   ) {
     super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic)
+    this._descriptor = descriptor
     // this.initGL((global as any).gl as WebGL2RenderingContext)
     this.initGL(webgl as WebGL2RenderingContext)
     this._healpixGrid = healpixGrid
@@ -88,6 +92,10 @@ export class HiPS extends AbstractSkyEntity {
         this._ancestorTiles.push(new AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl))
       }
     }
+  }
+
+  getProperty(key: string): string | undefined {
+    return this._descriptor.getProperty(key)
   }
 
   changeFormat(format: string): void {

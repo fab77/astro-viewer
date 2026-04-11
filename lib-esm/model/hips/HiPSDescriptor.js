@@ -13,6 +13,7 @@ export class HiPSDescriptor {
     _emMax;
     _isGalctic = false;
     _propertiesRawText;
+    _propertiesMap = new Map();
     constructor(hipsproperties, hipsurl) {
         this._hipsurl = hipsurl;
         this._propertiesRawText = hipsproperties;
@@ -21,6 +22,11 @@ export class HiPSDescriptor {
             const line = raw.trim();
             if (!line || line.startsWith('#'))
                 continue;
+            const maybeKey = line.slice(0, line.indexOf('=')).trim();
+            const maybeValue = this.getValue(line);
+            if (maybeKey && maybeValue !== undefined) {
+                this._propertiesMap.set(maybeKey, maybeValue);
+            }
             if (line.startsWith('hips_tile_format') || line.startsWith('format')) {
                 // normalize jpeg→jpg
                 const list = this.getValue(line)?.replace(/jpeg/gi, 'jpg') ?? '';
@@ -82,6 +88,12 @@ export class HiPSDescriptor {
     // --- Getters ---
     get propertiesRawText() {
         return this._propertiesRawText;
+    }
+    get properties() {
+        return new Map(this._propertiesMap);
+    }
+    getProperty(key) {
+        return this._propertiesMap.get(key);
     }
     get surveyName() {
         return this._hipsName;

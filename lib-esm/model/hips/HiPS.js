@@ -12,6 +12,7 @@ import AllSky from './AllSky.js';
 export class HiPS extends AbstractSkyEntity {
     _ancestorTiles;
     _allSkyTile;
+    _descriptor;
     _format;
     _baseurl;
     _maxorder;
@@ -27,8 +28,11 @@ export class HiPS extends AbstractSkyEntity {
     get minOrder() { return this._minorder; }
     get baseURL() { return this._baseurl; }
     get format() { return this._format; }
+    get propertiesRawText() { return this._descriptor.propertiesRawText; }
+    get properties() { return this._descriptor.properties; }
     constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
         super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
+        this._descriptor = descriptor;
         // this.initGL((global as any).gl as WebGL2RenderingContext)
         this.initGL(webgl);
         this._healpixGrid = healpixGrid;
@@ -60,6 +64,9 @@ export class HiPS extends AbstractSkyEntity {
                 this._ancestorTiles.push(new AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl));
             }
         }
+    }
+    getProperty(key) {
+        return this._descriptor.getProperty(key);
     }
     changeFormat(format) {
         this._format = format;
