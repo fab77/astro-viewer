@@ -9,7 +9,8 @@ export { MetadataColumn, MetadataInit, ColumnType } from './model/MetadataColumn
 export { Point, SphericalOpts, AstroOpts, PointInitOpts, CartesianOpts } from './model/Point.js';
 export { FoVUtils } from './utils/FoVUtils.js';
 export { CoordsType } from './utils/CoordsType.js';
-export { ColorMapName } from './model/ColorMaps.js';
+export { ColorMaps } from './model/ColorMaps.js';
+export type { ColorMap, ColorMapName } from './model/ColorMaps.js';
 export { HiPS } from './model/hips/HiPS.js';
 export { Source } from './model/Source.js';
 export { Footprint } from './model/footprints/Footprint.js';

@@ -8,6 +8,7 @@ export { MetadataColumn, ColumnType } from './model/MetadataColumn.js';
 export { Point } from './model/Point.js';
 export { FoVUtils } from './utils/FoVUtils.js';
 export { CoordsType } from './utils/CoordsType.js';
+export { ColorMaps } from './model/ColorMaps.js';
 export { HiPS } from './model/hips/HiPS.js';
 export { Source } from './model/Source.js';
 export { Footprint } from './model/footprints/Footprint.js';
