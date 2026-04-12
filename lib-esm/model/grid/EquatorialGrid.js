@@ -1,22 +1,19 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { vec4, mat4 } from 'gl-matrix';
-import global from '../../Global.js';
 import { fovHelper } from '../hips/FoVHelper.js';
 import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
-import Point from '../Point.js';
-import CoordsType from '../../utils/CoordsType.js';
-import FoVUtils from '../../utils/FoVUtils.js';
+import { Point } from '../Point.js';
+import { CoordsType } from '../../utils/CoordsType.js';
+import { FoVUtils } from '../../utils/FoVUtils.js';
 import GridTextHelper from './GridTextHelper.js';
-import HealpixGridSingleton from './HealpixGridSingleton.js';
-import AbstractSkyEntity from '../AbstractSkyEntity.js';
-import healpixGridSingleton from './HealpixGridSingleton.js';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
+import { HealpixGrid } from './HealpixGrid.js';
+import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
 /** Equatorial grid rendered as RA/Dec great-circle line loops */
-class EquatorialGrid extends AbstractSkyEntity {
+export class EquatorialGrid extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    showGrid = true;
+    showGrid = false;
     // private _gl: GL;
     _shaderProgram;
     _vertexShader;
@@ -44,21 +41,23 @@ class EquatorialGrid extends AbstractSkyEntity {
     //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
     _dec4Labels = new Map();
     _ra4Labels = new Map();
+    _healpixGrid;
     /**
      * @param radius Not used by current implementation (sphere is unit-radius)
      * @param fov    Field of view in degrees
      */
-    constructor() {
-        super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'equatorial-grid');
+    constructor(webgl, healpixGrid) {
+        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
+        this._healpixGrid = healpixGrid;
     }
     init(fov) {
         this._fov = fov;
-        this.initGL(global.gl);
+        this.initGL(super.webgl);
         // Program & buffers
-        this._shaderProgram = global.gl.createProgram();
+        this._shaderProgram = super.webgl.createProgram();
         this.initShaders();
-        this._phiVertexPositionBuffer = global.gl.createBuffer();
-        this._thetaVertexPositionBuffer = global.gl.createBuffer();
+        this._phiVertexPositionBuffer = super.webgl.createBuffer();
+        this._thetaVertexPositionBuffer = super.webgl.createBuffer();
         // Build initial RA/Dec line buffers
         this.initBuffers(this._fov);
     }
@@ -66,35 +65,35 @@ class EquatorialGrid extends AbstractSkyEntity {
     initShaders() {
         // Fragment
         const fsSource = GridShaderManager.healpixGridFS();
-        this._fragmentShader = global.gl.createShader(global.gl.FRAGMENT_SHADER);
-        global.gl.shaderSource(this._fragmentShader, fsSource);
-        global.gl.compileShader(this._fragmentShader);
-        if (!global.gl.getShaderParameter(this._fragmentShader, global.gl.COMPILE_STATUS)) {
+        this._fragmentShader = super.webgl.createShader(super.webgl.FRAGMENT_SHADER);
+        super.webgl.shaderSource(this._fragmentShader, fsSource);
+        super.webgl.compileShader(this._fragmentShader);
+        if (!super.webgl.getShaderParameter(this._fragmentShader, super.webgl.COMPILE_STATUS)) {
             // Keep identical behavior (alert) but surface errors in console too
-            const log = global.gl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
+            const log = super.webgl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
             console.error(log);
             alert(log);
             return;
         }
         // Vertex
         const vsSource = GridShaderManager.healpixGridVS();
-        this._vertexShader = global.gl.createShader(global.gl.VERTEX_SHADER);
-        global.gl.shaderSource(this._vertexShader, vsSource);
-        global.gl.compileShader(this._vertexShader);
-        if (!global.gl.getShaderParameter(this._vertexShader, global.gl.COMPILE_STATUS)) {
-            const log = global.gl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
+        this._vertexShader = super.webgl.createShader(super.webgl.VERTEX_SHADER);
+        super.webgl.shaderSource(this._vertexShader, vsSource);
+        super.webgl.compileShader(this._vertexShader);
+        if (!super.webgl.getShaderParameter(this._vertexShader, super.webgl.COMPILE_STATUS)) {
+            const log = super.webgl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
             console.error(log);
             alert(log);
             return;
         }
         // Link
-        global.gl.attachShader(this._shaderProgram, this._vertexShader);
-        global.gl.attachShader(this._shaderProgram, this._fragmentShader);
-        global.gl.linkProgram(this._shaderProgram);
-        if (!global.gl.getProgramParameter(this._shaderProgram, global.gl.LINK_STATUS)) {
+        super.webgl.attachShader(this._shaderProgram, this._vertexShader);
+        super.webgl.attachShader(this._shaderProgram, this._fragmentShader);
+        super.webgl.linkProgram(this._shaderProgram);
+        if (!super.webgl.getProgramParameter(this._shaderProgram, super.webgl.LINK_STATUS)) {
             alert('Could not initialise shaders');
         }
-        global.gl.useProgram(this._shaderProgram);
+        super.webgl.useProgram(this._shaderProgram);
     }
     /** Build RA/Dec line vertex arrays based on FoV step helper */
     initBuffers(fovDeg) {
@@ -151,8 +150,8 @@ class EquatorialGrid extends AbstractSkyEntity {
         }
     }
     /** Update buffers when FoV (in degrees) changes */
-    refresh() {
-        const fovDeg = healpixGridSingleton.getMinFoV();
+    refresh(fovDeg) {
+        // const fovDeg = healpixGridSingleton.getMinFoV()
         if (this._fov !== fovDeg) {
             this._fov = fovDeg;
             this.initBuffers(this._fov);
@@ -164,12 +163,13 @@ class EquatorialGrid extends AbstractSkyEntity {
         const dz = p1.z - p2.z;
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
-    enableShader(mMatrix, pMatrix) {
-        const gl = global.gl;
+    enableShader(mMatrix, pMatrix, vMatrix) {
+        const gl = super.webgl;
         gl.useProgram(this._shaderProgram);
         // uMVMatrix = camera * model
         const mvMatrix = mat4.create();
-        mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), mMatrix);
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
+        mat4.multiply(mvMatrix, vMatrix, mMatrix);
         // TODO move locations retrieval elsewhere
         // Uniform locations
         const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
@@ -197,40 +197,53 @@ class EquatorialGrid extends AbstractSkyEntity {
      * @param fovObj  current field-of-view (degrees). If your FoV type differs,
      *                pass the numeric value here; this signature matches original usage.
      */
-    draw() {
-        const gl = global.gl;
+    draw(input) {
+        const fovDeg = input.fovDeg;
+        if (!fovDeg)
+            return;
+        const gl = super.webgl;
         const mMatrix = this.getModelMatrix();
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const vMatrix = camera.getCameraMatrix();
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        if (!vMatrix)
+            return;
         if (this._thetaArray.length === 0)
             return;
-        this.refresh();
+        this.refresh(fovDeg);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();
             return;
         }
-        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-        this.enableShader(mMatrix, pMatrix);
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+        this.enableShader(mMatrix, pMatrix, vMatrix);
         // Draw Dec rings
         for (let i = 0; i < this._phiArray.length; i++) {
-            global.gl.bindBuffer(global.gl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
-            global.gl.bufferData(global.gl.ARRAY_BUFFER, this._phiArray[i], global.gl.STATIC_DRAW);
-            global.gl.vertexAttribPointer(this._attribLocations.position, 3, global.gl.FLOAT, false, 0, 0);
-            global.gl.enableVertexAttribArray(this._attribLocations.position);
-            global.gl.drawArrays(global.gl.LINE_LOOP, 0, 360 / this._phiStep);
+            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
+            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._phiArray[i], super.webgl.STATIC_DRAW);
+            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
+            super.webgl.enableVertexAttribArray(this._attribLocations.position);
+            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._phiStep);
         }
         // Draw RA rings
         for (let j = 0; j < this._thetaArray.length; j++) {
-            global.gl.bindBuffer(global.gl.ARRAY_BUFFER, this._thetaVertexPositionBuffer);
-            global.gl.bufferData(global.gl.ARRAY_BUFFER, this._thetaArray[j], global.gl.STATIC_DRAW);
-            global.gl.vertexAttribPointer(this._attribLocations.position, 3, global.gl.FLOAT, false, 0, 0);
-            global.gl.enableVertexAttribArray(this._attribLocations.position);
-            global.gl.drawArrays(global.gl.LINE_LOOP, 0, 360 / this._thetaStep);
+            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._thetaVertexPositionBuffer);
+            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._thetaArray[j], super.webgl.STATIC_DRAW);
+            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
+            super.webgl.enableVertexAttribArray(this._attribLocations.position);
+            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
         }
         // Label layout (HTML overlay)
-        const center = FoVUtils.getCenterJ2000(gl.canvas);
+        const center = FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera, pMatrix);
         // MVP = P * V * M
         const mvMatrix = mat4.create();
-        mat4.multiply(mvMatrix, global.camera.getCameraMatrix(), mMatrix);
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
+        mat4.multiply(mvMatrix, vMatrix, mMatrix);
         const mvpMatrix = mat4.create();
         mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
         // Dec labels (loop over RA keys)
@@ -248,8 +261,8 @@ class EquatorialGrid extends AbstractSkyEntity {
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
                         // clip->pixel
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * global.gl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * global.gl.canvas.height;
+                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
+                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
                         this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                         // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                     }
@@ -270,8 +283,8 @@ class EquatorialGrid extends AbstractSkyEntity {
                         vec4.transformMat4(clipspace, phiPoint, mvpMatrix);
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * global.gl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * global.gl.canvas.height;
+                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
+                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
                         // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                         this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                     }
@@ -284,6 +297,6 @@ class EquatorialGrid extends AbstractSkyEntity {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
     }
 }
-const equatorialGridSingleton = new EquatorialGrid();
-export default equatorialGridSingleton;
+// const equatorialGridSingleton = new EquatorialGrid();
+// export default equatorialGridSingleton;
 //# sourceMappingURL=EquatorialGrid.js.map

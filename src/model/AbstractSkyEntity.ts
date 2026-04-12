@@ -4,12 +4,22 @@
 
 import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
 import global from "../Global.js";
-import { bootSetup } from "../Config.js";
+
+import { HiPSShaderProgram } from '../shader/HiPSShaderProgram.js'
+// import { VisibleTilesManager } from "./hips/VisibleTilesManager.js";
+// import { TileBuffer } from "./hips/TileBuffer.js";
+import Camera from "../Camera.js";
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
+export interface SkyEntityDrawInput {
+  fovDeg?: number
+  // cameraMatrix?: Float32Array
+  camera: Camera
+  pMatrix: ReadonlyMat4
+}
 
-abstract class AbstractSkyEntity {
+export abstract class AbstractSkyEntity {
   // Public-ish properties used elsewhere in the app
   public refreshMe = false;
   public fovX_deg = 180;
@@ -17,7 +27,7 @@ abstract class AbstractSkyEntity {
   public xRad: number;
   public yRad: number;
   public prevFoV = this.fovX_deg;
-  public name: string;
+  public _name: string;
   // public insideSphere: boolean = bootSetup.insideSphere
 
   // Picking/sphere
@@ -40,17 +50,24 @@ abstract class AbstractSkyEntity {
   // Precomputed transform from galactic to equatorial (already inverted)
   protected galacticMatrixInverted: mat4 = mat4.create();
 
+  protected _webgl: WebGL2RenderingContext
+  protected _hipsShaderProgram: HiPSShaderProgram;
+  // protected _visibleTilesManager: VisibleTilesManager
+  // protected _tileBuffer: TileBuffer
+
   constructor(
     in_radius: number,
     in_position: ReadonlyVec3,
     in_xRad: number,
     in_yRad: number,
     in_name: string,
+    webgl: WebGL2RenderingContext,
     isGalacticHips?: boolean,
   ) {
+    this._webgl = webgl
     this.xRad = in_xRad;
     this.yRad = in_yRad;
-    this.name = in_name;
+    this._name = in_name;
     this.center = vec3.clone(in_position);
     this.radius = in_radius;
     // this.insideSphere = global.insideSphere
@@ -64,8 +81,26 @@ abstract class AbstractSkyEntity {
       -0.8676661849021912,  -0.19807636737823486,  0.4559837877750397,  0,
        0,                    0,                     0,                   1,
     )
+    // this._tileBuffer = new TileBuffer(1, this._webgl)
+    // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
+    
+    // this._visibleTilesManager = new VisibleTilesManager()
+    this._hipsShaderProgram = new HiPSShaderProgram(this._webgl)
   }
 
+  get name() {
+    return this._name
+  }
+
+  get hipsShaderProgram() {
+    return this._hipsShaderProgram
+  }
+  // get tileBuffer() {
+  //   return this._tileBuffer
+  // }
+  get webgl() {
+    return this._webgl
+  }
   /** GL setup and initial model transform */
   initGL(gl: GL): void {
     // GL resources
@@ -132,6 +167,10 @@ abstract class AbstractSkyEntity {
     return this.modelMatrix;
   }
 
+  setModelMatrix(modelMatrix: ReadonlyMat4) {
+    this.modelMatrix = modelMatrix
+  }
+
   /** Children with hierarchical geometry (e.g., HiPS) can override this. */
   setGeometryNeedsToBeRefreshed(): void {
     (this as any).refreshGeometryOnFoVChanged = false;
@@ -172,8 +211,6 @@ abstract class AbstractSkyEntity {
 
   // ---------- Abstract hooks ----------
   
-  abstract draw(): void;
+  abstract draw(input: SkyEntityDrawInput): void;
 
 }
-
-export default AbstractSkyEntity;

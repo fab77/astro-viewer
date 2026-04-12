@@ -1,6 +1,6 @@
-import Point from "../model/Point.js";
+import {Point} from "../model/Point.js";
 import Point2D from "../model/Point2D.js";
-import CoordsType from "./CoordsType.js";
+import {CoordsType} from "./CoordsType.js";
 
 type ProjectionFlag = 0 | 1 | 2;
 

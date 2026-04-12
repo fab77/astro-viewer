@@ -1,7 +1,7 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-declare class TapMetadata {
+export declare class TapMetadata {
     private _name;
     private _description;
     private _unit;
@@ -28,5 +28,4 @@ declare class TapMetadata {
     get index(): number | undefined;
     set index(idx: number | undefined);
 }
-export default TapMetadata;
 //# sourceMappingURL=TapMetadata.d.ts.map

@@ -13,6 +13,7 @@ export const LS_KEYS = {
 
 export const state = {
   AstroAPI: undefined,
+  AstroAPI2: undefined,
   TAP: undefined,
   CAT_LIST: [],
   FP_LIST: [],

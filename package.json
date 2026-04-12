@@ -1,7 +1,7 @@
 {
-  "name": "astro-core",
+  "name": "astro-viewer",
   "description": "Astrobrowser 3d engine.",
-  "version": "1.1.0",
+  "version": "1.3.0",
   "keywords": [
     "HiPS",
     "HiPS cutout",
@@ -15,13 +15,13 @@
   ],
   "author": "Fabrizio Giordano (fab77)",
   "license": "GPL-3.0-only",
-  "homepage": "https://github.com/fab77/astro-core#readme",
+  "homepage": "https://github.com/fab77/astro-viewer#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/fab77/astro-core.git"
+    "url": "git+https://github.com/fab77/astro-viewer.git"
   },
   "bugs": {
-    "url": "https://github.com/fab77/astro-core/issues",
+    "url": "https://github.com/fab77/astro-viewer/issues",
     "email": "fabriziogiordano77@gmail.com"
   },
   "type": "module",
@@ -29,14 +29,14 @@
     ".": {
       "types": "./lib-esm/index.d.ts",
       "import": "./lib-esm/index.js",
-      "require": "./dist/astro-core.cjs"
+      "require": "./dist/astroviewer.cjs"
     }
   },
   "module": "./lib-esm/index.js",
-  "main": "./dist/astro-core.cjs",
+  "main": "./dist/astroviewer.cjs",
   "types": "./lib-esm/index.d.ts",
-  "unpkg": "dist/astro-core.min.js",
-  "jsdelivr": "dist/astro-core.min.js",
+  "unpkg": "dist/astroviewer.min.js",
+  "jsdelivr": "dist/astroviewer.min.js",
   "files": [
     "lib-esm/",
     "dist"
@@ -45,11 +45,10 @@
   "sideEffects": false,
   "scripts": {
     "clean": "shx rm -rf dist lib-esm",
-    "dev": "npm run clean && tsc && webpack --mode=development --watch --progress; cp dist/* webtest/",
-    "prod": "npm run clean && tsc && webpack --mode=production && npm run web",
-    "web": "cp dist/* public/javascripts/; cp -R src/html/javascripts/ public/javascripts/; cp -R src/html/css/ public/css/; cp src/html/index.html public/",
-    "start-server": "npx http-server public",
-    "all": "npm run clean; npm run prod; npm run start-server"
+    "build": "npm run clean && tsc && webpack --mode=production",
+    "build:dev": "npm run clean && tsc && webpack --mode=development --watch --progress",
+    "web": "cp dist/* public/javascripts/; cp -R src/html/javascripts/ public/javascripts/; cp -R src/html/css/ public/css/; cp src/html/*.html public/",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=22.0.0"

@@ -3,16 +3,16 @@ export class TapRepo {
     _cataloguesList;
     _observationsList;
     _notClassified;
-    _activeObservations;
-    _activeCatalogues;
+    // private _activeObservations: FootprintSetGL[]
+    // private _activeCatalogues: CatalogueGL[]
     _tapBaseURL;
     constructor(tapUrl) {
         this._tapBaseURL = tapUrl;
         this._cataloguesList = [];
         this._observationsList = [];
         this._notClassified = [];
-        this._activeObservations = [];
-        this._activeCatalogues = [];
+        // this._activeObservations = []
+        // this._activeCatalogues = []
         this._adqlFunctionList = [];
     }
     get tapBaseUrl() {
@@ -27,12 +27,12 @@ export class TapRepo {
     setNotClassifiedList(notClassifiedList) {
         this._notClassified = notClassifiedList;
     }
-    setCatalogueActive(catalogue) {
-        this._activeCatalogues.push(catalogue);
-    }
-    setObservationActive(observation) {
-        this._activeObservations.push(observation);
-    }
+    // setCatalogueActive(catalogue: CatalogueGL): void {
+    //   this._activeCatalogues.push(catalogue)
+    // }
+    // setObservationActive(observation: FootprintSetGL): void {
+    //   this._activeObservations.push(observation)
+    // }
     get cataloguesList() {
         return this._cataloguesList;
     }

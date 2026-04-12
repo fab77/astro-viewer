@@ -1,4 +1,7 @@
-import HiPS from './HiPS.js';
+import { TileBuffer } from './TileBuffer.js';
+import { HiPS } from './HiPS.js';
+import { VisibleTilesManager } from './VisibleTilesManager.js';
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
 type Mat4 = Float32Array;
 export default class Tile {
     private _hips;
@@ -22,8 +25,11 @@ export default class Tile {
     private vertexPositionBuffer;
     private vertexIndices;
     private vertexIndexBuffer?;
+    private _tileBuffer;
     opacity: number;
-    constructor(tileno: number, order: number, hips: HiPS);
+    private _webgl;
+    private _visibleTileManager;
+    constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, webgl: WebGL2RenderingContext, visibleTileManager: VisibleTilesManager);
     destroyIntervals(): void;
     getReadyState(): boolean;
     get cacheTime0(): number | undefined;
@@ -38,7 +44,7 @@ export default class Tile {
     get inView(): boolean;
     private moveToCache;
     amIStillInFoV(): void;
-    draw(visibleOrder: number, visibleTilesMap: Map<number, number[]>, pMatrix: Mat4, vMatrix: Mat4, mMatrix: Mat4, colorMapIdx: number): void;
+    draw(visibleOrder: number, visibleTilesMap: Map<number, number[]>, pMatrix: Mat4, vMatrix: Mat4, mMatrix: Mat4, colorMapIdx: number, hipsShaderProgram: HiPSShaderProgram): void;
     private drawChildren;
 }
 export {};

@@ -3,7 +3,7 @@
  * @author Fabrizio Giordano (Fab77)
  */
 
-class TapMetadata {
+export class TapMetadata {
   private _name: string
   private _description: string
   private _unit: string
@@ -70,4 +70,4 @@ class TapMetadata {
   }
 }
 
-export default TapMetadata
+// export default TapMetadata

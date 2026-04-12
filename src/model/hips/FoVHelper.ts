@@ -15,7 +15,7 @@ class FoVHelper {
     if (fov >= 0.21) return 9
     if (fov >= 0.12) return 10
     if (fov >= 0.06) return 11
-    if (fov < 0.015) return 12
+    if (fov >= 0.015) return 12
     return 13
   }
 

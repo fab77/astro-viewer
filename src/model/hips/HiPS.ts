@@ -3,24 +3,25 @@
  * @author Fabrizio Giordano (Fab77)
  */
 
-import AbstractSkyEntity from '../AbstractSkyEntity.js'
+import {AbstractSkyEntity, SkyEntityDrawInput} from '../AbstractSkyEntity.js'
 import { fovHelper } from './FoVHelper.js'
-import { newTileBuffer } from './TileBuffer.js'
 import ColorMaps, { ColorMap } from '../ColorMaps.js'
-import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import AncestorTile from './AncestorTile.js'
-import { visibleTilesManager } from './VisibleTilesManager.js'
 import AllSky from './AllSky.js'
-import healpixGridSingleton from '../grid/HealpixGridSingleton.js'
-import global from '../../Global.js'
+// import global from '../../Global.js'
 import {HiPSDescriptor} from './HiPSDescriptor.js'
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
+// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
+import { HealpixGrid } from '../grid/HealpixGrid.js'
+import { ReadonlyMat4 } from 'gl-matrix'
 
 
-class HiPS extends AbstractSkyEntity {
+export class HiPS extends AbstractSkyEntity {
   
   private _ancestorTiles: AncestorTile[]
   private _allSkyTile: AllSky | null
+  private _descriptor: HiPSDescriptor
 
   private _format: string
   private _baseurl: string
@@ -33,24 +34,33 @@ class HiPS extends AbstractSkyEntity {
   public samplerIdx = 0
   public colorMapIdx = 0
   public colorMap = ColorMaps['native']
+  private _healpixGrid: HealpixGrid
 
   // exposed read-only helpers
   get maxOrder(): number { return this._maxorder }
   get minOrder(): number { return this._minorder }
   get baseURL(): string { return this._baseurl }
   get format(): string { return this._format }
+  get propertiesRawText(): string { return this._descriptor.propertiesRawText }
+  get properties(): ReadonlyMap<string, string> { return this._descriptor.properties }
 
   constructor(
     radius: number,
     position: [number, number, number],
     xrad: number,
     yrad: number,
-    descriptor: HiPSDescriptor
+    descriptor: HiPSDescriptor,
+    webgl: WebGL2RenderingContext,
+    healpixGrid: HealpixGrid
   ) {
-    super(radius, position, xrad, yrad, descriptor.surveyName, descriptor.isGalactic)
-    this.initGL((global as any).gl as WebGL2RenderingContext)
-
-    newTileBuffer.addHiPS(this)
+    super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic)
+    this._descriptor = descriptor
+    // this.initGL((global as any).gl as WebGL2RenderingContext)
+    this.initGL(webgl as WebGL2RenderingContext)
+    this._healpixGrid = healpixGrid
+    
+    // newTileBuffer.addHiPS(this)
+    this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this)
 
     // DEBUG logs kept from JS (optional)
     // eslint-disable-next-line no-console
@@ -76,12 +86,16 @@ class HiPS extends AbstractSkyEntity {
     // auto-detect all-sky: original code forces true
     this._allSky = true
     if (this._allSky) {
-      this._allSkyTile = new AllSky(this)
+      this._allSkyTile = new AllSky(this, this._webgl, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram)
     } else {
       for (let t = 0; t < 12; t++) {
-        this._ancestorTiles.push(new AncestorTile(t, 0, this))
+        this._ancestorTiles.push(new AncestorTile(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl))
       }
     }
+  }
+
+  getProperty(key: string): string | undefined {
+    return this._descriptor.getProperty(key)
   }
 
   changeFormat(format: string): void {
@@ -95,8 +109,12 @@ class HiPS extends AbstractSkyEntity {
     if (this._tileBuffer) this._tileBuffer._format = this._format
     const pixelByOrder =
       this.isGalacticHips
-        ? visibleTilesManager.galVisibleTilesByOrder
-        : visibleTilesManager.visibleTilesByOrder
+        ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
+        : this._healpixGrid.visibleTilesManager.visibleTilesByOrder
+    // const pixelByOrder =
+    //   this.isGalacticHips
+    //     ? visibleTilesManager.galVisibleTilesByOrder
+    //     : visibleTilesManager.visibleTilesByOrder
     // @ts-ignore
     if (this._tileBuffer?.updateTiles) this._tileBuffer.updateTiles(pixelByOrder.pixels, pixelByOrder.order)
   }
@@ -112,41 +130,75 @@ class HiPS extends AbstractSkyEntity {
    * 6 -> cubehelix
    */
   changeColorMap(colorMap: ColorMap): void {
+    console.log('HiPS.changeColorMap -> shaderProgram', super.hipsShaderProgram.shaderProgram);
+
     this.colorMap = colorMap
     switch (colorMap.name) {
       case 'grayscale':
         this.colorMapIdx = 1
-        hipsShaderProgram.setGrayscaleShader()
+        // hipsShaderProgram.setGrayscaleShader()
+        this.colorMap = ColorMaps['grayscale']
+        super.hipsShaderProgram.setGrayscaleShader()
         break
       case 'planck':
         this.colorMapIdx = 2
-        hipsShaderProgram.setColorMapShader()
+        this.colorMap = ColorMaps['planck']
+        // hipsShaderProgram.setColorMapShader()
+        super.hipsShaderProgram.setColorMapShader()
         break
       case 'cmb':
         this.colorMapIdx = 3
-        hipsShaderProgram.setColorMapShader()
+        this.colorMap = ColorMaps['cmb']
+        // hipsShaderProgram.setColorMapShader()
+        super.hipsShaderProgram.setColorMapShader()
         break
       case 'rainbow':
         this.colorMapIdx = 4
-        hipsShaderProgram.setColorMapShader()
+        this.colorMap = ColorMaps['rainbow']
+        // hipsShaderProgram.setColorMapShader()
+        super.hipsShaderProgram.setColorMapShader()
         break
       case 'eosb':
         this.colorMapIdx = 5
-        hipsShaderProgram.setColorMapShader()
+        this.colorMap = ColorMaps['eosb']
+        super.hipsShaderProgram.setColorMapShader()
+        // hipsShaderProgram.setColorMapShader()
         break
       case 'cubehelix':
         this.colorMapIdx = 6
-        hipsShaderProgram.setColorMapShader()
+        this.colorMap = ColorMaps['cubehelix']
+        super.hipsShaderProgram.setColorMapShader()
+        // hipsShaderProgram.setColorMapShader()
+        break
+      case 'hot':
+        this.colorMapIdx = 7
+        this.colorMap = ColorMaps['hot']
+        super.hipsShaderProgram.setColorMapShader()
+        // hipsShaderProgram.setColorMapShader()
+        break
+      case 'gray':
+        this.colorMapIdx = 8
+        this.colorMap = ColorMaps['gray']
+        super.hipsShaderProgram.setColorMapShader()
+        // hipsShaderProgram.setColorMapShader()
+        break
+      case 'native':
+        this.colorMapIdx = 0
+        this.colorMap = ColorMaps['native']
+        super.hipsShaderProgram.setNativeShader()
         break
       default:
-        this.colorMapIdx = 0
-        hipsShaderProgram.setNativeShader()
+        this.colorMapIdx = 9
+        this.colorMap = colorMap
+        super.hipsShaderProgram.setColorMapShader()
     }
   }
 
   private initShaders(): void {
-    hipsShaderProgram.enableProgram()
-    this.shaderProgram = hipsShaderProgram.shaderProgram
+    super.hipsShaderProgram.enableProgram()
+    // hipsShaderProgram.enableProgram()
+    // this.shaderProgram = super.hipsShaderProgram.shaderProgram
+    // this.shaderProgram = hipsShaderProgram.shaderProgram
   }
 
   getCurrentHealpixOrder(): number {
@@ -154,34 +206,44 @@ class HiPS extends AbstractSkyEntity {
   }
 
   private refresh(): void {
-    const fov = healpixGridSingleton.getMinFoV()
+    // const fov = healpixGridSingleton.getMinFoV()
+    const fov = this._healpixGrid.getMinFoV()
     this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder)
   }
 
-  draw(): void {
+  draw(input: SkyEntityDrawInput): void {
     
-    if (!global.camera || global.camera.getCameraMatrix() === undefined) return
+    const vMatrix = input.camera.getCameraMatrix() as Float32Array
+    if (!vMatrix) return
+
+    const pMatrix = input.pMatrix
+    if (!pMatrix) return
+
     this.refresh()
     
-    const vMatrix = global.camera.getCameraMatrix() as Float32Array
-    const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
+    // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
     const mMatrix = this.getModelMatrix() as Float32Array
+    super.hipsShaderProgram.setRuntimeColorMap(this.colorMap)
 
     if (this._allSky && this._allSkyTile) {
       if (this.isGalacticHips) {
         this._allSkyTile.draw(
-          visibleTilesManager.galVisibleTilesByOrder.order,
-          visibleTilesManager.galAncestorsMap,
-          pMatrix,
+          this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order,
+          this._healpixGrid.visibleTilesManager.galAncestorsMap,
+          // visibleTilesManager.galVisibleTilesByOrder.order,
+          // visibleTilesManager.galAncestorsMap,
+          pMatrix as Float32Array,
           vMatrix,
           mMatrix,
           this.colorMapIdx
         )
       } else {
         this._allSkyTile.draw(
-          visibleTilesManager.visibleTilesByOrder.order,
-          visibleTilesManager.ancestorsMap,
-          pMatrix,
+          this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order,
+          this._healpixGrid.visibleTilesManager.ancestorsMap,
+          // visibleTilesManager.visibleTilesByOrder.order,
+          // visibleTilesManager.ancestorsMap,
+          pMatrix as Float32Array,
           vMatrix,
           mMatrix,
           this.colorMapIdx
@@ -192,16 +254,20 @@ class HiPS extends AbstractSkyEntity {
 
     // Non all-sky path
     const order = this.isGalacticHips
-      ? visibleTilesManager.galVisibleTilesByOrder.order
-      : visibleTilesManager.visibleTilesByOrder.order
+      ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
+      : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order
+      // ? visibleTilesManager.galVisibleTilesByOrder.order
+      // : visibleTilesManager.visibleTilesByOrder.order
     const map = this.isGalacticHips
-      ? visibleTilesManager.galAncestorsMap
-      : visibleTilesManager.ancestorsMap
+      ? this._healpixGrid.visibleTilesManager.galAncestorsMap
+      : this._healpixGrid.visibleTilesManager.ancestorsMap
+      // ? visibleTilesManager.galAncestorsMap
+      // : visibleTilesManager.ancestorsMap
 
     this._ancestorTiles.forEach((ancestor) => {
-      ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx)
+      ancestor.draw(order, map, pMatrix as Float32Array, vMatrix, mMatrix, this.colorMapIdx)
     })
   }
 }
 
-export default HiPS
+// export default HiPS

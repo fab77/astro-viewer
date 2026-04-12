@@ -1,6 +1,6 @@
-import Point from "../model/Point.js";
+import { Point } from "../model/Point.js";
 import Point2D from "../model/Point2D.js";
-import CoordsType from "./CoordsType.js";
+import { CoordsType } from "./CoordsType.js";
 class GeomUtils {
     // Orthodromic (great-circle) distance in radians
     static orthodromicDistance(p1, p2) {

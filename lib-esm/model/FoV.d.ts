@@ -1,14 +1,28 @@
+/**
+ * FoV singleton (TypeScript)
+ * - Uses computePerspectiveMatrixSingleton.pMatrix
+ * - Guards acos domain (numeric safety)
+ * - Uses vec3.transformMat4 instead of custom mat4*vec3
+ * - Keeps original “insideSphere ? 360 - angle : angle” behavior
+ */
+import { ReadonlyMat4 } from 'gl-matrix';
+import { HealpixGrid } from './grid/HealpixGrid.js';
+import Camera from '../Camera.js';
 export declare class FoV {
+    private static readonly MIN_FOV_DEG;
     private fovXDeg;
     private fovYDeg;
     private ratio;
     private _minFoV;
-    constructor();
+    private _webgl;
+    constructor(webgl: WebGL2RenderingContext);
     /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere: boolean): this;
+    getFoV(insideSphere: boolean, healpixGridSingleton: HealpixGrid, camera: Camera, pMatrix: ReadonlyMat4): FoV;
     private computeRatio;
     changeMinFov(deg: number): void;
     get minFoV(): number;
+    get xFoV(): number;
+    get yFoV(): number;
     computeDistanceFromAngle(angleDeg: number): number;
     /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
     private computeAngle;

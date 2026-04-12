@@ -2,15 +2,22 @@
  * @author Fabrizio Giordano (Fab)
  */
 import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
+import { HiPSShaderProgram } from '../shader/HiPSShaderProgram.js';
+import Camera from "../Camera.js";
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
-declare abstract class AbstractSkyEntity {
+export interface SkyEntityDrawInput {
+    fovDeg?: number;
+    camera: Camera;
+    pMatrix: ReadonlyMat4;
+}
+export declare abstract class AbstractSkyEntity {
     refreshMe: boolean;
     fovX_deg: number;
     fovY_deg: number;
     xRad: number;
     yRad: number;
     prevFoV: number;
-    name: string;
+    _name: string;
     center: vec3;
     radius: number;
     isGalacticHips: boolean;
@@ -23,7 +30,12 @@ declare abstract class AbstractSkyEntity {
     protected modelMatrix: mat4;
     protected inverseModelMatrix: mat4;
     protected galacticMatrixInverted: mat4;
-    constructor(in_radius: number, in_position: ReadonlyVec3, in_xRad: number, in_yRad: number, in_name: string, isGalacticHips?: boolean);
+    protected _webgl: WebGL2RenderingContext;
+    protected _hipsShaderProgram: HiPSShaderProgram;
+    constructor(in_radius: number, in_position: ReadonlyVec3, in_xRad: number, in_yRad: number, in_name: string, webgl: WebGL2RenderingContext, isGalacticHips?: boolean);
+    get name(): string;
+    get hipsShaderProgram(): HiPSShaderProgram;
+    get webgl(): WebGL2RenderingContext;
     /** GL setup and initial model transform */
     initGL(gl: GL): void;
     translate(translation: ReadonlyVec3): void;
@@ -32,11 +44,12 @@ declare abstract class AbstractSkyEntity {
     protected refreshModelMatrix(): void;
     getModelMatrixInverse(): ReadonlyMat4;
     getModelMatrix(): ReadonlyMat4;
+    setModelMatrix(modelMatrix: ReadonlyMat4): void;
     /** Children with hierarchical geometry (e.g., HiPS) can override this. */
     setGeometryNeedsToBeRefreshed(): void;
     rotateX(m: mat4, angle: number): mat4;
     rotateY(m: mat4, angle: number): mat4;
-    abstract draw(): void;
+    abstract draw(input: SkyEntityDrawInput): void;
 }
-export default AbstractSkyEntity;
+export {};
 //# sourceMappingURL=AbstractSkyEntity.d.ts.map

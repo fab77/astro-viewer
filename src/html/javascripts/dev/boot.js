@@ -24,8 +24,9 @@ async function bootstrap() {
   try {
     loadPersisted();
 
-    const AC = new astroviewer.AstroViewer();
-    window.AstroAPI = state.AstroAPI = AC;
+    const canvasEl = document.getElementById("astrocanvas");
+    const AC = new astroviewer.AstroViewer(canvasEl);
+    window.AstroAPI = state.AstroAPI = AC;  
     window.TAP = state.TAP;
 
     // Initialize grid toggle checkboxes from API

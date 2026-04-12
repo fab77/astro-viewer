@@ -1,10 +1,10 @@
 // Tile.ts
 import global from '../../Global.js'
-import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
-import { newTileBuffer } from './TileBuffer.js'
-import { visibleTilesManager } from './VisibleTilesManager.js'
+import { TileBuffer } from './TileBuffer.js'
 import { fovHelper } from './FoVHelper.js'
-import HiPS from './HiPS.js'
+import {HiPS} from './HiPS.js'
+import { VisibleTilesManager } from './VisibleTilesManager.js'
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 
 // ---- Local helper types (adapt or import real ones if you have them) ----
 
@@ -24,7 +24,7 @@ type Mat4 = Float32Array;
 // ------------------------------------------------------------------------
 
 export default class Tile {
-  private _hips: HiPS 
+  private _hips: HiPS
   private _tileno: number
   private _baseurl: string
   private _order: number
@@ -52,9 +52,24 @@ export default class Tile {
   private vertexIndices: Uint16Array | Uint32Array = new Uint16Array()
   private vertexIndexBuffer?: WebGLBuffer
 
-  public opacity = 1.0
+  private _tileBuffer: TileBuffer
 
-  constructor(tileno: number, order: number, hips: HiPS) {
+  public opacity = 1.0
+  private _webgl: WebGL2RenderingContext
+  private _visibleTileManager: VisibleTilesManager
+  // private _hipsShaderProgram
+
+  constructor(tileno: number, order: number,
+    hips: HiPS, tileBuffer: TileBuffer,
+    webgl: WebGL2RenderingContext,
+    visibleTileManager: VisibleTilesManager,
+  // hipsShaderProgram: HiPSShaderProgram
+) {
+
+    // this._hipsShaderProgram = hipsShaderProgram
+    this._visibleTileManager = visibleTileManager
+    this._webgl = webgl
+    this._tileBuffer = tileBuffer
     this._hips = hips
     this._tileno = tileno
 
@@ -93,14 +108,24 @@ export default class Tile {
   }
 
   private initImage(): void {
+    if (this._order > this._maxorder) {
+      this._ready = false
+      this._abort = true
+      this.destroyIntervals()
+      console.warn(
+        `[Tile] Skipping tile request above max order: requested order ${this._order}, max order ${this._maxorder}, url ${this._baseurl}`
+      )
+      return
+    }
+
     this._image = new Image()
-    
+
     const dirnumber = Math.floor(this._tileno / 10000) * 10000
     this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`
 
     this._image.onload = () => this.imageLoaded()
     this._image.onerror = () => {
-      console.error('File not found?', this._texurl)
+      // console.error('File not found?', this._texurl)
       this._ready = false
       this._abort = true
       this.destroyIntervals()
@@ -111,27 +136,32 @@ export default class Tile {
   }
 
   private imageLoaded(): void {
-    
-    this.textureLoaded()
-    this.initModelBuffer()
 
-    const gl = global.gl as WebGL2RenderingContext
-    gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
-    gl.bindTexture(gl.TEXTURE_2D, this._texture!)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image)
-
-    this._textureLoaded = true
-    if (this._textureLoaded) this._ready = true
+    // this.textureLoaded()
+    // this.initModelBuffer()
+    // this._textureLoaded = true
+    this._ready = true
   }
 
-  private textureLoaded(): void {
-    const gl = global.gl as WebGL2RenderingContext
+  // private textureLoaded(): void {
+  private textureLoaded(hipsShaderProgram: HiPSShaderProgram): void {
+    
+    
+    // this._hipsShaderProgram.enableProgram()
     hipsShaderProgram.enableProgram()
-
+    const gl = this._webgl as WebGL2RenderingContext
     this._texture = gl.createTexture()!
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true)
     gl.bindTexture(gl.TEXTURE_2D, this._texture)
+
+    if (!gl.isTexture(this._texture)) {
+      console.log('error in texture')
+    }
+
+    gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
+    gl.bindTexture(gl.TEXTURE_2D, this._texture!)
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image)
 
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
@@ -139,15 +169,18 @@ export default class Tile {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
     // FIX: use the sampler location we fetched in enableShaders()
-    gl.uniform1i((hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
+    // gl.uniform1i((this._hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
+    // gl.uniform1i((hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
 
     if (!gl.isTexture(this._texture)) {
       console.warn('Texture creation failed')
     }
+    this.initModelBuffer()
+    this._textureLoaded = true
   }
 
   private initModelBuffer(): void {
-    const gl = global.gl as WebGL2RenderingContext
+    const gl = this._webgl as WebGL2RenderingContext
 
     this.vertexPosition = []
     this.vertexPositionBuffer = []
@@ -213,7 +246,7 @@ export default class Tile {
     orderjump: number,
     origxyf: any
   ): void {
-    const gl = global.gl as WebGL2RenderingContext
+    const gl = this._webgl as WebGL2RenderingContext
     this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin))
 
     const step = 1 / (1 << orderjump)
@@ -266,7 +299,8 @@ export default class Tile {
   }
 
   private moveToCache(): void {
-    newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips)
+    // newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips)
+    this._tileBuffer.moveTileToCache(this._tileno, this._order, this._hips)
     this._inView = false
     this.destroyIntervals()
   }
@@ -275,37 +309,65 @@ export default class Tile {
     if (this._textureLoaded) this._ready = true
 
     if (this._isGalacticHips) {
-      if (visibleTilesManager.galAncestorsMap.has(this._order)) {
-        if (!visibleTilesManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
+      if (this._visibleTileManager.galAncestorsMap.has(this._order)) {
+        if (!this._visibleTileManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
           this.moveToCache()
         } else {
           this._inView = true
         }
       }
+      // if (visibleTilesManager.galAncestorsMap.has(this._order)) {
+      //   if (!visibleTilesManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
+      //     this.moveToCache()
+      //   } else {
+      //     this._inView = true
+      //   }
+      // }
 
-      if (this._order == visibleTilesManager.visibleOrder) {
-        if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+      if (this._order == this._visibleTileManager.visibleOrder) {
+        if (!this._visibleTileManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
           this.moveToCache()
         } else {
           this._inView = true
         }
       }
+      // if (this._order == visibleTilesManager.visibleOrder) {
+      //   if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+      //     this.moveToCache()
+      //   } else {
+      //     this._inView = true
+      //   }
+      // }
     } else {
-      if (visibleTilesManager.ancestorsMap.has(this._order)) {
-        if (!visibleTilesManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
+      if (this._visibleTileManager.ancestorsMap.has(this._order)) {
+        if (!this._visibleTileManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
           this.moveToCache()
         } else {
           this._inView = true
         }
       }
+      // if (visibleTilesManager.ancestorsMap.has(this._order)) {
+      //   if (!visibleTilesManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
+      //     this.moveToCache()
+      //   } else {
+      //     this._inView = true
+      //   }
+      // }
 
-      if (this._order == visibleTilesManager.visibleOrder) {
-        if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+      if (this._order == this._visibleTileManager.visibleOrder) {
+        if (!this._visibleTileManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
           this.moveToCache()
         } else {
           this._inView = true
         }
       }
+      // if (this._order == visibleTilesManager.visibleOrder) {
+      //   if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+      //     this.moveToCache()
+      //   } else {
+      //     this._inView = true
+      //   }
+      // }
     }
   }
 
@@ -315,25 +377,34 @@ export default class Tile {
     pMatrix: Mat4,
     vMatrix: Mat4,
     mMatrix: Mat4,
-    colorMapIdx: number
+    colorMapIdx: number,
+    hipsShaderProgram: HiPSShaderProgram
   ): void {
     if (!this._ready || this._abort) return
+    
+    if (!this._textureLoaded) {
+      this.textureLoaded(hipsShaderProgram)
+    }
 
     let quadrantsToDraw = new Set<number>([0, 1, 2, 3])
     if (visibleOrder > this._order && this._order < this._maxorder) {
-      const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+      // const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+      const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram)
       if (kids) quadrantsToDraw = kids
     }
-
-    const gl = global.gl as WebGL2RenderingContext
+    const gl = this._webgl as WebGL2RenderingContext
     hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
-
+    // this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+    
     // Enable attributes (these locations are retrieved in enableShaders)
+    // gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+    // gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
     gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
     gl.enableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
 
     gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex)
     gl.bindTexture(gl.TEXTURE_2D, this._texture!)
+    // gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity)
     gl.uniform1f((hipsShaderProgram.locations as ShaderLocations).textureAlpha, this.opacity)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer!)
@@ -344,10 +415,12 @@ export default class Tile {
       gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx])
 
       gl.vertexAttribPointer(
+        // this._hipsShaderProgram.locations.vertexPositionAttribute,
         (hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute,
         3, gl.FLOAT, false, 5 * 4, 0
       )
       gl.vertexAttribPointer(
+        // this._hipsShaderProgram.locations.textureCoordAttribute,
         (hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute,
         2, gl.FLOAT, false, 5 * 4, 3 * 4
       )
@@ -355,6 +428,8 @@ export default class Tile {
       gl.drawElements(gl.TRIANGLES, elemno, indexType, 0)
     })
 
+    // gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+    // gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
     gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).vertexPositionAttribute)
     gl.disableVertexAttribArray((hipsShaderProgram.locations as ShaderLocations).textureCoordAttribute)
   }
@@ -365,7 +440,8 @@ export default class Tile {
     pMatrix: Mat4,
     vMatrix: Mat4,
     mMatrix: Mat4,
-    colorMapIdx: number
+    colorMapIdx: number,
+    hipsShaderProgram: HiPSShaderProgram
   ): Set<number> | undefined {
     const quadrantsToDraw = new Set<number>([0, 1, 2, 3])
     const childrenOrder = this._order + 1
@@ -376,11 +452,15 @@ export default class Tile {
       const list = visibleTilesMap.get(childrenOrder)!
       if (list.includes(childTileNo)) {
         const childTile = this._isGalacticHips
-          ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-          : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
+          ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+          : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips)
+        // const childTile = this._isGalacticHips
+        //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+        //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
 
-        childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
-        if ((childTile as any)._ready) {
+        // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+        childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram)
+        if (childTile._ready) {
           quadrantsToDraw.delete(childTileNo - (this._tileno << 2))
         }
       }

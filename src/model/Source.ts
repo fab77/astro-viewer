@@ -2,7 +2,7 @@
 
 import { Healpix, Vec3, Pointing } from 'healpixjs';
 import global from '../Global.js';
-import Point from './Point.js';
+import {Point} from './Point.js';
 
 export interface SourceDetail {
   key: string;
@@ -11,7 +11,7 @@ export interface SourceDetail {
   unit?: string;
 }
 
-class Source {
+export class Source {
   private _point: Point;
   private _name?: string;
   private _details: any[];
@@ -26,7 +26,7 @@ class Source {
   constructor(in_point: Point, in_details: any[] = []) {
     this._point = in_point;
     this._details = in_details;
-    this._shapesize = 8.0;
+    this._shapesize = 16.0;
     this._brightnessFactor = -99;
 
     this.computeHealpixPixel();
@@ -79,5 +79,3 @@ class Source {
     this._brightnessFactor = factor;
   }
 }
-
-export default Source;

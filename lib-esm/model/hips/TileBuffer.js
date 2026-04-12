@@ -1,6 +1,7 @@
 // TileBuffer.ts
 import Tile from './Tile.js'; // adjust if your file is named differently
-export default class TileBuffer {
+// export default class TileBuffer {
+export class TileBuffer {
     // Equatorial
     _tiles;
     _cachedTiles;
@@ -11,7 +12,13 @@ export default class TileBuffer {
     _galActiveHiPS;
     _cacheAliveMilliSeconds;
     _cleanerId;
-    constructor(minutesToLiveInCache = 1) {
+    _webgl;
+    _visibleTileManager;
+    _hipsShaderProgram;
+    constructor(minutesToLiveInCache = 1, webgl, hipsShaderProgram, visibleTileManager) {
+        this._hipsShaderProgram = hipsShaderProgram;
+        this._visibleTileManager = visibleTileManager;
+        this._webgl = webgl;
         this._tiles = new Map();
         this._cachedTiles = new Map();
         this._activeHiPS = new Map();
@@ -42,12 +49,18 @@ export default class TileBuffer {
     /** Preload/add tile for every registered equatorial HiPS. */
     addTile(order, tileno) {
         for (const hips of this._activeHiPS.keys()) {
+            if (order > hips.maxOrder) {
+                continue;
+            }
             this.getTile(tileno, order, hips);
         }
     }
     /** Preload/add tile for every registered galactic HiPS. */
     addGalTile(order, tileno) {
         for (const hips of this._galActiveHiPS.keys()) {
+            if (order > hips.maxOrder) {
+                continue;
+            }
             this.getGalTile(tileno, order, hips);
         }
     }
@@ -62,7 +75,8 @@ export default class TileBuffer {
                 tile.resetCacheTime0();
             }
             else {
-                const tile = new Tile(tileno, order, hips);
+                // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+                const tile = new Tile(tileno, order, hips, this, this._webgl, this._visibleTileManager);
                 this._tiles.set(tileKey, tile);
             }
         }
@@ -79,7 +93,8 @@ export default class TileBuffer {
                 tile.resetCacheTime0();
             }
             else {
-                const tile = new Tile(tileno, order, hips);
+                // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+                const tile = new Tile(tileno, order, hips, this, this._webgl, this._visibleTileManager);
                 this._galTiles.set(tileKey, tile);
             }
         }
@@ -129,5 +144,5 @@ export default class TileBuffer {
     }
 }
 // Singleton (kept for compatibility with your original export)
-export const newTileBuffer = new TileBuffer();
+// export const newTileBuffer = new TileBuffer()
 //# sourceMappingURL=TileBuffer.js.map

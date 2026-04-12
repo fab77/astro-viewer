@@ -2,12 +2,11 @@
 /**
  * @author Fabrizio Giordano (Fab)
  */
-import Point from '../model/Point.js';
+import { Point } from '../model/Point.js';
 import RayPickingUtils from './RayPickingUtils.js';
-import CoordsType from './CoordsType.js';
+import { CoordsType } from './CoordsType.js';
 import { mat4 } from 'gl-matrix';
-import computePerspectiveMatrixSingleton from './ComputePerspectiveMatrix.js';
-class FoVUtils {
+export class FoVUtils {
     /**
      * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
      * (Kept here for parity; this class doesn’t maintain those fields.)
@@ -21,20 +20,20 @@ class FoVUtils {
      */
     static getFoVPolygon(
     // _pMatrix: ReadonlyMat4 | null,
-    camera, canvas, model) {
+    camera, canvas, model, healpixGrid, webgl, pMatrix) {
         // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
         //   _pMatrix) as ReadonlyMat4;
-        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4 
         const vMatrix = camera.getCameraMatrix();
         const mMatrix = model.getModelMatrix();
         const canvasWidth = canvas.clientWidth;
         const canvasHeight = canvas.clientHeight;
         let points = [];
         // First check: does the sphere cover the whole screen?
-        const intersectionWithModel = RayPickingUtils.getIntersectionPointWithSingleModel(0, 0);
+        const intersectionWithModel = RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
         if (intersectionWithModel.length > 0) {
             // Fully covered → grab corners + midpoints (CASE C)
-            const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas);
+            const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
             points = cornersPoints;
         }
         else {
@@ -46,8 +45,8 @@ class FoVUtils {
             const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
             const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
             const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
-            const intersectionTopMiddle = RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0);
-            const intersectionRightMiddle = RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2);
+            const intersectionTopMiddle = RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera, pMatrix);
+            const intersectionRightMiddle = RayPickingUtils.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera, pMatrix);
             // CASE A: zoomed out, hemisphere fully visible
             if (intersectionTopMiddle.length === 0 &&
                 intersectionRightMiddle.length === 0) {
@@ -100,17 +99,17 @@ class FoVUtils {
      * Ray pick against 8 key screen positions (corners + midpoints).
      * Returns Points in clockwise order starting from top-left.
      */
-    static getScreenCornersIntersection(pMatrix, camera, canvas) {
+    static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
-        const topLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, 0);
-        const middleTop = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0);
-        const topRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, 0);
-        const middleRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2);
-        const bottomRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, h);
-        const middleBottom = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h);
-        const bottomLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, h);
-        const middleLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2);
+        const topLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
+        const middleTop = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera, pMatrix);
+        const topRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera, pMatrix);
+        const middleRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera, pMatrix);
+        const bottomRight = RayPickingUtils.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera, pMatrix);
+        const middleBottom = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera, pMatrix);
+        const bottomLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera, pMatrix);
+        const middleLeft = RayPickingUtils.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera, pMatrix);
         const out = [];
         const pushIf = (ip) => {
             if (ip.length > 0) {
@@ -128,10 +127,12 @@ class FoVUtils {
         return out;
     }
     /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas) {
+    static getCenterJ2000(canvas, healpixGrid, webgl, camera, pMatrix) {
         const w = canvas.clientWidth;
         const h = canvas.clientHeight;
-        const center = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2);
+        const center = RayPickingUtils.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera, pMatrix);
+        if (center.length <= 0)
+            throw Error(`Central point is null`);
         return new Point({ x: center[0], y: center[1], z: center[2] }, CoordsType.CARTESIAN);
     }
     /** Middle point on the unit sphere along the arc between two 3D points. */
@@ -213,5 +214,4 @@ class FoVUtils {
         return points.map(p => p.toADQL()).join(',');
     }
 }
-export default FoVUtils;
 //# sourceMappingURL=FoVUtils.js.map

@@ -1,24 +1,25 @@
 'use strict';
 
-import AbstractSkyEntity from '../AbstractSkyEntity.js';
+import {AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import global from '../../Global.js';
 
 import { mat4, vec4, ReadonlyMat4 } from 'gl-matrix';
 import { Healpix } from 'healpixjs';
 
 import { fovHelper } from '../hips/FoVHelper.js';
-import FoVUtils from '../../utils/FoVUtils.js';
+import {FoVUtils} from '../../utils/FoVUtils.js';
 import { FoV } from '../FoV.js';
 
-import CoordsType from '../../utils/CoordsType.js';
-import Point from '../Point.js';
+import {CoordsType} from '../../utils/CoordsType.js';
+import {Point} from '../Point.js';
 
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import GeomUtils from '../../utils/GeomUtils.js';
 import GridTextHelper from './GridTextHelper.js';
-import { visibleTilesManager } from '../hips/VisibleTilesManager.js';
-import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
+import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
+import { bootSetup } from '../../Config.js';
+import Camera from '../../Camera.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -29,7 +30,7 @@ interface BoundVec {
 }
 
 
-class HealpixGridSingleton extends AbstractSkyEntity {
+export class HealpixGrid extends AbstractSkyEntity {
 
   static ELEM_SIZE = 3;
   static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -42,6 +43,7 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
   private defaultColor = '#ec0acaff'
   private gridText: GridTextHelper = new GridTextHelper()
+  // private _hipsShaderProgram: HiPSShaderProgram
 
   private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
     position: 0,
@@ -58,70 +60,77 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   private _vertexCataloguePosition: Float32Array = new Float32Array(0);
   private _indexes: Uint32Array = new Uint32Array(0);
 
-  private fovObj!: FoV;
+  private _fovObj!: FoV;
 
   static INITIAL_FOV = 180;
   static RADIUS = 1;
   static INITIAL_POSITION: [number, number, number] = [0.0, 0.0, 0.0];
   static INITIAL_PhiRad = 0;
   static INITIAL_ThetaRad = 0;
+  private _visibleTilesManager: VisibleTilesManager;
+  
 
-
-
-  constructor() {
-    super(HealpixGridSingleton.RADIUS, HealpixGridSingleton.INITIAL_POSITION, HealpixGridSingleton.INITIAL_PhiRad, HealpixGridSingleton.INITIAL_ThetaRad, 'healpix-grid');
+  constructor(webgl: WebGL2RenderingContext) {
+    super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
+    this.init()
+    this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this)
+    this._visibleTilesManager.init(bootSetup.insideSphere)
   }
 
   init(): void {
     console.log('HealpixGridSingleton.init()');
-    this.initGL(global.gl as GL);
+    this.initGL(super.webgl as GL);
 
-    this._shaderProgram = (global.gl as GL).createProgram() as WebGLProgram;
+    this._shaderProgram = (super.webgl as GL).createProgram() as WebGLProgram;
     this.initShaders();
 
-    const order = fovHelper.getHiPSNorder(HealpixGridSingleton.INITIAL_FOV);
+    const order = fovHelper.getHiPSNorder(HealpixGrid.INITIAL_FOV);
     this._visibleorder = order;
 
     this._nPrimitiveFlags = 0;
 
-    this._vertexCataloguePositionBuffer = (global.gl as GL).createBuffer()!;
-    this._indexBuffer = (global.gl as GL).createBuffer()!;
+    this._vertexCataloguePositionBuffer = (super.webgl as GL).createBuffer()!;
+    this._indexBuffer = (super.webgl as GL).createBuffer()!;
 
     this._vertexCataloguePosition = new Float32Array(0);
 
-    this.fovObj = new FoV();
+    this._fovObj = new FoV(super.webgl);
+  }
+
+  get fovObj(): FoV {
+    return this._fovObj
   }
 
   get RADIUS(): number {
-    return HealpixGridSingleton.RADIUS
+    return HealpixGrid.RADIUS
   }
 
   get INITIAL_POSITION(): [number, number, number] {
-    return HealpixGridSingleton.INITIAL_POSITION
+    return HealpixGrid.INITIAL_POSITION
   }
 
   get INITIAL_PhiRad(): number {
-    return HealpixGridSingleton.INITIAL_PhiRad
+    return HealpixGrid.INITIAL_PhiRad
   }
 
   get INITIAL_ThetaRad(): number {
-    return HealpixGridSingleton.INITIAL_ThetaRad
+    return HealpixGrid.INITIAL_ThetaRad
   }
 
-  refreshFoV() {
-    return this.fovObj.getFoV(global.insideSphere);
+  refreshFoV(camera: Camera, pMatrix: ReadonlyMat4) {
+    return this._fovObj.getFoV(global.insideSphere, this, camera, pMatrix) ;
   }
 
   getFoV(): FoV {
-    return this.fovObj
+    return this._fovObj
   }
 
   getMinFoV() {
-    return this.fovObj.minFoV;
+    return this._fovObj.minFoV;
   }
 
   private initShaders(): void {
-    const gl = global.gl as GL;
+    const gl = super.webgl as GL;
 
     const fragmentShaderStr = GridShaderManager.healpixGridFS();
     this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)!;
@@ -262,9 +271,9 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   // }
 
 
-  private refresh(): void {
+  private refresh(camera: Camera, pMatrix: ReadonlyMat4): void {
 
-    this.refreshFoV();
+    this.refreshFoV(camera, pMatrix);
     const fov = this.getMinFoV();
     // expose to global (legacy)
     // (global as any).hipsFoV = fov;
@@ -273,8 +282,8 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     this._visibleorder = fovHelper.getHiPSNorder(fov);
   }
 
-  private enableShader(in_mMatrix: ReadonlyMat4, pMatrix: ReadonlyMat4): void {
-    const gl = global.gl as GL;
+  private enableShader(in_mMatrix: ReadonlyMat4, pMatrix: ReadonlyMat4, vMatrix: ReadonlyMat4): void {
+    const gl = super.webgl as GL;
 
     gl.useProgram(this._shaderProgram);
     // TODO move locations retrieval elsewhere
@@ -282,13 +291,14 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     // Uniform locations
     const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
     const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-    const uColor = (global.gl as GL).getUniformLocation(this._shaderProgram, 'u_fragcolor');
+    const uColor = (super.webgl as GL).getUniformLocation(this._shaderProgram, 'u_fragcolor');
 
     // Attribute locations
     this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
 
     let mvMatrix = mat4.create();
-    mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
+    // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
+    mvMatrix = mat4.multiply(mvMatrix, vMatrix, in_mMatrix);
 
     if (uMV) gl.uniformMatrix4fv(uMV, false, mvMatrix as Float32Array);
     if (uP) gl.uniformMatrix4fv(uP, false, pMatrix as Float32Array);
@@ -306,11 +316,23 @@ class HealpixGridSingleton extends AbstractSkyEntity {
     this.showGrid = !this.showGrid
   }
 
-  draw(): void {
-    const gl = global.gl as GL;
+  get visibleTilesManager(){
+    return this._visibleTilesManager
+  }
+
+  draw(input: SkyEntityDrawInput): void {
+    const gl = super.webgl as GL;
 
     const mMatrix = this.getModelMatrix();
-    this.refresh();
+    // const vMatrix = input.camera.getCameraMatrix()
+    const camera = input.camera
+    if (!camera ) return
+    const vMatrix = camera.getCameraMatrix()
+
+    const pMatrix = input.pMatrix
+    if (!pMatrix ) return
+    
+    this.refresh(camera, pMatrix);
 
     if (!this.showGrid) {
 
@@ -319,14 +341,16 @@ class HealpixGridSingleton extends AbstractSkyEntity {
       return;
     }
 
-    const visibleTiles = visibleTilesManager.visibleTilesByOrder
+    // const visibleTiles = visibleTilesManager.visibleTilesByOrder
+    const visibleTiles = this._visibleTilesManager.visibleTilesByOrder
     const pixels = visibleTiles.pixels;
     const order = visibleTiles.order;
 
     this.initBuffers(pixels, order);
 
-    const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-    this.enableShader(mMatrix, pMatrix);
+    
+    // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+    this.enableShader(mMatrix, pMatrix, vMatrix);
 
     // Upload positions
     gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
@@ -334,10 +358,10 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
     gl.vertexAttribPointer(
       this._attribLocations.position,
-      HealpixGridSingleton.ELEM_SIZE,
+      HealpixGrid.ELEM_SIZE,
       gl.FLOAT,
       false,
-      HealpixGridSingleton.BYTES_X_ELEM * HealpixGridSingleton.ELEM_SIZE,
+      HealpixGrid.BYTES_X_ELEM * HealpixGrid.ELEM_SIZE,
       0
     );
     gl.enableVertexAttribArray(this._attribLocations.position);
@@ -358,13 +382,14 @@ class HealpixGridSingleton extends AbstractSkyEntity {
 
     // Project and label pixel centers that are inside current FoV
     let mvMatrix = mat4.create();
-    mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
+    // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
+    mvMatrix = mat4.multiply(mvMatrix, vMatrix, mMatrix);
 
     let mvpMatrix = mat4.create();
     mvpMatrix = mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
 
     // FIX: pass model & pMatrix to match FoVUtils TS signature
-    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement);
+    const center = FoVUtils.getCenterJ2000(gl.canvas as HTMLCanvasElement, this, this._webgl, camera, pMatrix);
 
     const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
 
@@ -407,5 +432,5 @@ class HealpixGridSingleton extends AbstractSkyEntity {
   }
 }
 
-const healpixGridSingleton = new HealpixGridSingleton();
-export default healpixGridSingleton;
+// const healpixGridSingleton = new HealpixGridSingleton();
+// export default healpixGridSingleton;

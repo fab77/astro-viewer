@@ -1,12 +1,23 @@
-import { mat4 } from "gl-matrix";
+import { mat4, ReadonlyMat4 } from "gl-matrix";
 import Camera from "../Camera.js";
 
-class ComputePerspectiveMatrixSingleton {
-  private _pMatrix: mat4 | null = null;
+export class PerspectiveMatrixManager {
+  private _pMatrix: ReadonlyMat4
   private _aspectRatio = 1;
 
-  get pMatrix(): mat4 | null {
+  constructor (canvas: HTMLCanvasElement,
+    camera: Camera,
+    fovDeg: number,
+    nearPlane: number = 0.1,
+    insideSphere: boolean){
+      this._pMatrix = this.computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane, insideSphere)
+    }
+
+  get pMatrix(): ReadonlyMat4 {
     return this._pMatrix;
+  }
+  set pMatrix(pMatrix:Float32Array) {
+    this._pMatrix = pMatrix;
   }
 
   computePerspectiveMatrix(
@@ -41,6 +52,3 @@ class ComputePerspectiveMatrixSingleton {
     return p;
   }
 }
-
-const computePerspectiveMatrixSingleton = new ComputePerspectiveMatrixSingleton();
-export default computePerspectiveMatrixSingleton;

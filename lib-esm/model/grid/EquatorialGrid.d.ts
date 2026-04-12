@@ -1,6 +1,7 @@
-import AbstractSkyEntity from '../AbstractSkyEntity.js';
+import { HealpixGrid } from './HealpixGrid.js';
+import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 /** Equatorial grid rendered as RA/Dec great-circle line loops */
-declare class EquatorialGrid extends AbstractSkyEntity {
+export declare class EquatorialGrid extends AbstractSkyEntity {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
     private showGrid;
@@ -21,18 +22,19 @@ declare class EquatorialGrid extends AbstractSkyEntity {
     private _thetaArray;
     private _dec4Labels;
     private _ra4Labels;
+    private _healpixGrid;
     /**
      * @param radius Not used by current implementation (sphere is unit-radius)
      * @param fov    Field of view in degrees
      */
-    constructor();
+    constructor(webgl: WebGL2RenderingContext, healpixGrid: HealpixGrid);
     init(fov: number): void;
     /** Compile/link shaders and fetch uniform/attribute locations */
     private initShaders;
     /** Build RA/Dec line vertex arrays based on FoV step helper */
     private initBuffers;
     /** Update buffers when FoV (in degrees) changes */
-    refresh(): void;
+    refresh(fovDeg: number): void;
     private vectorDistance;
     private enableShader;
     isVisible(): boolean;
@@ -42,8 +44,6 @@ declare class EquatorialGrid extends AbstractSkyEntity {
      * @param fovObj  current field-of-view (degrees). If your FoV type differs,
      *                pass the numeric value here; this signature matches original usage.
      */
-    draw(): void;
+    draw(input: SkyEntityDrawInput): void;
 }
-declare const equatorialGridSingleton: EquatorialGrid;
-export default equatorialGridSingleton;
 //# sourceMappingURL=EquatorialGrid.d.ts.map

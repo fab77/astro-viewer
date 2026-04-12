@@ -2,14 +2,14 @@
  * @author Fabrizio Giordano (Fab)
  */
 import { SelectionObj } from '../../utils/GeomUtils.js';
-import Point from '../Point.js';
+import { Point } from '../Point.js';
 export interface FootprintDetail {
     key: string;
     value: string | number;
     valueType?: string;
     unit?: string;
 }
-declare class Footprint {
+export declare class Footprint {
     private _polygons;
     private _convexPolygons;
     private _stcs?;
@@ -41,5 +41,4 @@ declare class Footprint {
     get details(): FootprintDetail[];
     get selectionObj(): SelectionObj | undefined;
 }
-export default Footprint;
 //# sourceMappingURL=Footprint.d.ts.map

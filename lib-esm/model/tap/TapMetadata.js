@@ -2,7 +2,7 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-class TapMetadata {
+export class TapMetadata {
     _name;
     _description;
     _unit;
@@ -52,5 +52,4 @@ class TapMetadata {
         this._index = idx;
     }
 }
-export default TapMetadata;
 //# sourceMappingURL=TapMetadata.js.map

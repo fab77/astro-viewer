@@ -8,7 +8,7 @@
 import GeomUtils, { SelectionObj } from '../../utils/GeomUtils.js';
 // import global from '../../Global.js';
 import STCSParser, { STCSParseResult } from '../../utils/STCSParser.js';
-import Point from '../Point.js';
+import {Point} from '../Point.js';
 
 export interface FootprintDetail {
   key: string;
@@ -22,7 +22,7 @@ export interface FootprintDetail {
 //   totpoints: number;
 // }
 
-class Footprint {
+export class Footprint {
   private _polygons: Point[][] = []; // array of polygons (-> array of points)
   private _convexPolygons: any[][] = []; // convex polygons
   private _stcs?: string; // STC-S string
@@ -135,5 +135,3 @@ class Footprint {
     return this._selectionObj
   }
 }
-
-export default Footprint;

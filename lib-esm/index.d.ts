@@ -1,8 +1,17 @@
 export { AstroViewer } from './AstroViewer.js';
 export { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 export { FoV } from './model/FoV.js';
-export { TapRepo } from './model/tap/TapRepo.js';
-export { addTAPRepo } from './services/tapRepoService.js';
-export type { PointCoordinates } from './AstroSphere.js';
-export { HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
+export type { PointCoordinates, CameraChangedDetail } from './AstroSphere.js';
+export { HoveredFootprintDetail, FootprintSetGL } from './model/footprints/FootprintSetGL.js';
+export { CatalogueGL } from './model/catalogues/CatalogueGL.js';
+export { MetadataManager } from './model/MetadataManager.js';
+export { MetadataColumn, MetadataInit, ColumnType } from './model/MetadataColumn.js';
+export { Point, SphericalOpts, AstroOpts, PointInitOpts, CartesianOpts } from './model/Point.js';
+export { FoVUtils } from './utils/FoVUtils.js';
+export { CoordsType } from './utils/CoordsType.js';
+export { ColorMaps, COLOR_MAP_SAMPLE_COUNT, createColorMapFromSamples } from './model/ColorMaps.js';
+export type { ColorMap, ColorMapName } from './model/ColorMaps.js';
+export { HiPS } from './model/hips/HiPS.js';
+export { Source } from './model/Source.js';
+export { Footprint } from './model/footprints/Footprint.js';
 //# sourceMappingURL=index.d.ts.map

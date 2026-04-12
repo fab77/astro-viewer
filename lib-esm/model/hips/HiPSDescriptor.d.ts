@@ -15,8 +15,13 @@ export declare class HiPSDescriptor {
     private _emMin;
     private _emMax;
     private _isGalctic;
+    private _propertiesRawText;
+    private _propertiesMap;
     constructor(hipsproperties: string, hipsurl: string);
     private getValue;
+    get propertiesRawText(): string;
+    get properties(): ReadonlyMap<string, string>;
+    getProperty(key: string): string | undefined;
     get surveyName(): string;
     get url(): string;
     get maxOrder(): number;

@@ -1,8 +1,8 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import FootprintSetGL from '../footprints/FootprintSetGL.js'
-import CatalogueGL from '../catalogues/CatalogueGL.js'
+import { FootprintSetGL } from '../footprints/FootprintSetGL.js'
+import { CatalogueGL } from '../catalogues/CatalogueGL.js'
 
 export type ADQLFunction = string | { name: string; signature?: string; doc?: string }
 
@@ -13,8 +13,8 @@ export class TapRepo {
   private _observationsList: FootprintSetGL[]
   private _notClassified: unknown[]
 
-  private _activeObservations: FootprintSetGL[]
-  private _activeCatalogues: CatalogueGL[]
+  // private _activeObservations: FootprintSetGL[]
+  // private _activeCatalogues: CatalogueGL[]
 
   private _tapBaseURL: string
 
@@ -25,8 +25,8 @@ export class TapRepo {
     this._observationsList = []
     this._notClassified = []
 
-    this._activeObservations = []
-    this._activeCatalogues = []
+    // this._activeObservations = []
+    // this._activeCatalogues = []
 
     this._adqlFunctionList = []
   }
@@ -47,13 +47,13 @@ export class TapRepo {
     this._notClassified = notClassifiedList
   }
 
-  setCatalogueActive(catalogue: CatalogueGL): void {
-    this._activeCatalogues.push(catalogue)
-  }
+  // setCatalogueActive(catalogue: CatalogueGL): void {
+  //   this._activeCatalogues.push(catalogue)
+  // }
 
-  setObservationActive(observation: FootprintSetGL): void {
-    this._activeObservations.push(observation)
-  }
+  // setObservationActive(observation: FootprintSetGL): void {
+  //   this._activeObservations.push(observation)
+  // }
 
   get cataloguesList(): CatalogueGL[] {
     return this._cataloguesList

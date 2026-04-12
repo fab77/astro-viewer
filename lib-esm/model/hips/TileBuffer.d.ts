@@ -1,6 +1,8 @@
 import Tile from './Tile.js';
-import HiPS from './HiPS.js';
-export default class TileBuffer {
+import { HiPS } from './HiPS.js';
+import { VisibleTilesManager } from './VisibleTilesManager.js';
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
+export declare class TileBuffer {
     private _tiles;
     private _cachedTiles;
     private _activeHiPS;
@@ -9,7 +11,10 @@ export default class TileBuffer {
     private _galActiveHiPS;
     private _cacheAliveMilliSeconds;
     private _cleanerId;
-    constructor(minutesToLiveInCache?: number);
+    private _webgl;
+    private _visibleTileManager;
+    private _hipsShaderProgram;
+    constructor(minutesToLiveInCache: number | undefined, webgl: WebGL2RenderingContext, hipsShaderProgram: HiPSShaderProgram, visibleTileManager: VisibleTilesManager);
     /** Register an equatorial HiPS into the buffer. */
     addHiPS(hips: HiPS): void;
     /** Register a galactic HiPS into the buffer. */
@@ -31,5 +36,4 @@ export default class TileBuffer {
     /** Optional: call to stop internal timers if you dispose this buffer. */
     dispose(): void;
 }
-export declare const newTileBuffer: TileBuffer;
 //# sourceMappingURL=TileBuffer.d.ts.map

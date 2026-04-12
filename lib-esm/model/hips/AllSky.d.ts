@@ -1,4 +1,6 @@
-import HiPS from './HiPS.js';
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
+import { TileBuffer } from './TileBuffer.js';
+import { HiPS } from './HiPS.js';
 export default class AllSky {
     private _ready;
     private _hips;
@@ -19,7 +21,10 @@ export default class AllSky {
     private vertexPositionBuffer;
     private vertexIndexBuffer;
     private vidx;
-    constructor(hips: HiPS);
+    private _webgl;
+    private _tileBuffer;
+    private _hipsShaderProgram;
+    constructor(hips: HiPS, webgl: WebGL2RenderingContext, tileBuffer: TileBuffer, hipsShaderProgram: HiPSShaderProgram);
     private initImage;
     private imageLoaded;
     private textureLoaded;

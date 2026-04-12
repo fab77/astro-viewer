@@ -3,7 +3,8 @@
  */
 import { vec3, mat4 } from "gl-matrix";
 import global from "../Global.js";
-class AbstractSkyEntity {
+import { HiPSShaderProgram } from '../shader/HiPSShaderProgram.js';
+export class AbstractSkyEntity {
     // Public-ish properties used elsewhere in the app
     refreshMe = false;
     fovX_deg = 180;
@@ -11,7 +12,7 @@ class AbstractSkyEntity {
     xRad;
     yRad;
     prevFoV = this.fovX_deg;
-    name;
+    _name;
     // public insideSphere: boolean = bootSetup.insideSphere
     // Picking/sphere
     center;
@@ -29,16 +30,37 @@ class AbstractSkyEntity {
     inverseModelMatrix = mat4.create();
     // Precomputed transform from galactic to equatorial (already inverted)
     galacticMatrixInverted = mat4.create();
-    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, isGalacticHips) {
+    _webgl;
+    _hipsShaderProgram;
+    // protected _visibleTilesManager: VisibleTilesManager
+    // protected _tileBuffer: TileBuffer
+    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, webgl, isGalacticHips) {
+        this._webgl = webgl;
         this.xRad = in_xRad;
         this.yRad = in_yRad;
-        this.name = in_name;
+        this._name = in_name;
         this.center = vec3.clone(in_position);
         this.radius = in_radius;
         // this.insideSphere = global.insideSphere
         this.isGalacticHips = !!isGalacticHips;
         // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
         mat4.set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
+        // this._tileBuffer = new TileBuffer(1, this._webgl)
+        // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
+        // this._visibleTilesManager = new VisibleTilesManager()
+        this._hipsShaderProgram = new HiPSShaderProgram(this._webgl);
+    }
+    get name() {
+        return this._name;
+    }
+    get hipsShaderProgram() {
+        return this._hipsShaderProgram;
+    }
+    // get tileBuffer() {
+    //   return this._tileBuffer
+    // }
+    get webgl() {
+        return this._webgl;
     }
     /** GL setup and initial model transform */
     initGL(gl) {
@@ -95,6 +117,9 @@ class AbstractSkyEntity {
     getModelMatrix() {
         return this.modelMatrix;
     }
+    setModelMatrix(modelMatrix) {
+        this.modelMatrix = modelMatrix;
+    }
     /** Children with hierarchical geometry (e.g., HiPS) can override this. */
     setGeometryNeedsToBeRefreshed() {
         this.refreshGeometryOnFoVChanged = false;
@@ -125,5 +150,4 @@ class AbstractSkyEntity {
         return m;
     }
 }
-export default AbstractSkyEntity;
 //# sourceMappingURL=AbstractSkyEntity.js.map

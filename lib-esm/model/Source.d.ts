@@ -1,11 +1,11 @@
-import Point from './Point.js';
+import { Point } from './Point.js';
 export interface SourceDetail {
     key: string;
     value: string | number;
     valueType?: string;
     unit?: string;
 }
-declare class Source {
+export declare class Source {
     private _point;
     private _name?;
     private _details;
@@ -31,5 +31,4 @@ declare class Source {
      */
     set brightnessFactor(factor: number);
 }
-export default Source;
 //# sourceMappingURL=Source.d.ts.map

@@ -1,7 +1,16 @@
 export { AstroViewer } from './AstroViewer.js';
 export { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 export { FoV } from './model/FoV.js';
-export { TapRepo } from './model/tap/TapRepo.js';
-export { addTAPRepo } from './services/tapRepoService.js';
+export { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
+export { CatalogueGL } from './model/catalogues/CatalogueGL.js';
+export { MetadataManager } from './model/MetadataManager.js';
+export { MetadataColumn, ColumnType } from './model/MetadataColumn.js';
+export { Point } from './model/Point.js';
+export { FoVUtils } from './utils/FoVUtils.js';
+export { CoordsType } from './utils/CoordsType.js';
+export { ColorMaps, COLOR_MAP_SAMPLE_COUNT, createColorMapFromSamples } from './model/ColorMaps.js';
+export { HiPS } from './model/hips/HiPS.js';
+export { Source } from './model/Source.js';
+export { Footprint } from './model/footprints/Footprint.js';
 console.log('astroviewer UMD loaded');
 //# sourceMappingURL=index.js.map

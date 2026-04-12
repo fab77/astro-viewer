@@ -1,8 +1,11 @@
 // TileBuffer.ts
 import Tile from './Tile.js' // adjust if your file is named differently
-import HiPS from './HiPS.js'
+import {HiPS} from './HiPS.js'
+import { VisibleTilesManager } from './VisibleTilesManager.js'
+import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 
-export default class TileBuffer {
+// export default class TileBuffer {
+export class TileBuffer {
   // Equatorial
   private _tiles: Map<string, Tile>
   private _cachedTiles: Map<string, Tile>
@@ -16,7 +19,17 @@ export default class TileBuffer {
   private _cacheAliveMilliSeconds: number
   private _cleanerId: number
 
-  constructor(minutesToLiveInCache = 1) {
+  private _webgl: WebGL2RenderingContext
+  private _visibleTileManager: VisibleTilesManager
+  private _hipsShaderProgram
+
+  constructor(minutesToLiveInCache = 1, webgl: WebGL2RenderingContext,
+    hipsShaderProgram: HiPSShaderProgram,
+    visibleTileManager: VisibleTilesManager) {
+
+    this._hipsShaderProgram = hipsShaderProgram
+    this._visibleTileManager = visibleTileManager
+    this._webgl = webgl
     this._tiles = new Map()
     this._cachedTiles = new Map()
     this._activeHiPS = new Map()
@@ -53,6 +66,9 @@ export default class TileBuffer {
   /** Preload/add tile for every registered equatorial HiPS. */
   addTile(order: number, tileno: number): void {
     for (const hips of this._activeHiPS.keys()) {
+      if (order > hips.maxOrder) {
+        continue
+      }
       this.getTile(tileno, order, hips)
     }
   }
@@ -60,6 +76,9 @@ export default class TileBuffer {
   /** Preload/add tile for every registered galactic HiPS. */
   addGalTile(order: number, tileno: number): void {
     for (const hips of this._galActiveHiPS.keys()) {
+      if (order > hips.maxOrder) {
+        continue
+      }
       this.getGalTile(tileno, order, hips)
     }
   }
@@ -75,7 +94,8 @@ export default class TileBuffer {
         this._cachedTiles.delete(tileKey)
         tile.resetCacheTime0()
       } else {
-        const tile = new Tile(tileno, order, hips as any)
+        // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+        const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager)
         this._tiles.set(tileKey, tile)
       }
     }
@@ -93,7 +113,8 @@ export default class TileBuffer {
         this._galCachedTiles.delete(tileKey)
         tile.resetCacheTime0()
       } else {
-        const tile = new Tile(tileno, order, hips as any)
+        // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+        const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager)
         this._galTiles.set(tileKey, tile)
       }
     }
@@ -151,4 +172,4 @@ export default class TileBuffer {
 }
 
 // Singleton (kept for compatibility with your original export)
-export const newTileBuffer = new TileBuffer()
+// export const newTileBuffer = new TileBuffer()

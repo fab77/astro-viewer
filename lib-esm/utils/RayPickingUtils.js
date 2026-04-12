@@ -3,9 +3,6 @@
  */
 "use strict";
 import { vec3, mat4 } from "gl-matrix";
-import global from "../Global.js";
-import computePerspectiveMatrixSingleton from "./ComputePerspectiveMatrix.js";
-import healpixGridSingleton from "../model/grid/HealpixGridSingleton.js";
 class RayPickingUtils {
     static lastNearestVisibleObjectIdx = -1;
     /** Get index of the last object found under the mouse (if any). */
@@ -19,29 +16,24 @@ class RayPickingUtils {
      * @param pMatrix Projection matrix
      * @returns World-space direction (normalized) as a vec3
      */
-    static getRayFromMouse(mouseX, mouseY, pMatrix) {
-        if (!global.camera) {
-            throw new Error("Camera is not initialized.");
-        }
-        const vMatrix = global.camera.getCameraMatrix();
-        const gl = global.gl;
-        const rect = gl.canvas.getBoundingClientRect();
-        const canvasMX = mouseX - rect.left;
-        const canvasMY = mouseY - rect.top;
-        // viewport → NDC
-        const x = (2.0 * canvasMX) / gl.canvas.clientWidth - 1.0;
-        const y = 1.0 - (2.0 * canvasMY) / gl.canvas.clientHeight;
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
+        const gl = webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        // mouseX / mouseY are already local to the canvas (CSS pixels)
+        const canvasMX = mouseX;
+        const canvasMY = mouseY;
+        // Use rect.width / rect.height (CSS) for NDC
+        const x = (2.0 * canvasMX) / rect.width - 1.0;
+        const y = 1.0 - (2.0 * canvasMY) / rect.height;
         const z = -1.0;
-        // NDC → clip
         const rayClip = [x, y, z, 1.0];
-        // clip → eye
         const pInv = mat4.create();
         mat4.invert(pInv, pMatrix);
         const rayEye4 = [0, 0, 0, 0];
         RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
-        // direction in eye space (z = -1, w = 0)
+        // direction in eye space
         const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
-        // eye → world
         const vInv = mat4.create();
         mat4.invert(vInv, vMatrix);
         const rayWorld4 = [0, 0, 0, 0];
@@ -63,7 +55,7 @@ class RayPickingUtils {
      * Ray–sphere intersection (world space).
      * @returns distance `t` along the ray to the first hit, or `-1` if no hit.
      */
-    static raySphere(rayOrigWorld, rayDirectionWorld) {
+    static raySphere(rayOrigWorld, rayDirectionWorld, healpixGridSingleton) {
         let intersectionDistance = -1;
         const L = vec3.create();
         vec3.subtract(L, rayOrigWorld, healpixGridSingleton.center);
@@ -96,14 +88,10 @@ class RayPickingUtils {
      * Compute intersection with a single model (defaults to the Healpix grid).
      * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
      */
-    static getIntersectionPointWithSingleModel(mouseX, mouseY) {
-        const pMatrix = computePerspectiveMatrixSingleton.pMatrix;
-        const camera = global.camera;
-        if (!camera) {
-            throw new Error("Camera is not initialized.");
-        }
-        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix);
-        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld);
+    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera, pMatrix) {
+        const vMatrix = camera.getCameraMatrix();
+        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
+        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
         let intersectionModelPoint = [];
         if (t >= 0) {
             // world intersection
@@ -113,7 +101,8 @@ class RayPickingUtils {
             // world → model
             const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
             const modelHit4 = [0, 0, 0, 0];
-            RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
+            // RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
+            RayPickingUtils.mat4MultiplyVec4(healpixGrid.getModelMatrixInverse(), worldHit4, modelHit4);
             intersectionModelPoint = [modelHit4[0], modelHit4[1], modelHit4[2]];
         }
         return intersectionModelPoint;

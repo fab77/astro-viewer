@@ -1,8 +1,8 @@
 /**
  * @author Fabrizio Giordano (Fab77)
  */
-import Point from "../model/Point.js";
-import CoordsType from "./CoordsType.js";
+import { Point } from "../model/Point.js";
+import { CoordsType } from "./CoordsType.js";
 import global from "../Global.js";
 class STCSParser {
     static parseSTCS(stcs) {
