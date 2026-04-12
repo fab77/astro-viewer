@@ -63,9 +63,12 @@ declare class AstroSphere {
     private _cameraStatusChanged;
     private lastHoveredSource;
     private lastHoveredCatalogue;
+    private zoomSensitivity;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private initCamera;
     setCamera(camera: Camera): void;
+    setCameraRotationSensitivity(value: number): void;
+    getCameraRotationSensitivity(): number;
     get healpixGrid(): HealpixGrid;
     get equatorialGrid(): EquatorialGrid;
     private updateCentralPoint;
@@ -75,6 +78,8 @@ declare class AstroSphere {
     getLastMousePointCoordinates(): PointCoordinates | undefined;
     private clamp;
     private computeZoomStep;
+    setZoomSensitivity(value: number): void;
+    getZoomSensitivity(): number;
     private emitCameraChanged;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;

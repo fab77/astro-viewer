@@ -17,6 +17,7 @@ class Camera {
     move = vec3.create();
     phi = 0; // accumulated yaw (radians)
     theta = 0; // accumulated pitch (radians)
+    rotationSensitivity = 1.0;
     // lock rotation around world axes
     lockRotX = false;
     lockRotY = false;
@@ -214,7 +215,7 @@ class Camera {
         // at medium and wide fields of view.
         const normalizedFoV = Math.min(1, this.FoV / 18);
         const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
-        const usedRot = (totRot * distanceFactor * fovFactor) / 1.9;
+        const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
         // Build an axis from phi/theta, but zero components that are locked
         let axisX = this.lockRotX ? 0 : theta;
         let axisY = this.lockRotY ? 0 : phi;
@@ -227,6 +228,12 @@ class Camera {
         axisY /= axisLen;
         mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
         this.refreshViewMatrix();
+    }
+    setRotationSensitivity(value) {
+        this.rotationSensitivity = Math.min(3, Math.max(0.2, value));
+    }
+    getRotationSensitivity() {
+        return this.rotationSensitivity;
     }
     // rotate(phi: number, theta: number): void {
     //   // totRot is the magnitude of the requested rotation

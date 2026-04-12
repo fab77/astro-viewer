@@ -195,6 +195,18 @@ export class AstroViewer {
     getViewfinderColor() {
         return this.viewfinderColor;
     }
+    setRotationSensitivity(value) {
+        this.astroSphere.setCameraRotationSensitivity(value);
+    }
+    getRotationSensitivity() {
+        return this.astroSphere.getCameraRotationSensitivity();
+    }
+    setZoomSensitivity(value) {
+        this.astroSphere.setZoomSensitivity(value);
+    }
+    getZoomSensitivity() {
+        return this.astroSphere.getZoomSensitivity();
+    }
     // Internal
     constructor(canvasEl) {
         this.init(canvasEl);

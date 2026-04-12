@@ -45,6 +45,7 @@ class AstroSphere {
     _cameraStatusChanged = false;
     lastHoveredSource = null;
     lastHoveredCatalogue = null;
+    zoomSensitivity = 1.0;
     constructor(canvas, webgl) {
         console.log('[AstroSphere] new instance for canvas', canvas.id);
         // Keep global GL context (as in original JS)
@@ -76,6 +77,12 @@ class AstroSphere {
     }
     setCamera(camera) {
         this._camera = camera;
+    }
+    setCameraRotationSensitivity(value) {
+        this._camera.setRotationSensitivity(value);
+    }
+    getCameraRotationSensitivity() {
+        return this._camera.getRotationSensitivity();
     }
     get healpixGrid() {
         return this._healpixGrid;
@@ -130,7 +137,13 @@ class AstroSphere {
         // - broad FoV stays responsive without large jumps
         // - narrow FoV keeps a usable floor to avoid the 0.1 -> 0.02 deg stall
         const baseMagnitude = this.clamp(0.0012 + 0.0025 * Math.sqrt(Math.max(currentFov, 0)), 0.0012, 0.04);
-        return direction * baseMagnitude * wheelScale;
+        return direction * baseMagnitude * wheelScale * this.zoomSensitivity;
+    }
+    setZoomSensitivity(value) {
+        this.zoomSensitivity = this.clamp(value, 0.2, 3);
+    }
+    getZoomSensitivity() {
+        return this.zoomSensitivity;
     }
     emitCameraChanged(reason) {
         // avoid dispatch before scene is ready

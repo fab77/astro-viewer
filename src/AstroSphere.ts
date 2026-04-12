@@ -99,6 +99,7 @@ class AstroSphere {
   private _cameraStatusChanged: boolean = false
   private lastHoveredSource: Source | null = null
   private lastHoveredCatalogue: CatalogueGL | null = null
+  private zoomSensitivity = 1.0
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     console.log('[AstroSphere] new instance for canvas', canvas.id);
@@ -139,6 +140,14 @@ class AstroSphere {
 
   setCamera(camera: Camera) {
     this._camera = camera
+  }
+
+  setCameraRotationSensitivity(value: number): void {
+    this._camera.setRotationSensitivity(value)
+  }
+
+  getCameraRotationSensitivity(): number {
+    return this._camera.getRotationSensitivity()
   }
 
   get healpixGrid() {
@@ -216,7 +225,15 @@ class AstroSphere {
       0.04,
     )
 
-    return direction * baseMagnitude * wheelScale
+    return direction * baseMagnitude * wheelScale * this.zoomSensitivity
+  }
+
+  setZoomSensitivity(value: number): void {
+    this.zoomSensitivity = this.clamp(value, 0.2, 3)
+  }
+
+  getZoomSensitivity(): number {
+    return this.zoomSensitivity
   }
 
 

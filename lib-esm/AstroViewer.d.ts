@@ -65,6 +65,10 @@ export declare class AstroViewer {
     isViewfinderVisible(): boolean;
     setViewfinderColor(color: string): void;
     getViewfinderColor(): string;
+    setRotationSensitivity(value: number): void;
+    getRotationSensitivity(): number;
+    setZoomSensitivity(value: number): void;
+    getZoomSensitivity(): number;
     constructor(canvasEl: HTMLCanvasElement);
     private init;
     private initViewfinder;

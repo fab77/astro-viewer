@@ -34,6 +34,7 @@ class Camera implements CameraLike {
   private move: vec3 = vec3.create();
   private phi = 0;     // accumulated yaw (radians)
   private theta = 0;   // accumulated pitch (radians)
+  private rotationSensitivity = 1.0
 
   // lock rotation around world axes
   private lockRotX = false;
@@ -261,7 +262,7 @@ class Camera implements CameraLike {
     // at medium and wide fields of view.
     const normalizedFoV = Math.min(1, this.FoV / 18);
     const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
-    const usedRot = (totRot * distanceFactor * fovFactor) / 1.9;
+    const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
 
     // Build an axis from phi/theta, but zero components that are locked
     let axisX = this.lockRotX ? 0 : theta;
@@ -278,6 +279,14 @@ class Camera implements CameraLike {
 
     mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
     this.refreshViewMatrix();
+  }
+
+  setRotationSensitivity(value: number): void {
+    this.rotationSensitivity = Math.min(3, Math.max(0.2, value))
+  }
+
+  getRotationSensitivity(): number {
+    return this.rotationSensitivity
   }
 
   // rotate(phi: number, theta: number): void {

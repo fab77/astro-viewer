@@ -262,6 +262,22 @@ createFootprintSet(footprintSetName: string,
     return this.viewfinderColor
   }
 
+  setRotationSensitivity(value: number): void {
+    this.astroSphere.setCameraRotationSensitivity(value)
+  }
+
+  getRotationSensitivity(): number {
+    return this.astroSphere.getCameraRotationSensitivity()
+  }
+
+  setZoomSensitivity(value: number): void {
+    this.astroSphere.setZoomSensitivity(value)
+  }
+
+  getZoomSensitivity(): number {
+    return this.astroSphere.getZoomSensitivity()
+  }
+
   // Internal
   constructor(canvasEl: HTMLCanvasElement) {
     this.init(canvasEl)

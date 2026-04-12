@@ -4480,6 +4480,7 @@ class Camera {
     move = create();
     phi = 0; // accumulated yaw (radians)
     theta = 0; // accumulated pitch (radians)
+    rotationSensitivity = 1.0;
     // lock rotation around world axes
     lockRotX = false;
     lockRotY = false;
@@ -4677,7 +4678,7 @@ class Camera {
         // at medium and wide fields of view.
         const normalizedFoV = Math.min(1, this.FoV / 18);
         const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
-        const usedRot = (totRot * distanceFactor * fovFactor) / 1.9;
+        const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
         // Build an axis from phi/theta, but zero components that are locked
         let axisX = this.lockRotX ? 0 : theta;
         let axisY = this.lockRotY ? 0 : phi;
@@ -4690,6 +4691,12 @@ class Camera {
         axisY /= axisLen;
         rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
         this.refreshViewMatrix();
+    }
+    setRotationSensitivity(value) {
+        this.rotationSensitivity = Math.min(3, Math.max(0.2, value));
+    }
+    getRotationSensitivity() {
+        return this.rotationSensitivity;
     }
     // rotate(phi: number, theta: number): void {
     //   // totRot is the magnitude of the requested rotation
@@ -10927,6 +10934,7 @@ class AstroSphere {
     _cameraStatusChanged = false;
     lastHoveredSource = null;
     lastHoveredCatalogue = null;
+    zoomSensitivity = 1.0;
     constructor(canvas, webgl) {
         console.log('[AstroSphere] new instance for canvas', canvas.id);
         // Keep global GL context (as in original JS)
@@ -10958,6 +10966,12 @@ class AstroSphere {
     }
     setCamera(camera) {
         this._camera = camera;
+    }
+    setCameraRotationSensitivity(value) {
+        this._camera.setRotationSensitivity(value);
+    }
+    getCameraRotationSensitivity() {
+        return this._camera.getRotationSensitivity();
     }
     get healpixGrid() {
         return this._healpixGrid;
@@ -11012,7 +11026,13 @@ class AstroSphere {
         // - broad FoV stays responsive without large jumps
         // - narrow FoV keeps a usable floor to avoid the 0.1 -> 0.02 deg stall
         const baseMagnitude = this.clamp(0.0012 + 0.0025 * Math.sqrt(Math.max(currentFov, 0)), 0.0012, 0.04);
-        return direction * baseMagnitude * wheelScale;
+        return direction * baseMagnitude * wheelScale * this.zoomSensitivity;
+    }
+    setZoomSensitivity(value) {
+        this.zoomSensitivity = this.clamp(value, 0.2, 3);
+    }
+    getZoomSensitivity() {
+        return this.zoomSensitivity;
     }
     emitCameraChanged(reason) {
         // avoid dispatch before scene is ready
@@ -13569,7 +13589,7 @@ class AstroViewer {
     webglContextList = new Map();
     viewfinderEl = null;
     viewfinderVisible = bootSetup.showViewfinder;
-    viewfinderColor = 'rgba(255,255,255,0.68)';
+    viewfinderColor = 'rgba(75,148,226,0.68)';
     // API
     run() {
         return this.tick();
@@ -13746,6 +13766,18 @@ class AstroViewer {
     }
     getViewfinderColor() {
         return this.viewfinderColor;
+    }
+    setRotationSensitivity(value) {
+        this.astroSphere.setCameraRotationSensitivity(value);
+    }
+    getRotationSensitivity() {
+        return this.astroSphere.getCameraRotationSensitivity();
+    }
+    setZoomSensitivity(value) {
+        this.astroSphere.setZoomSensitivity(value);
+    }
+    getZoomSensitivity() {
+        return this.astroSphere.getZoomSensitivity();
     }
     // Internal
     constructor(canvasEl) {

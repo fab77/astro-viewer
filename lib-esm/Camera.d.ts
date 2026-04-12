@@ -19,6 +19,7 @@ declare class Camera implements CameraLike {
     private move;
     private phi;
     private theta;
+    private rotationSensitivity;
     private lockRotX;
     private lockRotY;
     private lockRotZ;
@@ -45,6 +46,8 @@ declare class Camera implements CameraLike {
     rotateYRadian(radian: number): void;
     rotateZRadian(radian: number): void;
     rotate(phi: number, theta: number): void;
+    setRotationSensitivity(value: number): void;
+    getRotationSensitivity(): number;
     private refreshViewMatrix;
     refreshFoV(currentFoV: number): void;
     getCameraMatrix(): mat4;
