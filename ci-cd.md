@@ -43,13 +43,3 @@ git push origin dev
 git merge main
 ```
 
-```
-git checkout main
-git pull origin main
-node -p "require('./package.json').version"
-npm ci
-npm publish
-git tag -a v1.3.0 -m "Release v1.3.0"
-git push origin v1.3.0
-git checkout dev
-```
