@@ -872,7 +872,7 @@ class AstroSphere {
     this._webgl.disable(this._webgl.DEPTH_TEST)
     this._webgl.enable(this._webgl.BLEND)
     this._webgl.enable(this._webgl.CULL_FACE)
-    this._webgl.cullFace(global.insideSphere ? this._webgl.BACK : this._webgl.FRONT)
+    this._webgl.cullFace(global.insideSphere ? this._webgl.FRONT : this._webgl.BACK)
     this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA)
 
     const visibleOrder = Math.min(

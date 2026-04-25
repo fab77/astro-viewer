@@ -143,14 +143,6 @@ export abstract class AbstractSkyEntity {
     mat4.invert(R_inverse, this.R);
     mat4.multiply(this.modelMatrix, this.T, R_inverse);
 
-    // Flip Y if we're outside the sphere
-    if (!global.insideSphere) {
-      this.modelMatrix[1]  = -this.modelMatrix[1];
-      this.modelMatrix[5]  = -this.modelMatrix[5];
-      this.modelMatrix[9]  = -this.modelMatrix[9];
-      this.modelMatrix[13] = -this.modelMatrix[13];
-    }
-
     // Apply galactic frame transform if needed
     if (this.isGalacticHips) {
       mat4.multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
