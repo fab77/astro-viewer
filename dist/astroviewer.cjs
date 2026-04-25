@@ -4503,9 +4503,7 @@ class Camera {
         this.goTo(raDeg, decDeg);
     }
     goTo(raDeg, decDeg) {
-        // mirror RA
-        const mirroredRA = 360 - raDeg;
-        this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
+        this.goToPhiTheta(astroDegToSpherical(raDeg, decDeg));
     }
     goToPhiTheta(ptDeg) {
         const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
@@ -6901,7 +6899,6 @@ class HiPSShaderProgram {
  */
 
 
-
 class AbstractSkyEntity {
     // Public-ish properties used elsewhere in the app
     refreshMe = false;
@@ -6995,13 +6992,6 @@ class AbstractSkyEntity {
         const R_inverse = mat4_create();
         invert(R_inverse, this.R);
         mat4_multiply(this.modelMatrix, this.T, R_inverse);
-        // Flip Y if we're outside the sphere
-        if (!src_Global.insideSphere) {
-            this.modelMatrix[1] = -this.modelMatrix[1];
-            this.modelMatrix[5] = -this.modelMatrix[5];
-            this.modelMatrix[9] = -this.modelMatrix[9];
-            this.modelMatrix[13] = -this.modelMatrix[13];
-        }
         // Apply galactic frame transform if needed
         if (this.isGalacticHips) {
             mat4_multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
@@ -11170,8 +11160,10 @@ class AstroSphere {
             }
             this.lastMouseX = newX;
             this.lastMouseY = newY;
+            // During drag, camera rotation is applied in the render loop via inertia.
+            // Defer the camera-changed event to that loop so coordinates reflect the
+            // actual updated camera state instead of the pre-rotation state.
             this._cameraStatusChanged = true;
-            this.emitCameraChanged('pointermove');
             event.preventDefault();
         };
         const handleMouseWheel = (event) => {
@@ -11498,7 +11490,7 @@ class AstroSphere {
         this._webgl.disable(this._webgl.DEPTH_TEST);
         this._webgl.enable(this._webgl.BLEND);
         this._webgl.enable(this._webgl.CULL_FACE);
-        this._webgl.cullFace(src_Global.insideSphere ? this._webgl.BACK : this._webgl.FRONT);
+        this._webgl.cullFace(src_Global.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
         this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
         const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
         this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);

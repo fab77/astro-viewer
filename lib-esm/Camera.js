@@ -40,9 +40,7 @@ class Camera {
         this.goTo(raDeg, decDeg);
     }
     goTo(raDeg, decDeg) {
-        // mirror RA
-        const mirroredRA = 360 - raDeg;
-        this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
+        this.goToPhiTheta(astroDegToSpherical(raDeg, decDeg));
     }
     goToPhiTheta(ptDeg) {
         const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
