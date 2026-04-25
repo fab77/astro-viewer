@@ -429,8 +429,10 @@ class AstroSphere {
       this.lastMouseX = newX;
       this.lastMouseY = newY;
 
+      // During drag, camera rotation is applied in the render loop via inertia.
+      // Defer the camera-changed event to that loop so coordinates reflect the
+      // actual updated camera state instead of the pre-rotation state.
       this._cameraStatusChanged = true
-      this.emitCameraChanged('pointermove');
       event.preventDefault();
     };
 
