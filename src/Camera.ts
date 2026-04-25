@@ -65,10 +65,7 @@ class Camera implements CameraLike {
   }
 
   goTo(raDeg: number, decDeg: number): void {
-
-    // mirror RA
-    const mirroredRA = 360 - raDeg;
-    this.goToPhiTheta(astroDegToSpherical(mirroredRA, decDeg));
+    this.goToPhiTheta(astroDegToSpherical(raDeg, decDeg));
   }
 
   private goToPhiTheta(ptDeg: SphericalCoords): void {

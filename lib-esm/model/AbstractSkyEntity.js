@@ -2,7 +2,6 @@
  * @author Fabrizio Giordano (Fab)
  */
 import { vec3, mat4 } from "gl-matrix";
-import global from "../Global.js";
 import { HiPSShaderProgram } from '../shader/HiPSShaderProgram.js';
 export class AbstractSkyEntity {
     // Public-ish properties used elsewhere in the app
@@ -97,13 +96,6 @@ export class AbstractSkyEntity {
         const R_inverse = mat4.create();
         mat4.invert(R_inverse, this.R);
         mat4.multiply(this.modelMatrix, this.T, R_inverse);
-        // Flip Y if we're outside the sphere
-        if (!global.insideSphere) {
-            this.modelMatrix[1] = -this.modelMatrix[1];
-            this.modelMatrix[5] = -this.modelMatrix[5];
-            this.modelMatrix[9] = -this.modelMatrix[9];
-            this.modelMatrix[13] = -this.modelMatrix[13];
-        }
         // Apply galactic frame transform if needed
         if (this.isGalacticHips) {
             mat4.multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
