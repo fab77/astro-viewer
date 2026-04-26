@@ -50,4 +50,3 @@ export declare class Point {
     toADQL(): string;
     toString(): string;
 }
-//# sourceMappingURL=Point.d.ts.map

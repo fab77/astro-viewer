@@ -84,4 +84,3 @@ export {};
 //     return meta?.name ?? meta?.name;
 //   }
 // }
-//# sourceMappingURL=FootprintProps.js.map

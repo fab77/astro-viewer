@@ -264,4 +264,3 @@ class GeomUtils {
     }
 }
 export default GeomUtils;
-//# sourceMappingURL=GeomUtils.js.map

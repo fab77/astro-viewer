@@ -8,4 +8,3 @@ export interface AstroGL {
     get metadataManager(): MetadataManager;
     changeColor(color: string): void;
 }
-//# sourceMappingURL=AstroGL.d.ts.map

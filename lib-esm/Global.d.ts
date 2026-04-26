@@ -24,4 +24,3 @@ declare class Global {
 }
 declare const global: Global;
 export default global;
-//# sourceMappingURL=Global.d.ts.map

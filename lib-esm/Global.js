@@ -49,4 +49,3 @@ class Global {
 }
 const global = new Global();
 export default global;
-//# sourceMappingURL=Global.js.map

@@ -130,4 +130,3 @@ export class Point {
         return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
     }
 }
-//# sourceMappingURL=Point.js.map

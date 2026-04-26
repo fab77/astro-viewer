@@ -11,4 +11,3 @@ declare class SesameService {
 }
 export declare const sesameService: SesameService;
 export default sesameService;
-//# sourceMappingURL=SesameService.d.ts.map

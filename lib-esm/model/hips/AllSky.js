@@ -229,4 +229,3 @@ export default class AllSky {
         return allSkyTiles2Skip;
     }
 }
-//# sourceMappingURL=AllSky.js.map

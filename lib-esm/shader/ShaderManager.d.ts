@@ -9,4 +9,3 @@ export default class ShaderManager {
     static hipsGrayscaleFS(): GLSLSource;
     static hipsColorMapFS(): GLSLSource;
 }
-//# sourceMappingURL=ShaderManager.d.ts.map

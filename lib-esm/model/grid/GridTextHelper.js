@@ -89,4 +89,3 @@ class GridTextHelper {
 }
 // export const gridTextHelper = new GridTextHelper();
 export default GridTextHelper;
-//# sourceMappingURL=GridTextHelper.js.map

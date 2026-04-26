@@ -48,4 +48,3 @@ export default class Tile {
     private drawChildren;
 }
 export {};
-//# sourceMappingURL=Tile.d.ts.map

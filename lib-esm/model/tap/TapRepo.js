@@ -48,4 +48,3 @@ export class TapRepo {
         return this._adqlFunctionList;
     }
 }
-//# sourceMappingURL=TapRepo.js.map

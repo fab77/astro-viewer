@@ -23,4 +23,3 @@ declare class GridTextHelper {
     addEqDivSet(msg: string, x: number, y: number, type: 'ra' | 'dec'): void;
 }
 export default GridTextHelper;
-//# sourceMappingURL=GridTextHelper.d.ts.map

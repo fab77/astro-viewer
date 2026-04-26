@@ -145,4 +145,3 @@ export class TileBuffer {
 }
 // Singleton (kept for compatibility with your original export)
 // export const newTileBuffer = new TileBuffer()
-//# sourceMappingURL=TileBuffer.js.map

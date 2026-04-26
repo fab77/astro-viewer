@@ -13,4 +13,3 @@ export async function fetchJson(url) {
         throw new Error(`${res.status} ${res.statusText}`);
     return res.json();
 }
-//# sourceMappingURL=helpers.js.map

@@ -153,4 +153,3 @@ export {};
 //     }
 //   }
 // }
-//# sourceMappingURL=CatalogueProps.js.map

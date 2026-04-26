@@ -32,4 +32,3 @@ export declare class CatalogueShaderProgram {
     enableShaders(pMatrix: Float32Array, modelMatrix: Float32Array, viewMatrix: Float32Array): void;
 }
 export {};
-//# sourceMappingURL=CatalogueShaderProgram.d.ts.map

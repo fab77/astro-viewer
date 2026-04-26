@@ -33,4 +33,3 @@ declare class MouseHelper {
     get phiThetaDeg(): SphericalCoords | null;
 }
 export default MouseHelper;
-//# sourceMappingURL=MouseHelper.d.ts.map

@@ -111,4 +111,3 @@ declare class AstroSphere {
     private emitHoveredSourceIfChanged;
 }
 export default AstroSphere;
-//# sourceMappingURL=AstroSphere.d.ts.map

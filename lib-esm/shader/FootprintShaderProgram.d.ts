@@ -28,4 +28,3 @@ export declare class FootprintShaderProgram {
     enableShaders(pMatrix: Float32Array, modelMatrix: Float32Array, viewMatrix: Float32Array): void;
 }
 export {};
-//# sourceMappingURL=FootprintShaderProgram.d.ts.map

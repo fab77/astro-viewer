@@ -214,4 +214,3 @@ export class FoVUtils {
         return points.map(p => p.toADQL()).join(',');
     }
 }
-//# sourceMappingURL=FoVUtils.js.map

@@ -1285,4 +1285,3 @@ export const ColorMaps = {
     },
 };
 export default ColorMaps;
-//# sourceMappingURL=ColorMaps.js.map

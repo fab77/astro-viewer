@@ -35,4 +35,3 @@ declare class AncestorTile {
     private drawChildren;
 }
 export default AncestorTile;
-//# sourceMappingURL=AncestorTile.d.ts.map

@@ -245,4 +245,3 @@ class AncestorTile {
     }
 }
 export default AncestorTile;
-//# sourceMappingURL=AncestorTile.js.map

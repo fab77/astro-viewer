@@ -52,4 +52,3 @@ export declare abstract class AbstractSkyEntity {
     abstract draw(input: SkyEntityDrawInput): void;
 }
 export {};
-//# sourceMappingURL=AbstractSkyEntity.d.ts.map

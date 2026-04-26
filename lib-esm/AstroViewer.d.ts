@@ -78,4 +78,3 @@ export declare class AstroViewer {
     private tick;
     private drawScene;
 }
-//# sourceMappingURL=AstroViewer.d.ts.map

@@ -9,4 +9,3 @@ export default class ShaderManagerMultiHiPS {
     static hipsEosbFS(): GLSLSource;
     static hipsCubehelixFS(): GLSLSource;
 }
-//# sourceMappingURL=ShaderManagerMutliHiPS.d.ts.map

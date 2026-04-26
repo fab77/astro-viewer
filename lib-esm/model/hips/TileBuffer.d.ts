@@ -36,4 +36,3 @@ export declare class TileBuffer {
     /** Optional: call to stop internal timers if you dispose this buffer. */
     dispose(): void;
 }
-//# sourceMappingURL=TileBuffer.d.ts.map

@@ -329,4 +329,3 @@ class Camera {
     isRotationLockedZ() { return this.lockRotZ; }
 }
 export default Camera;
-//# sourceMappingURL=Camera.js.map

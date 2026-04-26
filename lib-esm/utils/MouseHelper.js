@@ -91,4 +91,3 @@ class MouseHelper {
     }
 }
 export default MouseHelper;
-//# sourceMappingURL=MouseHelper.js.map

@@ -27,4 +27,3 @@ declare class RayPickingUtils {
     static getIntersectionPointWithSingleModel(mouseX: number, mouseY: number, healpixGrid: HealpixGrid, webgl: WebGL2RenderingContext, camera: Camera, pMatrix: ReadonlyMat4): number[];
 }
 export default RayPickingUtils;
-//# sourceMappingURL=RayPickingUtils.d.ts.map

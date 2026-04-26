@@ -47,4 +47,3 @@ export declare class MetadataColumn {
     get unit(): string;
     toJSON(): Record<string, unknown>;
 }
-//# sourceMappingURL=MetadataColumn.d.ts.map

@@ -1,1 +1,0 @@
-{"version":3,"file":"Point2D.d.ts","sourceRoot":"","sources":["../../src/model/Point2D.ts"],"names":[],"mappings":"AAAA,cAAM,OAAO;IACX,OAAO,CAAC,EAAE,CAAS;IACnB,OAAO,CAAC,EAAE,CAAS;gBAEP,CAAC,EAAE,MAAM,EAAE,CAAC,EAAE,MAAM;IAKhC,IAAI,CAAC,IAAI,MAAM,CAEd;IAED,IAAI,CAAC,IAAI,MAAM,CAEd;CACF;AAED,eAAe,OAAO,CAAC"}

@@ -26,4 +26,3 @@ class GridShaderManager {
     }
 }
 export default GridShaderManager;
-//# sourceMappingURL=GridShaderManager.js.map

@@ -142,4 +142,3 @@ export class AbstractSkyEntity {
         return m;
     }
 }
-//# sourceMappingURL=AbstractSkyEntity.js.map

@@ -46,4 +46,3 @@ export declare class HealpixGrid extends AbstractSkyEntity {
     draw(input: SkyEntityDrawInput): void;
     get visibleorder(): number;
 }
-//# sourceMappingURL=HealpixGrid.d.ts.map

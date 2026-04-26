@@ -747,4 +747,3 @@ export default class ShaderManagerMultiHiPS {
     }`;
     }
 }
-//# sourceMappingURL=ShaderManagerMutliHiPS.js.map

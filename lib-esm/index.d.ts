@@ -14,4 +14,3 @@ export type { ColorMap, ColorMapName } from './model/ColorMaps.js';
 export { HiPS } from './model/hips/HiPS.js';
 export { Source } from './model/Source.js';
 export { Footprint } from './model/footprints/Footprint.js';
-//# sourceMappingURL=index.d.ts.map

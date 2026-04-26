@@ -32,4 +32,3 @@ export declare class VisibleTilesManager {
     get visibleOrder(): number;
 }
 export {};
-//# sourceMappingURL=VisibleTilesManager.d.ts.map

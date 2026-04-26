@@ -589,4 +589,3 @@ export class FootprintSetGL {
     }
 }
 // export default FootprintSetGL
-//# sourceMappingURL=FootprintSetGL.js.map

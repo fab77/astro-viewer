@@ -29,4 +29,3 @@ export declare function sphericalToCartesian(phiDeg: number, thetaDeg: number, r
 export declare function astroDegToSpherical(raDeg: number, decDeg: number): SphericalCoords;
 export declare function raDegToHMS(raDeg: number): HMS;
 export declare function decDegToDMS(decDeg: number): DMS;
-//# sourceMappingURL=Utils.d.ts.map

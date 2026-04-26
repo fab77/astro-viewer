@@ -22,4 +22,3 @@ export function parseHipsList(text) {
         out.push(current);
     return out;
 }
-//# sourceMappingURL=parse-hipslist.js.map

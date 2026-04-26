@@ -13,4 +13,3 @@ declare class STCSParser {
     static parseCircle(stcs: string): STCSParseResult;
 }
 export default STCSParser;
-//# sourceMappingURL=STCSParser.d.ts.map

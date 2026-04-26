@@ -33,4 +33,3 @@ declare class GeomUtils {
     static checkPointInsidePolygon4(polygons: Point[][], point: Point): boolean;
 }
 export default GeomUtils;
-//# sourceMappingURL=GeomUtils.d.ts.map

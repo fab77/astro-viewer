@@ -104,4 +104,3 @@ class FoVHelper {
 }
 export const fovHelper = new FoVHelper();
 export default FoVHelper;
-//# sourceMappingURL=FoVHelper.js.map
