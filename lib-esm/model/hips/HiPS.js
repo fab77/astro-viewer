@@ -219,4 +219,3 @@ export class HiPS extends AbstractSkyEntity {
         });
     }
 }
-//# sourceMappingURL=HiPS.js.map

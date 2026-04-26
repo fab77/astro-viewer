@@ -352,4 +352,3 @@ export default class Tile {
         return quadrantsToDraw;
     }
 }
-//# sourceMappingURL=Tile.js.map

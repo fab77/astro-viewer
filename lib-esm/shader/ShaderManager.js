@@ -341,4 +341,3 @@ export default class ShaderManager {
     }`;
     }
 }
-//# sourceMappingURL=ShaderManager.js.map

@@ -34,4 +34,3 @@ export declare class HiPSDescriptor {
     get tileWidth(): number | undefined;
     get dataRange(): HiPSDataRange;
 }
-//# sourceMappingURL=HiPSDescriptor.d.ts.map

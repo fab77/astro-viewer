@@ -10,4 +10,3 @@ export interface HiPSNodeEntry {
     hips_release_date?: string;
     creator_did?: string;
 }
-//# sourceMappingURL=types.d.ts.map

@@ -62,4 +62,3 @@ export async function addHiPS(hipsUrl) {
         return null;
     }
 }
-//# sourceMappingURL=hipsNodeService.js.map

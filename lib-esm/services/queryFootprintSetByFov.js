@@ -125,4 +125,3 @@ export {};
 //     return
 //   }
 // }
-//# sourceMappingURL=queryFootprintSetByFov.js.map

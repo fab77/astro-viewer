@@ -29,4 +29,3 @@ export const bootSetup = {
     insideView: false,
     showViewfinder: false,
 };
-//# sourceMappingURL=Config.js.map

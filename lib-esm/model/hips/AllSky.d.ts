@@ -37,4 +37,3 @@ export default class AllSky {
     draw(visibleOrder: number, visibleTilesMap: Map<number, number[]>, pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, colorMapIdx: number): boolean;
     private drawChildren;
 }
-//# sourceMappingURL=AllSky.d.ts.map

@@ -101,4 +101,3 @@ export class Footprint {
         return this._selectionObj;
     }
 }
-//# sourceMappingURL=Footprint.js.map

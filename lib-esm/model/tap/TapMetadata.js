@@ -52,4 +52,3 @@ export class TapMetadata {
         this._index = idx;
     }
 }
-//# sourceMappingURL=TapMetadata.js.map

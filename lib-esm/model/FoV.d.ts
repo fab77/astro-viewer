@@ -60,4 +60,3 @@ export declare class FoV {
    */
     computeCameraPositionForAngularDiameter(targetAngularDiameterDeg: number): [number, number, number];
 }
-//# sourceMappingURL=FoV.d.ts.map

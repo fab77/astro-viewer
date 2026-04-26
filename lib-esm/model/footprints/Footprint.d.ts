@@ -41,4 +41,3 @@ export declare class Footprint {
     get details(): FootprintDetail[];
     get selectionObj(): SelectionObj | undefined;
 }
-//# sourceMappingURL=Footprint.d.ts.map

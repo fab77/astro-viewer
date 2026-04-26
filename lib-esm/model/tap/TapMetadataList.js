@@ -55,4 +55,3 @@ export class TapMetadataList {
         return this._posEqDecMetaColumns;
     }
 }
-//# sourceMappingURL=TapMetadataList.js.map

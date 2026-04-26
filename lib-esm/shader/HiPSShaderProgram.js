@@ -254,4 +254,3 @@ export class HiPSShaderProgram {
         gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
     }
 }
-//# sourceMappingURL=HiPSShaderProgram.js.map

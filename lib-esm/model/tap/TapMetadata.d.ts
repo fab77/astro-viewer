@@ -28,4 +28,3 @@ export declare class TapMetadata {
     get index(): number | undefined;
     set index(idx: number | undefined);
 }
-//# sourceMappingURL=TapMetadata.d.ts.map

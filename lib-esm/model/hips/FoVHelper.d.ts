@@ -8,4 +8,3 @@ declare class FoVHelper {
 }
 export declare const fovHelper: FoVHelper;
 export default FoVHelper;
-//# sourceMappingURL=FoVHelper.d.ts.map

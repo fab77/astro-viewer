@@ -13,4 +13,3 @@ class Point2D {
     }
 }
 export default Point2D;
-//# sourceMappingURL=Point2D.js.map

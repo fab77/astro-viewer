@@ -91,4 +91,3 @@ export class CatalogueShaderProgram {
     }
 }
 // export const catalogueShaderProgram = new CatalogueShaderProgram()
-//# sourceMappingURL=CatalogueShaderProgram.js.map

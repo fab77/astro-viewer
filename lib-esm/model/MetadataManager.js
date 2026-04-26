@@ -114,4 +114,3 @@ export class MetadataManager {
         this._selectedHueColumn = undefined;
     }
 }
-//# sourceMappingURL=MetadataManager.js.map

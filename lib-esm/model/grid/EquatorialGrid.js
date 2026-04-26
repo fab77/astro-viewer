@@ -299,4 +299,3 @@ export class EquatorialGrid extends AbstractSkyEntity {
 }
 // const equatorialGridSingleton = new EquatorialGrid();
 // export default equatorialGridSingleton;
-//# sourceMappingURL=EquatorialGrid.js.map

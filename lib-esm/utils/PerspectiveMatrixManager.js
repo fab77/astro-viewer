@@ -34,4 +34,3 @@ export class PerspectiveMatrixManager {
         return p;
     }
 }
-//# sourceMappingURL=PerspectiveMatrixManager.js.map

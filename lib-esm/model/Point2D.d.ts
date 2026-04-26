@@ -6,4 +6,3 @@ declare class Point2D {
     get y(): number;
 }
 export default Point2D;
-//# sourceMappingURL=Point2D.d.ts.map

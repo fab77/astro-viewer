@@ -31,4 +31,3 @@ export declare class Source {
      */
     set brightnessFactor(factor: number);
 }
-//# sourceMappingURL=Source.d.ts.map

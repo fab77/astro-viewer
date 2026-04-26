@@ -43,4 +43,3 @@ export declare class FoVUtils {
     /** Build ADQL string from an array of Points (ra,dec pairs). */
     static getAstroFoVPolygon(points: Point[]): string;
 }
-//# sourceMappingURL=FoVUtils.d.ts.map

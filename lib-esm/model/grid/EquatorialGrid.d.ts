@@ -46,4 +46,3 @@ export declare class EquatorialGrid extends AbstractSkyEntity {
      */
     draw(input: SkyEntityDrawInput): void;
 }
-//# sourceMappingURL=EquatorialGrid.d.ts.map

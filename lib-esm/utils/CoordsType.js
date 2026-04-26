@@ -9,4 +9,3 @@ export var CoordsType;
     CoordsType["ASTRO"] = "astro";
 })(CoordsType || (CoordsType = {}));
 // export default CoordsType;
-//# sourceMappingURL=CoordsType.js.map

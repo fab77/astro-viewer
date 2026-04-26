@@ -7,4 +7,3 @@ export declare enum CoordsType {
     SPHERICAL = "spherical",
     ASTRO = "astro"
 }
-//# sourceMappingURL=CoordsType.d.ts.map

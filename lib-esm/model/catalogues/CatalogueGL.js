@@ -611,4 +611,3 @@ export class CatalogueGL {
     }
 }
 // export default CatalogueGL;
-//# sourceMappingURL=CatalogueGL.js.map

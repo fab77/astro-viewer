@@ -8,4 +8,3 @@ export declare class PerspectiveMatrixManager {
     set pMatrix(pMatrix: Float32Array);
     computePerspectiveMatrix(canvas: HTMLCanvasElement, camera: Camera, fovDeg: number, nearPlane: number | undefined, insideSphere: boolean): mat4;
 }
-//# sourceMappingURL=PerspectiveMatrixManager.d.ts.map

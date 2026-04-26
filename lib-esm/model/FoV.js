@@ -272,4 +272,3 @@ export class FoV {
         return [0, 0, 0];
     }
 }
-//# sourceMappingURL=FoV.js.map

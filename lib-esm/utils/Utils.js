@@ -74,4 +74,3 @@ export function decDegToDMS(decDeg) {
     d = d * sign;
     return { d, m, s };
 }
-//# sourceMappingURL=Utils.js.map

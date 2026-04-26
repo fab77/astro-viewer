@@ -93,4 +93,3 @@ class STCSParser {
     }
 }
 export default STCSParser;
-//# sourceMappingURL=STCSParser.js.map

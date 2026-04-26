@@ -20,4 +20,3 @@ export {};
 // }
 // export const shaderUtility = new ShaderUtility();
 // export default ShaderUtility;
-//# sourceMappingURL=ShaderUtility.js.map

@@ -51,4 +51,3 @@ class SesameService {
 }
 export const sesameService = new SesameService();
 export default sesameService;
-//# sourceMappingURL=SesameService.js.map

@@ -103,4 +103,3 @@ export declare class FootprintSetGL {
     changeColor(color: string): void;
     draw(in_mMatrix: Float32Array, in_mouseHelper: MouseHelper, vMatrix: Float32Array, pMatrix: Float32Array): void;
 }
-//# sourceMappingURL=FootprintSetGL.d.ts.map

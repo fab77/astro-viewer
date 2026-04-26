@@ -60,4 +60,3 @@ export class Source {
         this._brightnessFactor = factor;
     }
 }
-//# sourceMappingURL=Source.js.map

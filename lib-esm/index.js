@@ -13,4 +13,3 @@ export { HiPS } from './model/hips/HiPS.js';
 export { Source } from './model/Source.js';
 export { Footprint } from './model/footprints/Footprint.js';
 console.log('astroviewer UMD loaded');
-//# sourceMappingURL=index.js.map

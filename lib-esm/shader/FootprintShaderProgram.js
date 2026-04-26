@@ -83,4 +83,3 @@ export class FootprintShaderProgram {
     }
 }
 // export const footprintShaderProgram = new FootprintShaderProgram()
-//# sourceMappingURL=FootprintShaderProgram.js.map

@@ -20,4 +20,3 @@ export declare class TapMetadataList {
     get posEqRAMetaColumns(): TapMetadata[];
     get posEqDecMetaColumns(): TapMetadata[];
 }
-//# sourceMappingURL=TapMetadataList.d.ts.map

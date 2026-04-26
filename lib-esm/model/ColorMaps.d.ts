@@ -14,4 +14,3 @@ type ColorChannelSamples = {
 export declare function createColorMapFromSamples(name: string, channels: ColorChannelSamples): ColorMap;
 export declare const ColorMaps: Record<ColorMapName, ColorMap>;
 export default ColorMaps;
-//# sourceMappingURL=ColorMaps.d.ts.map

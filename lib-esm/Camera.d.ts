@@ -71,4 +71,3 @@ declare class Camera implements CameraLike {
     isRotationLockedZ(): boolean;
 }
 export default Camera;
-//# sourceMappingURL=Camera.d.ts.map

@@ -345,4 +345,3 @@ export class AstroViewer {
         this.astroSphere.draw(this.canvas);
     }
 }
-//# sourceMappingURL=AstroViewer.js.map

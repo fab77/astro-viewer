@@ -129,4 +129,3 @@ export class HiPSDescriptor {
         return this._datarange;
     }
 }
-//# sourceMappingURL=HiPSDescriptor.js.map

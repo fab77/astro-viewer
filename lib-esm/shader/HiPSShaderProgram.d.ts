@@ -51,4 +51,3 @@ export declare class HiPSShaderProgram {
     enableShaders(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, colorMapIdx: number): void;
 }
 export {};
-//# sourceMappingURL=HiPSShaderProgram.d.ts.map

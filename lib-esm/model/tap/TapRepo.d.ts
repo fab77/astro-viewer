@@ -24,4 +24,3 @@ export declare class TapRepo {
     set adqlFunctionList(adqlFunctionList: ADQLFunction[] | undefined);
     get adqlFunctionList(): ADQLFunction[];
 }
-//# sourceMappingURL=TapRepo.d.ts.map

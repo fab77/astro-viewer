@@ -303,4 +303,3 @@ export class HealpixGrid extends AbstractSkyEntity {
         return this._visibleorder;
     }
 }
-//# sourceMappingURL=HealpixGrid.js.map

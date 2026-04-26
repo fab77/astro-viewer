@@ -92,4 +92,3 @@ export class MetadataColumn {
         };
     }
 }
-//# sourceMappingURL=MetadataColumn.js.map

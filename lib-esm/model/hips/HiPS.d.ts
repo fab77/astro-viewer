@@ -44,4 +44,3 @@ export declare class HiPS extends AbstractSkyEntity {
     private refresh;
     draw(input: SkyEntityDrawInput): void;
 }
-//# sourceMappingURL=HiPS.d.ts.map

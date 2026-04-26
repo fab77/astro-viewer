@@ -40,4 +40,3 @@ export declare class MetadataManager {
     resetShapeColumn(): void;
     resetHueColumn(): void;
 }
-//# sourceMappingURL=MetadataManager.d.ts.map
