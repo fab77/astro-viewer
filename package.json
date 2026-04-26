@@ -1,6 +1,7 @@
 {
   "name": "astro-viewer",
   "description": "Astrobrowser 3d engine.",
+
   "version": "1.5.0",
   "keywords": [
     "HiPS",
