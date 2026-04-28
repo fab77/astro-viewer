@@ -1,45 +1,69 @@
-# Release branch preparation
-```
+# AstroViewer Release Notes
+
+This repository is part of the AstroViewer dependency family and now follows a
+dual-license model. Before a commercial-facing release is considered final,
+review:
+
+- `LICENSE.md`
+- `LICENSE-COMMERCIAL.md`
+- `LICENSE-NONCOMMERCIAL.md`
+- `DEPENDENCY-LICENSING.md`
+
+## Current release policy
+
+- use the current package name `astro-viewer` until the package-channel
+  strategy is finalized
+- do not introduce a separate commercial npm package name until the legal text
+  and package-channel strategy are finalized across the dependency family
+- tag releases from `main` with `v<version>`
+- use CI build success and a local `npm run build` as the minimum release gate
+
+## Suggested release flow
+
+```bash
 git checkout dev
 git pull origin dev
 
-git checkout -b release/1.4.0
+git checkout -b release/2.0.0
 
-npm version 1.4.0 --no-git-tag-version
-git add package.json package-lock.json
-git commit -m "Prepare release 1.4.0"
+npm version 2.0.0 --no-git-tag-version
+npm install
+npm run build
 
-git push -u origin release/1.4.0
+git status
+git add package.json package-lock.json README.md LICENSE.md LICENSE-COMMERCIAL.md LICENSE-NONCOMMERCIAL.md DEPENDENCY-LICENSING.md ci-cd.md .github/workflows/ci.yml
+git commit -m "Prepare release 2.0.0"
+
+git push -u origin release/2.0.0
 ```
-# PR in github for release/1.4.0 -> main and merge to main
+Open PR `release/2.0.0 -> main` in GitHub and merge on `main`.
 
-
-# Tag creation
-```
+From `main`:
+```bash
 git checkout main
 git pull origin main
+
 node -p "require('./package.json').version"
-```
-
-# NPM publish
-```
 npm ci
+npm run build
+npm pack --dry-run
+find dist lib-esm -name "*.map"
+
+git tag -a v2.0.0 -m "Release v2.0.0"
+git push origin v2.0.0
 npm publish
-git tag -a v1.4.0 -m "Release v1.4.0"
-git push origin v1.4.0
 ```
 
-# Preparation of new snapshot
-```
+After release, merge to `dev`:
+```bash
 git checkout dev
 git pull origin dev
-npm version 1.5.0-snapshot --no-git-tag-version
+git merge main
+
+npm version 2.1.0-snapshot --no-git-tag-version
+npm install
+
 git add package.json package-lock.json
-git commit -m "Start 1.5.0-snapshot development"
+git commit -m "Start 2.1.0-snapshot development"
 git push origin dev
 ```
-
-```
-git merge main
-```
-
