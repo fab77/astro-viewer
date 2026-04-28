@@ -1,11 +1,26 @@
 # 🌌 AstroViewer
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![License: Dual](https://img.shields.io/badge/license-dual-blue.svg)](#licensing)
 [![TypeScript](https://img.shields.io/badge/language-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![WebGL](https://img.shields.io/badge/3D-WebGL-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API)
 
 **AstroViewer** is a lightweight 3D engine for **HiPS (Hierarchical Progressive Surveys)** visualisation and exploration, written in **TypeScript** and **WebGL**.  
-It powers the next generation of **Astrobrowser** and provides a simple API for embedding 3D HiPS viewers, catalogue overlays, and TAP service interactions in any web project.
+It powers the next generation of **Astrobrowser** and provides a simple API for embedding 3D HiPS viewers, catalogue overlays, footprints, and camera/navigation controls in any web project.
+
+## Licensing
+
+AstroViewer is distributed under a dual-license model:
+
+- a commercial license for proprietary or revenue-generating use
+- a separate non-commercial, source-available license for personal, academic,
+  research, evaluation, or other non-commercial use
+
+The non-commercial option is not an OSI open source license. See
+`LICENSE.md`, `LICENSE-COMMERCIAL.md`, and `LICENSE-NONCOMMERCIAL.md` for the
+repository-level licensing structure.
+
+The commercial posture of `astro-viewer` also depends on the licensing alignment
+of its first-party dependency chain. See `DEPENDENCY-LICENSING.md`.
 
 ---
 
@@ -31,7 +46,7 @@ Copy the bundle into your project and link it in your HTML page:
 ```
 
 Then you can use the global `astroviewer` object directly.  
-Here is a minimal example that loads the HiPS survey, activates a TAP service, and displays a source catalogue.
+Here is a minimal example that loads a HiPS survey and starts the viewer.
 
 ```html
 <!DOCTYPE html>
@@ -54,16 +69,9 @@ Here is a minimal example that loads the HiPS survey, activates a TAP service, a
       const resp = await fetch(hipsUrl + "properties");
       const propsText = await resp.text();
 
-      const desc = new astroviewer.HiPSDescriptor(propsText, new URL(hipsUrl));
-      const insideSphere = false;
-
-      window.AstroAPI.activateHiPS(desc, insideSphere);
+      const desc = new astroviewer.HiPSDescriptor(propsText, hipsUrl);
+      window.AstroAPI.activateHiPS(desc);
       window.AstroAPI.run();
-
-      const tapRepo = await astroviewer.addTAPRepo("https://sky.esa.int/esasky-tap/tap");
-      const catalogue = tapRepo.cataloguesList.find(cat => cat.name === "catalogues.integral_ibis");
-
-      window.AstroAPI.showCatalogue(catalogue);
     }
   </script>
 </body>
@@ -77,17 +85,17 @@ Here is a minimal example that loads the HiPS survey, activates a TAP service, a
 You can also use AstroViewer as a Node module:
 
 ```bash
-npm install ./path/to/astro-core
+npm install astro-viewer
 ```
 
 Then import from your code:
 
 ```ts
 // ESM
-import { AstroViewer, HiPSDescriptor, addTAPRepo } from 'astro-core';
+import { AstroViewer, HiPSDescriptor } from 'astro-viewer';
 
 // or CommonJS
-const { AstroViewer, HiPSDescriptor, addTAPRepo } = require('astro-core');
+const { AstroViewer, HiPSDescriptor } = require('astro-viewer');
 ```
 
 ---
@@ -109,24 +117,10 @@ This command will:
 - Prepare the web testing interface
 - Start a local web server
 
-You should see something like:
+You should see output similar to:
 
 ```
-Starting up http-server, serving public
-
-http-server version: 14.1.1
-
-http-server settings:
-CORS: disabled
-Cache: 3600 seconds
-Connection Timeout: 120 seconds
-Directory Listings: visible
-AutoIndex: visible
-
-Available on:
-  http://127.0.0.1:8080
-  http://10.0.0.184:8080
-Hit CTRL-C to stop the server
+Serving HTTP on 0.0.0.0 port 8080
 ```
 
 Then open one of the links in your browser (e.g. [http://127.0.0.1:8080](http://127.0.0.1:8080)) to start exploring **AstroViewer**.
@@ -153,8 +147,7 @@ Main exported classes and utilities:
 - `HiPSDescriptor` — handles HiPS metadata and configuration  
 - `FootprintSetGL` — renders observation footprints  
 - `CatalogueGL` — renders astronomical catalogues  
-- `addTAPRepo()` — loads TAP repositories and metadata  
-- `FoV`, `AstroSphere`, `HealpixGridSingleton`, etc. — geometry, camera, and rendering utilities  
+- `FoV` and related geometry/color-map utilities — camera and rendering helpers  
 
 ---
 
@@ -181,7 +174,7 @@ const AC = new astroviewer.AstroViewer({
 
 ```ts
 // Node/ESM
-import { AstroViewer } from 'astro-core';
+import { AstroViewer } from 'astro-viewer';
 const AC = new AstroViewer();
 ```
 
@@ -192,26 +185,17 @@ Start the render loop and event handling.
 AC.run();
 ```
 
-#### `stop()`
-Stop/pause the render loop.
-
-```js
-AC.stop();
-```
-
----
-
 ### HiPS Datasets
 
-#### `activateHiPS(descriptor: HiPSDescriptor, insideSphere = false)`
+#### `activateHiPS(descriptor: HiPSDescriptor)`
 Activate a HiPS dataset for rendering.
 
 ```js
 const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
 const props = await (await fetch(hipsUrl + "properties")).text();
-const desc = new astroviewer.HiPSDescriptor(props, new URL(hipsUrl));
+const desc = new astroviewer.HiPSDescriptor(props, hipsUrl);
 
-AC.activateHiPS(desc, /* insideSphere */ false);
+AC.activateHiPS(desc);
 ```
 
 #### `toggleInsideSphere()`
@@ -225,14 +209,11 @@ AC.toggleInsideSphere();   // outside <-> inside
 
 ### Camera & Navigation
 
-#### `goto(raDeg: number, decDeg: number, opts?)`
-Fly the camera to a sky coordinate (ICRS). Optional parameters:
-- `fovDeg?: number` – target field of view (angular diameter)
-- `durationMs?: number` – animation duration (default ~1000–1500 ms)
-- `easing?: (t:number)=>number` – custom easing
+#### `goTo(raDeg: number, decDeg: number)`
+Move the camera to a sky coordinate (ICRS).
 
 ```js
-await AC.goto(287.0, 12.5, { fovDeg: 60, durationMs: 1500 });
+AC.goTo(287.0, 12.5);
 ```
 
 
@@ -249,24 +230,12 @@ AC.toggleHealpixGrid();
 
 ---
 
-### TAP Repositories & Catalogues
-
-#### `addTAPRepo(url: string): Promise<TapRepo>`
-Discover capabilities and available datasets (catalogues, footprints, etc.).
-
-```js
-const tapRepo = await astroviewer.addTAPRepo("https://sky.esa.int/esasky-tap/tap");
-
-// Explore the lists (names depend on the service)
-console.log(tapRepo.cataloguesList.map(c => c.name));
-console.log(tapRepo.obsList?.map(o => o.name)); // if provided
-```
+### Catalogues
 
 #### `showCatalogue(catalogue: CatalogueGL)`
-Render a catalogue from a TAP repository.
+Render a catalogue layer.
 
 ```js
-const cat = tapRepo.cataloguesList.find(c => c.name === "catalogues.integral_ibis");
 AC.showCatalogue(cat);
 ```
 
@@ -326,26 +295,16 @@ AC.changeFootprintSetColor(footprints, "#00ffaa");
 
 Depending on your build, you may also have helpers like:
 
-#### `on(eventName: string, handler: Function)` / `off(eventName: string, handler: Function)`
-Listen to viewer events (e.g., click on source, pointer move).
-
-```js
-AC.on?.("pointermove", (info) => {
-  // info.ra, info.dec, info.pixelX, info.pixelY, etc.
-  console.log("Hover:", info);
-});
-```
-
-#### `getCenterCoords()`
+#### `getCenterCoordinates()`
 Return the current ICRS center of the viewport.
 
 ```js
-const { ra, dec } = AC.getCenterCoords?.() ?? { ra: 0, dec: 0 };
+const coords = AC.getCenterCoordinates();
 ```
 
-#### `setBackgroundColor(hex: string)`
+#### `toggleInsideSphere()`
 ```js
-AC.setBackgroundColor?.("#000000");
+AC.toggleInsideSphere();
 ```
 
 > If a method above is not present in your build, it means it’s not exported by `src/index.ts`.  
@@ -360,14 +319,16 @@ AC.setBackgroundColor?.("#000000");
 
 ## 📜 License
 
-This project is released under the **GNU GPL v3** license.  
-© 2025 Fabrizio Giordano (fab77)
+This repository uses a dual-license model.  
+Commercial use requires a separate written agreement.  
+Non-commercial use is available under the source-available terms in `LICENSE-NONCOMMERCIAL.md`.  
+See also `LICENSE.md` and `LICENSE-COMMERCIAL.md`.
 
 ---
 
 ## 🔗 Links
 
-- 🏠 [GitHub Repository](https://github.com/fab77/astro-core)
+- 🏠 [GitHub Repository](https://github.com/fab77/astro-viewer)
 - 🪐 [HiPS Standard (IVOA)](https://www.ivoa.net/documents/HiPS/)
 - 🛰️ [ESA Sky TAP Service](https://sky.esa.int/esasky-tap/tap)
-- ✉️ [Report Issues](https://github.com/fab77/astro-core/issues)
+- ✉️ [Report Issues](https://github.com/fab77/astro-viewer/issues)
