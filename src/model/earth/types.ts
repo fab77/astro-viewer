@@ -4,6 +4,7 @@ export type XYZLayerConfig = {
   maxZoom?: number
   segmentsPerSide?: number
   tileSize?: number
+  maxCachedTiles?: number
 }
 
 export type XYZTileCoord = {

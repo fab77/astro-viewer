@@ -14,6 +14,8 @@ export class XYZTile {
     _aborted = false;
     _loading = false;
     _failedUntil = 0;
+    _lastUsedAt = 0;
+    _createdAt = Date.now();
     _image;
     _objectUrl = null;
     constructor(coord, url, mesh, webgl, shaderProgram) {
@@ -42,6 +44,18 @@ export class XYZTile {
     }
     get failedUntil() {
         return this._failedUntil;
+    }
+    get loading() {
+        return this._loading;
+    }
+    get lastUsedAt() {
+        return this._lastUsedAt;
+    }
+    get createdAt() {
+        return this._createdAt;
+    }
+    touch() {
+        this._lastUsedAt = Date.now();
     }
     loadTexture() {
         if (this._loading || this._ready || this._aborted) {
@@ -98,6 +112,7 @@ export class XYZTile {
         this.revokeObjectUrl();
     }
     draw(pMatrix, vMatrix, mMatrix) {
+        this.touch();
         if (!this._ready) {
             this.loadTexture();
         }

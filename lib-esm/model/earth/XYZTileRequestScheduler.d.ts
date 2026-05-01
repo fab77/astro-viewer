@@ -7,12 +7,15 @@ export declare class XYZTileRequestScheduler {
     private _activeCount;
     private _queue;
     private _inflight;
-    private _hostCooldownUntil;
+    private _hostBackoff;
     constructor(maxConcurrent?: number);
+    setMaxConcurrent(maxConcurrent: number): void;
+    getMaxConcurrent(): number;
     load(url: string): Promise<Blob>;
     private pump;
     private fetchBlob;
     private getHostCooldown;
-    private setHostCooldown;
+    private registerSuccess;
+    private registerFailure;
 }
 export declare const xyzTileRequestScheduler: XYZTileRequestScheduler;

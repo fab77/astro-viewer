@@ -14,6 +14,7 @@ import ColorMaps, { ColorMap, ColorMapName } from './model/ColorMaps.js'
 import {HiPS} from './model/hips/HiPS.js'
 import { XYZLayer } from './model/earth/XYZLayer.js'
 import type { XYZLayerConfig } from './model/earth/types.js'
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext 
@@ -131,6 +132,14 @@ createFootprintSet(footprintSetName: string,
 
   activateXYZ(config: XYZLayerConfig): void {
     this.astroSphere.activateXYZ(config)
+  }
+
+  setXYZMaxConcurrentRequests(value: number): void {
+    xyzTileRequestScheduler.setMaxConcurrent(value)
+  }
+
+  getXYZMaxConcurrentRequests(): number {
+    return xyzTileRequestScheduler.getMaxConcurrent()
   }
 
   async loadHiPS(baseUrl: string): Promise<string> {

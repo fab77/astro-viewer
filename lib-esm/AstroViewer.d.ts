@@ -39,6 +39,8 @@ export declare class AstroViewer {
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     activateXYZ(config: XYZLayerConfig): void;
+    setXYZMaxConcurrentRequests(value: number): void;
+    getXYZMaxConcurrentRequests(): number;
     loadHiPS(baseUrl: string): Promise<string>;
     changeColorMap(colorMapName: ColorMapName): void;
     changeCustomColorMap(colorMap: ColorMap): void;

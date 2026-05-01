@@ -76,6 +76,11 @@
                 <input id="xyzMaxZoom" type="number" min="0" max="8" step="1" value="6" placeholder="Max zoom" />
                 <input id="xyzSegments" type="number" min="2" max="64" step="1" value="16" placeholder="Segments" />
             </div>
+            <div class="row3">
+                <input id="xyzMaxCachedTiles" type="number" min="32" max="4096" step="32" value="384" placeholder="Max cached tiles" />
+                <input id="xyzMaxConcurrentRequests" type="number" min="1" max="16" step="1" value="4" placeholder="Max concurrent requests" />
+                <span class="hint">Tune cache size and request parallelism for XYZ.</span>
+            </div>
             <div class="hint">XYZ zoom is computed automatically from distance/FoV and clamped between min/max.</div>
         </div>
 

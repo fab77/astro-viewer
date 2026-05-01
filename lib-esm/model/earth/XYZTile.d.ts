@@ -15,12 +15,18 @@ export declare class XYZTile {
     private _aborted;
     private _loading;
     private _failedUntil;
+    private _lastUsedAt;
+    private _createdAt;
     private _image?;
     private _objectUrl;
     constructor(coord: XYZTileCoord, url: string, mesh: XYZTileMesh, webgl: WebGL2RenderingContext, shaderProgram: XYZShaderProgram);
     get ready(): boolean;
     get coord(): XYZTileCoord;
     get failedUntil(): number;
+    get loading(): boolean;
+    get lastUsedAt(): number;
+    get createdAt(): number;
+    touch(): void;
     private loadTexture;
     private loadImageFromBlob;
     private onImageLoaded;

@@ -5,6 +5,7 @@ import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 import { bootSetup } from './Config.js';
 import ColorMaps from './model/ColorMaps.js';
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
 // & {
 //   viewportWidth: number
 //   viewportHeight: number
@@ -87,6 +88,12 @@ export class AstroViewer {
     }
     activateXYZ(config) {
         this.astroSphere.activateXYZ(config);
+    }
+    setXYZMaxConcurrentRequests(value) {
+        xyzTileRequestScheduler.setMaxConcurrent(value);
+    }
+    getXYZMaxConcurrentRequests() {
+        return xyzTileRequestScheduler.getMaxConcurrent();
     }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';

@@ -7,6 +7,8 @@ import { XYZVisibleTilesManager } from './XYZVisibleTilesManager.js'
 import type { XYZLayerConfig } from './types.js'
 
 export class XYZLayer extends AbstractSkyEntity {
+  private static readonly DEFAULT_MAX_CACHED_TILES = 384
+
   private _config: XYZLayerConfig
   private _provider: XYZTileProvider
   private _visibleTilesManager: XYZVisibleTilesManager
@@ -66,13 +68,19 @@ export class XYZLayer extends AbstractSkyEntity {
 
     for (const tileCoord of requestedTiles) {
       const tileKey = this.getTileKey(tileCoord)
-      if (this._tileCache.has(tileKey)) {
+      const existingTile = this._tileCache.get(tileKey)
+      if (existingTile) {
+        existingTile.touch()
         continue
       }
       const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments)
       const url = this._provider.getTileUrl(tileCoord)
-      this._tileCache.set(tileKey, new XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram))
+      const tile = new XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram)
+      tile.touch()
+      this._tileCache.set(tileKey, tile)
     }
+
+    this.evictCache()
   }
 
   draw(input: SkyEntityDrawInput): void {
@@ -94,6 +102,33 @@ export class XYZLayer extends AbstractSkyEntity {
       const tile = this._tileCache.get(tileKey)
       if (!tile) continue
       tile.draw(pMatrix, vMatrix, mMatrix)
+    }
+  }
+
+  private evictCache(): void {
+    const maxCachedTiles = this._config.maxCachedTiles ?? XYZLayer.DEFAULT_MAX_CACHED_TILES
+    if (this._tileCache.size <= maxCachedTiles) {
+      return
+    }
+
+    const visibleKeySet = new Set(this._visibleTileKeys)
+    const candidates = Array.from(this._tileCache.entries())
+      .filter(([tileKey]) => !visibleKeySet.has(tileKey))
+      .sort((a, b) => {
+        const scoreA = Math.min(a[1].lastUsedAt || a[1].createdAt, a[1].createdAt)
+        const scoreB = Math.min(b[1].lastUsedAt || b[1].createdAt, b[1].createdAt)
+        return scoreA - scoreB
+      })
+
+    for (const [tileKey, tile] of candidates) {
+      if (this._tileCache.size <= maxCachedTiles) {
+        break
+      }
+      if (tile.loading) {
+        continue
+      }
+      tile.dispose()
+      this._tileCache.delete(tileKey)
     }
   }
 

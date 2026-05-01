@@ -3951,6 +3951,8 @@ class XYZTile {
     _aborted = false;
     _loading = false;
     _failedUntil = 0;
+    _lastUsedAt = 0;
+    _createdAt = Date.now();
     _image;
     _objectUrl = null;
     constructor(coord, url, mesh, webgl, shaderProgram) {
@@ -3979,6 +3981,18 @@ class XYZTile {
     }
     get failedUntil() {
         return this._failedUntil;
+    }
+    get loading() {
+        return this._loading;
+    }
+    get lastUsedAt() {
+        return this._lastUsedAt;
+    }
+    get createdAt() {
+        return this._createdAt;
+    }
+    touch() {
+        this._lastUsedAt = Date.now();
     }
     loadTexture() {
         if (this._loading || this._ready || this._aborted) {
@@ -4035,6 +4049,7 @@ class XYZTile {
         this.revokeObjectUrl();
     }
     draw(pMatrix, vMatrix, mMatrix) {
+        this.touch();
         if (!this._ready) {
             this.loadTexture();
         }
@@ -4402,7 +4417,7 @@ class XYZTileRequestScheduler {
     _activeCount = 0;
     _queue = [];
     _inflight = new Map();
-    _hostCooldownUntil = new Map();
+    _hostBackoff = new Map();
     constructor(maxConcurrent = 4) {
         this._maxConcurrent = maxConcurrent;
     }
@@ -4454,35 +4469,58 @@ class XYZTileRequestScheduler {
                 cache: 'force-cache',
             });
             if (!response.ok) {
-                const cooldownMs = response.status === 429 ? 30000 : 10000;
-                this.setHostCooldown(item.url, cooldownMs);
+                const cooldownMs = this.registerFailure(item.url, response.status === 429);
                 throw new XYZTileRequestError(`HTTP ${response.status} loading ${item.url}`, cooldownMs);
             }
+            this.registerSuccess(item.url);
             return await response.blob();
         }
         catch (error) {
             if (error instanceof XYZTileRequestError) {
                 throw error;
             }
-            const cooldownMs = 10000;
-            this.setHostCooldown(item.url, cooldownMs);
+            const cooldownMs = this.registerFailure(item.url, false);
             throw new XYZTileRequestError(`Network/CORS failure loading ${item.url}`, cooldownMs);
         }
     }
     getHostCooldown(url) {
         try {
-            return this._hostCooldownUntil.get(new URL(url).host) ?? 0;
+            return this._hostBackoff.get(new URL(url).host)?.cooldownUntil ?? 0;
         }
         catch {
             return 0;
         }
     }
-    setHostCooldown(url, cooldownMs) {
+    registerSuccess(url) {
         try {
-            this._hostCooldownUntil.set(new URL(url).host, Date.now() + cooldownMs);
+            const host = new URL(url).host;
+            this._hostBackoff.set(host, {
+                cooldownUntil: 0,
+                consecutiveFailures: 0,
+            });
         }
         catch {
             // no-op
+        }
+    }
+    registerFailure(url, isRateLimited) {
+        try {
+            const host = new URL(url).host;
+            const previous = this._hostBackoff.get(host) ?? {
+                cooldownUntil: 0,
+                consecutiveFailures: 0,
+            };
+            const consecutiveFailures = previous.consecutiveFailures + 1;
+            const baseDelayMs = isRateLimited ? 4000 : 1500;
+            const cooldownMs = Math.min(isRateLimited ? 120000 : 30000, baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)));
+            this._hostBackoff.set(host, {
+                cooldownUntil: Date.now() + cooldownMs,
+                consecutiveFailures,
+            });
+            return cooldownMs;
+        }
+        catch {
+            return isRateLimited ? 30000 : 10000;
         }
     }
 }
@@ -4621,6 +4659,7 @@ const XYZTile_js_1 = __webpack_require__(375);
 const XYZTileProvider_js_1 = __webpack_require__(330);
 const XYZVisibleTilesManager_js_1 = __webpack_require__(937);
 class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    static DEFAULT_MAX_CACHED_TILES = 384;
     _config;
     _provider;
     _visibleTilesManager;
@@ -4668,13 +4707,18 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             .map((tileCoord) => this.getTileKey(tileCoord));
         for (const tileCoord of requestedTiles) {
             const tileKey = this.getTileKey(tileCoord);
-            if (this._tileCache.has(tileKey)) {
+            const existingTile = this._tileCache.get(tileKey);
+            if (existingTile) {
+                existingTile.touch();
                 continue;
             }
             const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments);
             const url = this._provider.getTileUrl(tileCoord);
-            this._tileCache.set(tileKey, new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram));
+            const tile = new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram);
+            tile.touch();
+            this._tileCache.set(tileKey, tile);
         }
+        this.evictCache();
     }
     draw(input) {
         const vMatrix = input.camera.getCameraMatrix();
@@ -4688,6 +4732,30 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             if (!tile)
                 continue;
             tile.draw(pMatrix, vMatrix, mMatrix);
+        }
+    }
+    evictCache() {
+        const maxCachedTiles = this._config.maxCachedTiles ?? XYZLayer.DEFAULT_MAX_CACHED_TILES;
+        if (this._tileCache.size <= maxCachedTiles) {
+            return;
+        }
+        const visibleKeySet = new Set(this._visibleTileKeys);
+        const candidates = Array.from(this._tileCache.entries())
+            .filter(([tileKey]) => !visibleKeySet.has(tileKey))
+            .sort((a, b) => {
+            const scoreA = Math.min(a[1].lastUsedAt || a[1].createdAt, a[1].createdAt);
+            const scoreB = Math.min(b[1].lastUsedAt || b[1].createdAt, b[1].createdAt);
+            return scoreA - scoreB;
+        });
+        for (const [tileKey, tile] of candidates) {
+            if (this._tileCache.size <= maxCachedTiles) {
+                break;
+            }
+            if (tile.loading) {
+                continue;
+            }
+            tile.dispose();
+            this._tileCache.delete(tileKey);
         }
     }
     disposeTiles() {

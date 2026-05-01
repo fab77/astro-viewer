@@ -4,6 +4,11 @@ type QueueItem = {
   reject: (error: Error) => void
 }
 
+type HostBackoffState = {
+  cooldownUntil: number
+  consecutiveFailures: number
+}
+
 export class XYZTileRequestError extends Error {
   cooldownMs: number
 
@@ -19,10 +24,19 @@ export class XYZTileRequestScheduler {
   private _activeCount = 0
   private _queue: QueueItem[] = []
   private _inflight: Map<string, Promise<Blob>> = new Map()
-  private _hostCooldownUntil: Map<string, number> = new Map()
+  private _hostBackoff: Map<string, HostBackoffState> = new Map()
 
   constructor(maxConcurrent = 4) {
     this._maxConcurrent = maxConcurrent
+  }
+
+  setMaxConcurrent(maxConcurrent: number): void {
+    this._maxConcurrent = Math.max(1, Math.floor(maxConcurrent))
+    this.pump()
+  }
+
+  getMaxConcurrent(): number {
+    return this._maxConcurrent
   }
 
   load(url: string): Promise<Blob> {
@@ -91,22 +105,21 @@ export class XYZTileRequestScheduler {
       })
 
       if (!response.ok) {
-        const cooldownMs = response.status === 429 ? 30000 : 10000
-        this.setHostCooldown(item.url, cooldownMs)
+        const cooldownMs = this.registerFailure(item.url, response.status === 429)
         throw new XYZTileRequestError(
           `HTTP ${response.status} loading ${item.url}`,
           cooldownMs,
         )
       }
 
+      this.registerSuccess(item.url)
       return await response.blob()
     } catch (error) {
       if (error instanceof XYZTileRequestError) {
         throw error
       }
 
-      const cooldownMs = 10000
-      this.setHostCooldown(item.url, cooldownMs)
+      const cooldownMs = this.registerFailure(item.url, false)
       throw new XYZTileRequestError(
         `Network/CORS failure loading ${item.url}`,
         cooldownMs,
@@ -116,17 +129,46 @@ export class XYZTileRequestScheduler {
 
   private getHostCooldown(url: string): number {
     try {
-      return this._hostCooldownUntil.get(new URL(url).host) ?? 0
+      return this._hostBackoff.get(new URL(url).host)?.cooldownUntil ?? 0
     } catch {
       return 0
     }
   }
 
-  private setHostCooldown(url: string, cooldownMs: number): void {
+  private registerSuccess(url: string): void {
     try {
-      this._hostCooldownUntil.set(new URL(url).host, Date.now() + cooldownMs)
+      const host = new URL(url).host
+      this._hostBackoff.set(host, {
+        cooldownUntil: 0,
+        consecutiveFailures: 0,
+      })
     } catch {
       // no-op
+    }
+  }
+
+  private registerFailure(url: string, isRateLimited: boolean): number {
+    try {
+      const host = new URL(url).host
+      const previous = this._hostBackoff.get(host) ?? {
+        cooldownUntil: 0,
+        consecutiveFailures: 0,
+      }
+      const consecutiveFailures = previous.consecutiveFailures + 1
+      const baseDelayMs = isRateLimited ? 4000 : 1500
+      const cooldownMs = Math.min(
+        isRateLimited ? 120000 : 30000,
+        baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)),
+      )
+
+      this._hostBackoff.set(host, {
+        cooldownUntil: Date.now() + cooldownMs,
+        consecutiveFailures,
+      })
+
+      return cooldownMs
+    } catch {
+      return isRateLimited ? 30000 : 10000
     }
   }
 }

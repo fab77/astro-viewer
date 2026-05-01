@@ -17,6 +17,8 @@ export class XYZTile {
   private _aborted = false
   private _loading = false
   private _failedUntil = 0
+  private _lastUsedAt = 0
+  private _createdAt = Date.now()
   private _image?: HTMLImageElement
   private _objectUrl: string | null = null
 
@@ -59,6 +61,22 @@ export class XYZTile {
 
   get failedUntil(): number {
     return this._failedUntil
+  }
+
+  get loading(): boolean {
+    return this._loading
+  }
+
+  get lastUsedAt(): number {
+    return this._lastUsedAt
+  }
+
+  get createdAt(): number {
+    return this._createdAt
+  }
+
+  touch(): void {
+    this._lastUsedAt = Date.now()
   }
 
   private loadTexture(): void {
@@ -125,6 +143,7 @@ export class XYZTile {
   }
 
   draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array): void {
+    this.touch()
     if (!this._ready) {
       this.loadTexture()
     }

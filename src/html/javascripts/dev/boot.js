@@ -34,11 +34,15 @@ async function bootstrap() {
     try {
       const healpixChk = el('healpixGridChk');
       const equatChk = el('equatorialGridChk');
+      const xyzConcurrentInput = el('xyzMaxConcurrentRequests');
       if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
         healpixChk.checked = !!AC.isHealpixGridVisible();
       }
       if (equatChk && typeof AC.isEquatorialGridVisible === "function") {
         equatChk.checked = !!AC.isEquatorialGridVisible();
+      }
+      if (xyzConcurrentInput && typeof AC.getXYZMaxConcurrentRequests === "function") {
+        xyzConcurrentInput.value = String(AC.getXYZMaxConcurrentRequests());
       }
     } catch { }
 
@@ -92,15 +96,25 @@ function wireUI() {
     const minZoom = Number(el('xyzMinZoom').value);
     const maxZoom = Number(el('xyzMaxZoom').value);
     const segmentsPerSide = Number(el('xyzSegments').value);
+    const maxCachedTiles = Number(el('xyzMaxCachedTiles').value);
+    const maxConcurrentRequests = Number(el('xyzMaxConcurrentRequests').value);
 
     if (!urlTemplate) return setStatus("Insert an XYZ URL template.");
     if (!Number.isFinite(minZoom) || minZoom < 0) return setStatus("Insert a valid XYZ min zoom.");
     if (!Number.isFinite(maxZoom) || maxZoom < 0) return setStatus("Insert a valid XYZ max zoom.");
     if (maxZoom < minZoom) return setStatus("XYZ max zoom must be greater than or equal to min zoom.");
     if (!Number.isFinite(segmentsPerSide) || segmentsPerSide < 2) return setStatus("Insert a valid segment count.");
+    if (!Number.isFinite(maxCachedTiles) || maxCachedTiles < 32) return setStatus("Insert a valid XYZ max cached tiles value.");
+    if (!Number.isFinite(maxConcurrentRequests) || maxConcurrentRequests < 1) return setStatus("Insert a valid XYZ max concurrent requests value.");
 
     try {
-      loadXYZ(urlTemplate, { minZoom, maxZoom, segmentsPerSide });
+      loadXYZ(urlTemplate, {
+        minZoom,
+        maxZoom,
+        segmentsPerSide,
+        maxCachedTiles,
+        maxConcurrentRequests,
+      });
     } catch (e) {
       setStatus("XYZ load error: " + (e.message || e));
     }
