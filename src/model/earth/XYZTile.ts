@@ -144,9 +144,15 @@ export class XYZTile {
     this.revokeObjectUrl()
   }
 
-  draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, priority = 0): void {
+  draw(
+    pMatrix: Float32Array,
+    vMatrix: Float32Array,
+    mMatrix: Float32Array,
+    priority = 0,
+    allowLoad = true,
+  ): void {
     this.touch()
-    if (!this._ready) {
+    if (!this._ready && allowLoad) {
       this.loadTexture(priority)
     }
     if (!this._ready || !this._texture) {

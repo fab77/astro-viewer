@@ -113,9 +113,9 @@ export class XYZTile {
         this._ready = true;
         this.revokeObjectUrl();
     }
-    draw(pMatrix, vMatrix, mMatrix, priority = 0) {
+    draw(pMatrix, vMatrix, mMatrix, priority = 0, allowLoad = true) {
         this.touch();
-        if (!this._ready) {
+        if (!this._ready && allowLoad) {
             this.loadTexture(priority);
         }
         if (!this._ready || !this._texture) {

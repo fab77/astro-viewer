@@ -108,6 +108,39 @@ export class XYZTileProvider {
         }
         return this.deduplicateTiles(tiles);
     }
+    tileFromSpherical(zoom, sphericalDeg) {
+        const lonDeg = sphericalDeg.phi > 180 ? sphericalDeg.phi - 360 : sphericalDeg.phi;
+        const latDeg = 90 - sphericalDeg.theta;
+        const dim = 2 ** zoom;
+        const x = Math.floor(((lonDeg + 180) / 360) * dim);
+        const y = Math.floor(this.latToTileY(latDeg, zoom));
+        return {
+            z: zoom,
+            x: this.wrapTileX(x, dim),
+            y: this.clampTileY(y, dim),
+        };
+    }
+    getNeighborTiles(tile, ring = 1) {
+        const dim = 2 ** tile.z;
+        const neighbors = [];
+        for (let dx = -ring; dx <= ring; dx++) {
+            for (let dy = -ring; dy <= ring; dy++) {
+                neighbors.push({
+                    z: tile.z,
+                    x: this.wrapTileX(tile.x + dx, dim),
+                    y: this.clampTileY(tile.y + dy, dim),
+                });
+            }
+        }
+        return this.deduplicateTiles(neighbors);
+    }
+    deduplicateTiles(tiles) {
+        const unique = new Map();
+        for (const tile of tiles) {
+            unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
+        }
+        return Array.from(unique.values());
+    }
     resolveViewCenter(camera, centerSphericalDeg) {
         if (centerSphericalDeg) {
             return {
@@ -150,12 +183,5 @@ export class XYZTileProvider {
     }
     clampTileY(y, dim) {
         return Math.max(0, Math.min(dim - 1, y));
-    }
-    deduplicateTiles(tiles) {
-        const unique = new Map();
-        for (const tile of tiles) {
-            unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
-        }
-        return Array.from(unique.values());
     }
 }

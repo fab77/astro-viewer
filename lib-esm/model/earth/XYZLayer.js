@@ -1,7 +1,7 @@
 import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
 import { XYZShaderProgram } from '../../shader/XYZShaderProgram.js';
 import { XYZMeshBuilder } from './XYZMeshBuilder.js';
-import { XYZTile } from './XYZTile.js';
+import { XYZTileBuffer } from './XYZTileBuffer.js';
 import { XYZTileProvider } from './XYZTileProvider.js';
 import { XYZVisibleTilesManager } from './XYZVisibleTilesManager.js';
 export class XYZLayer extends AbstractSkyEntity {
@@ -11,12 +11,15 @@ export class XYZLayer extends AbstractSkyEntity {
     _visibleTilesManager;
     _meshBuilder;
     _xyzShaderProgram;
-    _tileCache = new Map();
+    _tileBuffer;
     _visibleTileKeys = [];
+    _fallbackVisibleTileKeys = [];
     _tilePriorities = new Map();
     _tileSelectionKey = null;
     _currentTileCount = 0;
     _fallbackTileCount = 0;
+    _coreTileCount = 0;
+    _coverageTileCount = 0;
     constructor(config, webgl) {
         super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false);
         this._config = config;
@@ -24,6 +27,7 @@ export class XYZLayer extends AbstractSkyEntity {
         this._visibleTilesManager = new XYZVisibleTilesManager(this._provider);
         this._meshBuilder = new XYZMeshBuilder();
         this._xyzShaderProgram = new XYZShaderProgram(webgl);
+        this._tileBuffer = new XYZTileBuffer(1, webgl, this._meshBuilder, this._xyzShaderProgram);
         this.initGL(webgl);
         this.bootstrapTiles(180, null, null);
     }
@@ -35,7 +39,11 @@ export class XYZLayer extends AbstractSkyEntity {
         let loadingTileCount = 0;
         let coolingDownTileCount = 0;
         const now = Date.now();
-        for (const tile of this._tileCache.values()) {
+        const allTiles = [
+            ...Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile),
+            ...Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile),
+        ];
+        for (const tile of allTiles) {
             if (tile.ready) {
                 readyTileCount += 1;
             }
@@ -54,10 +62,12 @@ export class XYZLayer extends AbstractSkyEntity {
             return maxZoom == null ? zoom : Math.max(maxZoom, zoom);
         }, null);
         return {
-            cacheSize: this._tileCache.size,
+            cacheSize: this._tileBuffer.size,
             visibleTileCount: this._visibleTileKeys.length,
             currentTileCount: this._currentTileCount,
             fallbackTileCount: this._fallbackTileCount,
+            coreTileCount: this._coreTileCount,
+            coverageTileCount: this._coverageTileCount,
             readyTileCount,
             loadingTileCount,
             coolingDownTileCount,
@@ -84,6 +94,8 @@ export class XYZLayer extends AbstractSkyEntity {
                 currentTiles: this._provider.getInitialTiles(),
                 fallbackTiles: [],
                 currentZoom: 1,
+                coreTileCount: this._provider.getInitialTiles().length,
+                coverageTileCount: 0,
             };
         if (selection.key === this._tileSelectionKey) {
             return;
@@ -91,39 +103,41 @@ export class XYZLayer extends AbstractSkyEntity {
         this._tileSelectionKey = selection.key;
         this._currentTileCount = selection.currentTiles.length;
         this._fallbackTileCount = selection.fallbackTiles.length;
+        this._coreTileCount = selection.coreTileCount;
+        this._coverageTileCount = selection.coverageTileCount;
         const segments = this._config.segmentsPerSide ?? 16;
+        const coreTileKeys = new Set(selection.currentTiles
+            .slice(0, selection.coreTileCount)
+            .map((tileCoord) => this.getTileKey(tileCoord)));
         const prioritizedCurrentTiles = selection.currentTiles.map((tileCoord, index) => ({
             tileCoord,
             priority: 10000 + (selection.currentTiles.length - index),
+            role: coreTileKeys.has(this.getTileKey(tileCoord)) ? 'current' : 'coverage',
         }));
         const prioritizedFallbackTiles = selection.fallbackTiles.map((tileCoord, index) => ({
             tileCoord,
             priority: 1000 + (selection.fallbackTiles.length - index),
+            role: 'fallback',
         }));
         const requestedTiles = [...prioritizedCurrentTiles, ...prioritizedFallbackTiles];
         this._tilePriorities.clear();
-        this._visibleTileKeys = requestedTiles
+        this._fallbackVisibleTileKeys = [];
+        const orderedRequests = requestedTiles
             .sort((a, b) => a.tileCoord.z - b.tileCoord.z)
-            .map(({ tileCoord, priority }) => {
+            .map(({ tileCoord, priority, role }) => {
             const tileKey = this.getTileKey(tileCoord);
             this._tilePriorities.set(tileKey, priority);
-            return tileKey;
+            return {
+                tileCoord,
+                priority,
+                url: this._provider.getTileUrl(tileCoord),
+                role,
+            };
         });
-        for (const { tileCoord, priority } of requestedTiles) {
-            const tileKey = this.getTileKey(tileCoord);
-            const existingTile = this._tileCache.get(tileKey);
-            if (existingTile) {
-                existingTile.touch();
-                existingTile.primeLoad(priority);
-                continue;
-            }
-            const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments);
-            const url = this._provider.getTileUrl(tileCoord);
-            const tile = new XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram);
-            tile.touch();
-            tile.primeLoad(priority);
-            this._tileCache.set(tileKey, tile);
-        }
+        const ensuredKeys = this._tileBuffer.ensureTiles(orderedRequests, segments);
+        const fallbackKeySet = new Set(selection.fallbackTiles.map((tileCoord) => this.getTileKey(tileCoord)));
+        this._fallbackVisibleTileKeys = ensuredKeys.filter((tileKey) => fallbackKeySet.has(tileKey));
+        this._visibleTileKeys = ensuredKeys.filter((tileKey) => !fallbackKeySet.has(tileKey));
         this.evictCache();
     }
     draw(input) {
@@ -134,42 +148,26 @@ export class XYZLayer extends AbstractSkyEntity {
         const pMatrix = input.pMatrix;
         const mMatrix = this.getModelMatrix();
         for (const tileKey of this._visibleTileKeys) {
-            const tile = this._tileCache.get(tileKey);
+            const tile = this._tileBuffer.getActiveTile(tileKey);
             if (!tile)
                 continue;
             tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0);
         }
+        for (const tileKey of this._fallbackVisibleTileKeys) {
+            const tile = this._tileBuffer.getActiveTile(tileKey);
+            if (!tile)
+                continue;
+            tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0, false);
+        }
     }
     evictCache() {
         const maxCachedTiles = this._config.maxCachedTiles ?? XYZLayer.DEFAULT_MAX_CACHED_TILES;
-        if (this._tileCache.size <= maxCachedTiles) {
-            return;
-        }
-        const visibleKeySet = new Set(this._visibleTileKeys);
-        const candidates = Array.from(this._tileCache.entries())
-            .filter(([tileKey]) => !visibleKeySet.has(tileKey))
-            .sort((a, b) => {
-            const scoreA = Math.min(a[1].lastUsedAt || a[1].createdAt, a[1].createdAt);
-            const scoreB = Math.min(b[1].lastUsedAt || b[1].createdAt, b[1].createdAt);
-            return scoreA - scoreB;
-        });
-        for (const [tileKey, tile] of candidates) {
-            if (this._tileCache.size <= maxCachedTiles) {
-                break;
-            }
-            if (tile.loading) {
-                continue;
-            }
-            tile.dispose();
-            this._tileCache.delete(tileKey);
-        }
+        this._tileBuffer.evictCached(maxCachedTiles);
     }
     disposeTiles() {
-        for (const tile of this._tileCache.values()) {
-            tile.dispose();
-        }
-        this._tileCache.clear();
+        this._tileBuffer.dispose();
         this._visibleTileKeys = [];
+        this._fallbackVisibleTileKeys = [];
     }
     getTileKey(tileCoord) {
         return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;

@@ -17,11 +17,13 @@ export declare class XYZTileProvider {
     private getEffectiveTileY;
     private getSubdomain;
     getVisibleTilesAtZoom(z: number, centerSphericalDeg: ViewCenterSpherical | null, fovPolygon: Point[], viewportSphericalSamples: ViewCenterSpherical[], padding?: number): XYZTileCoord[];
+    tileFromSpherical(zoom: number, sphericalDeg: ViewCenterSpherical): XYZTileCoord;
+    getNeighborTiles(tile: XYZTileCoord, ring?: number): XYZTileCoord[];
+    deduplicateTiles(tiles: XYZTileCoord[]): XYZTileCoord[];
     private resolveViewCenter;
     private latToTileY;
     private wrapTileX;
     private normalizeLonAround;
     private clampTileY;
-    private deduplicateTiles;
 }
 export {};

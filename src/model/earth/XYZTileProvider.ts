@@ -149,6 +149,45 @@ export class XYZTileProvider {
     return this.deduplicateTiles(tiles)
   }
 
+  tileFromSpherical(zoom: number, sphericalDeg: ViewCenterSpherical): XYZTileCoord {
+    const lonDeg = sphericalDeg.phi > 180 ? sphericalDeg.phi - 360 : sphericalDeg.phi
+    const latDeg = 90 - sphericalDeg.theta
+    const dim = 2 ** zoom
+    const x = Math.floor(((lonDeg + 180) / 360) * dim)
+    const y = Math.floor(this.latToTileY(latDeg, zoom))
+
+    return {
+      z: zoom,
+      x: this.wrapTileX(x, dim),
+      y: this.clampTileY(y, dim),
+    }
+  }
+
+  getNeighborTiles(tile: XYZTileCoord, ring = 1): XYZTileCoord[] {
+    const dim = 2 ** tile.z
+    const neighbors: XYZTileCoord[] = []
+
+    for (let dx = -ring; dx <= ring; dx++) {
+      for (let dy = -ring; dy <= ring; dy++) {
+        neighbors.push({
+          z: tile.z,
+          x: this.wrapTileX(tile.x + dx, dim),
+          y: this.clampTileY(tile.y + dy, dim),
+        })
+      }
+    }
+
+    return this.deduplicateTiles(neighbors)
+  }
+
+  deduplicateTiles(tiles: XYZTileCoord[]): XYZTileCoord[] {
+    const unique = new Map<string, XYZTileCoord>()
+    for (const tile of tiles) {
+      unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile)
+    }
+    return Array.from(unique.values())
+  }
+
   private resolveViewCenter(
     camera: Camera | null,
     centerSphericalDeg: ViewCenterSpherical | null,
@@ -203,11 +242,4 @@ export class XYZTileProvider {
     return Math.max(0, Math.min(dim - 1, y))
   }
 
-  private deduplicateTiles(tiles: XYZTileCoord[]): XYZTileCoord[] {
-    const unique = new Map<string, XYZTileCoord>()
-    for (const tile of tiles) {
-      unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile)
-    }
-    return Array.from(unique.values())
-  }
 }

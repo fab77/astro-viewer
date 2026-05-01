@@ -4859,9 +4859,9 @@ class XYZTile {
         this._ready = true;
         this.revokeObjectUrl();
     }
-    draw(pMatrix, vMatrix, mMatrix, priority = 0) {
+    draw(pMatrix, vMatrix, mMatrix, priority = 0, allowLoad = true) {
         this.touch();
-        if (!this._ready) {
+        if (!this._ready && allowLoad) {
             this.loadTexture(priority);
         }
         if (!this._ready || !this._texture) {
@@ -13039,6 +13039,39 @@ class XYZTileProvider {
         }
         return this.deduplicateTiles(tiles);
     }
+    tileFromSpherical(zoom, sphericalDeg) {
+        const lonDeg = sphericalDeg.phi > 180 ? sphericalDeg.phi - 360 : sphericalDeg.phi;
+        const latDeg = 90 - sphericalDeg.theta;
+        const dim = 2 ** zoom;
+        const x = Math.floor(((lonDeg + 180) / 360) * dim);
+        const y = Math.floor(this.latToTileY(latDeg, zoom));
+        return {
+            z: zoom,
+            x: this.wrapTileX(x, dim),
+            y: this.clampTileY(y, dim),
+        };
+    }
+    getNeighborTiles(tile, ring = 1) {
+        const dim = 2 ** tile.z;
+        const neighbors = [];
+        for (let dx = -ring; dx <= ring; dx++) {
+            for (let dy = -ring; dy <= ring; dy++) {
+                neighbors.push({
+                    z: tile.z,
+                    x: this.wrapTileX(tile.x + dx, dim),
+                    y: this.clampTileY(tile.y + dy, dim),
+                });
+            }
+        }
+        return this.deduplicateTiles(neighbors);
+    }
+    deduplicateTiles(tiles) {
+        const unique = new Map();
+        for (const tile of tiles) {
+            unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
+        }
+        return Array.from(unique.values());
+    }
     resolveViewCenter(camera, centerSphericalDeg) {
         if (centerSphericalDeg) {
             return {
@@ -13081,13 +13114,6 @@ class XYZTileProvider {
     }
     clampTileY(y, dim) {
         return Math.max(0, Math.min(dim - 1, y));
-    }
-    deduplicateTiles(tiles) {
-        const unique = new Map();
-        for (const tile of tiles) {
-            unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
-        }
-        return Array.from(unique.values());
     }
 }
 exports.XYZTileProvider = XYZTileProvider;
@@ -13463,7 +13489,7 @@ exports.XYZLayer = void 0;
 const AbstractSkyEntity_js_1 = __webpack_require__(4735);
 const XYZShaderProgram_js_1 = __webpack_require__(149);
 const XYZMeshBuilder_js_1 = __webpack_require__(8819);
-const XYZTile_js_1 = __webpack_require__(1375);
+const XYZTileBuffer_js_1 = __webpack_require__(2737);
 const XYZTileProvider_js_1 = __webpack_require__(2330);
 const XYZVisibleTilesManager_js_1 = __webpack_require__(6937);
 class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
@@ -13473,12 +13499,15 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _visibleTilesManager;
     _meshBuilder;
     _xyzShaderProgram;
-    _tileCache = new Map();
+    _tileBuffer;
     _visibleTileKeys = [];
+    _fallbackVisibleTileKeys = [];
     _tilePriorities = new Map();
     _tileSelectionKey = null;
     _currentTileCount = 0;
     _fallbackTileCount = 0;
+    _coreTileCount = 0;
+    _coverageTileCount = 0;
     constructor(config, webgl) {
         super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false);
         this._config = config;
@@ -13486,6 +13515,7 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager(this._provider);
         this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
         this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
+        this._tileBuffer = new XYZTileBuffer_js_1.XYZTileBuffer(1, webgl, this._meshBuilder, this._xyzShaderProgram);
         this.initGL(webgl);
         this.bootstrapTiles(180, null, null);
     }
@@ -13497,7 +13527,11 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         let loadingTileCount = 0;
         let coolingDownTileCount = 0;
         const now = Date.now();
-        for (const tile of this._tileCache.values()) {
+        const allTiles = [
+            ...Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile),
+            ...Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile),
+        ];
+        for (const tile of allTiles) {
             if (tile.ready) {
                 readyTileCount += 1;
             }
@@ -13516,10 +13550,12 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             return maxZoom == null ? zoom : Math.max(maxZoom, zoom);
         }, null);
         return {
-            cacheSize: this._tileCache.size,
+            cacheSize: this._tileBuffer.size,
             visibleTileCount: this._visibleTileKeys.length,
             currentTileCount: this._currentTileCount,
             fallbackTileCount: this._fallbackTileCount,
+            coreTileCount: this._coreTileCount,
+            coverageTileCount: this._coverageTileCount,
             readyTileCount,
             loadingTileCount,
             coolingDownTileCount,
@@ -13546,6 +13582,8 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
                 currentTiles: this._provider.getInitialTiles(),
                 fallbackTiles: [],
                 currentZoom: 1,
+                coreTileCount: this._provider.getInitialTiles().length,
+                coverageTileCount: 0,
             };
         if (selection.key === this._tileSelectionKey) {
             return;
@@ -13553,39 +13591,41 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this._tileSelectionKey = selection.key;
         this._currentTileCount = selection.currentTiles.length;
         this._fallbackTileCount = selection.fallbackTiles.length;
+        this._coreTileCount = selection.coreTileCount;
+        this._coverageTileCount = selection.coverageTileCount;
         const segments = this._config.segmentsPerSide ?? 16;
+        const coreTileKeys = new Set(selection.currentTiles
+            .slice(0, selection.coreTileCount)
+            .map((tileCoord) => this.getTileKey(tileCoord)));
         const prioritizedCurrentTiles = selection.currentTiles.map((tileCoord, index) => ({
             tileCoord,
             priority: 10000 + (selection.currentTiles.length - index),
+            role: coreTileKeys.has(this.getTileKey(tileCoord)) ? 'current' : 'coverage',
         }));
         const prioritizedFallbackTiles = selection.fallbackTiles.map((tileCoord, index) => ({
             tileCoord,
             priority: 1000 + (selection.fallbackTiles.length - index),
+            role: 'fallback',
         }));
         const requestedTiles = [...prioritizedCurrentTiles, ...prioritizedFallbackTiles];
         this._tilePriorities.clear();
-        this._visibleTileKeys = requestedTiles
+        this._fallbackVisibleTileKeys = [];
+        const orderedRequests = requestedTiles
             .sort((a, b) => a.tileCoord.z - b.tileCoord.z)
-            .map(({ tileCoord, priority }) => {
+            .map(({ tileCoord, priority, role }) => {
             const tileKey = this.getTileKey(tileCoord);
             this._tilePriorities.set(tileKey, priority);
-            return tileKey;
+            return {
+                tileCoord,
+                priority,
+                url: this._provider.getTileUrl(tileCoord),
+                role,
+            };
         });
-        for (const { tileCoord, priority } of requestedTiles) {
-            const tileKey = this.getTileKey(tileCoord);
-            const existingTile = this._tileCache.get(tileKey);
-            if (existingTile) {
-                existingTile.touch();
-                existingTile.primeLoad(priority);
-                continue;
-            }
-            const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments);
-            const url = this._provider.getTileUrl(tileCoord);
-            const tile = new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram);
-            tile.touch();
-            tile.primeLoad(priority);
-            this._tileCache.set(tileKey, tile);
-        }
+        const ensuredKeys = this._tileBuffer.ensureTiles(orderedRequests, segments);
+        const fallbackKeySet = new Set(selection.fallbackTiles.map((tileCoord) => this.getTileKey(tileCoord)));
+        this._fallbackVisibleTileKeys = ensuredKeys.filter((tileKey) => fallbackKeySet.has(tileKey));
+        this._visibleTileKeys = ensuredKeys.filter((tileKey) => !fallbackKeySet.has(tileKey));
         this.evictCache();
     }
     draw(input) {
@@ -13596,48 +13636,189 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const pMatrix = input.pMatrix;
         const mMatrix = this.getModelMatrix();
         for (const tileKey of this._visibleTileKeys) {
-            const tile = this._tileCache.get(tileKey);
+            const tile = this._tileBuffer.getActiveTile(tileKey);
             if (!tile)
                 continue;
             tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0);
         }
+        for (const tileKey of this._fallbackVisibleTileKeys) {
+            const tile = this._tileBuffer.getActiveTile(tileKey);
+            if (!tile)
+                continue;
+            tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0, false);
+        }
     }
     evictCache() {
         const maxCachedTiles = this._config.maxCachedTiles ?? XYZLayer.DEFAULT_MAX_CACHED_TILES;
-        if (this._tileCache.size <= maxCachedTiles) {
-            return;
-        }
-        const visibleKeySet = new Set(this._visibleTileKeys);
-        const candidates = Array.from(this._tileCache.entries())
-            .filter(([tileKey]) => !visibleKeySet.has(tileKey))
-            .sort((a, b) => {
-            const scoreA = Math.min(a[1].lastUsedAt || a[1].createdAt, a[1].createdAt);
-            const scoreB = Math.min(b[1].lastUsedAt || b[1].createdAt, b[1].createdAt);
-            return scoreA - scoreB;
-        });
-        for (const [tileKey, tile] of candidates) {
-            if (this._tileCache.size <= maxCachedTiles) {
-                break;
-            }
-            if (tile.loading) {
-                continue;
-            }
-            tile.dispose();
-            this._tileCache.delete(tileKey);
-        }
+        this._tileBuffer.evictCached(maxCachedTiles);
     }
     disposeTiles() {
-        for (const tile of this._tileCache.values()) {
-            tile.dispose();
-        }
-        this._tileCache.clear();
+        this._tileBuffer.dispose();
         this._visibleTileKeys = [];
+        this._fallbackVisibleTileKeys = [];
     }
     getTileKey(tileCoord) {
         return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
     }
 }
 exports.XYZLayer = XYZLayer;
+
+
+/***/ }),
+
+/***/ 2737:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZTileBuffer = void 0;
+const XYZTile_js_1 = __webpack_require__(1375);
+class XYZTileBuffer {
+    _tiles = new Map();
+    _cachedTiles = new Map();
+    _cacheAliveMilliSeconds;
+    _cleanerId;
+    _webgl;
+    _meshBuilder;
+    _shaderProgram;
+    constructor(minutesToLiveInCache = 1, webgl, meshBuilder, shaderProgram) {
+        this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
+        this._webgl = webgl;
+        this._meshBuilder = meshBuilder;
+        this._shaderProgram = shaderProgram;
+        this._cleanerId = window.setInterval(() => {
+            this.cacheCleaner();
+        }, 10_000);
+    }
+    get activeTiles() {
+        return this._tiles;
+    }
+    get cachedTiles() {
+        return this._cachedTiles;
+    }
+    get size() {
+        return this._tiles.size + this._cachedTiles.size;
+    }
+    getTile(tileCoord, url, segmentsPerSide, role) {
+        const tileKey = this.key(tileCoord);
+        if (!this._tiles.has(tileKey)) {
+            if (this._cachedTiles.has(tileKey)) {
+                const entry = this._cachedTiles.get(tileKey);
+                entry.cacheTime0 = undefined;
+                entry.role = role;
+                this._tiles.set(tileKey, entry);
+                this._cachedTiles.delete(tileKey);
+            }
+            else {
+                const mesh = this._meshBuilder.buildTileMesh(tileCoord, segmentsPerSide);
+                this._tiles.set(tileKey, {
+                    tile: new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._shaderProgram),
+                    role,
+                });
+            }
+        }
+        else {
+            const entry = this._tiles.get(tileKey);
+            entry.role = role;
+        }
+        return this._tiles.get(tileKey).tile;
+    }
+    getExistingTile(tileCoord, role) {
+        const tileKey = this.key(tileCoord);
+        if (this._tiles.has(tileKey)) {
+            const entry = this._tiles.get(tileKey);
+            entry.role = role;
+            return entry.tile;
+        }
+        if (this._cachedTiles.has(tileKey)) {
+            const entry = this._cachedTiles.get(tileKey);
+            entry.cacheTime0 = undefined;
+            entry.role = role;
+            this._tiles.set(tileKey, entry);
+            this._cachedTiles.delete(tileKey);
+            return entry.tile;
+        }
+        return null;
+    }
+    ensureTiles(requests, segmentsPerSide) {
+        const visibleTileKeys = [];
+        for (const request of requests) {
+            const tile = request.role === 'fallback'
+                ? this.getExistingTile(request.tileCoord, 'fallback')
+                : this.getTile(request.tileCoord, request.url, segmentsPerSide, request.role);
+            if (!tile) {
+                continue;
+            }
+            tile.touch();
+            if (request.role !== 'fallback') {
+                tile.primeLoad(request.priority);
+            }
+            visibleTileKeys.push(this.key(request.tileCoord));
+        }
+        this.syncVisibleTiles(visibleTileKeys);
+        return visibleTileKeys;
+    }
+    getActiveTile(tileKey) {
+        return this._tiles.get(tileKey)?.tile ?? null;
+    }
+    syncVisibleTiles(visibleTileKeys) {
+        const visibleKeySet = new Set(visibleTileKeys);
+        for (const [tileKey, entry] of this._tiles) {
+            if (visibleKeySet.has(tileKey)) {
+                entry.tile.touch();
+                continue;
+            }
+            entry.cacheTime0 = Date.now();
+            this._cachedTiles.set(tileKey, entry);
+            this._tiles.delete(tileKey);
+        }
+    }
+    evictCached(maxCachedTiles) {
+        if (this.size <= maxCachedTiles) {
+            return;
+        }
+        const candidates = Array.from(this._cachedTiles.entries()).sort((a, b) => {
+            const scoreA = Math.min(a[1].tile.lastUsedAt || a[1].tile.createdAt, a[1].tile.createdAt);
+            const scoreB = Math.min(b[1].tile.lastUsedAt || b[1].tile.createdAt, b[1].tile.createdAt);
+            return scoreA - scoreB;
+        });
+        for (const [tileKey, entry] of candidates) {
+            if (this.size <= maxCachedTiles) {
+                break;
+            }
+            if (entry.tile.loading) {
+                continue;
+            }
+            entry.tile.dispose();
+            this._cachedTiles.delete(tileKey);
+        }
+    }
+    dispose() {
+        window.clearInterval(this._cleanerId);
+        for (const entry of this._tiles.values()) {
+            entry.tile.dispose();
+        }
+        for (const entry of this._cachedTiles.values()) {
+            entry.tile.dispose();
+        }
+        this._tiles.clear();
+        this._cachedTiles.clear();
+    }
+    cacheCleaner() {
+        const now = Date.now();
+        for (const [tileKey, entry] of this._cachedTiles) {
+            const t0 = entry.cacheTime0;
+            if (t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds && !entry.tile.loading) {
+                entry.tile.dispose();
+                this._cachedTiles.delete(tileKey);
+            }
+        }
+    }
+    key(tileCoord) {
+        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
+    }
+}
+exports.XYZTileBuffer = XYZTileBuffer;
 
 
 /***/ }),
@@ -17694,15 +17875,135 @@ class XYZVisibleTilesManager {
     }
     selectTiles(input) {
         const currentZoom = this._provider.resolveZoom(input.fovDeg ?? 180);
-        const currentTiles = this.orderTilesByScreenRelevance(this._provider.getVisibleTilesAtZoom(currentZoom, input.centerSphericalDeg ?? null, input.fovPolygon ?? [], input.viewportSphericalSamples ?? [], 1), currentZoom, input.centerSphericalDeg ?? null);
-        const fallbackTiles = this.orderFallbackTiles(Array.from(this.buildFallbackMap(currentTiles, currentZoom).values()), currentZoom, input.centerSphericalDeg ?? null);
+        const coreTiles = this.orderTilesByScreenRelevance(this.buildCoreVisibleTiles(currentZoom, input), currentZoom, input.centerSphericalDeg ?? null);
+        const coverageTiles = this.orderTilesByScreenRelevance(this.buildCoverageTiles(currentZoom, input, coreTiles), currentZoom, input.centerSphericalDeg ?? null);
+        const currentTiles = [...coreTiles, ...coverageTiles];
+        const fallbackTiles = this.orderFallbackTiles(Array.from(this.buildFallbackMap(coreTiles, currentZoom).values()), currentZoom, input.centerSphericalDeg ?? null);
         const key = `${currentZoom}:${currentTiles.map((tile) => `${tile.x}/${tile.y}`).join('|')}`;
         return {
             key,
             currentTiles,
             fallbackTiles,
             currentZoom,
+            coreTileCount: coreTiles.length,
+            coverageTileCount: coverageTiles.length,
         };
+    }
+    buildCoreVisibleTiles(currentZoom, input) {
+        const samples = this.collectCoverageSamples(input);
+        if (samples.length === 0) {
+            return this._provider.getVisibleTilesAtZoom(currentZoom, null, [], [], 0);
+        }
+        const tiles = [];
+        for (const sample of samples) {
+            tiles.push(this._provider.tileFromSpherical(currentZoom, sample));
+        }
+        return this._provider.deduplicateTiles(tiles);
+    }
+    buildCoverageTiles(currentZoom, input, coreTiles) {
+        if (coreTiles.length === 0) {
+            return [];
+        }
+        const ring = this.getNeighborRing(currentZoom, input.fovDeg ?? 180);
+        if (ring <= 0) {
+            return [];
+        }
+        const coreSet = new Set(coreTiles.map((tile) => this.key(tile)));
+        const coverageTiles = [];
+        for (const tile of coreTiles) {
+            if (!this.isBoundaryTile(tile, coreSet)) {
+                continue;
+            }
+            const neighbors = this._provider.getNeighborTiles(tile, ring);
+            for (const neighbor of neighbors) {
+                const neighborKey = this.key(neighbor);
+                if (coreSet.has(neighborKey)) {
+                    continue;
+                }
+                coverageTiles.push(neighbor);
+            }
+        }
+        return this._provider.deduplicateTiles(coverageTiles);
+    }
+    collectCoverageSamples(input) {
+        const samples = [];
+        if (input.centerSphericalDeg) {
+            samples.push(input.centerSphericalDeg);
+        }
+        for (const sample of input.viewportSphericalSamples ?? []) {
+            samples.push(sample);
+        }
+        const polygonSamples = this.interpolateFoVPolygon(input.fovPolygon ?? []);
+        for (const sample of polygonSamples) {
+            samples.push(sample);
+        }
+        return samples;
+    }
+    interpolateFoVPolygon(fovPolygon) {
+        if (fovPolygon.length === 0) {
+            return [];
+        }
+        const polygonSpherical = fovPolygon.map((point) => ({
+            phi: point.raDeg < 0 ? point.raDeg + 360 : point.raDeg,
+            theta: 90 - point.decDeg,
+        }));
+        const samples = [...polygonSpherical];
+        const segmentInterpolationCount = polygonSpherical.length >= 4 ? 2 : 1;
+        for (let i = 0; i < polygonSpherical.length; i++) {
+            const start = polygonSpherical[i];
+            const end = polygonSpherical[(i + 1) % polygonSpherical.length];
+            if (!start || !end)
+                continue;
+            const startPhi = this.normalizePhi(start.phi);
+            let endPhi = this.normalizePhi(end.phi);
+            if (Math.abs(endPhi - startPhi) > 180) {
+                endPhi += endPhi > startPhi ? -360 : 360;
+            }
+            for (let step = 1; step <= segmentInterpolationCount; step++) {
+                const t = step / (segmentInterpolationCount + 1);
+                const phi = this.normalizePhi(startPhi + (endPhi - startPhi) * t);
+                const theta = start.theta + (end.theta - start.theta) * t;
+                samples.push({ phi, theta });
+            }
+        }
+        return samples;
+    }
+    getNeighborRing(currentZoom, fovDeg) {
+        if (currentZoom >= 12) {
+            return 0;
+        }
+        if (currentZoom >= 8 && fovDeg < 20) {
+            return 0;
+        }
+        if (currentZoom >= 6) {
+            return 1;
+        }
+        return 1;
+    }
+    isBoundaryTile(tile, coreTileKeys) {
+        const directNeighbors = [
+            { z: tile.z, x: tile.x - 1, y: tile.y },
+            { z: tile.z, x: tile.x + 1, y: tile.y },
+            { z: tile.z, x: tile.x, y: tile.y - 1 },
+            { z: tile.z, x: tile.x, y: tile.y + 1 },
+        ];
+        return directNeighbors.some((neighbor) => !coreTileKeys.has(this.key(this.normalizeTile(neighbor))));
+    }
+    normalizeTile(tile) {
+        const dim = 2 ** tile.z;
+        return {
+            z: tile.z,
+            x: ((tile.x % dim) + dim) % dim,
+            y: Math.max(0, Math.min(dim - 1, tile.y)),
+        };
+    }
+    normalizePhi(phi) {
+        let value = phi;
+        while (value < 0)
+            value += 360;
+        while (value >= 360)
+            value -= 360;
+        return value;
     }
     buildFallbackMap(currentTiles, currentZoom) {
         const fallbackMap = new Map();
@@ -17761,6 +18062,9 @@ class XYZVisibleTilesManager {
             x: ((x % dim) + dim) % dim,
             y: Math.max(0, Math.min(dim - 1, y)),
         };
+    }
+    key(tile) {
+        return `${tile.z}/${tile.x}/${tile.y}`;
     }
 }
 exports.XYZVisibleTilesManager = XYZVisibleTilesManager;

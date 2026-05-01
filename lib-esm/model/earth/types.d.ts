@@ -16,6 +16,8 @@ export type XYZLayerDebugStats = {
     visibleTileCount: number;
     currentTileCount: number;
     fallbackTileCount: number;
+    coreTileCount: number;
+    coverageTileCount: number;
     readyTileCount: number;
     loadingTileCount: number;
     coolingDownTileCount: number;

@@ -1,12 +1,15 @@
 import type { XYZTileCoord } from './types.js'
 import { XYZTileProvider } from './XYZTileProvider.js'
 import type { SkyEntityDrawInput } from '../AbstractSkyEntity.js'
+import { Point } from '../Point.js'
 
 export type XYZTileSelection = {
   key: string
   currentTiles: XYZTileCoord[]
   fallbackTiles: XYZTileCoord[]
   currentZoom: number
+  coreTileCount: number
+  coverageTileCount: number
 }
 
 export class XYZVisibleTilesManager {
@@ -18,19 +21,19 @@ export class XYZVisibleTilesManager {
 
   selectTiles(input: SkyEntityDrawInput): XYZTileSelection {
     const currentZoom = this._provider.resolveZoom(input.fovDeg ?? 180)
-    const currentTiles = this.orderTilesByScreenRelevance(
-      this._provider.getVisibleTilesAtZoom(
-        currentZoom,
-        input.centerSphericalDeg ?? null,
-        input.fovPolygon ?? [],
-        input.viewportSphericalSamples ?? [],
-        1,
-      ),
+    const coreTiles = this.orderTilesByScreenRelevance(
+      this.buildCoreVisibleTiles(currentZoom, input),
       currentZoom,
       input.centerSphericalDeg ?? null,
     )
+    const coverageTiles = this.orderTilesByScreenRelevance(
+      this.buildCoverageTiles(currentZoom, input, coreTiles),
+      currentZoom,
+      input.centerSphericalDeg ?? null,
+    )
+    const currentTiles = [...coreTiles, ...coverageTiles]
     const fallbackTiles = this.orderFallbackTiles(
-      Array.from(this.buildFallbackMap(currentTiles, currentZoom).values()),
+      Array.from(this.buildFallbackMap(coreTiles, currentZoom).values()),
       currentZoom,
       input.centerSphericalDeg ?? null,
     )
@@ -41,7 +44,157 @@ export class XYZVisibleTilesManager {
       currentTiles,
       fallbackTiles,
       currentZoom,
+      coreTileCount: coreTiles.length,
+      coverageTileCount: coverageTiles.length,
     }
+  }
+
+  private buildCoreVisibleTiles(
+    currentZoom: number,
+    input: SkyEntityDrawInput,
+  ): XYZTileCoord[] {
+    const samples = this.collectCoverageSamples(input)
+
+    if (samples.length === 0) {
+      return this._provider.getVisibleTilesAtZoom(currentZoom, null, [], [], 0)
+    }
+
+    const tiles: XYZTileCoord[] = []
+
+    for (const sample of samples) {
+      tiles.push(this._provider.tileFromSpherical(currentZoom, sample))
+    }
+
+    return this._provider.deduplicateTiles(tiles)
+  }
+
+  private buildCoverageTiles(
+    currentZoom: number,
+    input: SkyEntityDrawInput,
+    coreTiles: XYZTileCoord[],
+  ): XYZTileCoord[] {
+    if (coreTiles.length === 0) {
+      return []
+    }
+
+    const ring = this.getNeighborRing(currentZoom, input.fovDeg ?? 180)
+    if (ring <= 0) {
+      return []
+    }
+
+    const coreSet = new Set(coreTiles.map((tile) => this.key(tile)))
+    const coverageTiles: XYZTileCoord[] = []
+
+    for (const tile of coreTiles) {
+      if (!this.isBoundaryTile(tile, coreSet)) {
+        continue
+      }
+
+      const neighbors = this._provider.getNeighborTiles(tile, ring)
+      for (const neighbor of neighbors) {
+        const neighborKey = this.key(neighbor)
+        if (coreSet.has(neighborKey)) {
+          continue
+        }
+        coverageTiles.push(neighbor)
+      }
+    }
+
+    return this._provider.deduplicateTiles(coverageTiles)
+  }
+
+  private collectCoverageSamples(input: SkyEntityDrawInput): Array<{ phi: number; theta: number }> {
+    const samples: Array<{ phi: number; theta: number }> = []
+
+    if (input.centerSphericalDeg) {
+      samples.push(input.centerSphericalDeg)
+    }
+
+    for (const sample of input.viewportSphericalSamples ?? []) {
+      samples.push(sample)
+    }
+
+    const polygonSamples = this.interpolateFoVPolygon(input.fovPolygon ?? [])
+    for (const sample of polygonSamples) {
+      samples.push(sample)
+    }
+
+    return samples
+  }
+
+  private interpolateFoVPolygon(fovPolygon: Point[]): Array<{ phi: number; theta: number }> {
+    if (fovPolygon.length === 0) {
+      return []
+    }
+
+    const polygonSpherical = fovPolygon.map((point) => ({
+      phi: point.raDeg < 0 ? point.raDeg + 360 : point.raDeg,
+      theta: 90 - point.decDeg,
+    }))
+
+    const samples: Array<{ phi: number; theta: number }> = [...polygonSpherical]
+    const segmentInterpolationCount = polygonSpherical.length >= 4 ? 2 : 1
+
+    for (let i = 0; i < polygonSpherical.length; i++) {
+      const start = polygonSpherical[i]
+      const end = polygonSpherical[(i + 1) % polygonSpherical.length]
+      if (!start || !end) continue
+
+      const startPhi = this.normalizePhi(start.phi)
+      let endPhi = this.normalizePhi(end.phi)
+      if (Math.abs(endPhi - startPhi) > 180) {
+        endPhi += endPhi > startPhi ? -360 : 360
+      }
+
+      for (let step = 1; step <= segmentInterpolationCount; step++) {
+        const t = step / (segmentInterpolationCount + 1)
+        const phi = this.normalizePhi(startPhi + (endPhi - startPhi) * t)
+        const theta = start.theta + (end.theta - start.theta) * t
+        samples.push({ phi, theta })
+      }
+    }
+
+    return samples
+  }
+
+  private getNeighborRing(currentZoom: number, fovDeg: number): number {
+    if (currentZoom >= 12) {
+      return 0
+    }
+    if (currentZoom >= 8 && fovDeg < 20) {
+      return 0
+    }
+    if (currentZoom >= 6) {
+      return 1
+    }
+    return 1
+  }
+
+  private isBoundaryTile(tile: XYZTileCoord, coreTileKeys: Set<string>): boolean {
+    const directNeighbors = [
+      { z: tile.z, x: tile.x - 1, y: tile.y },
+      { z: tile.z, x: tile.x + 1, y: tile.y },
+      { z: tile.z, x: tile.x, y: tile.y - 1 },
+      { z: tile.z, x: tile.x, y: tile.y + 1 },
+    ]
+
+    return directNeighbors.some((neighbor) => !coreTileKeys.has(this.key(this.normalizeTile(neighbor))))
+  }
+
+  private normalizeTile(tile: XYZTileCoord): XYZTileCoord {
+    const dim = 2 ** tile.z
+    return {
+      z: tile.z,
+      x: ((tile.x % dim) + dim) % dim,
+      y: Math.max(0, Math.min(dim - 1, tile.y)),
+    }
+  }
+
+  private normalizePhi(phi: number): number {
+    let value = phi
+    while (value < 0) value += 360
+    while (value >= 360) value -= 360
+    return value
   }
 
   private buildFallbackMap(currentTiles: XYZTileCoord[], currentZoom: number): Map<string, XYZTileCoord> {
@@ -121,5 +274,9 @@ export class XYZVisibleTilesManager {
       x: ((x % dim) + dim) % dim,
       y: Math.max(0, Math.min(dim - 1, y)),
     }
+  }
+
+  private key(tile: XYZTileCoord): string {
+    return `${tile.z}/${tile.x}/${tile.y}`
   }
 }

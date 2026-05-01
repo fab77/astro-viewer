@@ -31,7 +31,7 @@ export declare class XYZTile {
     private loadTexture;
     private loadImageFromBlob;
     private onImageLoaded;
-    draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, priority?: number): void;
+    draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, priority?: number, allowLoad?: boolean): void;
     dispose(): void;
     private revokeObjectUrl;
 }
