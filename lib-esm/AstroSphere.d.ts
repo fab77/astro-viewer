@@ -10,7 +10,7 @@ import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { ColorMap } from './model/ColorMaps.js';
 import { XYZLayer } from './model/earth/XYZLayer.js';
-import type { XYZLayerConfig } from './model/earth/types.js';
+import type { XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -114,6 +114,7 @@ declare class AstroSphere {
     private prevCentralDecDeg;
     get activeHiPS(): HiPS | null;
     get activeXYZ(): XYZLayer | null;
+    getXYZDebugStats(): XYZDebugStats;
     draw(canvas: HTMLCanvasElement): void;
     private emitHoveredSourceIfChanged;
 }

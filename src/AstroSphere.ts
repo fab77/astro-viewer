@@ -32,7 +32,8 @@ import { SkyEntityDrawInput } from './model/AbstractSkyEntity.js'
 import { CoordsType } from './utils/CoordsType.js'
 import ColorMaps, { ColorMapName, ColorMap } from './model/ColorMaps.js'
 import { XYZLayer } from './model/earth/XYZLayer.js'
-import type { XYZLayerConfig } from './model/earth/types.js'
+import type { XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -807,6 +808,14 @@ class AstroSphere {
 
   get activeXYZ(): XYZLayer | null {
     return this._activeXYZ
+  }
+
+  getXYZDebugStats(): XYZDebugStats {
+    return {
+      activeBaseLayer: this._activeBaseLayer,
+      layer: this._activeXYZ?.getDebugStats() ?? null,
+      requests: xyzTileRequestScheduler.getDebugStats(),
+    }
   }
 
   draw(canvas: HTMLCanvasElement) {

@@ -7,6 +7,7 @@ import { loadTapRepo, showFootprint, hideFootprints } from './tap.js';
 import { renderCatalogueManager, wireCatalogueManagerControls } from './catalogueManager.js';
 import { wireGoto } from './goto.js';
 import { wireCoords } from './coords.js';
+import { wireXYZDiagnostics } from './xyzDiagnostics.js';
 
 (function applyFixedProxy() {
   const FIXED_PROXY_BASE = ""; // set if needed
@@ -75,6 +76,7 @@ async function bootstrap() {
     wireGoto();
     wireCoords();
     wireHoveredFootprints();
+    wireXYZDiagnostics();
 
     setStatus("Ready ✅ Load a TAP to begin.");
   } catch (e) {

@@ -84,6 +84,16 @@
             <div class="hint">XYZ zoom is computed automatically from distance/FoV and clamped between min/max.</div>
         </div>
 
+        <details id="xyzDiagnosticsPanel" open style="margin-top:8px;">
+            <summary>XYZ diagnostics</summary>
+            <div class="stack">
+                <input id="xyzDiagSummary" class="mono" type="text" readonly value="Mode: —" />
+                <input id="xyzDiagCache" class="mono" type="text" readonly value="Cache: —" />
+                <input id="xyzDiagRequests" class="mono" type="text" readonly value="Requests: —" />
+                <div id="xyzDiagBackoff" class="hint">Backoff: none</div>
+            </div>
+        </details>
+
         <!-- Inside/Outside sphere toggle -->
         <div class="stack" style="margin-top:8px;">
             <label style="display:flex; align-items:center; gap:8px; user-select:none;">

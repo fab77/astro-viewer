@@ -4,7 +4,7 @@ import { XYZMeshBuilder } from './XYZMeshBuilder.js'
 import { XYZTile } from './XYZTile.js'
 import { XYZTileProvider } from './XYZTileProvider.js'
 import { XYZVisibleTilesManager } from './XYZVisibleTilesManager.js'
-import type { XYZLayerConfig } from './types.js'
+import type { XYZLayerConfig, XYZLayerDebugStats } from './types.js'
 
 export class XYZLayer extends AbstractSkyEntity {
   private static readonly DEFAULT_MAX_CACHED_TILES = 384
@@ -31,6 +31,43 @@ export class XYZLayer extends AbstractSkyEntity {
 
   get config(): XYZLayerConfig {
     return this._config
+  }
+
+  getDebugStats(): XYZLayerDebugStats {
+    let readyTileCount = 0
+    let loadingTileCount = 0
+    let coolingDownTileCount = 0
+    const now = Date.now()
+
+    for (const tile of this._tileCache.values()) {
+      if (tile.ready) {
+        readyTileCount += 1
+      }
+      if (tile.loading) {
+        loadingTileCount += 1
+      }
+      if (tile.failedUntil > now) {
+        coolingDownTileCount += 1
+      }
+    }
+
+    const currentZoom = this._visibleTileKeys.reduce<number | null>((maxZoom, tileKey) => {
+      const zoom = Number.parseInt(tileKey.split('/')[0] ?? '', 10)
+      if (!Number.isFinite(zoom)) {
+        return maxZoom
+      }
+      return maxZoom == null ? zoom : Math.max(maxZoom, zoom)
+    }, null)
+
+    return {
+      cacheSize: this._tileCache.size,
+      visibleTileCount: this._visibleTileKeys.length,
+      readyTileCount,
+      loadingTileCount,
+      coolingDownTileCount,
+      currentZoom,
+      tileSelectionKey: this._tileSelectionKey,
+    }
   }
 
   private bootstrapTiles(

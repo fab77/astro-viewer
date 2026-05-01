@@ -10,7 +10,7 @@ import { ReadonlyMat4 } from 'gl-matrix';
 import { ColorMap, ColorMapName } from './model/ColorMaps.js';
 import { HiPS } from './model/hips/HiPS.js';
 import { XYZLayer } from './model/earth/XYZLayer.js';
-import type { XYZLayerConfig } from './model/earth/types.js';
+import type { XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
 export declare class AstroViewer {
     private astroSphere;
     private canvas;
@@ -41,6 +41,7 @@ export declare class AstroViewer {
     activateXYZ(config: XYZLayerConfig): void;
     setXYZMaxConcurrentRequests(value: number): void;
     getXYZMaxConcurrentRequests(): number;
+    getXYZDebugStats(): XYZDebugStats;
     loadHiPS(baseUrl: string): Promise<string>;
     changeColorMap(colorMapName: ColorMapName): void;
     changeCustomColorMap(colorMap: ColorMap): void;

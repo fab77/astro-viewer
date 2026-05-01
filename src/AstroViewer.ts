@@ -13,7 +13,7 @@ import { ReadonlyMat4 } from 'gl-matrix'
 import ColorMaps, { ColorMap, ColorMapName } from './model/ColorMaps.js'
 import {HiPS} from './model/hips/HiPS.js'
 import { XYZLayer } from './model/earth/XYZLayer.js'
-import type { XYZLayerConfig } from './model/earth/types.js'
+import type { XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
@@ -140,6 +140,10 @@ createFootprintSet(footprintSetName: string,
 
   getXYZMaxConcurrentRequests(): number {
     return xyzTileRequestScheduler.getMaxConcurrent()
+  }
+
+  getXYZDebugStats(): XYZDebugStats {
+    return this.astroSphere.getXYZDebugStats()
   }
 
   async loadHiPS(baseUrl: string): Promise<string> {

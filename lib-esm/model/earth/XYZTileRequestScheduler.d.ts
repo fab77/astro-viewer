@@ -1,3 +1,4 @@
+import type { XYZRequestSchedulerDebugStats } from './types.js';
 export declare class XYZTileRequestError extends Error {
     cooldownMs: number;
     constructor(message: string, cooldownMs: number);
@@ -11,6 +12,7 @@ export declare class XYZTileRequestScheduler {
     constructor(maxConcurrent?: number);
     setMaxConcurrent(maxConcurrent: number): void;
     getMaxConcurrent(): number;
+    getDebugStats(): XYZRequestSchedulerDebugStats;
     load(url: string): Promise<Blob>;
     private pump;
     private fetchBlob;

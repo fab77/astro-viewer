@@ -1,5 +1,5 @@
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
-import type { XYZLayerConfig } from './types.js';
+import type { XYZLayerConfig, XYZLayerDebugStats } from './types.js';
 export declare class XYZLayer extends AbstractSkyEntity {
     private static readonly DEFAULT_MAX_CACHED_TILES;
     private _config;
@@ -12,6 +12,7 @@ export declare class XYZLayer extends AbstractSkyEntity {
     private _tileSelectionKey;
     constructor(config: XYZLayerConfig, webgl: WebGL2RenderingContext);
     get config(): XYZLayerConfig;
+    getDebugStats(): XYZLayerDebugStats;
     private bootstrapTiles;
     draw(input: SkyEntityDrawInput): void;
     private evictCache;

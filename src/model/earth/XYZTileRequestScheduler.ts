@@ -9,6 +9,8 @@ type HostBackoffState = {
   consecutiveFailures: number
 }
 
+import type { XYZRequestSchedulerDebugStats } from './types.js'
+
 export class XYZTileRequestError extends Error {
   cooldownMs: number
 
@@ -37,6 +39,26 @@ export class XYZTileRequestScheduler {
 
   getMaxConcurrent(): number {
     return this._maxConcurrent
+  }
+
+  getDebugStats(): XYZRequestSchedulerDebugStats {
+    const now = Date.now()
+    const hostsInBackoff = Array.from(this._hostBackoff.entries())
+      .map(([host, state]) => ({
+        host,
+        cooldownMs: Math.max(0, state.cooldownUntil - now),
+        consecutiveFailures: state.consecutiveFailures,
+      }))
+      .filter((entry) => entry.cooldownMs > 0 || entry.consecutiveFailures > 0)
+      .sort((a, b) => b.cooldownMs - a.cooldownMs)
+
+    return {
+      activeRequests: this._activeCount,
+      queuedRequests: this._queue.length,
+      inflightRequests: this._inflight.size,
+      maxConcurrentRequests: this._maxConcurrent,
+      hostsInBackoff,
+    }
   }
 
   load(url: string): Promise<Blob> {

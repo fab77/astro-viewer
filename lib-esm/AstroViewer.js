@@ -95,6 +95,9 @@ export class AstroViewer {
     getXYZMaxConcurrentRequests() {
         return xyzTileRequestScheduler.getMaxConcurrent();
     }
+    getXYZDebugStats() {
+        return this.astroSphere.getXYZDebugStats();
+    }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
         const resp = await fetch(hipsUrl + 'properties');

@@ -4428,6 +4428,24 @@ class XYZTileRequestScheduler {
     getMaxConcurrent() {
         return this._maxConcurrent;
     }
+    getDebugStats() {
+        const now = Date.now();
+        const hostsInBackoff = Array.from(this._hostBackoff.entries())
+            .map(([host, state]) => ({
+            host,
+            cooldownMs: Math.max(0, state.cooldownUntil - now),
+            consecutiveFailures: state.consecutiveFailures,
+        }))
+            .filter((entry) => entry.cooldownMs > 0 || entry.consecutiveFailures > 0)
+            .sort((a, b) => b.cooldownMs - a.cooldownMs);
+        return {
+            activeRequests: this._activeCount,
+            queuedRequests: this._queue.length,
+            inflightRequests: this._inflight.size,
+            maxConcurrentRequests: this._maxConcurrent,
+            hostsInBackoff,
+        };
+    }
     load(url) {
         const inflight = this._inflight.get(url);
         if (inflight) {
@@ -4687,6 +4705,39 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     }
     get config() {
         return this._config;
+    }
+    getDebugStats() {
+        let readyTileCount = 0;
+        let loadingTileCount = 0;
+        let coolingDownTileCount = 0;
+        const now = Date.now();
+        for (const tile of this._tileCache.values()) {
+            if (tile.ready) {
+                readyTileCount += 1;
+            }
+            if (tile.loading) {
+                loadingTileCount += 1;
+            }
+            if (tile.failedUntil > now) {
+                coolingDownTileCount += 1;
+            }
+        }
+        const currentZoom = this._visibleTileKeys.reduce((maxZoom, tileKey) => {
+            const zoom = Number.parseInt(tileKey.split('/')[0] ?? '', 10);
+            if (!Number.isFinite(zoom)) {
+                return maxZoom;
+            }
+            return maxZoom == null ? zoom : Math.max(maxZoom, zoom);
+        }, null);
+        return {
+            cacheSize: this._tileCache.size,
+            visibleTileCount: this._visibleTileKeys.length,
+            readyTileCount,
+            loadingTileCount,
+            coolingDownTileCount,
+            currentZoom,
+            tileSelectionKey: this._tileSelectionKey,
+        };
     }
     bootstrapTiles(fovDeg, camera, centerSphericalDeg, fovPolygon = null, viewportSphericalSamples = null) {
         const selection = camera
@@ -8183,6 +8234,7 @@ const HealpixGrid_js_1 = __webpack_require__(595);
 const CoordsType_js_1 = __webpack_require__(145);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
 const XYZLayer_js_1 = __webpack_require__(502);
+const XYZTileRequestScheduler_js_1 = __webpack_require__(409);
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -8721,6 +8773,13 @@ class AstroSphere {
     }
     get activeXYZ() {
         return this._activeXYZ;
+    }
+    getXYZDebugStats() {
+        return {
+            activeBaseLayer: this._activeBaseLayer,
+            layer: this._activeXYZ?.getDebugStats() ?? null,
+            requests: XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getDebugStats(),
+        };
     }
     draw(canvas) {
         if (this._refreshingStatus)
@@ -9729,6 +9788,9 @@ class AstroViewer {
     }
     getXYZMaxConcurrentRequests() {
         return XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getMaxConcurrent();
+    }
+    getXYZDebugStats() {
+        return this.astroSphere.getXYZDebugStats();
     }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';

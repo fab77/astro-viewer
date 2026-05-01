@@ -13,6 +13,7 @@ import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { CoordsType } from './utils/CoordsType.js';
 import ColorMaps from './model/ColorMaps.js';
 import { XYZLayer } from './model/earth/XYZLayer.js';
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -551,6 +552,13 @@ class AstroSphere {
     }
     get activeXYZ() {
         return this._activeXYZ;
+    }
+    getXYZDebugStats() {
+        return {
+            activeBaseLayer: this._activeBaseLayer,
+            layer: this._activeXYZ?.getDebugStats() ?? null,
+            requests: xyzTileRequestScheduler.getDebugStats(),
+        };
     }
     draw(canvas) {
         if (this._refreshingStatus)
