@@ -9,7 +9,10 @@ export declare class XYZLayer extends AbstractSkyEntity {
     private _xyzShaderProgram;
     private _tileCache;
     private _visibleTileKeys;
+    private _tilePriorities;
     private _tileSelectionKey;
+    private _currentTileCount;
+    private _fallbackTileCount;
     constructor(config: XYZLayerConfig, webgl: WebGL2RenderingContext);
     get config(): XYZLayerConfig;
     getDebugStats(): XYZLayerDebugStats;

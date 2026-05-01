@@ -34,7 +34,6 @@ export class XYZTile {
         webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
         webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
         webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
-        this.loadTexture();
     }
     get ready() {
         return this._ready;
@@ -57,7 +56,10 @@ export class XYZTile {
     touch() {
         this._lastUsedAt = Date.now();
     }
-    loadTexture() {
+    primeLoad(priority = 0) {
+        this.loadTexture(priority);
+    }
+    loadTexture(priority = 0) {
         if (this._loading || this._ready || this._aborted) {
             return;
         }
@@ -66,7 +68,7 @@ export class XYZTile {
             return;
         }
         this._loading = true;
-        xyzTileRequestScheduler.load(this._url)
+        xyzTileRequestScheduler.load(this._url, priority)
             .then((blob) => this.loadImageFromBlob(blob))
             .catch((error) => {
             this._loading = false;
@@ -83,7 +85,7 @@ export class XYZTile {
         image.onerror = () => {
             this._loading = false;
             this._ready = false;
-            this._failedUntil = Date.now() + 10000;
+            this._failedUntil = Date.now() + 30000;
             this.revokeObjectUrl();
         };
         image.src = this._objectUrl;
@@ -111,10 +113,10 @@ export class XYZTile {
         this._ready = true;
         this.revokeObjectUrl();
     }
-    draw(pMatrix, vMatrix, mMatrix) {
+    draw(pMatrix, vMatrix, mMatrix, priority = 0) {
         this.touch();
         if (!this._ready) {
-            this.loadTexture();
+            this.loadTexture(priority);
         }
         if (!this._ready || !this._texture) {
             return;

@@ -1,9 +1,11 @@
 export class XYZTileRequestError extends Error {
     cooldownMs;
-    constructor(message, cooldownMs) {
+    retryable;
+    constructor(message, cooldownMs, retryable = true) {
         super(message);
         this.name = 'XYZTileRequestError';
         this.cooldownMs = cooldownMs;
+        this.retryable = retryable;
     }
 }
 export class XYZTileRequestScheduler {
@@ -12,6 +14,7 @@ export class XYZTileRequestScheduler {
     _queue = [];
     _inflight = new Map();
     _hostBackoff = new Map();
+    _sequence = 0;
     constructor(maxConcurrent = 4) {
         this._maxConcurrent = maxConcurrent;
     }
@@ -37,10 +40,11 @@ export class XYZTileRequestScheduler {
             queuedRequests: this._queue.length,
             inflightRequests: this._inflight.size,
             maxConcurrentRequests: this._maxConcurrent,
+            highestQueuedPriority: this._queue[0]?.priority ?? null,
             hostsInBackoff,
         };
     }
-    load(url) {
+    load(url, priority = 0) {
         const inflight = this._inflight.get(url);
         if (inflight) {
             return inflight;
@@ -51,7 +55,14 @@ export class XYZTileRequestScheduler {
             return Promise.reject(new XYZTileRequestError(`Cooldown active for ${new URL(url).host}`, hostCooldown - now));
         }
         const promise = new Promise((resolve, reject) => {
-            this._queue.push({ url, resolve, reject });
+            this._queue.push({
+                url,
+                resolve,
+                reject,
+                priority,
+                sequence: this._sequence++,
+            });
+            this._queue.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
             this.pump();
         }).finally(() => {
             this._inflight.delete(url);
@@ -88,8 +99,9 @@ export class XYZTileRequestScheduler {
                 cache: 'force-cache',
             });
             if (!response.ok) {
-                const cooldownMs = this.registerFailure(item.url, response.status === 429);
-                throw new XYZTileRequestError(`HTTP ${response.status} loading ${item.url}`, cooldownMs);
+                const isTransient = response.status === 429 || response.status >= 500;
+                const cooldownMs = this.registerFailure(item.url, isTransient);
+                throw new XYZTileRequestError(`HTTP ${response.status} loading ${item.url}`, isTransient ? cooldownMs : 5 * 60 * 1000, isTransient);
             }
             this.registerSuccess(item.url);
             return await response.blob();
@@ -99,7 +111,7 @@ export class XYZTileRequestScheduler {
                 throw error;
             }
             const cooldownMs = this.registerFailure(item.url, false);
-            throw new XYZTileRequestError(`Network/CORS failure loading ${item.url}`, cooldownMs);
+            throw new XYZTileRequestError(`Network/CORS failure loading ${item.url}`, cooldownMs, true);
         }
     }
     getHostCooldown(url) {
@@ -123,6 +135,9 @@ export class XYZTileRequestScheduler {
         }
     }
     registerFailure(url, isRateLimited) {
+        if (!isRateLimited) {
+            return 0;
+        }
         try {
             const host = new URL(url).host;
             const previous = this._hostBackoff.get(host) ?? {
@@ -130,8 +145,8 @@ export class XYZTileRequestScheduler {
                 consecutiveFailures: 0,
             };
             const consecutiveFailures = previous.consecutiveFailures + 1;
-            const baseDelayMs = isRateLimited ? 4000 : 1500;
-            const cooldownMs = Math.min(isRateLimited ? 120000 : 30000, baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)));
+            const baseDelayMs = 4000;
+            const cooldownMs = Math.min(120000, baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)));
             this._hostBackoff.set(host, {
                 cooldownUntil: Date.now() + cooldownMs,
                 consecutiveFailures,
@@ -139,7 +154,7 @@ export class XYZTileRequestScheduler {
             return cooldownMs;
         }
         catch {
-            return isRateLimited ? 30000 : 10000;
+            return 30000;
         }
     }
 }

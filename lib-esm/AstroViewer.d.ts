@@ -10,7 +10,7 @@ import { ReadonlyMat4 } from 'gl-matrix';
 import { ColorMap, ColorMapName } from './model/ColorMaps.js';
 import { HiPS } from './model/hips/HiPS.js';
 import { XYZLayer } from './model/earth/XYZLayer.js';
-import type { XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
 export declare class AstroViewer {
     private astroSphere;
     private canvas;
@@ -39,6 +39,7 @@ export declare class AstroViewer {
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     activateXYZ(config: XYZLayerConfig): void;
+    activateWMTS(config: WMTSLayerConfig): void;
     setXYZMaxConcurrentRequests(value: number): void;
     getXYZMaxConcurrentRequests(): number;
     getXYZDebugStats(): XYZDebugStats;

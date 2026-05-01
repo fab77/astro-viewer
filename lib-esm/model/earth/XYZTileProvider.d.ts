@@ -14,6 +14,8 @@ export declare class XYZTileProvider {
     getTileUrl(tile: XYZTileCoord): string;
     resolveZoom(fovDeg: number): number;
     private clampZoom;
+    private getEffectiveTileY;
+    private getSubdomain;
     getVisibleTilesAtZoom(z: number, centerSphericalDeg: ViewCenterSpherical | null, fovPolygon: Point[], viewportSphericalSamples: ViewCenterSpherical[], padding?: number): XYZTileCoord[];
     private resolveViewCenter;
     private latToTileY;

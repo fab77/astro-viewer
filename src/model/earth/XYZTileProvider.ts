@@ -34,10 +34,18 @@ export class XYZTileProvider {
   }
 
   getTileUrl(tile: XYZTileCoord): string {
+    if (this._config.urlResolver) {
+      return this._config.urlResolver(tile)
+    }
+
+    const effectiveY = this.getEffectiveTileY(tile)
+    const subdomain = this.getSubdomain(tile)
+
     return this._config.urlTemplate
       .replace(/\{z\}/g, String(tile.z))
       .replace(/\{x\}/g, String(tile.x))
-      .replace(/\{y\}/g, String(tile.y))
+      .replace(/\{y\}/g, String(effectiveY))
+      .replace(/\{s\}/g, subdomain)
   }
 
   resolveZoom(fovDeg: number): number {
@@ -49,6 +57,25 @@ export class XYZTileProvider {
 
   private clampZoom(zoom: number): number {
     return Math.max(this.minZoom, Math.min(this.maxZoom, zoom))
+  }
+
+  private getEffectiveTileY(tile: XYZTileCoord): number {
+    if (!this._config.flipY) {
+      return tile.y
+    }
+
+    const dim = 2 ** tile.z
+    return dim - 1 - tile.y
+  }
+
+  private getSubdomain(tile: XYZTileCoord): string {
+    const subdomains = this._config.subdomains ?? []
+    if (subdomains.length === 0) {
+      return ''
+    }
+
+    const index = Math.abs(tile.x + tile.y + tile.z) % subdomains.length
+    return subdomains[index] ?? ''
   }
 
   getVisibleTilesAtZoom(

@@ -13,6 +13,7 @@ export { ColorMaps, COLOR_MAP_SAMPLE_COUNT, createColorMapFromSamples } from './
 export type { ColorMap, ColorMapName } from './model/ColorMaps.js';
 export { HiPS } from './model/hips/HiPS.js';
 export { XYZLayer } from './model/earth/XYZLayer.js';
-export type { XYZLayerConfig, XYZTileCoord, XYZTileMesh } from './model/earth/types.js';
+export { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js';
+export type { XYZLayerConfig, XYZTileCoord, XYZTileMesh, WMTSLayerConfig, WMTSRequestEncoding } from './model/earth/types.js';
 export { Source } from './model/Source.js';
 export { Footprint } from './model/footprints/Footprint.js';

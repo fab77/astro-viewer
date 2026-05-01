@@ -2,7 +2,7 @@
 /******/ 	"use strict";
 /******/ 	var __webpack_modules__ = ({
 
-/***/ 6:
+/***/ 146:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -10,160 +10,288 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.TileBuffer = void 0;
-// TileBuffer.ts
-const Tile_js_1 = __importDefault(__webpack_require__(256)); // adjust if your file is named differently
-// export default class TileBuffer {
-class TileBuffer {
-    // Equatorial
-    _tiles;
-    _cachedTiles;
-    _activeHiPS;
-    // Galactic
-    _galTiles;
-    _galCachedTiles;
-    _galActiveHiPS;
-    _cacheAliveMilliSeconds;
-    _cleanerId;
-    _webgl;
-    _visibleTileManager;
-    _hipsShaderProgram;
-    constructor(minutesToLiveInCache = 1, webgl, hipsShaderProgram, visibleTileManager) {
-        this._hipsShaderProgram = hipsShaderProgram;
-        this._visibleTileManager = visibleTileManager;
-        this._webgl = webgl;
-        this._tiles = new Map();
-        this._cachedTiles = new Map();
-        this._activeHiPS = new Map();
-        this._galTiles = new Map();
-        this._galCachedTiles = new Map();
-        this._galActiveHiPS = new Map();
-        this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
-        this._cleanerId = window.setInterval(() => {
-            this.cacheCleaner();
-        }, 10_000);
+exports.Source = void 0;
+const healpixjs_1 = __webpack_require__(1138);
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+class Source {
+    _point;
+    _name;
+    _details;
+    _h_pix;
+    _shapesize;
+    _brightnessFactor;
+    /**
+     * @param in_point Point.js (Cartesian/RA-Dec wrapper)
+     * @param in_details Optional array of key/value metadata
+     */
+    constructor(in_point, in_details = []) {
+        this._point = in_point;
+        this._details = in_details;
+        this._shapesize = 16.0;
+        this._brightnessFactor = -99;
+        this.computeHealpixPixel();
     }
-    /** Register an equatorial HiPS into the buffer. */
-    addHiPS(hips) {
-        if (this._activeHiPS.has(hips)) {
-            console.error('HiPS already present in TileBuffer');
-            return;
+    getDetailByindex(index) {
+        if (index < 0 || index >= this._details.length) {
+            return undefined;
         }
-        this._activeHiPS.set(hips, new Map());
+        return this._details[index];
     }
-    /** Register a galactic HiPS into the buffer. */
-    addGalHiPS(hips) {
-        if (this._galActiveHiPS.has(hips)) {
-            console.error('HiPS already present in TileBuffer');
-            return;
-        }
-        this._galActiveHiPS.set(hips, new Map());
+    get details() {
+        return this._details;
     }
-    /** Preload/add tile for every registered equatorial HiPS. */
-    addTile(order, tileno) {
-        for (const hips of this._activeHiPS.keys()) {
-            if (order > hips.maxOrder) {
-                continue;
-            }
-            this.getTile(tileno, order, hips);
-        }
+    computeHealpixPixel() {
+        // Get Healpix instance from global
+        const healpix = Global_js_1.default.getHealpix(Global_js_1.default.nsideForSelection);
+        const vec3 = new healpixjs_1.Vec3(this._point.x, this._point.y, this._point.z);
+        const ptg = new healpixjs_1.Pointing(vec3, false);
+        this._h_pix = healpix.ang2pix(ptg, false);
     }
-    /** Preload/add tile for every registered galactic HiPS. */
-    addGalTile(order, tileno) {
-        for (const hips of this._galActiveHiPS.keys()) {
-            if (order > hips.maxOrder) {
-                continue;
-            }
-            this.getGalTile(tileno, order, hips);
-        }
+    get point() {
+        return this._point;
     }
-    /** Fetch (or create) an equatorial tile, reviving from cache if present. */
-    getTile(tileno, order, hips) {
-        const tileKey = this.key(order, tileno, hips.baseURL);
-        if (!this._tiles.has(tileKey)) {
-            if (this._cachedTiles.has(tileKey)) {
-                const tile = this._cachedTiles.get(tileKey);
-                this._tiles.set(tileKey, tile);
-                this._cachedTiles.delete(tileKey);
-                tile.resetCacheTime0();
-            }
-            else {
-                // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
-                const tile = new Tile_js_1.default(tileno, order, hips, this, this._webgl, this._visibleTileManager);
-                this._tiles.set(tileKey, tile);
-            }
-        }
-        return this._tiles.get(tileKey);
+    get name() {
+        return this._name;
     }
-    /** Fetch (or create) a galactic tile, reviving from cache if present. */
-    getGalTile(tileno, order, hips) {
-        const tileKey = this.key(order, tileno, hips.baseURL);
-        if (!this._galTiles.has(tileKey)) {
-            if (this._galCachedTiles.has(tileKey)) {
-                const tile = this._galCachedTiles.get(tileKey);
-                this._galTiles.set(tileKey, tile);
-                this._galCachedTiles.delete(tileKey);
-                tile.resetCacheTime0();
-            }
-            else {
-                // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
-                const tile = new Tile_js_1.default(tileno, order, hips, this, this._webgl, this._visibleTileManager);
-                this._galTiles.set(tileKey, tile);
-            }
-        }
-        return this._galTiles.get(tileKey);
+    get healpixPixel() {
+        return this._h_pix;
     }
-    /** Move a tile (equatorial or galactic) into cache. */
-    moveTileToCache(tileno, order, hips) {
-        const tileKey = this.key(order, tileno, hips.baseURL);
-        if (this._tiles.has(tileKey)) {
-            const tile = this._tiles.get(tileKey);
-            tile.setCacheTime0();
-            this._cachedTiles.set(tileKey, tile);
-            this._tiles.delete(tileKey);
-        }
-        if (this._galTiles.has(tileKey)) {
-            const tile = this._galTiles.get(tileKey);
-            tile.setCacheTime0();
-            this._galCachedTiles.set(tileKey, tile);
-            this._galTiles.delete(tileKey);
-        }
+    get shapeSize() {
+        return this._shapesize;
     }
-    /** Periodically purge stale cached tiles. */
-    cacheCleaner() {
-        const now = Date.now();
-        for (const [tileKey, tile] of this._cachedTiles) {
-            const t0 = tile.cacheTime0;
-            if (!tile.inView && t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds) {
-                tile.destroyIntervals();
-                this._cachedTiles.delete(tileKey);
-            }
-        }
-        for (const [tileKey, tile] of this._galCachedTiles) {
-            const t0 = tile.cacheTime0;
-            if (!tile.inView && t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds) {
-                tile.destroyIntervals();
-                this._galCachedTiles.delete(tileKey);
-            }
-        }
+    set shapeSize(size) {
+        this._shapesize = size;
     }
-    /** Compose a stable key for maps. */
-    key(order, tileno, baseURL) {
-        return `${order}#${tileno}#${baseURL}`;
+    get brightnessFactor() {
+        return this._brightnessFactor;
     }
-    /** Optional: call to stop internal timers if you dispose this buffer. */
-    dispose() {
-        window.clearInterval(this._cleanerId);
+    /**
+     * @param factor Must be in [-1..1]
+     */
+    set brightnessFactor(factor) {
+        this._brightnessFactor = factor;
     }
 }
-exports.TileBuffer = TileBuffer;
-// Singleton (kept for compatibility with your original export)
-// export const newTileBuffer = new TileBuffer()
+exports.Source = Source;
 
 
 /***/ }),
 
-/***/ 56:
+/***/ 149:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZShaderProgram = void 0;
+class XYZShaderProgram {
+    locations;
+    _webgl;
+    _shaderProgram;
+    constructor(webgl) {
+        this._webgl = webgl;
+        this.locations = {
+            pMatrix: null,
+            mMatrix: null,
+            vMatrix: null,
+            sampler: null,
+            vertexPositionAttribute: -1,
+            textureCoordAttribute: -1,
+        };
+    }
+    get shaderProgram() {
+        const gl = this._webgl;
+        if (!this._shaderProgram) {
+            const program = gl.createProgram();
+            if (!program) {
+                throw new Error('Could not create XYZ shader program');
+            }
+            this._shaderProgram = program;
+            this.initShaders();
+        }
+        gl.useProgram(this._shaderProgram);
+        return this._shaderProgram;
+    }
+    enableProgram() {
+        this._webgl.useProgram(this.shaderProgram);
+    }
+    enableShaders(pMatrix, vMatrix, mMatrix) {
+        const gl = this._webgl;
+        const program = this.shaderProgram;
+        gl.useProgram(program);
+        this.locations.pMatrix = gl.getUniformLocation(program, 'uPMatrix');
+        this.locations.mMatrix = gl.getUniformLocation(program, 'uMMatrix');
+        this.locations.vMatrix = gl.getUniformLocation(program, 'uVMatrix');
+        this.locations.sampler = gl.getUniformLocation(program, 'uSampler');
+        this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
+        this.locations.textureCoordAttribute = gl.getAttribLocation(program, 'aTextureCoord');
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
+        gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
+        gl.uniform1i(this.locations.sampler, 0);
+    }
+    initShaders() {
+        const gl = this._webgl;
+        const vertexShader = this.compileShader(gl.VERTEX_SHADER, `#version 300 es
+      in vec3 aVertexPosition;
+      in vec2 aTextureCoord;
+      uniform mat4 uPMatrix;
+      uniform mat4 uVMatrix;
+      uniform mat4 uMMatrix;
+      out vec2 vTextureCoord;
+      void main(void) {
+        vTextureCoord = aTextureCoord;
+        gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
+      }`);
+        const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, `#version 300 es
+      precision mediump float;
+      in vec2 vTextureCoord;
+      uniform sampler2D uSampler;
+      out vec4 outColor;
+      void main(void) {
+        outColor = texture(uSampler, vTextureCoord);
+      }`);
+        gl.attachShader(this._shaderProgram, vertexShader);
+        gl.attachShader(this._shaderProgram, fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            throw new Error(gl.getProgramInfoLog(this._shaderProgram) || 'Could not initialise XYZ shaders');
+        }
+    }
+    compileShader(type, source) {
+        const gl = this._webgl;
+        const shader = gl.createShader(type);
+        if (!shader) {
+            throw new Error('Could not create XYZ shader');
+        }
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(shader) || 'XYZ shader compile error');
+        }
+        return shader;
+    }
+}
+exports.XYZShaderProgram = XYZShaderProgram;
+
+
+/***/ }),
+
+/***/ 229:
+/***/ ((__unused_webpack_module, exports) => {
+
+// FoVHelper.ts
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.fovHelper = void 0;
+class FoVHelper {
+    getHiPSNorder(fov) {
+        if (fov >= 179)
+            return 0;
+        if (fov >= 90)
+            return 1;
+        if (fov >= 30)
+            return 2;
+        if (fov >= 20)
+            return 3;
+        if (fov >= 6)
+            return 4;
+        if (fov >= 3.2)
+            return 5;
+        if (fov >= 1.6)
+            return 6;
+        if (fov >= 0.85)
+            return 7;
+        if (fov >= 0.42)
+            return 8;
+        if (fov >= 0.21)
+            return 9;
+        if (fov >= 0.12)
+            return 10;
+        if (fov >= 0.06)
+            return 11;
+        if (fov >= 0.015)
+            return 12;
+        return 13;
+    }
+    getRADegSteps(fov) {
+        let raStep;
+        let decStep;
+        if (fov >= 179) {
+            raStep = 10;
+            decStep = 10;
+        }
+        else if (fov >= 25) {
+            raStep = 9;
+            decStep = 9;
+        }
+        else if (fov >= 12.5) {
+            raStep = 8;
+            decStep = 8;
+        }
+        else if (fov >= 6) {
+            raStep = 6;
+            decStep = 6;
+        }
+        else if (fov >= 3.2) {
+            raStep = 5;
+            decStep = 5;
+        }
+        else if (fov >= 1.6) {
+            raStep = 4;
+            decStep = 4;
+        }
+        else if (fov >= 0.85) {
+            raStep = 3;
+            decStep = 3;
+        }
+        else if (fov >= 0.42) {
+            raStep = 2;
+            decStep = 2;
+        }
+        else if (fov >= 0.21) {
+            raStep = 1;
+            decStep = 1;
+        }
+        else if (fov >= 0.12) {
+            raStep = 0.5;
+            decStep = 0.5;
+        }
+        else if (fov >= 0.06) {
+            raStep = 0.25;
+            decStep = 0.25;
+        }
+        else {
+            raStep = 10;
+            decStep = 10;
+        }
+        return { raStep, decStep };
+    }
+    getRefOrder(order) {
+        switch (order) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+                return order + 6;
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+                return order + 5;
+            case 8:
+                return order + 4;
+            default:
+                return order + 3;
+        }
+    }
+}
+exports.fovHelper = new FoVHelper();
+exports["default"] = FoVHelper;
+
+
+/***/ }),
+
+/***/ 592:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -171,172 +299,2282 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.VisibleTilesManager = void 0;
-const Global_js_1 = __importDefault(__webpack_require__(382));
-const healpixjs_1 = __webpack_require__(138);
-const RayPickingUtils_js_1 = __importDefault(__webpack_require__(639));
-// import { newTileBuffer } from './TileBuffer.js';
-const TileBuffer_js_1 = __webpack_require__(6);
-const gl_matrix_1 = __webpack_require__(961);
-// import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
-// import {HealpixGridSingleton} from '../grid/HealpixGridSingleton.js';
-const Config_js_1 = __webpack_require__(919);
-class VisibleTilesManager {
-    _visibleTilesByOrder;
-    _ancestorsMap;
-    initialised;
-    _galVisibleTilesByOrder;
-    _galAncestorsMap;
-    _galacticMatrixInverted;
-    _galacticMatrix;
-    insideSphere = Config_js_1.bootSetup.insideSphere;
-    _tileBuffer;
-    _healpixGrid;
+exports.FootprintSetGL = void 0;
+const Footprint_js_1 = __webpack_require__(2475);
+const Utils_js_1 = __webpack_require__(7930);
+const FootprintShaderProgram_js_1 = __webpack_require__(8909);
+const Point_js_1 = __webpack_require__(6553);
+const GeomUtils_js_1 = __importDefault(__webpack_require__(2930));
+const CoordsType_js_1 = __webpack_require__(8145);
+const MetadataManager_js_1 = __webpack_require__(5403);
+class FootprintSetGL {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    static CONVEXPOLY_ELEM_SIZE = 3;
+    _kind = "FootprintSetGL";
+    _ready;
+    // footprintsetProps: FootprintProps
+    _name;
+    _description;
+    // tapRepo: TapRepo
+    extHoveredIndexes;
+    oldMouseCoords;
+    healpixDensityMap;
+    totConvexPoints;
+    // footprintsInPix256: Map<number, Footprint[]>
+    // gl: GL;
+    // shaderProgram: WebGLProgram
+    vertexCataloguePositionBuffer;
+    indexBuffer;
+    hoveredVertexPositionBuffer;
+    hoveredIndexBuffer;
+    selectedVertexPositionBuffer;
+    selectedIndexBuffer;
+    indexes;
+    footprintPolygons = [];
+    vertexCataloguePosition;
+    totPoints;
+    nPrimitiveFlags = 0;
+    hoveredIndexes;
+    hoveredElementIndexes;
+    _hoveredFootprints = [];
+    hoveredVertexPosition;
+    totHoveredPoints;
+    nHoveredPrimitiveFlags = 0;
+    selectedIndexes;
+    selectedElementIndexes;
+    _selectedFootprints = [];
+    selectedVertexPosition;
+    totSelectedPoints;
+    nSlectedPrimitiveFlags = 0;
+    _shapeColor = "#00fff2ff";
+    _bufferInitialised = false;
     _webgl;
-    constructor(webgl, hipsShaderProgram, healpixGrid) {
+    _isVisible = true;
+    _metadataManager;
+    _providerUrl;
+    _footprintShaderProgram;
+    _visibleTilesManager;
+    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl, visibleTilesManager) {
         this._webgl = webgl;
-        this._healpixGrid = healpixGrid;
-        this._visibleTilesByOrder = { pixels: [], order: 0 };
-        this._ancestorsMap = new Map();
-        this.initialised = false;
-        this._galVisibleTilesByOrder = { pixels: [], order: 0 };
-        this._galAncestorsMap = new Map();
-        // Matrices for galactic <-> equatorial
-        this._galacticMatrixInverted = gl_matrix_1.mat4.create();
-        this._galacticMatrix = gl_matrix_1.mat4.create();
-        // From https://observablehq.com/@fil/galactic-rotations (single-precision friendly)
-        // This matrix is (galactic -> equatorial); we store its inverse too.
-        gl_matrix_1.mat4.set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
-        gl_matrix_1.mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
-        this._tileBuffer = new TileBuffer_js_1.TileBuffer(1, webgl, hipsShaderProgram, this);
+        this._ready = false;
+        this._visibleTilesManager = visibleTilesManager;
+        this.TYPE = "FOOTPRINT_SET";
+        this._name = fsetName;
+        this._description = fsetDescription;
+        this._providerUrl = providerUrl;
+        this._metadataManager = metadataManager;
+        this.initFootprintArrays();
+        this.oldMouseCoords = null;
+        this._footprintShaderProgram = new FootprintShaderProgram_js_1.FootprintShaderProgram(this._webgl);
+        this._footprintShaderProgram.shaderProgram;
     }
-    get healpixGrid() {
-        return this._healpixGrid;
+    initFootprintArrays() {
+        this.footprintPolygons = [];
+        this.indexes = new Uint32Array();
+        this.vertexCataloguePosition = new Float32Array();
+        this.totPoints = 0;
+        this.totConvexPoints = 0;
+        this.extHoveredIndexes = new Uint32Array();
+        this._hoveredFootprints = [];
+        this.hoveredVertexPosition = new Float32Array();
+        this.totHoveredPoints = 0;
+        this.hoveredIndexes = [];
+        this.hoveredElementIndexes = new Uint32Array();
+        this._selectedFootprints = [];
+        this.selectedVertexPosition = new Float32Array();
+        this.totSelectedPoints = 0;
+        this.selectedIndexes = [];
+        this.selectedElementIndexes = new Uint32Array();
     }
-    get tileBuffer() {
-        return this._tileBuffer;
-    }
-    init(insideSphere) {
-        this.initialised = true;
-        this.insideSphere = insideSphere;
-        // this.computeVisiblePixels();
-        // setInterval(() => this.computeVisiblePixels(), 500);
-    }
-    getVisibleOrder() {
-        // return healpixGridSingleton.visibleorder;
-        return this._healpixGrid.visibleorder;
-    }
-    // computeVisiblePixels(): void {
-    computeVisiblePixels(order, webgl, camera, pMatrix) {
-        if (!this.initialised)
+    initGLBuffers() {
+        if (!this._webgl)
             return;
-        // let order = healpixGridSingleton.visibleorder;
-        if (Global_js_1.default.insideSphere && order < 3) {
-            order = 3;
+        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
+        this.indexBuffer = this._webgl.createBuffer();
+        this.hoveredVertexPositionBuffer = this._webgl.createBuffer();
+        this.hoveredIndexBuffer = this._webgl.createBuffer();
+        this.selectedVertexPositionBuffer = this._webgl.createBuffer();
+        this.selectedIndexBuffer = this._webgl.createBuffer();
+    }
+    setIsVisible(visibility) {
+        this._isVisible = visibility;
+    }
+    get isVisible() {
+        return this._isVisible;
+    }
+    get shapeColor() {
+        return this._shapeColor;
+    }
+    get providerUrl() {
+        return this._providerUrl;
+    }
+    get name() {
+        return this._name;
+    }
+    get metadataManager() {
+        return this._metadataManager;
+    }
+    addFootprint(in_footprint) {
+        this.footprintPolygons.push(in_footprint);
+    }
+    // addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void {
+    addFootprints(in_data, columnsmeta) {
+        this._ready = false;
+        this._metadataManager = new MetadataManager_js_1.MetadataManager(columnsmeta);
+        // const geomDataIndex = this.footprintsetProps.geomColumn?.index
+        const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
+        if (geomDataIndex < 0) {
+            throw new Error("geomColumn or its index is undefined in footprintsetProps");
         }
-        this._ancestorsMap.set(order, []);
-        this._galAncestorsMap.set(order, []);
-        let pixels = [];
-        let galTiles = [];
-        if (order === 0) {
-            const geomhealpix = Global_js_1.default.getHealpix(0);
-            const npix = geomhealpix.getNPix();
-            for (let i = 0; i < npix; i++) {
-                pixels.push(i);
-                this._ancestorsMap.get(order).push(i);
-                galTiles.push(i);
-                this._galAncestorsMap.get(order).push(i);
+        for (let j = 0; j < in_data.length; j++) {
+            if (in_data[j][0] !== null) {
+                const footprint = new Footprint_js_1.Footprint(in_data[j][geomDataIndex], in_data[j]);
+                if (footprint._valid) {
+                    this.addFootprint(footprint);
+                    this.totPoints += footprint.totPoints;
+                    this.totConvexPoints += footprint.totConvexPoints;
+                }
+            }
+        }
+        // this.initBuffer()
+        this._ready = true;
+        this._bufferInitialised = false;
+    }
+    clearFootprints() {
+        this.initFootprintArrays();
+    }
+    initBuffer() {
+        // this._webgl = webgl
+        if (!this._webgl)
+            return;
+        this.initGLBuffers();
+        const nFootprints = this.footprintPolygons.length;
+        let npolygons = nFootprints - 1;
+        for (let j = 0; j < nFootprints; j++) {
+            npolygons += this.footprintPolygons[j].polygons.length - 1;
+        }
+        this.indexes = new Uint32Array(this.totPoints + npolygons + 1);
+        const MAX_UNSIGNED_INT = 0xffffffff;
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this.vertexCataloguePosition = new Float32Array(3 * this.totPoints);
+        let positionIndex = 0;
+        let vIdx = 0;
+        const R = 1.0;
+        this.nPrimitiveFlags = 0;
+        for (let j = 0; j < nFootprints; j++) {
+            const footprint = this.footprintPolygons[j];
+            const footprintPoly = footprint.polygons;
+            if (j > 0) {
+                this.indexes[vIdx++] = MAX_UNSIGNED_INT;
+                this.nPrimitiveFlags++;
+            }
+            for (const poly of footprintPoly) {
+                if (poly !== footprintPoly[0]) {
+                    this.indexes[vIdx++] = MAX_UNSIGNED_INT;
+                    this.nPrimitiveFlags++;
+                }
+                for (const point of poly) {
+                    this.vertexCataloguePosition[positionIndex++] = R * point.x;
+                    this.vertexCataloguePosition[positionIndex++] = R * point.y;
+                    this.vertexCataloguePosition[positionIndex++] = R * point.z;
+                    this.indexes[vIdx++] = Math.floor((positionIndex - 1) / 3);
+                }
+            }
+        }
+        this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
+        console.log("Buffer initialized");
+    }
+    checkSelection(mouseHelper) {
+        if (!mouseHelper.x || !mouseHelper.y || !mouseHelper.z)
+            return;
+        let mousePix = mouseHelper.computeNpix();
+        if (!mousePix)
+            return;
+        this._hoveredFootprints = [];
+        this.totHoveredPoints = 0;
+        const mousePoint = new Point_js_1.Point({ x: mouseHelper.x, y: mouseHelper.y, z: mouseHelper.z }, CoordsType_js_1.CoordsType.CARTESIAN);
+        for (let i = 0; i < this.footprintPolygons.length; i++) {
+            const footprint = this.footprintPolygons[i];
+            if (!footprint.selectionObj)
+                continue;
+            if (GeomUtils_js_1.default.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
+                const details = [...footprint.details];
+                // const geomDataIndex = this.footprintsetProps.geomColumn?.index
+                const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
+                if (geomDataIndex < 0)
+                    continue;
+                details.splice(geomDataIndex, 1);
+                this._hoveredFootprints.push(footprint);
+                this.totHoveredPoints += footprint.totPoints;
+            }
+        }
+        this.initHoveringBuffer();
+    }
+    get hoveredFootprints() {
+        return {
+            // metadata: this.footprintsetProps.tapMetadataList,
+            metadata: this._metadataManager,
+            footprints: this._hoveredFootprints,
+            tableName: this._name,
+            description: this._description,
+            // provider: this.tapRepo.tapBaseUrl
+            provider: this._providerUrl,
+        };
+    }
+    get selectedFootprints() {
+        return this._selectedFootprints;
+    }
+    checkClicking(in_mouseHelper) {
+        if (in_mouseHelper.x == null ||
+            in_mouseHelper.y == null ||
+            in_mouseHelper.z == null) {
+            return [];
+        }
+        const clickedIndexes = [];
+        const mousePoint = new Point_js_1.Point({ x: in_mouseHelper.x, y: in_mouseHelper.y, z: in_mouseHelper.z }, CoordsType_js_1.CoordsType.CARTESIAN);
+        for (let i = 0; i < this.footprintPolygons.length; i++) {
+            const footprint = this.footprintPolygons[i];
+            if (!footprint.selectionObj)
+                continue;
+            if (GeomUtils_js_1.default.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
+                clickedIndexes.push(i);
+            }
+        }
+        return clickedIndexes;
+    }
+    setSelectedIndexes(selectedIndex) {
+        selectedIndex.forEach((idx) => {
+            if (idx < 0 || idx >= this.footprintPolygons.length)
+                return;
+            if (this.selectedIndexes.includes(idx)) {
+                this.selectedIndexes.splice(this.selectedIndexes.indexOf(idx), 1);
+            }
+            else {
+                this.selectedIndexes.push(idx);
+            }
+        });
+        this.refreshSelectedFootprints();
+    }
+    refreshSelectedFootprints() {
+        this._selectedFootprints = this.selectedIndexes
+            .map((idx) => this.footprintPolygons[idx])
+            .filter((footprint) => Boolean(footprint));
+        this.totSelectedPoints = this._selectedFootprints.reduce((total, footprint) => total + footprint.totPoints, 0);
+        if (this._selectedFootprints.length === 0) {
+            this.selectedVertexPosition = new Float32Array();
+            this.selectedElementIndexes = new Uint32Array();
+            this.nSlectedPrimitiveFlags = 0;
+            return;
+        }
+        this.initSelectionBuffer();
+    }
+    getFootprintsFromPointer(in_mouseHelper) {
+        const pickedIndexes = this.checkClicking(in_mouseHelper);
+        if (!pickedIndexes.length) {
+            return {
+                footprints: [],
+                pickedIndexes: [],
+            };
+        }
+        const footprints = [];
+        pickedIndexes.forEach((idx) => {
+            const footprint = this.footprintPolygons[idx];
+            if (footprint)
+                footprints.push(footprint);
+        });
+        return footprints.length ? { footprints, pickedIndexes } : null;
+    }
+    selectPrimaryFootprintFromClick(in_mouseHelper) {
+        const picked = this.getFootprintsFromPointer(in_mouseHelper);
+        const clickedIndexes = picked?.pickedIndexes ?? [];
+        this.setSelectedIndexes(clickedIndexes);
+        if (!clickedIndexes.length) {
+            return {
+                footprints: [],
+                selectionState: [],
+            };
+        }
+        const selectionState = [];
+        const selectedFootprints = [];
+        clickedIndexes.forEach((idx) => {
+            const footprint = this.footprintPolygons[idx];
+            if (!footprint)
+                return;
+            const selected = this.selectedIndexes.includes(idx);
+            selectionState.push({ footprint, selected });
+            selectedFootprints.push(footprint);
+        });
+        return selectedFootprints.length
+            ? { footprints: selectedFootprints, selectionState }
+            : null;
+    }
+    // highlightFootprint(footprint: Footprint, highlighted: boolean) {
+    //   if (highlighted) {
+    //     this._hoveredFootprints.push(footprint)
+    //     this.totHoveredPoints += footprint.totPoints
+    //   } else {
+    //     const indexOfFootprint = this._hoveredFootprints.indexOf(footprint)
+    //     this._hoveredFootprints.splice(indexOfFootprint, 1)
+    //     this.totHoveredPoints -= footprint.totPoints
+    //   }
+    //   this.initHoveringBuffer()
+    // }
+    /**
+     *
+     * @param {Footprint[]} footprints
+     */
+    // addFootprint2Selected(footprints: Footprint[]) {
+    //   let refreshBuffer = false
+    //   for (let f of footprints) {
+    //     if (!this._selectedFootprints.includes(f)) {
+    //       this._selectedFootprints.push(f)
+    //       this.totSelectedPoints += f.totPoints
+    //       refreshBuffer = true
+    //     }
+    //   }
+    //   if (refreshBuffer) {
+    //     this.initSelectionBuffer()
+    //   }
+    // }
+    /**
+     *
+     * @param {Footprint} footprint
+     */
+    // removeFootprintFromSelection(footprint: Footprint) {
+    //   const indexOfObject = this._selectedFootprints.indexOf(footprint)
+    //   if (indexOfObject >= 0) {
+    //     this._selectedFootprints.splice(indexOfObject, 1)
+    //     this.totSelectedPoints -= footprint.totPoints
+    //     if (this._selectedFootprints.length > 0) {
+    //       this.initSelectionBuffer()
+    //     }
+    //   }
+    // }
+    FootprintPolygonMatches(left, right) {
+        if (left === right)
+            return true;
+        const leftConvexPoly = left.convexPolygons;
+        const rightConvexPoly = right.convexPolygons;
+        if (leftConvexPoly !== rightConvexPoly ||
+            leftConvexPoly !== rightConvexPoly) {
+            return false;
+        }
+        if (left.details.length !== right.details.length) {
+            return false;
+        }
+        for (let i = 0; i < left.details.length; i++) {
+            if (!Object.is(left.details[i], right.details[i])) {
+                return false;
+            }
+        }
+        return true;
+    }
+    findFootprintPolygonIndex(footprint) {
+        const footprintIndex = this.footprintPolygons.indexOf(footprint);
+        if (footprintIndex >= 0) {
+            return footprintIndex;
+        }
+        return this.footprintPolygons.findIndex((candidate) => this.FootprintPolygonMatches(candidate, footprint));
+    }
+    extHighlightFootprint(footprint, highlighted) {
+        const sIdx = this.findFootprintPolygonIndex(footprint);
+        if (sIdx < 0)
+            return;
+        const base = sIdx * FootprintSetGL.ELEM_SIZE;
+        if (highlighted) {
+            if (!this.hoveredIndexes.includes(sIdx)) {
+                this.hoveredIndexes.push(sIdx);
             }
         }
         else {
-            const geomhealpix = Global_js_1.default.getHealpix(order);
-            // const maxX = (global.gl as GL).canvas.width;
-            // const maxY = (global.gl as GL).canvas.height;
-            const maxX = webgl.canvas.width;
-            const maxY = webgl.canvas.height;
-            // Sample a grid of screen points, project to the sphere, then to galactic
-            for (let i = 0; i <= maxX; i += maxX / 30) {
-                for (let j = 0; j <= maxY; j += maxY / 30) {
-                    const hit = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl, camera, pMatrix);
-                    if (hit.length > 0) {
-                        // Equatorial -> Galactic (use _galacticMatrix)
-                        const galVec = gl_matrix_1.vec4.create();
-                        gl_matrix_1.vec4.transformMat4(galVec, [hit[0], hit[1], hit[2], 1], this._galacticMatrix);
-                        // Index in galactic HEALPix
-                        const galPoint = new healpixjs_1.Pointing(new healpixjs_1.Vec3(galVec[0], galVec[1], galVec[2]));
-                        const galTileNo = geomhealpix.ang2pix(galPoint);
-                        // Index in equatorial HEALPix
-                        const curPoint = new healpixjs_1.Pointing(new healpixjs_1.Vec3(hit[0], hit[1], hit[2]));
-                        const currPixNo = geomhealpix.ang2pix(curPoint);
-                        if (!pixels.includes(currPixNo)) {
-                            pixels.push(currPixNo);
-                            this._ancestorsMap.get(order).push(currPixNo);
-                            // newTileBuffer.addTile(order, currPixNo);
-                            this._tileBuffer.addTile(order, currPixNo);
-                        }
-                        if (!galTiles.includes(galTileNo)) {
-                            galTiles.push(galTileNo);
-                            this._galAncestorsMap.get(order).push(galTileNo);
-                            // newTileBuffer.addGalTile(order, galTileNo);
-                            this._tileBuffer.addGalTile(order, galTileNo);
-                        }
-                    }
-                }
-            }
-        }
-        this._visibleTilesByOrder = { pixels: pixels, order: order };
-        this._galVisibleTilesByOrder = { pixels: galTiles, order: order };
-        // Build ancestor pyramids down to order 0
-        for (let o = 1; o < order; o++) {
-            const tgtOrder = order - o;
-            const list = this._ancestorsMap.get(tgtOrder) ?? [];
-            this._ancestorsMap.set(tgtOrder, list);
-            for (let p = 0; p < pixels.length; p++) {
-                const parent = pixels[p] >> (2 * o);
-                if (!list.includes(parent)) {
-                    list.push(parent);
-                    // newTileBuffer.addTile(tgtOrder, parent);
-                    this._tileBuffer.addTile(tgtOrder, parent);
-                }
-            }
-        }
-        for (let o = 1; o < order; o++) {
-            const tgtOrder = order - o;
-            const list = this._galAncestorsMap.get(tgtOrder) ?? [];
-            this._galAncestorsMap.set(tgtOrder, list);
-            for (let p = 0; p < galTiles.length; p++) {
-                const parent = galTiles[p] >> (2 * o);
-                if (!list.includes(parent)) {
-                    list.push(parent);
-                    // newTileBuffer.addGalTile(tgtOrder, parent);
-                    this._tileBuffer.addGalTile(tgtOrder, parent);
-                }
+            if (base + 4 >= this.vertexCataloguePosition.length)
+                return;
+            const i = this.hoveredIndexes.indexOf(sIdx);
+            if (i >= 0) {
+                this.hoveredIndexes.splice(i, 1);
             }
         }
     }
-    get visibleTilesByOrder() {
-        return this._visibleTilesByOrder;
+    extAddPolygons2Selected(footprint) {
+        if (!this._bufferInitialised) {
+            this.initBuffer();
+        }
+        const sIdx = this.findFootprintPolygonIndex(footprint);
+        if (sIdx < 0)
+            return;
+        const base = sIdx * FootprintSetGL.ELEM_SIZE;
+        if (!this.selectedIndexes.includes(sIdx)) {
+            this.selectedIndexes.push(sIdx);
+        }
+        else {
+            if (base + 4 >= this.vertexCataloguePosition.length)
+                return;
+            const i = this.selectedIndexes.indexOf(sIdx);
+            if (i >= 0) {
+                this.selectedIndexes.splice(i, 1);
+            }
+        }
+        this.refreshSelectedFootprints();
     }
-    get ancestorsMap() {
-        return this._ancestorsMap;
+    initHoveringBuffer() {
+        /*
+                TODO better approach. when creating the indexbuffer of footprints,
+                add 1 extra position for the selection (set to 0 == not selected),
+                and save the position "positionIndex" in an array (selectionIndexes).
+                When checking the selection, I get the index of the footprint, which
+                matches with the index in the selectionIndexes to retrieve the position
+                of the flag to be set to 1 in the vertexposition
+                This will ease checking the selection in the vertex/fragment shader and
+                set the pointsize and shape color.
+                */
+        if (!this._webgl)
+            return;
+        if (this._hoveredFootprints.length == 0) {
+            return;
+        }
+        let nFootprints = this._hoveredFootprints.length;
+        let npolygons = nFootprints - 1;
+        for (let j = 0; j < nFootprints; j++) {
+            npolygons += this._hoveredFootprints[j].polygons.length - 1;
+        }
+        // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
+        // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+        this.hoveredElementIndexes = new Uint32Array(this.totHoveredPoints + npolygons);
+        const MAX_UNSIGNED_INT = 0xffffffff; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
+        // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
+        this.hoveredVertexPosition = new Float32Array(3 * this.totHoveredPoints);
+        let positionIndex = 0;
+        let vIdx = 0;
+        let R = 1.0;
+        this.nHoveredPrimitiveFlags = 0;
+        for (let j = 0; j < nFootprints; j++) {
+            let hoveredFootprintPoly = this._hoveredFootprints[j].polygons;
+            if (j > 0) {
+                this.hoveredElementIndexes[vIdx] = MAX_UNSIGNED_INT;
+                this.nHoveredPrimitiveFlags += 1;
+                vIdx += 1;
+            }
+            for (let polyIdx = 0; polyIdx < hoveredFootprintPoly.length; polyIdx++) {
+                if (polyIdx > 0) {
+                    this.hoveredElementIndexes[vIdx] = MAX_UNSIGNED_INT;
+                    this.nHoveredPrimitiveFlags += 1;
+                    vIdx += 1;
+                }
+                const poly = hoveredFootprintPoly[polyIdx];
+                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+                    const p = poly[pointIdx];
+                    this.hoveredVertexPosition[positionIndex] = R * p.x;
+                    this.hoveredVertexPosition[positionIndex + 1] = R * p.y;
+                    this.hoveredVertexPosition[positionIndex + 2] = R * p.z;
+                    this.hoveredElementIndexes[vIdx] = Math.floor(positionIndex / 3);
+                    vIdx += 1;
+                    positionIndex += 3;
+                }
+            }
+        }
     }
-    get galVisibleTilesByOrder() {
-        return this._galVisibleTilesByOrder;
+    initSelectionBuffer() {
+        if (!this._webgl)
+            return;
+        if (this._selectedFootprints.length == 0) {
+            return;
+        }
+        const nFootprints = this._selectedFootprints.length;
+        let npolygons = nFootprints - 1;
+        for (let j = 0; j < nFootprints; j++) {
+            npolygons += this._selectedFootprints[j].polygons.length - 1;
+        }
+        this.selectedElementIndexes = new Uint32Array(this.totSelectedPoints + npolygons);
+        const MAX_UNSIGNED_INT = 0xffffffff;
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
+        this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints);
+        let positionIndex = 0;
+        let vIdx = 0;
+        const R = 1.0;
+        this.nSlectedPrimitiveFlags = 0;
+        for (let j = 0; j < nFootprints; j++) {
+            const footprintPoly = this._selectedFootprints[j].polygons;
+            if (j > 0) {
+                this.selectedElementIndexes[vIdx] = MAX_UNSIGNED_INT;
+                this.nSlectedPrimitiveFlags += 1;
+                vIdx += 1;
+            }
+            for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
+                if (polyIdx > 0) {
+                    this.selectedElementIndexes[vIdx] = MAX_UNSIGNED_INT;
+                    this.nSlectedPrimitiveFlags += 1;
+                    vIdx += 1;
+                }
+                const poly = footprintPoly[polyIdx];
+                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
+                    const p = poly[pointIdx];
+                    this.selectedVertexPosition[positionIndex] = R * p.x;
+                    this.selectedVertexPosition[positionIndex + 1] = R * p.y;
+                    this.selectedVertexPosition[positionIndex + 2] = R * p.z;
+                    this.selectedElementIndexes[vIdx] = Math.floor(positionIndex / 3);
+                    vIdx += 1;
+                    positionIndex += 3;
+                }
+            }
+        }
     }
-    get galAncestorsMap() {
-        return this._galAncestorsMap;
+    changeColor(color) {
+        this._shapeColor = color;
     }
-    get visibleOrder() {
-        return this._visibleTilesByOrder.order;
+    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
+        if (!this.isVisible)
+            return;
+        if (!this._ready)
+            return;
+        if (!vMatrix)
+            return;
+        // if (!global.camera) return
+        if (!this._bufferInitialised)
+            this.initBuffer();
+        if (!this._webgl)
+            return;
+        this._footprintShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
+        // this._footprintShaderProgram.enableShaders(
+        //   computePerspectiveMatrixSingleton.pMatrix as Float32Array,
+        //   in_mMatrix,
+        //   vMatrix
+        // )
+        if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
+            this.checkSelection(in_mouseHelper);
+        }
+        if (this._hoveredFootprints.length > 0) {
+            // TODO POINT_SIZE doesn't have any effect on line thickness!! it only applies to points
+            const rgb = (0, Utils_js_1.colorHex2RGB)("#00FF00");
+            const alpha = 1.0;
+            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
+            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
+            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.hoveredVertexPosition, this._webgl.STATIC_DRAW);
+            // setting footprint position
+            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer);
+            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredElementIndexes, this._webgl.STATIC_DRAW);
+            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
+            this._webgl.drawElements(this._webgl.LINE_LOOP, this.hoveredVertexPosition.length / 3 + this.nHoveredPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
+        }
+        if (this._selectedFootprints.length > 0) {
+            const rgb = (0, Utils_js_1.colorHex2RGB)("#ECB462");
+            const alpha = 1.0;
+            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
+            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
+            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.selectedVertexPosition, this._webgl.STATIC_DRAW);
+            // setting footprint position
+            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer);
+            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedElementIndexes, this._webgl.STATIC_DRAW);
+            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
+            this._webgl.drawElements(this._webgl.LINE_LOOP, this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
+        }
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+        this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexes, this._webgl.STATIC_DRAW);
+        // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
+        const shapeColor = [...(0, Utils_js_1.colorHex2RGB)(this._shapeColor), 1.0];
+        this._webgl.uniform4f(this._footprintShaderProgram.locations.color, ...shapeColor);
+        this._webgl.drawElements(this._webgl.LINE_LOOP, this.indexes.length, this._webgl.UNSIGNED_INT, 0);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, null);
+        this.oldMouseCoords = in_mouseHelper.xyz;
     }
 }
-exports.VisibleTilesManager = VisibleTilesManager;
-// export const visibleTilesManager = new VisibleTilesManager();
+exports.FootprintSetGL = FootprintSetGL;
+// export default FootprintSetGL
 
 
 /***/ }),
 
-/***/ 72:
+/***/ 619:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ColorMaps = exports.COLOR_MAP_SAMPLE_COUNT = void 0;
+exports.createColorMapFromSamples = createColorMapFromSamples;
+exports.COLOR_MAP_SAMPLE_COUNT = 256;
+function validateColorChannel(name, values) {
+    if (!Array.isArray(values)) {
+        throw new Error(`Channel "${name}" must be an array.`);
+    }
+    if (values.length !== exports.COLOR_MAP_SAMPLE_COUNT) {
+        throw new Error(`Channel "${name}" must contain exactly ${exports.COLOR_MAP_SAMPLE_COUNT} samples.`);
+    }
+    for (let i = 0; i < values.length; i += 1) {
+        const value = values[i];
+        if (!Number.isFinite(value)) {
+            throw new Error(`Channel "${name}" contains a non-finite value at index ${i}.`);
+        }
+        if (value < 0 || value > 255) {
+            throw new Error(`Channel "${name}" contains an out-of-range value at index ${i}. Expected 0..255.`);
+        }
+    }
+}
+function packColorChannel(values) {
+    const packed = new Float32Array(exports.COLOR_MAP_SAMPLE_COUNT * 4);
+    for (let i = 0; i < exports.COLOR_MAP_SAMPLE_COUNT; i += 1) {
+        packed[i * 4] = values[i];
+    }
+    return packed;
+}
+function createColorMapFromSamples(name, channels) {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+        throw new Error("Color map name must not be empty.");
+    }
+    validateColorChannel("r", channels.r);
+    validateColorChannel("g", channels.g);
+    validateColorChannel("b", channels.b);
+    return {
+        name: trimmedName,
+        r: packColorChannel(channels.r),
+        g: packColorChannel(channels.g),
+        b: packColorChannel(channels.b),
+    };
+}
+exports.ColorMaps = {
+    grayscale: {
+        name: 'grayscale',
+        r: new Float32Array([]),
+        g: new Float32Array([]),
+        b: new Float32Array([]),
+        // r: [],
+        // g: [],
+        // b: [],
+    },
+    native: {
+        name: 'native',
+        r: new Float32Array([]),
+        g: new Float32Array([]),
+        b: new Float32Array([]),
+        // r: [],
+        // g: [],
+        // b: [],
+    },
+    planck: {
+        name: 'planck',
+        r: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 0.769231, 0.0, 0.0, 0.0, 1.53846, 0.0, 0.0, 0.0, 2.30769, 0.0, 0.0, 0.0,
+            3.07692, 0.0, 0.0, 0.0, 3.84615, 0.0, 0.0, 0.0, 4.61538, 0.0, 0.0, 0.0, 5.38462, 0.0, 0.0,
+            0.0, 6.15385, 0.0, 0.0, 0.0, 6.92308, 0.0, 0.0, 0.0, 7.69231, 0.0, 0.0, 0.0, 8.46154, 0.0,
+            0.0, 0.0, 9.23077, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 11.5385, 0.0, 0.0, 0.0, 13.0769, 0.0,
+            0.0, 0.0, 14.6154, 0.0, 0.0, 0.0, 16.1538, 0.0, 0.0, 0.0, 17.6923, 0.0, 0.0, 0.0, 19.2308,
+            0.0, 0.0, 0.0, 20.7692, 0.0, 0.0, 0.0, 22.3077, 0.0, 0.0, 0.0, 23.8462, 0.0, 0.0, 0.0,
+            25.3846, 0.0, 0.0, 0.0, 26.9231, 0.0, 0.0, 0.0, 28.4615, 0.0, 0.0, 0.0, 30.0, 0.0, 0.0, 0.0,
+            33.8462, 0.0, 0.0, 0.0, 37.6923, 0.0, 0.0, 0.0, 41.5385, 0.0, 0.0, 0.0, 45.3846, 0.0, 0.0,
+            0.0, 49.2308, 0.0, 0.0, 0.0, 53.0769, 0.0, 0.0, 0.0, 56.9231, 0.0, 0.0, 0.0, 60.7692, 0.0,
+            0.0, 0.0, 64.6154, 0.0, 0.0, 0.0, 68.4615, 0.0, 0.0, 0.0, 72.3077, 0.0, 0.0, 0.0, 76.1538,
+            0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 88.5385, 0.0, 0.0, 0.0, 97.0769, 0.0, 0.0, 0.0, 105.615,
+            0.0, 0.0, 0.0, 114.154, 0.0, 0.0, 0.0, 122.692, 0.0, 0.0, 0.0, 131.231, 0.0, 0.0, 0.0,
+            139.769, 0.0, 0.0, 0.0, 148.308, 0.0, 0.0, 0.0, 156.846, 0.0, 0.0, 0.0, 165.385, 0.0, 0.0,
+            0.0, 173.923, 0.0, 0.0, 0.0, 182.462, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 193.846, 0.0, 0.0,
+            0.0, 196.692, 0.0, 0.0, 0.0, 199.538, 0.0, 0.0, 0.0, 202.385, 0.0, 0.0, 0.0, 205.231, 0.0,
+            0.0, 0.0, 208.077, 0.0, 0.0, 0.0, 210.923, 0.0, 0.0, 0.0, 213.769, 0.0, 0.0, 0.0, 216.615,
+            0.0, 0.0, 0.0, 219.462, 0.0, 0.0, 0.0, 222.308, 0.0, 0.0, 0.0, 225.154, 0.0, 0.0, 0.0, 228.0,
+            0.0, 0.0, 0.0, 229.182, 0.0, 0.0, 0.0, 230.364, 0.0, 0.0, 0.0, 231.545, 0.0, 0.0, 0.0,
+            232.727, 0.0, 0.0, 0.0, 233.909, 0.0, 0.0, 0.0, 235.091, 0.0, 0.0, 0.0, 236.273, 0.0, 0.0,
+            0.0, 237.455, 0.0, 0.0, 0.0, 238.636, 0.0, 0.0, 0.0, 239.818, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0,
+            0.0, 241.0, 0.0, 0.0, 0.0, 241.364, 0.0, 0.0, 0.0, 241.727, 0.0, 0.0, 0.0, 242.091, 0.0, 0.0,
+            0.0, 242.455, 0.0, 0.0, 0.0, 242.818, 0.0, 0.0, 0.0, 243.182, 0.0, 0.0, 0.0, 243.545, 0.0,
+            0.0, 0.0, 243.909, 0.0, 0.0, 0.0, 244.273, 0.0, 0.0, 0.0, 244.636, 0.0, 0.0, 0.0, 245.0, 0.0,
+            0.0, 0.0, 245.231, 0.0, 0.0, 0.0, 245.462, 0.0, 0.0, 0.0, 245.692, 0.0, 0.0, 0.0, 245.923,
+            0.0, 0.0, 0.0, 246.154, 0.0, 0.0, 0.0, 246.385, 0.0, 0.0, 0.0, 246.615, 0.0, 0.0, 0.0,
+            246.846, 0.0, 0.0, 0.0, 247.077, 0.0, 0.0, 0.0, 247.308, 0.0, 0.0, 0.0, 247.538, 0.0, 0.0,
+            0.0, 247.769, 0.0, 0.0, 0.0, 248.0, 0.0, 0.0, 0.0, 248.146, 0.0, 0.0, 0.0, 248.292, 0.0, 0.0,
+            0.0, 248.438, 0.0, 0.0, 0.0, 248.585, 0.0, 0.0, 0.0, 248.731, 0.0, 0.0, 0.0, 248.877, 0.0,
+            0.0, 0.0, 249.023, 0.0, 0.0, 0.0, 249.169, 0.0, 0.0, 0.0, 249.315, 0.0, 0.0, 0.0, 249.462,
+            0.0, 0.0, 0.0, 249.608, 0.0, 0.0, 0.0, 249.754, 0.0, 0.0, 0.0, 249.9, 0.0, 0.0, 0.0, 249.312,
+            0.0, 0.0, 0.0, 248.723, 0.0, 0.0, 0.0, 248.135, 0.0, 0.0, 0.0, 247.546, 0.0, 0.0, 0.0,
+            246.958, 0.0, 0.0, 0.0, 246.369, 0.0, 0.0, 0.0, 245.781, 0.0, 0.0, 0.0, 245.192, 0.0, 0.0,
+            0.0, 244.604, 0.0, 0.0, 0.0, 244.015, 0.0, 0.0, 0.0, 243.427, 0.0, 0.0, 0.0, 242.838, 0.0,
+            0.0, 0.0, 242.25, 0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 236.365, 0.0, 0.0, 0.0, 233.423, 0.0,
+            0.0, 0.0, 230.481, 0.0, 0.0, 0.0, 227.538, 0.0, 0.0, 0.0, 224.596, 0.0, 0.0, 0.0, 221.654,
+            0.0, 0.0, 0.0, 218.712, 0.0, 0.0, 0.0, 215.769, 0.0, 0.0, 0.0, 212.827, 0.0, 0.0, 0.0,
+            209.885, 0.0, 0.0, 0.0, 206.942, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0,
+            198.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 192.0, 0.0, 0.0, 0.0, 189.0, 0.0, 0.0, 0.0, 186.0,
+            0.0, 0.0, 0.0, 183.0, 0.0, 0.0, 0.0, 180.0, 0.0, 0.0, 0.0, 177.0, 0.0, 0.0, 0.0, 174.0, 0.0,
+            0.0, 0.0, 171.0, 0.0, 0.0, 0.0, 168.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 161.077, 0.0, 0.0,
+            0.0, 157.154, 0.0, 0.0, 0.0, 153.231, 0.0, 0.0, 0.0, 149.308, 0.0, 0.0, 0.0, 145.385, 0.0,
+            0.0, 0.0, 141.462, 0.0, 0.0, 0.0, 137.538, 0.0, 0.0, 0.0, 133.615, 0.0, 0.0, 0.0, 129.692,
+            0.0, 0.0, 0.0, 125.769, 0.0, 0.0, 0.0, 121.846, 0.0, 0.0, 0.0, 117.923, 0.0, 0.0, 0.0, 114.0,
+            0.0, 0.0, 0.0, 115.038, 0.0, 0.0, 0.0, 116.077, 0.0, 0.0, 0.0, 117.115, 0.0, 0.0, 0.0,
+            118.154, 0.0, 0.0, 0.0, 119.192, 0.0, 0.0, 0.0, 120.231, 0.0, 0.0, 0.0, 121.269, 0.0, 0.0,
+            0.0, 122.308, 0.0, 0.0, 0.0, 123.346, 0.0, 0.0, 0.0, 124.385, 0.0, 0.0, 0.0, 125.423, 0.0,
+            0.0, 0.0, 126.462, 0.0, 0.0, 0.0, 127.5, 0.0, 0.0, 0.0, 131.423, 0.0, 0.0, 0.0, 135.346, 0.0,
+            0.0, 0.0, 139.269, 0.0, 0.0, 0.0, 143.192, 0.0, 0.0, 0.0, 147.115, 0.0, 0.0, 0.0, 151.038,
+            0.0, 0.0, 0.0, 154.962, 0.0, 0.0, 0.0, 158.885, 0.0, 0.0, 0.0, 162.808, 0.0, 0.0, 0.0,
+            166.731, 0.0, 0.0, 0.0, 170.654, 0.0, 0.0, 0.0, 174.577, 0.0, 0.0, 0.0, 178.5, 0.0, 0.0, 0.0,
+            180.462, 0.0, 0.0, 0.0, 182.423, 0.0, 0.0, 0.0, 184.385, 0.0, 0.0, 0.0, 186.346, 0.0, 0.0,
+            0.0, 188.308, 0.0, 0.0, 0.0, 190.269, 0.0, 0.0, 0.0, 192.231, 0.0, 0.0, 0.0, 194.192, 0.0,
+            0.0, 0.0, 196.154, 0.0, 0.0, 0.0, 198.115, 0.0, 0.0, 0.0, 200.077, 0.0, 0.0, 0.0, 202.038,
+            0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 205.962, 0.0, 0.0, 0.0, 207.923, 0.0, 0.0, 0.0, 209.885,
+            0.0, 0.0, 0.0, 211.846, 0.0, 0.0, 0.0, 213.808, 0.0, 0.0, 0.0, 215.769, 0.0, 0.0, 0.0,
+            217.731, 0.0, 0.0, 0.0, 219.692, 0.0, 0.0, 0.0, 221.654, 0.0, 0.0, 0.0, 223.615, 0.0, 0.0,
+            0.0, 225.577, 0.0, 0.0, 0.0, 227.538, 0.0, 0.0, 0.0, 229.5, 0.0, 0.0, 0.0, 230.481, 0.0, 0.0,
+            0.0, 231.462, 0.0, 0.0, 0.0, 232.442, 0.0, 0.0, 0.0, 233.423, 0.0, 0.0, 0.0, 234.404, 0.0,
+            0.0, 0.0, 235.385, 0.0, 0.0, 0.0, 236.365, 0.0, 0.0, 0.0, 237.346, 0.0, 0.0, 0.0, 238.327,
+            0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 240.288, 0.0, 0.0, 0.0, 241.269, 0.0, 0.0, 0.0, 242.25,
+            0.0, 0.0, 0.0, 242.642, 0.0, 0.0, 0.0, 243.035, 0.0, 0.0, 0.0, 243.427, 0.0, 0.0, 0.0,
+            243.819, 0.0, 0.0, 0.0, 244.212, 0.0, 0.0, 0.0, 244.604, 0.0, 0.0, 0.0, 244.996, 0.0, 0.0,
+            0.0, 245.388, 0.0, 0.0, 0.0, 245.781, 0.0, 0.0, 0.0, 246.173, 0.0, 0.0, 0.0, 246.565, 0.0,
+            0.0, 0.0, 246.958, 0.0, 0.0, 0.0, 247.35, 0.0, 0.0, 0.0, 247.814, 0.0, 0.0, 0.0, 248.277, 0.0,
+            0.0, 0.0, 248.741, 0.0, 0.0, 0.0, 249.205, 0.0, 0.0, 0.0, 249.668, 0.0, 0.0, 0.0, 250.132,
+            0.0, 0.0, 0.0, 250.595, 0.0, 0.0, 0.0, 251.059, 0.0, 0.0, 0.0, 251.523, 0.0, 0.0, 0.0,
+            251.986, 0.0, 0.0, 0.0, 252.45, 0.0, 0.0, 0.0
+        ]),
+        g: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 1.53846, 0.0, 0.0, 0.0, 3.07692, 0.0, 0.0, 0.0, 4.61538, 0.0, 0.0, 0.0,
+            6.15385, 0.0, 0.0, 0.0, 7.69231, 0.0, 0.0, 0.0, 9.23077, 0.0, 0.0, 0.0, 10.7692, 0.0, 0.0,
+            0.0, 12.3077, 0.0, 0.0, 0.0, 13.8462, 0.0, 0.0, 0.0, 15.3846, 0.0, 0.0, 0.0, 16.9231, 0.0,
+            0.0, 0.0, 18.4615, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 32.6154, 0.0, 0.0, 0.0, 45.2308, 0.0,
+            0.0, 0.0, 57.8462, 0.0, 0.0, 0.0, 70.4615, 0.0, 0.0, 0.0, 83.0769, 0.0, 0.0, 0.0, 95.6923,
+            0.0, 0.0, 0.0, 108.308, 0.0, 0.0, 0.0, 120.923, 0.0, 0.0, 0.0, 133.538, 0.0, 0.0, 0.0,
+            146.154, 0.0, 0.0, 0.0, 158.769, 0.0, 0.0, 0.0, 171.385, 0.0, 0.0, 0.0, 184.0, 0.0, 0.0, 0.0,
+            187.923, 0.0, 0.0, 0.0, 191.846, 0.0, 0.0, 0.0, 195.769, 0.0, 0.0, 0.0, 199.692, 0.0, 0.0,
+            0.0, 203.615, 0.0, 0.0, 0.0, 207.538, 0.0, 0.0, 0.0, 211.462, 0.0, 0.0, 0.0, 215.385, 0.0,
+            0.0, 0.0, 219.308, 0.0, 0.0, 0.0, 223.231, 0.0, 0.0, 0.0, 227.154, 0.0, 0.0, 0.0, 231.077,
+            0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 235.308, 0.0, 0.0, 0.0, 235.615, 0.0, 0.0, 0.0, 235.923,
+            0.0, 0.0, 0.0, 236.231, 0.0, 0.0, 0.0, 236.538, 0.0, 0.0, 0.0, 236.846, 0.0, 0.0, 0.0,
+            237.154, 0.0, 0.0, 0.0, 237.462, 0.0, 0.0, 0.0, 237.769, 0.0, 0.0, 0.0, 238.077, 0.0, 0.0,
+            0.0, 238.385, 0.0, 0.0, 0.0, 238.692, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 239.077, 0.0, 0.0,
+            0.0, 239.154, 0.0, 0.0, 0.0, 239.231, 0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 239.385, 0.0,
+            0.0, 0.0, 239.462, 0.0, 0.0, 0.0, 239.538, 0.0, 0.0, 0.0, 239.615, 0.0, 0.0, 0.0, 239.692,
+            0.0, 0.0, 0.0, 239.769, 0.0, 0.0, 0.0, 239.846, 0.0, 0.0, 0.0, 239.923, 0.0, 0.0, 0.0, 240.0,
+            0.0, 0.0, 0.0, 240.091, 0.0, 0.0, 0.0, 240.182, 0.0, 0.0, 0.0, 240.273, 0.0, 0.0, 0.0,
+            240.364, 0.0, 0.0, 0.0, 240.455, 0.0, 0.0, 0.0, 240.545, 0.0, 0.0, 0.0, 240.636, 0.0, 0.0,
+            0.0, 240.727, 0.0, 0.0, 0.0, 240.818, 0.0, 0.0, 0.0, 240.909, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0,
+            0.0, 241.0, 0.0, 0.0, 0.0, 240.909, 0.0, 0.0, 0.0, 240.818, 0.0, 0.0, 0.0, 240.727, 0.0, 0.0,
+            0.0, 240.636, 0.0, 0.0, 0.0, 240.545, 0.0, 0.0, 0.0, 240.455, 0.0, 0.0, 0.0, 240.364, 0.0,
+            0.0, 0.0, 240.273, 0.0, 0.0, 0.0, 240.182, 0.0, 0.0, 0.0, 240.091, 0.0, 0.0, 0.0, 240.0, 0.0,
+            0.0, 0.0, 239.615, 0.0, 0.0, 0.0, 239.231, 0.0, 0.0, 0.0, 238.846, 0.0, 0.0, 0.0, 238.462,
+            0.0, 0.0, 0.0, 238.077, 0.0, 0.0, 0.0, 237.692, 0.0, 0.0, 0.0, 237.308, 0.0, 0.0, 0.0,
+            236.923, 0.0, 0.0, 0.0, 236.538, 0.0, 0.0, 0.0, 236.154, 0.0, 0.0, 0.0, 235.769, 0.0, 0.0,
+            0.0, 235.385, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 232.615, 0.0, 0.0, 0.0, 230.231, 0.0, 0.0,
+            0.0, 227.846, 0.0, 0.0, 0.0, 225.462, 0.0, 0.0, 0.0, 223.077, 0.0, 0.0, 0.0, 220.692, 0.0,
+            0.0, 0.0, 218.308, 0.0, 0.0, 0.0, 215.923, 0.0, 0.0, 0.0, 213.538, 0.0, 0.0, 0.0, 211.154,
+            0.0, 0.0, 0.0, 208.769, 0.0, 0.0, 0.0, 206.385, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 200.077,
+            0.0, 0.0, 0.0, 196.154, 0.0, 0.0, 0.0, 192.231, 0.0, 0.0, 0.0, 188.308, 0.0, 0.0, 0.0,
+            184.385, 0.0, 0.0, 0.0, 180.462, 0.0, 0.0, 0.0, 176.538, 0.0, 0.0, 0.0, 172.615, 0.0, 0.0,
+            0.0, 168.692, 0.0, 0.0, 0.0, 164.769, 0.0, 0.0, 0.0, 160.846, 0.0, 0.0, 0.0, 156.923, 0.0,
+            0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 147.115, 0.0, 0.0, 0.0, 141.231, 0.0, 0.0, 0.0, 135.346, 0.0,
+            0.0, 0.0, 129.462, 0.0, 0.0, 0.0, 123.577, 0.0, 0.0, 0.0, 117.692, 0.0, 0.0, 0.0, 111.808,
+            0.0, 0.0, 0.0, 105.923, 0.0, 0.0, 0.0, 100.038, 0.0, 0.0, 0.0, 94.1538, 0.0, 0.0, 0.0,
+            88.2692, 0.0, 0.0, 0.0, 82.3846, 0.0, 0.0, 0.0, 76.5, 0.0, 0.0, 0.0, 73.0769, 0.0, 0.0, 0.0,
+            69.6538, 0.0, 0.0, 0.0, 66.2308, 0.0, 0.0, 0.0, 62.8077, 0.0, 0.0, 0.0, 59.3846, 0.0, 0.0,
+            0.0, 55.9615, 0.0, 0.0, 0.0, 52.5385, 0.0, 0.0, 0.0, 49.1154, 0.0, 0.0, 0.0, 45.6923, 0.0,
+            0.0, 0.0, 42.2692, 0.0, 0.0, 0.0, 38.8462, 0.0, 0.0, 0.0, 35.4231, 0.0, 0.0, 0.0, 32.0, 0.0,
+            0.0, 0.0, 29.5385, 0.0, 0.0, 0.0, 27.0769, 0.0, 0.0, 0.0, 24.6154, 0.0, 0.0, 0.0, 22.1538,
+            0.0, 0.0, 0.0, 19.6923, 0.0, 0.0, 0.0, 17.2308, 0.0, 0.0, 0.0, 14.7692, 0.0, 0.0, 0.0,
+            12.3077, 0.0, 0.0, 0.0, 9.84615, 0.0, 0.0, 0.0, 7.38462, 0.0, 0.0, 0.0, 4.92308, 0.0, 0.0,
+            0.0, 2.46154, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.80769, 0.0, 0.0, 0.0, 19.6154, 0.0, 0.0,
+            0.0, 29.4231, 0.0, 0.0, 0.0, 39.2308, 0.0, 0.0, 0.0, 49.0385, 0.0, 0.0, 0.0, 58.8462, 0.0,
+            0.0, 0.0, 68.6538, 0.0, 0.0, 0.0, 78.4615, 0.0, 0.0, 0.0, 88.2692, 0.0, 0.0, 0.0, 98.0769,
+            0.0, 0.0, 0.0, 107.885, 0.0, 0.0, 0.0, 117.692, 0.0, 0.0, 0.0, 127.5, 0.0, 0.0, 0.0, 131.423,
+            0.0, 0.0, 0.0, 135.346, 0.0, 0.0, 0.0, 139.269, 0.0, 0.0, 0.0, 143.192, 0.0, 0.0, 0.0,
+            147.115, 0.0, 0.0, 0.0, 151.038, 0.0, 0.0, 0.0, 154.962, 0.0, 0.0, 0.0, 158.885, 0.0, 0.0,
+            0.0, 162.808, 0.0, 0.0, 0.0, 166.731, 0.0, 0.0, 0.0, 170.654, 0.0, 0.0, 0.0, 174.577, 0.0,
+            0.0, 0.0, 178.5, 0.0, 0.0, 0.0, 180.462, 0.0, 0.0, 0.0, 182.423, 0.0, 0.0, 0.0, 184.385, 0.0,
+            0.0, 0.0, 186.346, 0.0, 0.0, 0.0, 188.308, 0.0, 0.0, 0.0, 190.269, 0.0, 0.0, 0.0, 192.231,
+            0.0, 0.0, 0.0, 194.192, 0.0, 0.0, 0.0, 196.154, 0.0, 0.0, 0.0, 198.115, 0.0, 0.0, 0.0,
+            200.077, 0.0, 0.0, 0.0, 202.038, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 205.962, 0.0, 0.0, 0.0,
+            207.923, 0.0, 0.0, 0.0, 209.885, 0.0, 0.0, 0.0, 211.846, 0.0, 0.0, 0.0, 213.808, 0.0, 0.0,
+            0.0, 215.769, 0.0, 0.0, 0.0, 217.731, 0.0, 0.0, 0.0, 219.692, 0.0, 0.0, 0.0, 221.654, 0.0,
+            0.0, 0.0, 223.615, 0.0, 0.0, 0.0, 225.577, 0.0, 0.0, 0.0, 227.538, 0.0, 0.0, 0.0, 229.5, 0.0,
+            0.0, 0.0, 230.481, 0.0, 0.0, 0.0, 231.462, 0.0, 0.0, 0.0, 232.442, 0.0, 0.0, 0.0, 233.423,
+            0.0, 0.0, 0.0, 234.404, 0.0, 0.0, 0.0, 235.385, 0.0, 0.0, 0.0, 236.365, 0.0, 0.0, 0.0,
+            237.346, 0.0, 0.0, 0.0, 238.327, 0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 240.288, 0.0, 0.0,
+            0.0, 241.269, 0.0, 0.0, 0.0, 242.25, 0.0, 0.0, 0.0, 242.642, 0.0, 0.0, 0.0, 243.035, 0.0, 0.0,
+            0.0, 243.427, 0.0, 0.0, 0.0, 243.819, 0.0, 0.0, 0.0, 244.212, 0.0, 0.0, 0.0, 244.604, 0.0,
+            0.0, 0.0, 244.996, 0.0, 0.0, 0.0, 245.388, 0.0, 0.0, 0.0, 245.781, 0.0, 0.0, 0.0, 246.173,
+            0.0, 0.0, 0.0, 246.565, 0.0, 0.0, 0.0, 246.958, 0.0, 0.0, 0.0, 247.35, 0.0, 0.0, 0.0, 247.814,
+            0.0, 0.0, 0.0, 248.277, 0.0, 0.0, 0.0, 248.741, 0.0, 0.0, 0.0, 249.205, 0.0, 0.0, 0.0,
+            249.668, 0.0, 0.0, 0.0, 250.132, 0.0, 0.0, 0.0, 250.595, 0.0, 0.0, 0.0, 251.059, 0.0, 0.0,
+            0.0, 251.523, 0.0, 0.0, 0.0, 251.986, 0.0, 0.0, 0.0, 252.45, 0.0, 0.0, 0.0
+        ]),
+        b: new Float32Array([
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 254.615, 0.0, 0.0, 0.0, 254.231, 0.0, 0.0, 0.0, 253.846,
+            0.0, 0.0, 0.0, 253.462, 0.0, 0.0, 0.0, 253.077, 0.0, 0.0, 0.0, 252.692, 0.0, 0.0, 0.0,
+            252.308, 0.0, 0.0, 0.0, 251.923, 0.0, 0.0, 0.0, 251.538, 0.0, 0.0, 0.0, 251.154, 0.0, 0.0,
+            0.0, 250.769, 0.0, 0.0, 0.0, 250.385, 0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 249.615, 0.0, 0.0,
+            0.0, 249.231, 0.0, 0.0, 0.0, 248.846, 0.0, 0.0, 0.0, 248.462, 0.0, 0.0, 0.0, 248.077, 0.0,
+            0.0, 0.0, 247.692, 0.0, 0.0, 0.0, 247.308, 0.0, 0.0, 0.0, 246.923, 0.0, 0.0, 0.0, 246.538,
+            0.0, 0.0, 0.0, 246.154, 0.0, 0.0, 0.0, 245.769, 0.0, 0.0, 0.0, 245.385, 0.0, 0.0, 0.0, 245.0,
+            0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 233.0, 0.0,
+            0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0,
+            0.0, 218.0, 0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0,
+            208.636, 0.0, 0.0, 0.0, 205.273, 0.0, 0.0, 0.0, 201.909, 0.0, 0.0, 0.0, 198.545, 0.0, 0.0,
+            0.0, 195.182, 0.0, 0.0, 0.0, 191.818, 0.0, 0.0, 0.0, 188.455, 0.0, 0.0, 0.0, 185.091, 0.0,
+            0.0, 0.0, 181.727, 0.0, 0.0, 0.0, 178.364, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0, 171.538, 0.0,
+            0.0, 0.0, 168.077, 0.0, 0.0, 0.0, 164.615, 0.0, 0.0, 0.0, 161.154, 0.0, 0.0, 0.0, 157.692,
+            0.0, 0.0, 0.0, 154.231, 0.0, 0.0, 0.0, 150.769, 0.0, 0.0, 0.0, 147.308, 0.0, 0.0, 0.0,
+            143.846, 0.0, 0.0, 0.0, 140.385, 0.0, 0.0, 0.0, 136.923, 0.0, 0.0, 0.0, 133.462, 0.0, 0.0,
+            0.0, 130.0, 0.0, 0.0, 0.0, 122.942, 0.0, 0.0, 0.0, 115.885, 0.0, 0.0, 0.0, 108.827, 0.0, 0.0,
+            0.0, 101.769, 0.0, 0.0, 0.0, 94.7115, 0.0, 0.0, 0.0, 87.6539, 0.0, 0.0, 0.0, 80.5962, 0.0,
+            0.0, 0.0, 73.5385, 0.0, 0.0, 0.0, 66.4808, 0.0, 0.0, 0.0, 59.4231, 0.0, 0.0, 0.0, 52.3654,
+            0.0, 0.0, 0.0, 45.3077, 0.0, 0.0, 0.0, 38.25, 0.0, 0.0, 0.0, 36.2885, 0.0, 0.0, 0.0, 34.3269,
+            0.0, 0.0, 0.0, 32.3654, 0.0, 0.0, 0.0, 30.4038, 0.0, 0.0, 0.0, 28.4423, 0.0, 0.0, 0.0,
+            26.4808, 0.0, 0.0, 0.0, 24.5192, 0.0, 0.0, 0.0, 22.5577, 0.0, 0.0, 0.0, 20.5962, 0.0, 0.0,
+            0.0, 18.6346, 0.0, 0.0, 0.0, 16.6731, 0.0, 0.0, 0.0, 14.7115, 0.0, 0.0, 0.0, 12.75, 0.0, 0.0,
+            0.0, 11.7692, 0.0, 0.0, 0.0, 10.7885, 0.0, 0.0, 0.0, 9.80769, 0.0, 0.0, 0.0, 8.82692, 0.0,
+            0.0, 0.0, 7.84615, 0.0, 0.0, 0.0, 6.86539, 0.0, 0.0, 0.0, 5.88461, 0.0, 0.0, 0.0, 4.90385,
+            0.0, 0.0, 0.0, 3.92308, 0.0, 0.0, 0.0, 2.94231, 0.0, 0.0, 0.0, 1.96154, 0.0, 0.0, 0.0,
+            0.980769, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.46154, 0.0, 0.0, 0.0, 4.92308, 0.0, 0.0, 0.0,
+            7.38462, 0.0, 0.0, 0.0, 9.84616, 0.0, 0.0, 0.0, 12.3077, 0.0, 0.0, 0.0, 14.7692, 0.0, 0.0,
+            0.0, 17.2308, 0.0, 0.0, 0.0, 19.6923, 0.0, 0.0, 0.0, 22.1538, 0.0, 0.0, 0.0, 24.6154, 0.0,
+            0.0, 0.0, 27.0769, 0.0, 0.0, 0.0, 29.5385, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0,
+            0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0,
+            0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0,
+            0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 41.3077, 0.0, 0.0, 0.0,
+            50.6154, 0.0, 0.0, 0.0, 59.9231, 0.0, 0.0, 0.0, 69.2308, 0.0, 0.0, 0.0, 78.5385, 0.0, 0.0,
+            0.0, 87.8462, 0.0, 0.0, 0.0, 97.1539, 0.0, 0.0, 0.0, 106.462, 0.0, 0.0, 0.0, 115.769, 0.0,
+            0.0, 0.0, 125.077, 0.0, 0.0, 0.0, 134.385, 0.0, 0.0, 0.0, 143.692, 0.0, 0.0, 0.0, 153.0, 0.0,
+            0.0, 0.0, 156.923, 0.0, 0.0, 0.0, 160.846, 0.0, 0.0, 0.0, 164.769, 0.0, 0.0, 0.0, 168.692,
+            0.0, 0.0, 0.0, 172.615, 0.0, 0.0, 0.0, 176.538, 0.0, 0.0, 0.0, 180.462, 0.0, 0.0, 0.0,
+            184.385, 0.0, 0.0, 0.0, 188.308, 0.0, 0.0, 0.0, 192.231, 0.0, 0.0, 0.0, 196.154, 0.0, 0.0,
+            0.0, 200.077, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 205.962, 0.0, 0.0, 0.0, 207.923, 0.0, 0.0,
+            0.0, 209.885, 0.0, 0.0, 0.0, 211.846, 0.0, 0.0, 0.0, 213.808, 0.0, 0.0, 0.0, 215.769, 0.0,
+            0.0, 0.0, 217.731, 0.0, 0.0, 0.0, 219.692, 0.0, 0.0, 0.0, 221.654, 0.0, 0.0, 0.0, 223.615,
+            0.0, 0.0, 0.0, 225.577, 0.0, 0.0, 0.0, 227.538, 0.0, 0.0, 0.0, 229.5, 0.0, 0.0, 0.0, 230.481,
+            0.0, 0.0, 0.0, 231.462, 0.0, 0.0, 0.0, 232.442, 0.0, 0.0, 0.0, 233.423, 0.0, 0.0, 0.0,
+            234.404, 0.0, 0.0, 0.0, 235.385, 0.0, 0.0, 0.0, 236.365, 0.0, 0.0, 0.0, 237.346, 0.0, 0.0,
+            0.0, 238.327, 0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 240.288, 0.0, 0.0, 0.0, 241.269, 0.0,
+            0.0, 0.0, 242.25, 0.0, 0.0, 0.0, 242.838, 0.0, 0.0, 0.0, 243.427, 0.0, 0.0, 0.0, 244.015, 0.0,
+            0.0, 0.0, 244.604, 0.0, 0.0, 0.0, 245.192, 0.0, 0.0, 0.0, 245.781, 0.0, 0.0, 0.0, 246.369,
+            0.0, 0.0, 0.0, 246.958, 0.0, 0.0, 0.0, 247.546, 0.0, 0.0, 0.0, 248.135, 0.0, 0.0, 0.0,
+            248.723, 0.0, 0.0, 0.0, 249.312, 0.0, 0.0, 0.0, 249.9, 0.0, 0.0, 0.0, 250.096, 0.0, 0.0, 0.0,
+            250.292, 0.0, 0.0, 0.0, 250.488, 0.0, 0.0, 0.0, 250.685, 0.0, 0.0, 0.0, 250.881, 0.0, 0.0,
+            0.0, 251.077, 0.0, 0.0, 0.0, 251.273, 0.0, 0.0, 0.0, 251.469, 0.0, 0.0, 0.0, 251.665, 0.0,
+            0.0, 0.0, 251.862, 0.0, 0.0, 0.0, 252.058, 0.0, 0.0, 0.0, 252.254, 0.0, 0.0, 0.0, 252.45, 0.0,
+            0.0, 0.0, 252.682, 0.0, 0.0, 0.0, 252.914, 0.0, 0.0, 0.0, 253.145, 0.0, 0.0, 0.0, 253.377,
+            0.0, 0.0, 0.0, 253.609, 0.0, 0.0, 0.0, 253.841, 0.0, 0.0, 0.0, 254.073, 0.0, 0.0, 0.0,
+            254.305, 0.0, 0.0, 0.0, 254.536, 0.0, 0.0, 0.0, 254.768, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0
+        ]),
+    },
+    cmb: {
+        name: 'cmb',
+        r: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0,
+            30.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 54.0, 0.0,
+            0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0,
+            85.0, 0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0, 97.0, 0.0, 0.0, 0.0, 103.0, 0.0, 0.0, 0.0, 109.0,
+            0.0, 0.0, 0.0, 115.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 133.0, 0.0,
+            0.0, 0.0, 139.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0, 0.0, 151.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0,
+            0.0, 163.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0, 0.0, 176.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0,
+            188.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 206.0, 0.0, 0.0, 0.0, 212.0,
+            0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 236.0, 0.0,
+            0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 248.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 251.0, 0.0, 0.0,
+            0.0, 247.0, 0.0, 0.0, 0.0, 244.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0,
+            233.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 218.0,
+            0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 204.0, 0.0,
+            0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 190.0, 0.0, 0.0,
+            0.0, 186.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 179.0, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0,
+            172.0, 0.0, 0.0, 0.0, 168.0, 0.0, 0.0, 0.0, 164.0, 0.0, 0.0, 0.0, 161.0, 0.0, 0.0, 0.0, 157.0,
+            0.0, 0.0, 0.0, 154.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 143.0, 0.0,
+            0.0, 0.0, 139.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0, 128.0, 0.0, 0.0,
+            0.0, 125.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 118.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0,
+            110.0, 0.0, 0.0, 0.0, 107.0, 0.0, 0.0, 0.0, 103.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0
+        ]),
+        g: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 10.0, 0.0,
+            0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 16.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0,
+            24.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 34.0, 0.0,
+            0.0, 0.0, 37.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0,
+            48.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 56.0, 0.0, 0.0, 0.0, 58.0, 0.0,
+            0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 69.0, 0.0, 0.0, 0.0,
+            72.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 82.0, 0.0,
+            0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 88.0, 0.0, 0.0, 0.0, 90.0, 0.0, 0.0, 0.0, 93.0, 0.0, 0.0, 0.0,
+            96.0, 0.0, 0.0, 0.0, 98.0, 0.0, 0.0, 0.0, 101.0, 0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 106.0,
+            0.0, 0.0, 0.0, 109.0, 0.0, 0.0, 0.0, 112.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0, 117.0, 0.0,
+            0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 124.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0,
+            0.0, 129.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0, 134.0, 0.0, 0.0, 0.0, 137.0, 0.0, 0.0, 0.0,
+            139.0, 0.0, 0.0, 0.0, 142.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 150.0,
+            0.0, 0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 155.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 160.0, 0.0,
+            0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0,
+            0.0, 172.0, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0, 177.0, 0.0, 0.0, 0.0, 180.0, 0.0, 0.0, 0.0,
+            182.0, 0.0, 0.0, 0.0, 185.0, 0.0, 0.0, 0.0, 188.0, 0.0, 0.0, 0.0, 190.0, 0.0, 0.0, 0.0, 193.0,
+            0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 203.0, 0.0,
+            0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0,
+            0.0, 215.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0,
+            221.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 223.0,
+            0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 224.0, 0.0,
+            0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0,
+            0.0, 226.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0,
+            228.0, 0.0, 0.0, 0.0, 228.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0,
+            0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 231.0, 0.0,
+            0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0,
+            0.0, 233.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 234.0, 0.0, 0.0, 0.0,
+            234.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 236.0,
+            0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 237.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 234.0, 0.0,
+            0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0,
+            0.0, 227.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0,
+            222.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 219.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 217.0,
+            0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 214.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 211.0, 0.0,
+            0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 206.0, 0.0, 0.0,
+            0.0, 205.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 202.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0,
+            199.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 194.0,
+            0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 190.0, 0.0, 0.0, 0.0, 189.0, 0.0,
+            0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 185.0, 0.0, 0.0, 0.0, 183.0, 0.0, 0.0,
+            0.0, 182.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0, 180.0, 0.0, 0.0, 0.0, 177.0, 0.0, 0.0, 0.0,
+            175.0, 0.0, 0.0, 0.0, 172.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 165.0,
+            0.0, 0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 160.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 155.0, 0.0,
+            0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0,
+            0.0, 142.0, 0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 137.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0,
+            132.0, 0.0, 0.0, 0.0, 130.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 125.0, 0.0, 0.0, 0.0, 122.0,
+            0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 117.0, 0.0, 0.0, 0.0, 115.0, 0.0, 0.0, 0.0, 112.0, 0.0,
+            0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 107.0, 0.0, 0.0, 0.0, 105.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0,
+            0.0, 100.0, 0.0, 0.0, 0.0, 97.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 92.0, 0.0, 0.0, 0.0,
+            90.0, 0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 82.0, 0.0, 0.0, 0.0, 80.0, 0.0,
+            0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 73.0, 0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0,
+            69.0, 0.0, 0.0, 0.0, 68.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 62.0, 0.0,
+            0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0,
+            54.0, 0.0, 0.0, 0.0, 52.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 47.0, 0.0,
+            0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 43.0, 0.0, 0.0, 0.0, 41.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0,
+            38.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 34.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 31.0, 0.0,
+            0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0,
+            22.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 15.0, 0.0,
+            0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0,
+            6.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0
+        ]),
+        b: new Float32Array([
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 254.0, 0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 252.0, 0.0, 0.0, 0.0, 251.0,
+            0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 249.0, 0.0, 0.0, 0.0, 248.0, 0.0, 0.0, 0.0, 247.0, 0.0,
+            0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 244.0, 0.0, 0.0,
+            0.0, 243.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0,
+            239.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 237.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 236.0,
+            0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 234.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 232.0, 0.0,
+            0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 228.0, 0.0, 0.0,
+            0.0, 227.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0,
+            224.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 220.0,
+            0.0, 0.0, 0.0, 219.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 217.0, 0.0, 0.0, 0.0, 217.0, 0.0,
+            0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 206.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0,
+            0.0, 191.0, 0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0, 176.0, 0.0, 0.0, 0.0,
+            171.0, 0.0, 0.0, 0.0, 166.0, 0.0, 0.0, 0.0, 161.0, 0.0, 0.0, 0.0, 156.0, 0.0, 0.0, 0.0, 151.0,
+            0.0, 0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 141.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0, 0.0, 131.0, 0.0,
+            0.0, 0.0, 126.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 116.0, 0.0, 0.0, 0.0, 111.0, 0.0, 0.0,
+            0.0, 105.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 90.0, 0.0, 0.0, 0.0,
+            85.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0, 0.0, 65.0, 0.0,
+            0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0,
+            40.0, 0.0, 0.0, 0.0, 35.0, 0.0, 0.0, 0.0, 30.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 20.0, 0.0,
+            0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        ]),
+    },
+    rainbow: {
+        name: 'rainbow',
+        r: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 18.0, 0.0,
+            0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 31.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0,
+            40.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 54.0, 0.0, 0.0, 0.0, 58.0, 0.0,
+            0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 68.0, 0.0, 0.0, 0.0, 69.0, 0.0, 0.0, 0.0,
+            72.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 79.0, 0.0, 0.0, 0.0, 80.0, 0.0,
+            0.0, 0.0, 82.0, 0.0, 0.0, 0.0, 83.0, 0.0, 0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0,
+            86.0, 0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 88.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0, 0.0, 87.0, 0.0,
+            0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0,
+            84.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 83.0, 0.0, 0.0, 0.0, 79.0, 0.0, 0.0, 0.0, 78.0, 0.0,
+            0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0, 0.0,
+            68.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 58.0, 0.0, 0.0, 0.0, 55.0, 0.0,
+            0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 43.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0,
+            36.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 16.0, 0.0,
+            0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 21.0, 0.0,
+            0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0,
+            46.0, 0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 67.0, 0.0,
+            0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 89.0, 0.0, 0.0, 0.0,
+            93.0, 0.0, 0.0, 0.0, 97.0, 0.0, 0.0, 0.0, 101.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 114.0,
+            0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 135.0, 0.0,
+            0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0,
+            0.0, 161.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0,
+            182.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 203.0,
+            0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 225.0, 0.0,
+            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 246.0, 0.0, 0.0,
+            0.0, 250.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0
+        ]),
+        g: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 4.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 16.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 25.0,
+            0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0,
+            0.0, 51.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 72.0,
+            0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 89.0, 0.0, 0.0, 0.0, 93.0, 0.0, 0.0,
+            0.0, 97.0, 0.0, 0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0,
+            119.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0, 140.0,
+            0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 161.0, 0.0,
+            0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 174.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0,
+            0.0, 187.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0,
+            208.0, 0.0, 0.0, 0.0, 216.0, 0.0, 0.0, 0.0, 220.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 229.0,
+            0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 250.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 233.0, 0.0,
+            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 216.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0,
+            0.0, 208.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0,
+            187.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 174.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0, 0.0, 165.0,
+            0.0, 0.0, 0.0, 161.0, 0.0, 0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 144.0, 0.0,
+            0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0,
+            0.0, 119.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0, 0.0,
+            97.0, 0.0, 0.0, 0.0, 89.0, 0.0, 0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 76.0, 0.0,
+            0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0,
+            51.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 34.0, 0.0, 0.0, 0.0, 29.0, 0.0,
+            0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0
+        ]),
+        b: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 7.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 14.0, 0.0,
+            0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 28.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0,
+            38.0, 0.0, 0.0, 0.0, 43.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 59.0, 0.0,
+            0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 68.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0,
+            81.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 100.0,
+            0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 109.0, 0.0, 0.0, 0.0, 113.0, 0.0, 0.0, 0.0, 118.0, 0.0,
+            0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0,
+            0.0, 141.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 154.0, 0.0, 0.0, 0.0,
+            159.0, 0.0, 0.0, 0.0, 163.0, 0.0, 0.0, 0.0, 168.0, 0.0, 0.0, 0.0, 173.0, 0.0, 0.0, 0.0, 177.0,
+            0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 195.0, 0.0,
+            0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0, 214.0, 0.0, 0.0,
+            0.0, 218.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0, 0.0,
+            236.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 246.0, 0.0,
+            0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0,
+            0.0, 220.0, 0.0, 0.0, 0.0, 216.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0,
+            199.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 178.0,
+            0.0, 0.0, 0.0, 174.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 157.0, 0.0,
+            0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0,
+            0.0, 131.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0,
+            110.0, 0.0, 0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0, 0.0, 97.0, 0.0, 0.0, 0.0, 89.0,
+            0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0,
+            0.0, 63.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 42.0,
+            0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 34.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0,
+            0.0, 16.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0
+        ]),
+    },
+    eosb: {
+        name: 'eosb',
+        r: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 18.0,
+            0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 49.0, 0.0, 0.0,
+            0.0, 57.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 81.0, 0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0,
+            100.0, 0.0, 0.0, 0.0, 109.0, 0.0, 0.0, 0.0, 118.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 136.0,
+            0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 139.0, 0.0, 0.0, 0.0, 163.0, 0.0, 0.0, 0.0, 173.0, 0.0,
+            0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0,
+            0.0, 218.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0,
+            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0,
+            0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 251.0, 0.0, 0.0, 0.0, 249.0, 0.0,
+            0.0, 0.0, 247.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0,
+            0.0, 215.0, 0.0, 0.0, 0.0, 214.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 234.0, 0.0, 0.0, 0.0,
+            232.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 228.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 224.0,
+            0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 216.0, 0.0,
+            0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0,
+            0.0, 207.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0,
+            179.0, 0.0, 0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 192.0,
+            0.0, 0.0, 0.0, 190.0, 0.0, 0.0, 0.0, 188.0, 0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 184.0, 0.0,
+            0.0, 0.0, 164.0, 0.0, 0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 176.0, 0.0, 0.0,
+            0.0, 175.0, 0.0, 0.0, 0.0, 173.0, 0.0, 0.0, 0.0, 171.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0,
+            167.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0, 0.0, 159.0,
+            0.0, 0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 156.0, 0.0, 0.0, 0.0, 154.0, 0.0, 0.0, 0.0, 152.0, 0.0,
+            0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 130.0, 0.0, 0.0,
+            0.0, 128.0, 0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 138.0, 0.0, 0.0, 0.0, 137.0, 0.0, 0.0, 0.0,
+            135.0, 0.0, 0.0, 0.0, 133.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 129.0, 0.0, 0.0, 0.0, 127.0,
+            0.0, 0.0, 0.0, 113.0, 0.0, 0.0, 0.0, 111.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 119.0, 0.0,
+            0.0, 0.0, 117.0, 0.0, 0.0, 0.0, 117.0, 0.0, 0.0, 0.0
+        ]),
+        g: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0,
+            0.0, 0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 31.0, 0.0, 0.0, 0.0, 39.0, 0.0, 0.0,
+            0.0, 47.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 79.0,
+            0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 103.0, 0.0, 0.0, 0.0, 111.0, 0.0,
+            0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0, 129.0, 0.0, 0.0,
+            0.0, 136.0, 0.0, 0.0, 0.0, 159.0, 0.0, 0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0,
+            183.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 215.0,
+            0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 247.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
+            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0,
+            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
+            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
+            255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 250.0,
+            0.0, 0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 233.0, 0.0,
+            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0,
+            0.0, 212.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0,
+            195.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 160.0,
+            0.0, 0.0, 0.0, 156.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 161.0, 0.0,
+            0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0,
+            0.0, 140.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 118.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0,
+            125.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 116.0,
+            0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0, 112.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0, 0.0, 97.0, 0.0,
+            0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0,
+            0.0, 97.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 93.0, 0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0, 80.0,
+            0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 82.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0,
+            0.0, 78.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 70.0,
+            0.0, 0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 61.0, 0.0, 0.0,
+            0.0, 59.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 50.0,
+            0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0,
+            0.0, 40.0, 0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 31.0,
+            0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0,
+            0.0, 21.0, 0.0, 0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 16.0, 0.0, 0.0, 0.0, 14.0, 0.0, 0.0, 0.0, 12.0,
+            0.0, 0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        ]),
+        b: new Float32Array([
+            116.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 136.0,
+            0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 153.0, 0.0,
+            0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0, 0.0, 149.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0,
+            0.0, 174.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0,
+            191.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 183.0, 0.0, 0.0, 0.0, 187.0,
+            0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 216.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 225.0, 0.0,
+            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0,
+            0.0, 221.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0, 0.0,
+            239.0, 0.0, 0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 207.0,
+            0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 172.0, 0.0, 0.0, 0.0, 164.0, 0.0, 0.0, 0.0, 175.0, 0.0,
+            0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 159.0, 0.0, 0.0, 0.0, 151.0, 0.0, 0.0, 0.0, 143.0, 0.0, 0.0,
+            0.0, 135.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0,
+            93.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 79.0, 0.0, 0.0, 0.0, 71.0, 0.0,
+            0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 39.0, 0.0, 0.0, 0.0,
+            28.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 7.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+        ]),
+    },
+    cubehelix: {
+        name: 'cubehelix',
+        r: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0,
+            0.0, 8.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 13.0,
+            0.0, 0.0, 0.0, 14.0, 0.0, 0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0,
+            0.0, 19.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 22.0,
+            0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0,
+            0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0,
+            0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0,
+            0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0,
+            0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0,
+            0.0, 24.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 23.0,
+            0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0,
+            0.0, 22.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0,
+            0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0,
+            0.0, 20.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0,
+            0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0,
+            0.0, 23.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 26.0,
+            0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 28.0, 0.0, 0.0, 0.0, 30.0, 0.0, 0.0,
+            0.0, 31.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 35.0, 0.0, 0.0, 0.0, 36.0,
+            0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 39.0, 0.0, 0.0, 0.0, 41.0, 0.0, 0.0, 0.0, 43.0, 0.0, 0.0,
+            0.0, 45.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 49.0, 0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 53.0,
+            0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 62.0, 0.0, 0.0,
+            0.0, 65.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 75.0,
+            0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 81.0, 0.0, 0.0, 0.0, 83.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0,
+            0.0, 89.0, 0.0, 0.0, 0.0, 92.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 98.0, 0.0, 0.0, 0.0,
+            101.0, 0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 107.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 113.0,
+            0.0, 0.0, 0.0, 116.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 126.0, 0.0,
+            0.0, 0.0, 129.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0, 138.0, 0.0, 0.0,
+            0.0, 141.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0,
+            153.0, 0.0, 0.0, 0.0, 155.0, 0.0, 0.0, 0.0, 158.0, 0.0, 0.0, 0.0, 161.0, 0.0, 0.0, 0.0, 164.0,
+            0.0, 0.0, 0.0, 166.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0, 171.0, 0.0, 0.0, 0.0, 174.0, 0.0,
+            0.0, 0.0, 176.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0, 183.0, 0.0, 0.0,
+            0.0, 185.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 189.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0,
+            193.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 199.0,
+            0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0, 202.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 204.0, 0.0,
+            0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 206.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0,
+            0.0, 209.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0,
+            211.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0,
+            0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0,
+            0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0,
+            0.0, 210.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0,
+            208.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 206.0,
+            0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 203.0, 0.0,
+            0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 202.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0,
+            0.0, 200.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0,
+            197.0, 0.0, 0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 195.0,
+            0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 194.0, 0.0,
+            0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0,
+            0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0,
+            193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 195.0,
+            0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 197.0, 0.0,
+            0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0,
+            0.0, 202.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0,
+            206.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 212.0,
+            0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 217.0, 0.0, 0.0, 0.0, 218.0, 0.0,
+            0.0, 0.0, 220.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0,
+            0.0, 227.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0, 0.0,
+            234.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 242.0,
+            0.0, 0.0, 0.0, 244.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0, 0.0, 249.0, 0.0,
+            0.0, 0.0, 251.0, 0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 255.0
+        ]),
+        g: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0,
+            0.0, 2.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 5.0, 0.0,
+            0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 7.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 9.0,
+            0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 11.0, 0.0, 0.0, 0.0, 11.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0,
+            0.0, 13.0, 0.0, 0.0, 0.0, 14.0, 0.0, 0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 18.0,
+            0.0, 0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0,
+            0.0, 24.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 28.0, 0.0, 0.0, 0.0, 29.0,
+            0.0, 0.0, 0.0, 31.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 34.0, 0.0, 0.0, 0.0, 35.0, 0.0, 0.0,
+            0.0, 37.0, 0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 41.0, 0.0, 0.0, 0.0, 43.0,
+            0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0,
+            0.0, 52.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 58.0,
+            0.0, 0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 62.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0,
+            0.0, 67.0, 0.0, 0.0, 0.0, 69.0, 0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0, 73.0, 0.0, 0.0, 0.0, 74.0,
+            0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 79.0, 0.0, 0.0, 0.0, 81.0, 0.0, 0.0,
+            0.0, 83.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0, 0.0, 88.0, 0.0, 0.0, 0.0, 89.0,
+            0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0, 92.0, 0.0, 0.0, 0.0, 94.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0,
+            0.0, 97.0, 0.0, 0.0, 0.0, 98.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0, 0.0, 101.0, 0.0, 0.0, 0.0,
+            102.0, 0.0, 0.0, 0.0, 103.0, 0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 107.0,
+            0.0, 0.0, 0.0, 108.0, 0.0, 0.0, 0.0, 109.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 111.0, 0.0,
+            0.0, 0.0, 112.0, 0.0, 0.0, 0.0, 113.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0,
+            0.0, 115.0, 0.0, 0.0, 0.0, 116.0, 0.0, 0.0, 0.0, 116.0, 0.0, 0.0, 0.0, 117.0, 0.0, 0.0, 0.0,
+            118.0, 0.0, 0.0, 0.0, 118.0, 0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 120.0,
+            0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0,
+            0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0,
+            0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0,
+            122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0,
+            0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0,
+            0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0,
+            0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0,
+            121.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0,
+            0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0,
+            0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0,
+            0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0,
+            122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 124.0,
+            0.0, 0.0, 0.0, 124.0, 0.0, 0.0, 0.0, 125.0, 0.0, 0.0, 0.0, 125.0, 0.0, 0.0, 0.0, 126.0, 0.0,
+            0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 128.0, 0.0, 0.0, 0.0, 129.0, 0.0, 0.0,
+            0.0, 130.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0,
+            133.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0, 0.0, 137.0, 0.0, 0.0, 0.0, 138.0,
+            0.0, 0.0, 0.0, 139.0, 0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 142.0, 0.0, 0.0, 0.0, 143.0, 0.0,
+            0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 149.0, 0.0, 0.0,
+            0.0, 150.0, 0.0, 0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 154.0, 0.0, 0.0, 0.0, 155.0, 0.0, 0.0, 0.0,
+            157.0, 0.0, 0.0, 0.0, 158.0, 0.0, 0.0, 0.0, 160.0, 0.0, 0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 164.0,
+            0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0, 171.0, 0.0,
+            0.0, 0.0, 172.0, 0.0, 0.0, 0.0, 174.0, 0.0, 0.0, 0.0, 176.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0,
+            0.0, 180.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 183.0, 0.0, 0.0, 0.0, 185.0, 0.0, 0.0, 0.0,
+            187.0, 0.0, 0.0, 0.0, 189.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 194.0,
+            0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 202.0, 0.0,
+            0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0,
+            0.0, 210.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0,
+            216.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 219.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 222.0,
+            0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 228.0, 0.0,
+            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0,
+            0.0, 233.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 237.0, 0.0, 0.0, 0.0,
+            238.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 241.0,
+            0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 244.0, 0.0, 0.0, 0.0, 244.0, 0.0,
+            0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0,
+            0.0, 248.0, 0.0, 0.0, 0.0, 248.0, 0.0, 0.0, 0.0, 249.0, 0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0,
+            250.0, 0.0, 0.0, 0.0, 251.0, 0.0, 0.0, 0.0, 251.0, 0.0, 0.0, 0.0, 252.0, 0.0, 0.0, 0.0, 252.0,
+            0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 254.0, 0.0, 0.0, 0.0, 255.0, 0.0,
+            0.0, 0.0
+        ]),
+        b: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0,
+            0.0, 8.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 11.0, 0.0, 0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 15.0,
+            0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0,
+            0.0, 25.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 31.0, 0.0, 0.0, 0.0, 33.0,
+            0.0, 0.0, 0.0, 35.0, 0.0, 0.0, 0.0, 37.0, 0.0, 0.0, 0.0, 39.0, 0.0, 0.0, 0.0, 41.0, 0.0, 0.0,
+            0.0, 43.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 50.0,
+            0.0, 0.0, 0.0, 52.0, 0.0, 0.0, 0.0, 54.0, 0.0, 0.0, 0.0, 56.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0,
+            0.0, 59.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 62.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 65.0,
+            0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 69.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0,
+            0.0, 71.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 73.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 74.0,
+            0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0,
+            0.0, 77.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0,
+            0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0,
+            0.0, 77.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 76.0,
+            0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 73.0, 0.0, 0.0,
+            0.0, 73.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0, 0.0, 69.0,
+            0.0, 0.0, 0.0, 68.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0,
+            0.0, 65.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 60.0,
+            0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 58.0, 0.0, 0.0, 0.0, 58.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0,
+            0.0, 56.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 54.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 52.0,
+            0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 49.0, 0.0, 0.0,
+            0.0, 49.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 47.0,
+            0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0,
+            0.0, 46.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 47.0,
+            0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 49.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0,
+            0.0, 50.0, 0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 52.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 55.0,
+            0.0, 0.0, 0.0, 56.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0,
+            0.0, 62.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 65.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 69.0,
+            0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0,
+            0.0, 81.0, 0.0, 0.0, 0.0, 83.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0, 0.0, 88.0, 0.0, 0.0, 0.0, 91.0,
+            0.0, 0.0, 0.0, 94.0, 0.0, 0.0, 0.0, 96.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0,
+            0.0, 105.0, 0.0, 0.0, 0.0, 108.0, 0.0, 0.0, 0.0, 111.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0,
+            117.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 124.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 130.0,
+            0.0, 0.0, 0.0, 133.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 143.0, 0.0,
+            0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 149.0, 0.0, 0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 156.0, 0.0, 0.0,
+            0.0, 159.0, 0.0, 0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0,
+            172.0, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0, 184.0,
+            0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 189.0, 0.0, 0.0, 0.0, 192.0, 0.0, 0.0, 0.0, 195.0, 0.0,
+            0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0,
+            0.0, 207.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 214.0, 0.0, 0.0, 0.0,
+            216.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 220.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 224.0,
+            0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 230.0, 0.0,
+            0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 234.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0,
+            0.0, 236.0, 0.0, 0.0, 0.0, 237.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0,
+            239.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 242.0,
+            0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0,
+            0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0,
+            0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0,
+            242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 241.0,
+            0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 240.0, 0.0,
+            0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0,
+            0.0, 239.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0,
+            238.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 238.0,
+            0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 239.0, 0.0,
+            0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0,
+            0.0, 241.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0,
+            244.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0, 0.0, 248.0,
+            0.0, 0.0, 0.0, 249.0, 0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 252.0, 0.0, 0.0, 0.0, 253.0, 0.0,
+            0.0, 0.0, 255.0, 0.0, 0.0, 0.0
+        ]),
+    },
+    hot: {
+        name: 'hot',
+        r: new Float32Array([
+            0.0, 4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0, 32.0, 36.0, 40.0, 44.0, 48.0, 52.0, 56.0, 60.0,
+            64.0, 68.0, 72.0, 76.0, 80.0, 84.0, 88.0, 92.0, 96.0, 100.0, 104.0, 108.0, 112.0, 116.0,
+            120.0, 124.0, 128.0, 132.0, 136.0, 140.0, 144.0, 148.0, 152.0, 156.0, 160.0, 164.0, 168.0,
+            172.0, 176.0, 180.0, 184.0, 188.0, 192.0, 196.0, 200.0, 204.0, 208.0, 212.0, 216.0, 220.0,
+            224.0, 228.0, 232.0, 236.0, 240.0, 244.0, 248.0, 252.0, 255.0, 255.0, 255.0, 255.0, 255.0,
+            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
+            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
+            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
+            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
+            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
+            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
+            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0
+        ]),
+        g: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.30769,
+            4.61538, 6.92308, 9.23077, 11.5385, 13.8462, 16.1538, 18.4615, 20.7692, 23.0769, 25.3846, 27.6923,
+            30.0, 32.3077, 34.6154, 36.9231, 39.2308, 41.5385, 43.8462, 46.1538, 48.4615, 50.7692, 53.0769,
+            55.3846, 57.6923, 60.0, 62.3077, 64.6154, 66.9231, 69.2308, 71.5385, 73.8462, 76.1538, 78.4615,
+            80.7692, 83.0769, 85.3846, 87.6923, 90.0, 92.3077, 94.6154, 96.9231, 99.2308, 101.538, 103.846, 106.154,
+            108.462, 110.769, 113.077, 115.385, 117.692, 120.0, 122.308, 124.615, 126.923, 129.231, 131.538,
+            133.846, 136.154, 138.462, 140.769, 143.077, 145.385, 147.692, 150.0, 152.308, 154.615, 156.923,
+            159.231, 161.538, 163.846, 166.154, 168.462, 170.769, 173.077, 175.385, 177.692, 180.0, 182.308,
+            184.615, 186.923, 189.231, 191.538, 193.846, 196.154, 198.462, 200.769, 203.077, 205.385,
+            207.692, 210.0, 212.308, 214.615, 216.923, 219.231, 221.538, 223.846, 226.154, 228.462, 230.769,
+            233.077, 235.385, 237.692, 240.0, 242.308, 244.615, 246.923, 249.231, 251.538, 253.846, 255.0,
+            255.0, 255.0, 255.0, 255.0, 255.0, 255.0
+        ]),
+        b: new Float32Array([
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.980769,
+            1.96154, 2.94231, 3.92308, 4.90385, 5.88461, 6.86539, 7.84615, 8.82692, 9.80769, 10.7885, 11.7692, 12.75,
+            13.7308, 14.7115, 15.6923, 16.6731, 17.6538, 18.6346, 19.6154, 20.5962, 21.5769, 22.5577, 23.5385,
+            24.5192, 25.5, 26.4808, 27.4615, 28.4423, 29.4231, 30.4038, 31.3846, 32.3654, 33.3462, 34.3269,
+            35.3077, 36.2885, 37.2692, 38.25, 39.2308, 40.2115, 41.1923, 42.1731, 43.1538, 44.1346, 45.1154, 46.0962,
+            47.0769, 48.0577, 49.0385, 50.0192, 51.0, 51.9808, 52.9615, 53.9423, 54.9231, 55.9038, 56.8846,
+            57.8654, 58.8462, 59.8269, 60.8077, 61.7885, 62.7692, 63.75, 64.7308, 65.7115, 66.6923, 67.6731,
+            68.6538, 69.6346, 70.6154, 71.5962, 72.5769, 73.5577, 74.5385, 75.5192, 76.5, 77.4808, 78.4615, 79.4423,
+            80.4231, 81.4038, 82.3846, 83.3654, 84.3462, 85.3269, 86.3077, 87.2885, 88.2692, 89.25, 90.2308,
+            91.2115, 92.1923, 93.1731, 94.1538, 95.1346, 96.1154, 97.0962, 98.0769, 99.0577, 100.038,
+            101.019, 102.0, 102.981, 103.962, 104.942, 105.923, 106.904, 107.885, 108.865, 109.846, 110.827,
+            111.808, 112.788, 113.769, 114.75, 115.731, 116.711, 117.692, 118.673, 119.654, 120.634,
+            121.615, 122.596, 123.577, 124.557, 125.538, 126.519, 127.5
+        ])
+    },
+    gray: {
+        name: 'gray',
+        r: new Float32Array([
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
+            47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66,
+            67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
+            89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107,
+            108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123,
+            124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138,
+            139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152,
+            153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164,
+            165, 166, 167, 168, 169, 170, 171, 172,
+            173, 174, 175, 176, 177,
+            178, 179,
+            180,
+            181,
+            182,
+            183,
+            184,
+            185,
+            186,
+            187,
+            188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200,
+            201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212,
+            213, 214, 215, 216, 217, 218, 219, 220,
+            221, 222,
+            223,
+            224,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230,
+            231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242,
+            243, 244, 245, 246, 247, 248, 249, 250,
+            251,
+            252,
+            253,
+            254,
+            255
+        ]),
+        g: new Float32Array([
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
+            46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+            57,
+            58,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64,
+            65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82,
+            83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100,
+            101,
+            102,
+            103,
+            104,
+            105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
+            115,
+            116,
+            117,
+            118,
+            119,
+            120,
+            121,
+            122,
+            123,
+            124,
+            125, 126, 127, 128, 129, 130, 131, 132, 133, 134,
+            135,
+            136,
+            137,
+            138,
+            139,
+            140,
+            141,
+            142,
+            143,
+            144,
+            145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
+            155,
+            156,
+            157,
+            158,
+            159,
+            160,
+            161,
+            162,
+            163,
+            164,
+            165, 166, 167, 168, 169, 170, 171, 172, 173, 174,
+            175,
+            176,
+            177,
+            178,
+            179,
+            180,
+            181,
+            182,
+            183,
+            184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196,
+            197, 198, 199, 200, 201, 202, 203, 204, 205, 206,
+            207,
+            208,
+            209,
+            210,
+            211,
+            212,
+            213,
+            214,
+            215,
+            216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227,
+            228, 229, 230, 231, 232, 233, 234, 235, 236, 237,
+            238,
+            239,
+            240,
+            241,
+            242,
+            243,
+            244,
+            245,
+            246,
+            247, 248, 249, 250,
+            251,
+            252,
+            253,
+            254,
+            255
+        ]),
+        b: new Float32Array([
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
+            59,
+            60,
+            61,
+            62,
+            63,
+            64,
+            65,
+            66,
+            67,
+            68,
+            69,
+            70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
+            89,
+            90,
+            91,
+            92,
+            93,
+            94,
+            95,
+            96,
+            97,
+            98,
+            99,
+            100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
+            117,
+            118,
+            119,
+            120,
+            121,
+            122,
+            123,
+            124,
+            125,
+            126,
+            127,
+            128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144,
+            145,
+            146,
+            147,
+            148,
+            149,
+            150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164,
+            165,
+            166,
+            167,
+            168,
+            169,
+            170,
+            171,
+            172,
+            173,
+            174,
+            175,
+            176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192,
+            193,
+            194,
+            195,
+            196,
+            197,
+            198,
+            199,
+            200,
+            201,
+            202,
+            203,
+            204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220,
+            221,
+            222,
+            223,
+            224,
+            225,
+            226,
+            227,
+            228,
+            229,
+            230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240,
+            241,
+            242,
+            243,
+            244,
+            245,
+            246,
+            247,
+            248,
+            249,
+            250,
+            251,
+            252,
+            253,
+            254,
+            255
+        ])
+    },
+};
+exports["default"] = exports.ColorMaps;
+
+
+/***/ }),
+
+/***/ 772:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AstroViewer = void 0;
+// import global from './Global.js'
+const AstroSphere_js_1 = __importDefault(__webpack_require__(4723));
+const HiPSDescriptor_js_1 = __webpack_require__(5087);
+const CatalogueGL_js_1 = __webpack_require__(1232);
+const FootprintSetGL_js_1 = __webpack_require__(592);
+const Config_js_1 = __webpack_require__(2919);
+const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
+const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
+// & {
+//   viewportWidth: number
+//   viewportHeight: number
+// }
+class AstroViewer {
+    astroSphere;
+    canvas;
+    webgl;
+    rafId = null;
+    webglContextList = new Map();
+    viewfinderEl = null;
+    viewfinderVisible = Config_js_1.bootSetup.showViewfinder;
+    viewfinderColor = 'rgba(75,148,226,0.68)';
+    // API
+    run() {
+        return this.tick();
+    }
+    // CATALOGUES
+    createCatalogue(catalogueName, catalogueDescription, providerUrl, metadataManager) {
+        return new CatalogueGL_js_1.CatalogueGL(catalogueName, catalogueDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showCatalogue(catalogue) {
+        this.astroSphere.showCatalogue(catalogue);
+    }
+    hideCatalogue(catalogue, isVisible) {
+        catalogue.setIsVisible(isVisible);
+    }
+    deleteCatalogue(catalogue) {
+        this.astroSphere.deleteCatalogue(catalogue);
+    }
+    changeCatalogueRA(catalogue, raColumnName) {
+        catalogue.changeMetaRA(raColumnName);
+        // catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
+        return catalogue;
+    }
+    changeCatalogueDec(catalogue, decColumnName) {
+        catalogue.changeMetaDec(decColumnName);
+        // catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
+        return catalogue;
+    }
+    changeCatalogueColor(catalogue, hexColor) {
+        catalogue.changeColor(hexColor);
+        // catalogue.catalogueProps.changeColor(hexColor)
+        return catalogue;
+    }
+    setCatalogueShapeHue(catalogue, metadataColumnName) {
+        catalogue.changeMetaShapeHue(metadataColumnName);
+        return catalogue;
+    }
+    setCatalogueShapeSize(catalogue, metadataColumnName) {
+        catalogue.changeMetaShapeSize(metadataColumnName);
+        return catalogue;
+    }
+    //FOOTPRINT
+    createFootprintSet(footprintSetName, footprintSetDescription, providerUrl, metadataManager) {
+        return new FootprintSetGL_js_1.FootprintSetGL(footprintSetName, footprintSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    changeFootprintSetColor(footprintSet, hexColor) {
+        // footprintSet.footprintsetProps.changeColor(hexColor)
+        footprintSet.changeColor(hexColor);
+    }
+    getHoveredFootprints() {
+        return this.astroSphere.getHoveredFootprints();
+    }
+    // HIPS
+    getDefaultHiPSURL() {
+        return Config_js_1.bootSetup.defaultHipsUrl;
+    }
+    activateHiPS(hipsDescriptor) {
+        this.astroSphere.activateHiPS(hipsDescriptor);
+    }
+    activateXYZ(config) {
+        this.astroSphere.activateXYZ(config);
+    }
+    activateWMTS(config) {
+        this.astroSphere.activateWMTS(config);
+    }
+    setXYZMaxConcurrentRequests(value) {
+        XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.setMaxConcurrent(value);
+    }
+    getXYZMaxConcurrentRequests() {
+        return XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getMaxConcurrent();
+    }
+    getXYZDebugStats() {
+        return this.astroSphere.getXYZDebugStats();
+    }
+    async loadHiPS(baseUrl) {
+        const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+        const resp = await fetch(hipsUrl + 'properties');
+        if (!resp.ok)
+            throw new Error(`HTTP ${resp.status} fetching properties`);
+        const propsText = await resp.text();
+        const desc = new HiPSDescriptor_js_1.HiPSDescriptor(propsText, hipsUrl);
+        this.astroSphere.activateHiPS(desc);
+        return desc.surveyName;
+        // this.activateHiPS(desc);
+    }
+    // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
+    changeColorMap(colorMapName) {
+        const colorMap = ColorMaps_js_1.default[colorMapName];
+        // hips.changeColorMap(colorMap)
+        this.astroSphere.changeColorMap(colorMap);
+    }
+    changeCustomColorMap(colorMap) {
+        this.astroSphere.changeColorMap(colorMap);
+    }
+    getActiveHiPS() {
+        return this.astroSphere.activeHiPS;
+    }
+    getActiveXYZ() {
+        return this.astroSphere.activeXYZ;
+    }
+    // Camera: GOTOs and COORDS
+    setCamera(camera) {
+        this.astroSphere.setCamera(camera);
+    }
+    setCameraPosition(pos) {
+        this.astroSphere.setCameraPosition(pos);
+    }
+    setCameraMatrix(viewMatrix) {
+        this.astroSphere.setCameraMatrix(viewMatrix);
+    }
+    restoreAstroViewerState(detail, applyColorMap) {
+        this.astroSphere.applyFullCameraState(detail, applyColorMap);
+    }
+    getCurrentAstroViewerStatus() {
+        return this.astroSphere.getCurrentStatus();
+    }
+    goTo(raDeg, decDeg) {
+        // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
+        this.astroSphere.goTo(raDeg, decDeg);
+    }
+    getCenterCoordinates() {
+        return this.astroSphere.getCentralPointCoordinates();
+    }
+    getCoordinatesFromMouse() {
+        return this.astroSphere.getLastMousePointCoordinates();
+    }
+    // GRIDs
+    setModelMatrix(modelMatrix) {
+        this.astroSphere.healpixGrid.setModelMatrix(modelMatrix);
+    }
+    toggleHealpixGrid() {
+        // healpixGridSingleton.toggleShowGrid()
+        this.astroSphere.healpixGrid.toggleShowGrid();
+    }
+    isHealpixGridVisible() {
+        // return healpixGridSingleton.isVisible()
+        return this.astroSphere.healpixGrid.isVisible();
+    }
+    toggleEquatorialGrid() {
+        // equatorialGridSingleton.toggleShowGrid()
+        return this.astroSphere.equatorialGrid.toggleShowGrid();
+    }
+    isEquatorialGridVisible() {
+        // return equatorialGridSingleton.isVisible()
+        return this.astroSphere.equatorialGrid.isVisible();
+    }
+    // FOV
+    getFoV() {
+        return this.astroSphere.getFoV();
+    }
+    getFoVPolygon() {
+        return this.astroSphere.getFoVPolygon();
+    }
+    changeFoV(deg) {
+        this, this.astroSphere.changeFoV(deg);
+    }
+    changeFoV2(deg) {
+        this, this.astroSphere.changeFoV2(deg);
+    }
+    changeFoV3(deg) {
+        this, this.astroSphere.changeFoV3(deg);
+    }
+    getInsideSphere() {
+        return this.astroSphere.getInsideSphere();
+    }
+    toggleInsideSphere() {
+        this.astroSphere.toggleInsideSphere();
+    }
+    toggleViewfinder() {
+        this.viewfinderVisible = !this.viewfinderVisible;
+        this.syncViewfinderVisibility();
+        return this.viewfinderVisible;
+    }
+    setViewfinderVisible(visible) {
+        this.viewfinderVisible = visible;
+        this.syncViewfinderVisibility();
+    }
+    isViewfinderVisible() {
+        return this.viewfinderVisible;
+    }
+    setViewfinderColor(color) {
+        this.viewfinderColor = color;
+        this.syncViewfinderColor();
+    }
+    getViewfinderColor() {
+        return this.viewfinderColor;
+    }
+    setRotationSensitivity(value) {
+        this.astroSphere.setCameraRotationSensitivity(value);
+    }
+    getRotationSensitivity() {
+        return this.astroSphere.getCameraRotationSensitivity();
+    }
+    setZoomSensitivity(value) {
+        this.astroSphere.setZoomSensitivity(value);
+    }
+    getZoomSensitivity() {
+        return this.astroSphere.getZoomSensitivity();
+    }
+    // Internal
+    constructor(canvasEl) {
+        this.init(canvasEl);
+        this.webglContextList = new Map();
+    }
+    init(canvasEl) {
+        console.log('init webgl');
+        this.canvas = canvasEl;
+        this.initViewfinder();
+        const gl = this.canvas.getContext('webgl2', { alpha: false });
+        if (!gl) {
+            alert('Could not initialise WebGL, sorry :-(');
+            throw new Error('WebGL2 not available');
+        }
+        // Extend with custom fields used elsewhere
+        this.webgl = gl;
+        // this.webgl.viewportWidth = this.canvas.width
+        // this.webgl.viewportHeight = this.canvas.height
+        try {
+            // 1/255 = 0.00392156862
+            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
+        }
+        catch (e) {
+            console.log('Error instantiating WebGL context');
+        }
+        this.initListeners();
+        // ; (global as any).gl = this.webgl
+        this.astroSphere = new AstroSphere_js_1.default(this.canvas, this.webgl);
+    }
+    initViewfinder() {
+        const parent = this.canvas.parentElement;
+        if (!parent)
+            return;
+        if (window.getComputedStyle(parent).position === 'static') {
+            parent.style.position = 'relative';
+        }
+        const viewfinder = document.createElement('div');
+        viewfinder.setAttribute('data-astro-viewfinder', 'true');
+        viewfinder.setAttribute('aria-hidden', 'true');
+        viewfinder.style.position = 'absolute';
+        viewfinder.style.left = '50%';
+        viewfinder.style.top = '50%';
+        viewfinder.style.width = '44px';
+        viewfinder.style.height = '44px';
+        viewfinder.style.transform = 'translate(-50%, -50%)';
+        viewfinder.style.pointerEvents = 'none';
+        viewfinder.style.zIndex = '1';
+        viewfinder.style.boxSizing = 'border-box';
+        const segments = [
+            { left: '50%', top: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
+            { left: '50%', bottom: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
+            { left: '7px', top: '50%', width: '11px', height: '1px', transform: 'translateY(-50%)' },
+            { right: '7px', top: '50%', width: '11px', height: '1px', transform: 'translateY(-50%)' },
+        ];
+        for (const segmentDef of segments) {
+            const segment = document.createElement('div');
+            segment.style.position = 'absolute';
+            segment.style.left = segmentDef.left ?? 'auto';
+            segment.style.right = segmentDef.right ?? 'auto';
+            segment.style.top = segmentDef.top ?? 'auto';
+            segment.style.bottom = segmentDef.bottom ?? 'auto';
+            segment.style.width = segmentDef.width;
+            segment.style.height = segmentDef.height;
+            segment.style.transform = segmentDef.transform;
+            segment.style.background = 'currentColor';
+            segment.style.borderRadius = '999px';
+            segment.style.boxShadow = '0 0 0 1px rgba(0, 0, 0, 0.14)';
+            viewfinder.appendChild(segment);
+        }
+        parent.appendChild(viewfinder);
+        this.viewfinderEl = viewfinder;
+        this.syncViewfinderVisibility();
+        this.syncViewfinderColor();
+    }
+    syncViewfinderVisibility() {
+        if (!this.viewfinderEl)
+            return;
+        this.viewfinderEl.style.display = this.viewfinderVisible ? 'block' : 'none';
+    }
+    syncViewfinderColor() {
+        if (!this.viewfinderEl)
+            return;
+        this.viewfinderEl.style.color = this.viewfinderColor;
+    }
+    initListeners() {
+        console.log('inside initListeners');
+        const resizeCanvas = () => {
+            console.log('[resizeCanvas]');
+            const rect = this.canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            const newWidth = Math.max(1, Math.floor(rect.width * dpr));
+            const newHeight = Math.max(1, Math.floor(rect.height * dpr));
+            if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
+                this.canvas.width = newWidth;
+                this.canvas.height = newHeight;
+                // this.webgl.viewportWidth = this.canvas.width
+                // this.webgl.viewportHeight = this.canvas.height
+                this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
+            }
+        };
+        const handleContextLost = (event) => {
+            console.log('[handleContextLost]');
+            event.preventDefault();
+            if (this.rafId !== null) {
+                cancelAnimationFrame(this.rafId);
+                this.rafId = null;
+            }
+        };
+        const handleContextRestored = (_event) => {
+            console.log('[handleContextRestored]');
+            // this.webgl.viewportWidth = this.canvas.width
+            // this.webgl.viewportHeight = this.canvas.height
+            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
+            this.webgl.enable(this.webgl.DEPTH_TEST);
+            this.rafId = requestAnimationFrame(() => this.tick());
+        };
+        // 🔥 ResizeObserver per pannelli / split / layout dinamici
+        if ('ResizeObserver' in window) {
+            const ro = new ResizeObserver(() => {
+                resizeCanvas();
+            });
+            // Osserva il canvas o il suo parent (a tua scelta)
+            ro.observe(this.canvas);
+        }
+        window.addEventListener('resize', resizeCanvas);
+        this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
+        this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+        resizeCanvas();
+    }
+    tick() {
+        this.drawScene();
+        this.rafId = requestAnimationFrame(() => this.tick());
+        return this.rafId;
+    }
+    drawScene() {
+        this.astroSphere.draw(this.canvas);
+    }
+}
+exports.AstroViewer = AstroViewer;
+
+
+/***/ }),
+
+/***/ 1072:
 /***/ ((__unused_webpack_module, exports) => {
 
 
@@ -440,377 +2678,7 @@ exports.MetadataColumn = MetadataColumn;
 
 /***/ }),
 
-/***/ 83:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FoVUtils = void 0;
-/**
- * @author Fabrizio Giordano (Fab)
- */
-const Point_js_1 = __webpack_require__(553);
-const RayPickingUtils_js_1 = __importDefault(__webpack_require__(639));
-const CoordsType_js_1 = __webpack_require__(145);
-const gl_matrix_1 = __webpack_require__(961);
-class FoVUtils {
-    /**
-     * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
-     * (Kept here for parity; this class doesn’t maintain those fields.)
-     */
-    getMinFoV() {
-        return this._fovY_deg <= this._fovX_deg ? this._fovY_deg : this._fovX_deg;
-    }
-    /**
-     * Compute the FoV polygon as a list of Points (clockwise).
-     * Uses ray picking + frustum planes against a unit sphere.
-     */
-    static getFoVPolygon(
-    // _pMatrix: ReadonlyMat4 | null,
-    camera, canvas, model, healpixGrid, webgl, pMatrix) {
-        // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
-        //   _pMatrix) as ReadonlyMat4;
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4 
-        const vMatrix = camera.getCameraMatrix();
-        const mMatrix = model.getModelMatrix();
-        const canvasWidth = canvas.clientWidth;
-        const canvasHeight = canvas.clientHeight;
-        let points = [];
-        // First check: does the sphere cover the whole screen?
-        const intersectionWithModel = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
-        if (intersectionWithModel.length > 0) {
-            // Fully covered → grab corners + midpoints (CASE C)
-            const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
-            points = cornersPoints;
-        }
-        else {
-            // Partial coverage: build frustum planes
-            let M = gl_matrix_1.mat4.create();
-            M = gl_matrix_1.mat4.multiply(M, vMatrix, mMatrix);
-            M = gl_matrix_1.mat4.multiply(M, pMatrix, M);
-            const topPlane = [M[3] - M[1], M[7] - M[5], M[11] - M[9], M[15] - M[13]]; // m41-m21, ...
-            const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
-            const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
-            const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
-            const intersectionTopMiddle = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera, pMatrix);
-            const intersectionRightMiddle = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera, pMatrix);
-            // CASE A: zoomed out, hemisphere fully visible
-            if (intersectionTopMiddle.length === 0 &&
-                intersectionRightMiddle.length === 0) {
-                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
-                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
-                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
-                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
-                points.push(topPoints[0], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], middleLeftTop);
-            }
-            // CASE E: no intersection on top/bottom planes
-            else if (intersectionTopMiddle.length === 0) {
-                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
-                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
-                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
-                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[1], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[1], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
-                points.push(topPoints[0], middleTopRight, rightPoints[0], rightPoints[1], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], leftPoints[1], middleLeftTop);
-            }
-            // CASE D: no intersection on right/left planes
-            else if (intersectionRightMiddle.length === 0) {
-                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
-                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
-                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
-                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
-                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
-                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[1], rightPoints[0])[0];
-                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
-                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[1], leftPoints[0])[0];
-                points.push(topPoints[0], topPoints[1], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], bottomPoints[1], middleBottomLeft, leftPoints[0], middleLeftTop);
-            }
-            // CASE B: all frustum planes intersect
-            else {
-                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
-                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
-                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
-                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
-                points.push(topPoints[0], topPoints[1], rightPoints[0], rightPoints[1], bottomPoints[0], bottomPoints[1], leftPoints[0], leftPoints[1]);
-            }
-        }
-        return points;
-    }
-    /**
-     * Ray pick against 8 key screen positions (corners + midpoints).
-     * Returns Points in clockwise order starting from top-left.
-     */
-    static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const topLeft = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
-        const middleTop = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera, pMatrix);
-        const topRight = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera, pMatrix);
-        const middleRight = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera, pMatrix);
-        const bottomRight = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera, pMatrix);
-        const middleBottom = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera, pMatrix);
-        const bottomLeft = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera, pMatrix);
-        const middleLeft = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera, pMatrix);
-        const out = [];
-        const pushIf = (ip) => {
-            if (ip.length > 0) {
-                out.push(new Point_js_1.Point({ x: ip[0], y: ip[1], z: ip[2] }, CoordsType_js_1.CoordsType.CARTESIAN));
-            }
-        };
-        pushIf(topLeft);
-        pushIf(middleTop);
-        pushIf(topRight);
-        pushIf(middleRight);
-        pushIf(bottomRight);
-        pushIf(middleBottom);
-        pushIf(bottomLeft);
-        pushIf(middleLeft);
-        return out;
-    }
-    /** Returns the center point (in J2000) of the current view as a `Point`. */
-    static getCenterJ2000(canvas, healpixGrid, webgl, camera, pMatrix) {
-        const w = canvas.clientWidth;
-        const h = canvas.clientHeight;
-        const center = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera, pMatrix);
-        if (center.length <= 0)
-            throw Error(`Central point is null`);
-        return new Point_js_1.Point({ x: center[0], y: center[1], z: center[2] }, CoordsType_js_1.CoordsType.CARTESIAN);
-    }
-    /** Middle point on the unit sphere along the arc between two 3D points. */
-    static computeMiddlePoint(p1, p2) {
-        // midpoint of segment
-        const xm = (p1.x + p2.x) / 2;
-        const ym = (p1.y + p2.y) / 2;
-        const zm = (p1.z + p2.z) / 2;
-        // project the midpoint back to unit sphere
-        const len = Math.hypot(xm, ym, zm) || 1;
-        const x = xm / len;
-        const y = ym / len;
-        const z = zm / len;
-        return [new Point_js_1.Point({ x, y, z }, CoordsType_js_1.CoordsType.CARTESIAN)];
-    }
-    /**
-     * Nearest intersection point between a frustum plane and the unit sphere,
-     * using the plane normal.
-     */
-    static getNearestSpherePoint(plane) {
-        const [A, B, C, D] = plane;
-        const R = 1;
-        const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
-        const t1 = R * invLen;
-        const t2 = -R * invLen;
-        const P1 = [A * t1, B * t1, C * t1];
-        const P2 = [A * t2, B * t2, C * t2];
-        const den = Math.sqrt(A * A + B * B + C * C) || 1;
-        const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
-        const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
-        const P = dist1 <= dist2 ? P1 : P2;
-        return [new Point_js_1.Point({ x: P[0], y: P[1], z: P[2] }, CoordsType_js_1.CoordsType.CARTESIAN)];
-    }
-    /**
-     * Intersections between a frustum plane and the unit sphere,
-     * computed via two perpendicular planes.
-     * Returns two points (first from `plane4Circle_1`, second from `plane4Circle_2`).
-     */
-    static getFrustumIntersectionWithSphere(_M, plane4Sphere, plane4Circle_1, plane4Circle_2) {
-        const [A0, B0, C0, D0] = plane4Sphere;
-        // center of the circle (projection of sphere center onto plane)
-        const denom0 = (A0 * A0 + B0 * B0 + C0 * C0) || 1;
-        const x_c = -(A0 * D0) / denom0;
-        const y_c = -(B0 * D0) / denom0;
-        const z_c = -(C0 * D0) / denom0;
-        const d = Math.abs(D0) / Math.sqrt(denom0); // distance from sphere center (0,0,0)
-        const R = 1;
-        const out = [];
-        if (R > d) {
-            const r = Math.sqrt(R * R - d * d);
-            const pick = (plane) => {
-                const [A, B, C, D] = plane;
-                const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
-                const t1 = r * invLen;
-                const t2 = -r * invLen;
-                const P1 = [x_c + A * t1, y_c + B * t1, z_c + C * t1];
-                const P2 = [x_c + A * t2, y_c + B * t2, z_c + C * t2];
-                const den = Math.sqrt(A * A + B * B + C * C) || 1;
-                const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
-                const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
-                return dist1 <= dist2 ? P1 : P2;
-            };
-            const P_intersection_1 = pick(plane4Circle_1);
-            const P_intersection_2 = pick(plane4Circle_2);
-            out.push(new Point_js_1.Point({ x: P_intersection_1[0], y: P_intersection_1[1], z: P_intersection_1[2] }, CoordsType_js_1.CoordsType.CARTESIAN), new Point_js_1.Point({ x: P_intersection_2[0], y: P_intersection_2[1], z: P_intersection_2[2] }, CoordsType_js_1.CoordsType.CARTESIAN));
-        }
-        else if (R === d) {
-            // Tangent: both intersections collapse to the circle center on the plane
-            out.push(new Point_js_1.Point({ x: x_c, y: y_c, z: z_c }, CoordsType_js_1.CoordsType.CARTESIAN), new Point_js_1.Point({ x: x_c, y: y_c, z: z_c }, CoordsType_js_1.CoordsType.CARTESIAN));
-        }
-        else {
-            // No intersection; return empty to avoid pushing undefined values
-            // console.log('Frustum plane not intersecting the sphere');
-        }
-        return out;
-    }
-    /** Build ADQL string from an array of Points (ra,dec pairs). */
-    static getAstroFoVPolygon(points) {
-        return points.map(p => p.toADQL()).join(',');
-    }
-}
-exports.FoVUtils = FoVUtils;
-
-
-/***/ }),
-
-/***/ 87:
-/***/ ((__unused_webpack_module, exports) => {
-
-// HiPSDescriptor.ts
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HiPSDescriptor = void 0;
-class HiPSDescriptor {
-    _minOrder = 3;
-    _imgformats = [];
-    _datarange = { min: undefined, max: undefined };
-    _maxOrder;
-    _tilewidth;
-    _hipsFrame;
-    _hipsName = 'NONAME';
-    _hipsurl;
-    _emMin;
-    _emMax;
-    _isGalctic = false;
-    _propertiesRawText;
-    _propertiesMap = new Map();
-    constructor(hipsproperties, hipsurl) {
-        this._hipsurl = hipsurl;
-        this._propertiesRawText = hipsproperties;
-        const lines = hipsproperties.split(/\r\n|\n/);
-        for (const raw of lines) {
-            const line = raw.trim();
-            if (!line || line.startsWith('#'))
-                continue;
-            const maybeKey = line.slice(0, line.indexOf('=')).trim();
-            const maybeValue = this.getValue(line);
-            if (maybeKey && maybeValue !== undefined) {
-                this._propertiesMap.set(maybeKey, maybeValue);
-            }
-            if (line.startsWith('hips_tile_format') || line.startsWith('format')) {
-                // normalize jpeg→jpg
-                const list = this.getValue(line)?.replace(/jpeg/gi, 'jpg') ?? '';
-                this._imgformats = list.split(/\s+/).filter(Boolean);
-            }
-            else if (line.startsWith('hips_data_range')) {
-                const v = this.getValue(line);
-                if (v) {
-                    const [minStr, maxStr] = v.split(/\s+/);
-                    this._datarange.min = parseFloat(minStr);
-                    this._datarange.max = parseFloat(maxStr);
-                }
-            }
-            else if (line.startsWith('hips_tile_width')) {
-                const n = Number(this.getValue(line));
-                this._tilewidth = Number.isFinite(n) ? n : undefined;
-            }
-            else if (line.startsWith('hips_order_min')) {
-                const n = Number(this.getValue(line));
-                this._minOrder = Number.isFinite(n) ? n : this._minOrder;
-            }
-            else if (line.startsWith('hips_order') || line.startsWith('maxOrder')) {
-                const n = Number(this.getValue(line));
-                this._maxOrder = Number.isFinite(n) ? n : this._maxOrder;
-            }
-            else if (line.startsWith('hips_frame') || line.startsWith('frame')) {
-                this._hipsFrame = this.getValue(line);
-            }
-            else if (line.startsWith('obs_collection') || line.startsWith('label')) {
-                this._hipsName = this.getValue(line) ?? this._hipsName;
-            }
-            else if (line.startsWith('em_min')) {
-                const n = Number(this.getValue(line));
-                this._emMin = Number.isFinite(n) ? n : undefined;
-            }
-            else if (line.startsWith('em_max')) {
-                const n = Number(this.getValue(line));
-                this._emMax = Number.isFinite(n) ? n : undefined;
-            }
-        }
-        if (!this._hipsName) {
-            console.warn(`[HiPSDescriptor] hipsName not defined in properties of ${this._hipsurl}. Defaulting to 'NONAME'.`);
-        }
-        if (!this._hipsFrame) {
-            console.warn(`[HiPSDescriptor] hips_frame not defined in properties of ${this._hipsurl}. Defaulting to 'equatorial'.`);
-            this._hipsFrame = 'equatorial';
-        }
-        this._isGalctic = this._hipsFrame.toLowerCase().includes('gal');
-        if (this._maxOrder === undefined || this._imgformats.length === 0) {
-            throw new Error(`[HiPSDescriptor] Invalid properties for ${this._hipsurl}. maxOrder=${this._maxOrder}, imgFormats.length=${this._imgformats.length}`);
-        }
-    }
-    getValue(line) {
-        const idx = line.indexOf('=');
-        if (idx < 0)
-            return undefined;
-        return line.slice(idx + 1).trim();
-    }
-    // --- Getters ---
-    get propertiesRawText() {
-        return this._propertiesRawText;
-    }
-    get properties() {
-        return new Map(this._propertiesMap);
-    }
-    getProperty(key) {
-        return this._propertiesMap.get(key);
-    }
-    get surveyName() {
-        return this._hipsName;
-    }
-    get url() {
-        return this._hipsurl;
-    }
-    get maxOrder() {
-        return this._maxOrder;
-    }
-    get minOrder() {
-        return this._minOrder;
-    }
-    get imgFormats() {
-        return this._imgformats;
-    }
-    get hipsFrame() {
-        return this._hipsFrame;
-    }
-    get isGalactic() {
-        return this._isGalctic;
-    }
-    get emMin() {
-        return this._emMin;
-    }
-    get emMax() {
-        return this._emMax;
-    }
-    get tileWidth() {
-        return this._tilewidth;
-    }
-    get dataRange() {
-        return this._datarange;
-    }
-}
-exports.HiPSDescriptor = HiPSDescriptor;
-
-
-/***/ }),
-
-/***/ 138:
+/***/ 1138:
 /***/ ((__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) => {
 
 // ESM COMPAT FLAG
@@ -2246,213 +4114,18 @@ class Healpix {
 
 /***/ }),
 
-/***/ 145:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CoordsType = void 0;
-/**
- * Enum for coordinate types.
- * @author Fabrizio Giordano (Fab77)
- */
-var CoordsType;
-(function (CoordsType) {
-    CoordsType["CARTESIAN"] = "cartesian";
-    CoordsType["SPHERICAL"] = "spherical";
-    CoordsType["ASTRO"] = "astro";
-})(CoordsType || (exports.CoordsType = CoordsType = {}));
-// export default CoordsType;
-
-
-/***/ }),
-
-/***/ 146:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Source = void 0;
-const healpixjs_1 = __webpack_require__(138);
-const Global_js_1 = __importDefault(__webpack_require__(382));
-class Source {
-    _point;
-    _name;
-    _details;
-    _h_pix;
-    _shapesize;
-    _brightnessFactor;
-    /**
-     * @param in_point Point.js (Cartesian/RA-Dec wrapper)
-     * @param in_details Optional array of key/value metadata
-     */
-    constructor(in_point, in_details = []) {
-        this._point = in_point;
-        this._details = in_details;
-        this._shapesize = 16.0;
-        this._brightnessFactor = -99;
-        this.computeHealpixPixel();
-    }
-    getDetailByindex(index) {
-        if (index < 0 || index >= this._details.length) {
-            return undefined;
-        }
-        return this._details[index];
-    }
-    get details() {
-        return this._details;
-    }
-    computeHealpixPixel() {
-        // Get Healpix instance from global
-        const healpix = Global_js_1.default.getHealpix(Global_js_1.default.nsideForSelection);
-        const vec3 = new healpixjs_1.Vec3(this._point.x, this._point.y, this._point.z);
-        const ptg = new healpixjs_1.Pointing(vec3, false);
-        this._h_pix = healpix.ang2pix(ptg, false);
-    }
-    get point() {
-        return this._point;
-    }
-    get name() {
-        return this._name;
-    }
-    get healpixPixel() {
-        return this._h_pix;
-    }
-    get shapeSize() {
-        return this._shapesize;
-    }
-    set shapeSize(size) {
-        this._shapesize = size;
-    }
-    get brightnessFactor() {
-        return this._brightnessFactor;
-    }
-    /**
-     * @param factor Must be in [-1..1]
-     */
-    set brightnessFactor(factor) {
-        this._brightnessFactor = factor;
-    }
-}
-exports.Source = Source;
-
-
-/***/ }),
-
-/***/ 149:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZShaderProgram = void 0;
-class XYZShaderProgram {
-    locations;
-    _webgl;
-    _shaderProgram;
-    constructor(webgl) {
-        this._webgl = webgl;
-        this.locations = {
-            pMatrix: null,
-            mMatrix: null,
-            vMatrix: null,
-            sampler: null,
-            vertexPositionAttribute: -1,
-            textureCoordAttribute: -1,
-        };
-    }
-    get shaderProgram() {
-        const gl = this._webgl;
-        if (!this._shaderProgram) {
-            const program = gl.createProgram();
-            if (!program) {
-                throw new Error('Could not create XYZ shader program');
-            }
-            this._shaderProgram = program;
-            this.initShaders();
-        }
-        gl.useProgram(this._shaderProgram);
-        return this._shaderProgram;
-    }
-    enableProgram() {
-        this._webgl.useProgram(this.shaderProgram);
-    }
-    enableShaders(pMatrix, vMatrix, mMatrix) {
-        const gl = this._webgl;
-        const program = this.shaderProgram;
-        gl.useProgram(program);
-        this.locations.pMatrix = gl.getUniformLocation(program, 'uPMatrix');
-        this.locations.mMatrix = gl.getUniformLocation(program, 'uMMatrix');
-        this.locations.vMatrix = gl.getUniformLocation(program, 'uVMatrix');
-        this.locations.sampler = gl.getUniformLocation(program, 'uSampler');
-        this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
-        this.locations.textureCoordAttribute = gl.getAttribLocation(program, 'aTextureCoord');
-        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
-        gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
-        gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
-        gl.uniform1i(this.locations.sampler, 0);
-    }
-    initShaders() {
-        const gl = this._webgl;
-        const vertexShader = this.compileShader(gl.VERTEX_SHADER, `#version 300 es
-      in vec3 aVertexPosition;
-      in vec2 aTextureCoord;
-      uniform mat4 uPMatrix;
-      uniform mat4 uVMatrix;
-      uniform mat4 uMMatrix;
-      out vec2 vTextureCoord;
-      void main(void) {
-        vTextureCoord = aTextureCoord;
-        gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
-      }`);
-        const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, `#version 300 es
-      precision mediump float;
-      in vec2 vTextureCoord;
-      uniform sampler2D uSampler;
-      out vec4 outColor;
-      void main(void) {
-        outColor = texture(uSampler, vTextureCoord);
-      }`);
-        gl.attachShader(this._shaderProgram, vertexShader);
-        gl.attachShader(this._shaderProgram, fragmentShader);
-        gl.linkProgram(this._shaderProgram);
-        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
-            throw new Error(gl.getProgramInfoLog(this._shaderProgram) || 'Could not initialise XYZ shaders');
-        }
-    }
-    compileShader(type, source) {
-        const gl = this._webgl;
-        const shader = gl.createShader(type);
-        if (!shader) {
-            throw new Error('Could not create XYZ shader');
-        }
-        gl.shaderSource(shader, source);
-        gl.compileShader(shader);
-        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-            throw new Error(gl.getShaderInfoLog(shader) || 'XYZ shader compile error');
-        }
-        return shader;
-    }
-}
-exports.XYZShaderProgram = XYZShaderProgram;
-
-
-/***/ }),
-
-/***/ 232:
+/***/ 1232:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CatalogueGL = void 0;
 const Source_js_1 = __webpack_require__(146);
-const Point_js_1 = __webpack_require__(553);
-const CoordsType_js_1 = __webpack_require__(145);
-const Utils_js_1 = __webpack_require__(930);
-const CatalogueShaderProgram_js_1 = __webpack_require__(940);
-const MetadataManager_js_1 = __webpack_require__(403);
+const Point_js_1 = __webpack_require__(6553);
+const CoordsType_js_1 = __webpack_require__(8145);
+const Utils_js_1 = __webpack_require__(7930);
+const CatalogueShaderProgram_js_1 = __webpack_require__(3559);
+const MetadataManager_js_1 = __webpack_require__(5403);
 class CatalogueGL {
     _kind = "CatalogueGL";
     static ELEM_SIZE = 6;
@@ -3065,877 +4738,13 @@ exports.CatalogueGL = CatalogueGL;
 
 /***/ }),
 
-/***/ 256:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-// Tile.ts
-const Global_js_1 = __importDefault(__webpack_require__(382));
-const FoVHelper_js_1 = __webpack_require__(610);
-// ------------------------------------------------------------------------
-class Tile {
-    _hips;
-    _tileno;
-    _baseurl;
-    _order;
-    _format;
-    _maxorder;
-    _isGalacticHips;
-    _ready = false;
-    _abort = false;
-    _image;
-    _textureLoaded = false;
-    _texture;
-    _texurl = '';
-    _hipsShaderIndex = 0;
-    _cacheTime0;
-    _inView = true;
-    _amIStillInFoV_requsetID;
-    // geometry buffers
-    vertexPosition = [];
-    vertexPositionBuffer = [];
-    vertexIndices = new Uint16Array();
-    vertexIndexBuffer;
-    _tileBuffer;
-    opacity = 1.0;
-    _webgl;
-    _visibleTileManager;
-    // private _hipsShaderProgram
-    constructor(tileno, order, hips, tileBuffer, webgl, visibleTileManager) {
-        // this._hipsShaderProgram = hipsShaderProgram
-        this._visibleTileManager = visibleTileManager;
-        this._webgl = webgl;
-        this._tileBuffer = tileBuffer;
-        this._hips = hips;
-        this._tileno = tileno;
-        this._format = hips.format;
-        this._baseurl = hips.baseURL;
-        this._maxorder = hips.maxOrder;
-        this._isGalacticHips = hips.isGalacticHips;
-        this._order = order;
-        this._amIStillInFoV_requsetID = window.setInterval(() => {
-            this.amIStillInFoV();
-        }, 5000);
-        this.initImage();
-    }
-    destroyIntervals() {
-        window.clearInterval(this._amIStillInFoV_requsetID);
-    }
-    getReadyState() {
-        return this._ready;
-    }
-    get cacheTime0() {
-        return this._cacheTime0;
-    }
-    resetCacheTime0() {
-        this._cacheTime0 = undefined;
-    }
-    setCacheTime0() {
-        this._cacheTime0 = new Date().getTime();
-    }
-    initImage() {
-        if (this._order > this._maxorder) {
-            this._ready = false;
-            this._abort = true;
-            this.destroyIntervals();
-            console.warn(`[Tile] Skipping tile request above max order: requested order ${this._order}, max order ${this._maxorder}, url ${this._baseurl}`);
-            return;
-        }
-        this._image = new Image();
-        const dirnumber = Math.floor(this._tileno / 10000) * 10000;
-        this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
-        this._image.onload = () => this.imageLoaded();
-        this._image.onerror = () => {
-            // console.error('File not found?', this._texurl)
-            this._ready = false;
-            this._abort = true;
-            this.destroyIntervals();
-        };
-        this._image.crossOrigin = 'anonymous';
-        this._image.src = this._texurl;
-    }
-    imageLoaded() {
-        // this.textureLoaded()
-        // this.initModelBuffer()
-        // this._textureLoaded = true
-        this._ready = true;
-    }
-    // private textureLoaded(): void {
-    textureLoaded(hipsShaderProgram) {
-        // this._hipsShaderProgram.enableProgram()
-        hipsShaderProgram.enableProgram();
-        const gl = this._webgl;
-        this._texture = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        if (!gl.isTexture(this._texture)) {
-            console.log('error in texture');
-        }
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        // FIX: use the sampler location we fetched in enableShaders()
-        // gl.uniform1i((this._hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
-        // gl.uniform1i((hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
-        if (!gl.isTexture(this._texture)) {
-            console.warn('Texture creation failed');
-        }
-        this.initModelBuffer();
-        this._textureLoaded = true;
-    }
-    initModelBuffer() {
-        const gl = this._webgl;
-        this.vertexPosition = [];
-        this.vertexPositionBuffer = [];
-        this.vertexIndices = new Uint16Array();
-        const reforder = FoVHelper_js_1.fovHelper.getRefOrder(this._order);
-        const orighealpix = Global_js_1.default.getHealpix(this._order);
-        const origxyf = orighealpix.nest2xyf(this._tileno);
-        const orderjump = reforder - this._order;
-        const dxmin = origxyf.ix << orderjump;
-        const dxmax = (origxyf.ix << orderjump) + (1 << orderjump);
-        const dymin = origxyf.iy << orderjump;
-        const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
-        const healpix = Global_js_1.default.getHealpix(reforder);
-        this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, 0, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, 1, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, 2, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin + (dymax - dymin) / 2, dymax, 3, healpix, orderjump, origxyf);
-        const pixelsXQuadrant = this.vertexPosition[0].length / 20;
-        const idx = this.computeVertexIndices(pixelsXQuadrant);
-        // If large, upgrade to Uint32 indices
-        if (idx.length > 65535) {
-            // Optional: require OES_element_index_uint if you’re still on WebGL1
-            this.vertexIndices = new Uint32Array(idx);
-        }
-        else {
-            this.vertexIndices = new Uint16Array(idx);
-        }
-        this.vertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndices, gl.STATIC_DRAW);
-    }
-    computeVertexIndices(pixelsXQuadrant) {
-        const vertexIndices = new Uint32Array(6 * pixelsXQuadrant);
-        let baseFaceIndex = 0;
-        for (let j = 0; j < pixelsXQuadrant; j++) {
-            const b = baseFaceIndex;
-            vertexIndices[6 * j] = b;
-            vertexIndices[6 * j + 1] = b + 1;
-            vertexIndices[6 * j + 2] = b + 2;
-            vertexIndices[6 * j + 3] = b + 2;
-            vertexIndices[6 * j + 4] = b + 3;
-            vertexIndices[6 * j + 5] = b;
-            baseFaceIndex += 4;
-        }
-        return vertexIndices;
-    }
-    setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        const gl = this._webgl;
-        this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
-        const step = 1 / (1 << orderjump);
-        let p = 0;
-        const s_pixel_size = 0;
-        const t_pixel_size = 0;
-        for (let dx = dxmin; dx < dxmax; dx++) {
-            for (let dy = dymin; dy < dymax; dy++) {
-                const facesVec3Array = healpix.getPointsForXyfNoStep(dx, dy, origxyf.face);
-                const uindex = dy - (origxyf.iy << orderjump);
-                const vindex = dx - (origxyf.ix << orderjump);
-                // v0
-                this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x;
-                this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y;
-                this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z;
-                this.vertexPosition[qidx][20 * p + 3] = step + step * uindex + s_pixel_size;
-                this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex) - t_pixel_size;
-                // v1
-                this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x;
-                this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y;
-                this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z;
-                this.vertexPosition[qidx][20 * p + 8] = step + step * uindex + s_pixel_size;
-                this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex + t_pixel_size;
-                // v2
-                this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x;
-                this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y;
-                this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z;
-                this.vertexPosition[qidx][20 * p + 13] = step * uindex - s_pixel_size;
-                this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex + t_pixel_size;
-                // v3
-                this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x;
-                this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y;
-                this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z;
-                this.vertexPosition[qidx][20 * p + 18] = step * uindex - s_pixel_size;
-                this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex) - t_pixel_size;
-                p++;
-            }
-        }
-        this.vertexPositionBuffer[qidx] = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition[qidx], gl.STATIC_DRAW);
-    }
-    get inView() {
-        return this._inView;
-    }
-    moveToCache() {
-        // newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips)
-        this._tileBuffer.moveTileToCache(this._tileno, this._order, this._hips);
-        this._inView = false;
-        this.destroyIntervals();
-    }
-    amIStillInFoV() {
-        if (this._textureLoaded)
-            this._ready = true;
-        if (this._isGalacticHips) {
-            if (this._visibleTileManager.galAncestorsMap.has(this._order)) {
-                if (!this._visibleTileManager.galAncestorsMap.get(this._order).includes(this._tileno)) {
-                    this.moveToCache();
-                }
-                else {
-                    this._inView = true;
-                }
-            }
-            // if (visibleTilesManager.galAncestorsMap.has(this._order)) {
-            //   if (!visibleTilesManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
-            //     this.moveToCache()
-            //   } else {
-            //     this._inView = true
-            //   }
-            // }
-            if (this._order == this._visibleTileManager.visibleOrder) {
-                if (!this._visibleTileManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
-                    this.moveToCache();
-                }
-                else {
-                    this._inView = true;
-                }
-            }
-            // if (this._order == visibleTilesManager.visibleOrder) {
-            //   if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
-            //     this.moveToCache()
-            //   } else {
-            //     this._inView = true
-            //   }
-            // }
-        }
-        else {
-            if (this._visibleTileManager.ancestorsMap.has(this._order)) {
-                if (!this._visibleTileManager.ancestorsMap.get(this._order).includes(this._tileno)) {
-                    this.moveToCache();
-                }
-                else {
-                    this._inView = true;
-                }
-            }
-            // if (visibleTilesManager.ancestorsMap.has(this._order)) {
-            //   if (!visibleTilesManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
-            //     this.moveToCache()
-            //   } else {
-            //     this._inView = true
-            //   }
-            // }
-            if (this._order == this._visibleTileManager.visibleOrder) {
-                if (!this._visibleTileManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
-                    this.moveToCache();
-                }
-                else {
-                    this._inView = true;
-                }
-            }
-            // if (this._order == visibleTilesManager.visibleOrder) {
-            //   if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
-            //     this.moveToCache()
-            //   } else {
-            //     this._inView = true
-            //   }
-            // }
-        }
-    }
-    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram) {
-        if (!this._ready || this._abort)
-            return;
-        if (!this._textureLoaded) {
-            this.textureLoaded(hipsShaderProgram);
-        }
-        let quadrantsToDraw = new Set([0, 1, 2, 3]);
-        if (visibleOrder > this._order && this._order < this._maxorder) {
-            // const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
-            const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram);
-            if (kids)
-                quadrantsToDraw = kids;
-        }
-        const gl = this._webgl;
-        hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        // this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
-        // Enable attributes (these locations are retrieved in enableShaders)
-        // gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
-        // gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        // gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity)
-        gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        const elemno = this.vertexIndices.length;
-        const indexType = this.vertexIndices instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
-        quadrantsToDraw.forEach((qidx) => {
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-            gl.vertexAttribPointer(
-            // this._hipsShaderProgram.locations.vertexPositionAttribute,
-            hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-            gl.vertexAttribPointer(
-            // this._hipsShaderProgram.locations.textureCoordAttribute,
-            hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
-            gl.drawElements(gl.TRIANGLES, elemno, indexType, 0);
-        });
-        // gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
-        // gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
-    }
-    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram) {
-        const quadrantsToDraw = new Set([0, 1, 2, 3]);
-        const childrenOrder = this._order + 1;
-        if (!visibleTilesMap.has(childrenOrder))
-            return;
-        for (let c = 0; c < 4; c++) {
-            const childTileNo = (this._tileno << 2) + c;
-            const list = visibleTilesMap.get(childrenOrder);
-            if (list.includes(childTileNo)) {
-                const childTile = this._isGalacticHips
-                    ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-                    : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
-                // const childTile = this._isGalacticHips
-                //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-                //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
-                // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
-                childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram);
-                if (childTile._ready) {
-                    quadrantsToDraw.delete(childTileNo - (this._tileno << 2));
-                }
-            }
-        }
-        return quadrantsToDraw;
-    }
-}
-exports["default"] = Tile;
-
-
-/***/ }),
-
-/***/ 330:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZTileProvider = void 0;
-const Global_js_1 = __importDefault(__webpack_require__(382));
-const MAX_MERCATOR_LAT = 85.0511287798066;
-class XYZTileProvider {
-    _config;
-    constructor(config) {
-        this._config = config;
-    }
-    get config() {
-        return this._config;
-    }
-    get minZoom() {
-        return Math.max(0, Math.floor(this._config.minZoom ?? 0));
-    }
-    get maxZoom() {
-        return Math.max(this.minZoom, Math.floor(this._config.maxZoom ?? 6));
-    }
-    getInitialTiles() {
-        return this.getVisibleTilesAtZoom(1, null, [], [], 1);
-    }
-    getTileUrl(tile) {
-        return this._config.urlTemplate
-            .replace(/\{z\}/g, String(tile.z))
-            .replace(/\{x\}/g, String(tile.x))
-            .replace(/\{y\}/g, String(tile.y));
-    }
-    resolveZoom(fovDeg) {
-        const safeFov = Math.max(0.01, Math.min(180, fovDeg));
-        const targetTileWidthDeg = Math.max(0.01, safeFov / 2);
-        const rawZoom = Math.ceil(Math.log2(360 / targetTileWidthDeg));
-        return this.clampZoom(rawZoom);
-    }
-    clampZoom(zoom) {
-        return Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
-    }
-    getVisibleTilesAtZoom(z, centerSphericalDeg, fovPolygon, viewportSphericalSamples, padding = 1) {
-        const dim = 2 ** z;
-        const center = this.resolveViewCenter(null, centerSphericalDeg);
-        const normalizedCenterLon = this.normalizeLonAround(center.lonDeg, center.lonDeg);
-        const polygonPoints = fovPolygon.length > 0
-            ? fovPolygon.map((point) => ({
-                lonDeg: this.normalizeLonAround(point.raDeg > 180 ? point.raDeg - 360 : point.raDeg, normalizedCenterLon),
-                latDeg: point.decDeg,
-            }))
-            : [center];
-        const samplePoints = viewportSphericalSamples.map((sample) => ({
-            lonDeg: this.normalizeLonAround(sample.phi > 180 ? sample.phi - 360 : sample.phi, normalizedCenterLon),
-            latDeg: 90 - sample.theta,
-        }));
-        const coveragePoints = [center, ...polygonPoints, ...samplePoints];
-        let minLon = normalizedCenterLon;
-        let maxLon = normalizedCenterLon;
-        let minLat = center.latDeg;
-        let maxLat = center.latDeg;
-        for (const point of coveragePoints) {
-            minLon = Math.min(minLon, point.lonDeg);
-            maxLon = Math.max(maxLon, point.lonDeg);
-            minLat = Math.min(minLat, point.latDeg);
-            maxLat = Math.max(maxLat, point.latDeg);
-        }
-        const adaptivePadding = Math.max(padding, Math.min(3, Math.max(1, Math.ceil(z / 3))));
-        const minX = Math.floor(((minLon + 180) / 360) * dim) - adaptivePadding;
-        const maxX = Math.floor(((maxLon + 180) / 360) * dim) + adaptivePadding;
-        const minY = Math.floor(this.latToTileY(maxLat, z)) - adaptivePadding;
-        const maxY = Math.floor(this.latToTileY(minLat, z)) + adaptivePadding;
-        const tiles = [];
-        for (let x = minX; x <= maxX; x++) {
-            for (let y = minY; y <= maxY; y++) {
-                tiles.push({
-                    z,
-                    x: this.wrapTileX(x, dim),
-                    y: this.clampTileY(y, dim),
-                });
-            }
-        }
-        for (const point of coveragePoints) {
-            const centerTileX = Math.floor(((point.lonDeg + 180) / 360) * dim);
-            const centerTileY = Math.floor(this.latToTileY(point.latDeg, z));
-            for (let dx = -adaptivePadding; dx <= adaptivePadding; dx++) {
-                for (let dy = -adaptivePadding; dy <= adaptivePadding; dy++) {
-                    tiles.push({
-                        z,
-                        x: this.wrapTileX(centerTileX + dx, dim),
-                        y: this.clampTileY(centerTileY + dy, dim),
-                    });
-                }
-            }
-        }
-        return this.deduplicateTiles(tiles);
-    }
-    resolveViewCenter(camera, centerSphericalDeg) {
-        if (centerSphericalDeg) {
-            return {
-                lonDeg: centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi,
-                latDeg: 90 - centerSphericalDeg.theta,
-            };
-        }
-        if (!camera) {
-            return { lonDeg: 0, latDeg: 0 };
-        }
-        const [x, y, z] = camera.getCameraPosition();
-        const len = Math.hypot(x, y, z);
-        if (!Number.isFinite(len) || len === 0) {
-            return { lonDeg: 0, latDeg: 0 };
-        }
-        const scale = Global_js_1.default.insideSphere ? 1 / len : -1 / len;
-        const vx = x * scale;
-        const vy = y * scale;
-        const vz = z * scale;
-        const lonDeg = (Math.atan2(vy, vx) * 180) / Math.PI;
-        const latDeg = (Math.asin(Math.max(-1, Math.min(1, vz))) * 180) / Math.PI;
-        return { lonDeg, latDeg };
-    }
-    latToTileY(latDeg, z) {
-        const lat = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, latDeg));
-        const latRad = (lat * Math.PI) / 180;
-        const n = 2 ** z;
-        return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * n;
-    }
-    wrapTileX(x, dim) {
-        return ((x % dim) + dim) % dim;
-    }
-    normalizeLonAround(lonDeg, referenceLonDeg) {
-        let lon = lonDeg;
-        while (lon - referenceLonDeg > 180)
-            lon -= 360;
-        while (lon - referenceLonDeg < -180)
-            lon += 360;
-        return lon;
-    }
-    clampTileY(y, dim) {
-        return Math.max(0, Math.min(dim - 1, y));
-    }
-    deduplicateTiles(tiles) {
-        const unique = new Map();
-        for (const tile of tiles) {
-            unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
-        }
-        return Array.from(unique.values());
-    }
-}
-exports.XYZTileProvider = XYZTileProvider;
-
-
-/***/ }),
-
-/***/ 361:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-/**
- * @author Fabrizio Giordano (Fab)
- * @param in_radius - number
- * @param in_gl - GL context
- * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-class GridTextHelper {
-    _divEqContainerElement;
-    _divHPXContainerElement;
-    _divSets;
-    _divSetNdx;
-    constructor() {
-        this._divEqContainerElement = document.querySelector('#gridcoords');
-        this._divHPXContainerElement = document.querySelector('#gridhpx');
-        this._divSetNdx = 0;
-        this._divSets = [];
-    }
-    initHtml() {
-        // Kept for API parity; nothing required here with current logic.
-    }
-    resetDivSets() {
-        // Hide remaining divs and reset index
-        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
-            this._divSets[this._divSetNdx].style.display = 'none';
-        }
-        this._divSetNdx = 0;
-    }
-    /**
-     * Add / reuse a floating label for HPX coordinates
-     */
-    addHPXDivSet(msg, x, y) {
-        let divSet = this._divSets[this._divSetNdx++];
-        // Create on demand
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = 'floating-div-ra'; // style like RA tags
-            div.appendChild(textNode);
-            if (!this._divHPXContainerElement) {
-                this._divHPXContainerElement = document.querySelector('#gridhpx');
-            }
-            if (!this._divHPXContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divHPXContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
-        }
-        // Show & position
-        divSet.style.display = 'block';
-        divSet.style.left = `${Math.floor(x + 25)}px`;
-        divSet.style.top = `${Math.floor(y)}px`;
-        divSet.textNode.nodeValue = msg;
-    }
-    /**
-     * Add / reuse a floating label for Equatorial coords
-     * @param type 'ra' or 'dec'
-     */
-    addEqDivSet(msg, x, y, type) {
-        let divSet = this._divSets[this._divSetNdx++];
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
-            div.appendChild(textNode);
-            if (!this._divEqContainerElement) {
-                this._divEqContainerElement = document.querySelector('#gridcoords');
-            }
-            if (!this._divEqContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divEqContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
-        }
-        divSet.style.display = 'block';
-        if (type === 'ra') {
-            divSet.style.left = `${Math.floor(x + 25)}px`;
-            divSet.style.top = `${Math.floor(y)}px`;
-        }
-        else {
-            divSet.style.left = `${Math.floor(x)}px`;
-            divSet.style.top = `${Math.floor(y + 25)}px`;
-        }
-        divSet.textNode.nodeValue = msg;
-    }
-}
-// export const gridTextHelper = new GridTextHelper();
-exports["default"] = GridTextHelper;
-
-
-/***/ }),
-
-/***/ 368:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const Global_js_1 = __importDefault(__webpack_require__(382));
-class AllSky {
-    _ready = false;
-    _hips;
-    _format;
-    _baseurl;
-    _isGalacticHips;
-    _order = 3;
-    opacity = 1.0;
-    _hipsShaderIndex = 0;
-    _texture = null;
-    _image;
-    _texurl;
-    _textureLoaded = false;
-    _maxTiles = 0;
-    _numFacesXTile = 0;
-    _numFaces = 0;
-    vertexPosition;
-    vertexPositionBuffer;
-    vertexIndexBuffer;
-    vidx = 0;
-    _webgl;
-    _tileBuffer;
-    _hipsShaderProgram;
-    constructor(hips, webgl, tileBuffer, hipsShaderProgram) {
-        this._tileBuffer = tileBuffer;
-        this._hips = hips;
-        this._webgl = webgl;
-        this._format = hips.format;
-        this._baseurl = hips.baseURL;
-        this._isGalacticHips = hips.isGalacticHips;
-        this._hipsShaderProgram = hipsShaderProgram;
-        this.initImage();
-    }
-    initImage() {
-        this._image = new Image();
-        this._texurl = `${this._baseurl}/Norder3/Allsky.${this._format}`;
-        this._image.onload = () => this.imageLoaded();
-        this._image.onerror = () => {
-            console.error('File not found? %s', this._texurl);
-        };
-        this._image.setAttribute('crossorigin', 'anonymous');
-        this._image.src = this._texurl;
-    }
-    imageLoaded() {
-        this.textureLoaded();
-        this.initModelBuffer();
-        this._textureLoaded = true;
-        this._ready = true;
-    }
-    textureLoaded() {
-        // hipsShaderProgram.enableProgram()
-        this._hipsShaderProgram.enableProgram();
-        const gl = this._webgl;
-        this._texture = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        // gl.uniform1i(hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex)
-        if (!gl.isTexture(this._texture)) {
-            console.log('error in texture');
-        }
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        const useMipmaps = true;
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, useMipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
-        // MAG filter: ONLY NEAREST or LINEAR are valid
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_LINEAR)
-        // gl.generateMipmap(gl.TEXTURE_2D)
-        if (useMipmaps)
-            gl.generateMipmap(gl.TEXTURE_2D);
-    }
-    initModelBuffer() {
-        const gl = this._webgl;
-        const orderjump = 1;
-        const tgtHpxOrder = this._order + orderjump;
-        const healpix = Global_js_1.default.getHealpix(this._order);
-        this._maxTiles = healpix.getNPix();
-        const tgtHealpix = Global_js_1.default.getHealpix(tgtHpxOrder);
-        this._numFacesXTile = 4 ** orderjump; // used in gl.draw
-        this._numFaces = this._numFacesXTile * this._maxTiles;
-        this.vertexPosition = new Float32Array(20 * this._numFaces);
-        let sindex = 0;
-        let tindex = 0;
-        this.vidx = 0;
-        for (let t = 0; t < this._maxTiles; t++) {
-            const xyf = healpix.nest2xyf(t);
-            const dxmin = xyf.ix << orderjump;
-            const dxmax = (xyf.ix << orderjump) + (1 << orderjump);
-            const dymin = xyf.iy << orderjump;
-            const dymax = (xyf.iy << orderjump) + (1 << orderjump);
-            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, tgtHealpix, xyf, 0, 0);
-            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, tgtHealpix, xyf, 0, 1);
-            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, tgtHealpix, xyf, 1, 0);
-            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin + (dxmax - dxmin) / 2, dxmax, dymin + (dymax - dymin) / 2, dymax, tgtHealpix, xyf, 1, 1);
-            sindex++;
-            if (sindex === 27) {
-                tindex++;
-                sindex = 0;
-            }
-        }
-        const vertexIndices = new Uint16Array(6 * this._numFaces);
-        let baseFaceIndex = 0;
-        for (let i = 0; i < this._numFaces; i++) {
-            vertexIndices[6 * i] = baseFaceIndex;
-            vertexIndices[6 * i + 1] = baseFaceIndex + 1;
-            vertexIndices[6 * i + 2] = baseFaceIndex + 3;
-            vertexIndices[6 * i + 3] = baseFaceIndex + 1;
-            vertexIndices[6 * i + 4] = baseFaceIndex + 2;
-            vertexIndices[6 * i + 5] = baseFaceIndex + 3;
-            baseFaceIndex += 4;
-        }
-        this.vertexPositionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition, gl.STATIC_DRAW);
-        this.vertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexIndices, gl.STATIC_DRAW);
-    }
-    setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmax, dymin, dymax, tgthealpix, xyf, qx, qy) {
-        let facesVec3Array = [];
-        const factor = 2 ** (tgthealpix.order - 3);
-        const s_step = 1 / (27 * factor); // 0.037037037...
-        const t_step = 1 / (29 * factor); // 0.034482759...
-        const s_pixel_size = s_step / 64;
-        const t_pixel_size = t_step / 64;
-        const base_s = factor * s_step * sindex + s_step * qx;
-        const base_t = factor * t_step * tindex + t_step * qy;
-        for (let dx = dxmin; dx < dxmax; dx++) {
-            for (let dy = dymin; dy < dymax; dy++) {
-                facesVec3Array = tgthealpix.getPointsForXyfNoStep(dx, dy, xyf.face);
-                // bottom right
-                this.vertexPosition[20 * this.vidx] = facesVec3Array[0].x;
-                this.vertexPosition[20 * this.vidx + 1] = facesVec3Array[0].y;
-                this.vertexPosition[20 * this.vidx + 2] = facesVec3Array[0].z;
-                this.vertexPosition[20 * this.vidx + 3] = s_step + base_s - s_pixel_size;
-                this.vertexPosition[20 * this.vidx + 4] = 1 - (t_step + base_t) + t_pixel_size;
-                // top right
-                this.vertexPosition[20 * this.vidx + 5] = facesVec3Array[1].x;
-                this.vertexPosition[20 * this.vidx + 6] = facesVec3Array[1].y;
-                this.vertexPosition[20 * this.vidx + 7] = facesVec3Array[1].z;
-                this.vertexPosition[20 * this.vidx + 8] = s_step + base_s - s_pixel_size;
-                this.vertexPosition[20 * this.vidx + 9] = 1 - base_t - t_pixel_size;
-                // top left
-                this.vertexPosition[20 * this.vidx + 10] = facesVec3Array[2].x;
-                this.vertexPosition[20 * this.vidx + 11] = facesVec3Array[2].y;
-                this.vertexPosition[20 * this.vidx + 12] = facesVec3Array[2].z;
-                this.vertexPosition[20 * this.vidx + 13] = base_s + s_pixel_size;
-                this.vertexPosition[20 * this.vidx + 14] = 1 - base_t - t_pixel_size;
-                // bottom left
-                this.vertexPosition[20 * this.vidx + 15] = facesVec3Array[3].x;
-                this.vertexPosition[20 * this.vidx + 16] = facesVec3Array[3].y;
-                this.vertexPosition[20 * this.vidx + 17] = facesVec3Array[3].z;
-                this.vertexPosition[20 * this.vidx + 18] = base_s + s_pixel_size;
-                this.vertexPosition[20 * this.vidx + 19] = 1 - (t_step + base_t) + t_pixel_size;
-                this.vidx++;
-            }
-        }
-    }
-    /**
-     * Renders the all-sky layer and, when available, delegates to higher-resolution child tiles.
-     * Returns `true` if it attempted to draw (ready), `false` if still not ready.
-     */
-    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        if (!this._ready)
-            return false;
-        let allSkyTiles2Skip = [];
-        if (visibleOrder >= this._order) {
-            const skipped = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
-            if (skipped)
-                allSkyTiles2Skip = skipped;
-        }
-        const gl = this._webgl;
-        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
-        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
-        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
-        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        // gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity)
-        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        gl.vertexAttribPointer(
-        // hipsShaderProgram.locations.vertexPositionAttribute,
-        this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-        gl.vertexAttribPointer(
-        // hipsShaderProgram.locations.textureCoordAttribute,
-        this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
-        for (let t = 0; t < this._maxTiles; t++) {
-            if (!allSkyTiles2Skip.includes(t)) {
-                gl.drawElements(gl.TRIANGLES, 6 * this._numFacesXTile, gl.UNSIGNED_SHORT, 12 * t * this._numFacesXTile);
-            }
-        }
-        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
-        // gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute)
-        // gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute)
-        return true;
-    }
-    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        const childrenOrder = this._order;
-        if (!visibleTilesMap.has(childrenOrder))
-            return;
-        const visibleTiles = visibleTilesMap.get(childrenOrder);
-        const allSkyTiles2Skip = [];
-        for (let i = 0; i < visibleTiles.length; i++) {
-            const tileno = visibleTiles[i];
-            const childTile = this._isGalacticHips
-                ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-                : this._tileBuffer.getTile(tileno, childrenOrder, this._hips);
-            // const childTile = this._isGalacticHips
-            //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-            //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
-            // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
-            childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram);
-            if (childTile.getReadyState()) {
-                allSkyTiles2Skip.push(tileno);
-            }
-        }
-        return allSkyTiles2Skip;
-    }
-}
-exports["default"] = AllSky;
-
-
-/***/ }),
-
-/***/ 375:
+/***/ 1375:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZTile = void 0;
-const XYZTileRequestScheduler_js_1 = __webpack_require__(409);
+const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
 class XYZTile {
     _coord;
     _url;
@@ -3971,7 +4780,6 @@ class XYZTile {
         webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
         webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
         webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
-        this.loadTexture();
     }
     get ready() {
         return this._ready;
@@ -3994,7 +4802,10 @@ class XYZTile {
     touch() {
         this._lastUsedAt = Date.now();
     }
-    loadTexture() {
+    primeLoad(priority = 0) {
+        this.loadTexture(priority);
+    }
+    loadTexture(priority = 0) {
         if (this._loading || this._ready || this._aborted) {
             return;
         }
@@ -4003,7 +4814,7 @@ class XYZTile {
             return;
         }
         this._loading = true;
-        XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.load(this._url)
+        XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.load(this._url, priority)
             .then((blob) => this.loadImageFromBlob(blob))
             .catch((error) => {
             this._loading = false;
@@ -4020,7 +4831,7 @@ class XYZTile {
         image.onerror = () => {
             this._loading = false;
             this._ready = false;
-            this._failedUntil = Date.now() + 10000;
+            this._failedUntil = Date.now() + 30000;
             this.revokeObjectUrl();
         };
         image.src = this._objectUrl;
@@ -4048,10 +4859,10 @@ class XYZTile {
         this._ready = true;
         this.revokeObjectUrl();
     }
-    draw(pMatrix, vMatrix, mMatrix) {
+    draw(pMatrix, vMatrix, mMatrix, priority = 0) {
         this.touch();
         if (!this._ready) {
-            this.loadTexture();
+            this.loadTexture(priority);
         }
         if (!this._ready || !this._texture) {
             return;
@@ -4106,7606 +4917,7 @@ exports.XYZTile = XYZTile;
 
 /***/ }),
 
-/***/ 382:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const healpixjs_1 = __webpack_require__(138);
-const Config_js_1 = __webpack_require__(919);
-class Global {
-    // --- cached / runtime state ---
-    // private _camera: Camera | null;
-    // private _gl: GL | null;
-    _healpix;
-    // --- config/state flags ---
-    _selectionnside;
-    // private _healpix4footprints: boolean;
-    _useCORSProxy;
-    _corsProxyUrl;
-    _maxDecimals;
-    _debug;
-    _insideSphere;
-    _version;
-    constructor() {
-        this._useCORSProxy = Config_js_1.bootSetup.useCORSProxy;
-        this._corsProxyUrl = Config_js_1.bootSetup.corsProxyUrl;
-        this._maxDecimals = Config_js_1.bootSetup.maxDecimals;
-        this._debug = Config_js_1.bootSetup.debug;
-        this._insideSphere = Config_js_1.bootSetup.insideView;
-        this._version = Config_js_1.bootSetup.version;
-        this._healpix = {};
-        this._selectionnside = 32;
-    }
-    init() {
-        console.log('Global.init()');
-    }
-    // --- getters/setters ---
-    get version() { return this._version; }
-    set corsProxyUrl(url) { this._corsProxyUrl = url; }
-    get corsProxyUrl() { return this._corsProxyUrl; }
-    get useCORSProxy() { return this._useCORSProxy; }
-    set useCORSProxy(enabled) { this._useCORSProxy = enabled; }
-    get debug() { return this._debug; }
-    getHealpix(order) {
-        if (this._healpix[order] === undefined) {
-            // order is HEALPix "order" ⇒ nside = 2^order
-            this._healpix[order] = new healpixjs_1.Healpix(Math.pow(2, order));
-        }
-        return this._healpix[order];
-    }
-    get MAX_DECIMALS() { return this._maxDecimals; }
-    set insideSphere(v) { this._insideSphere = v; }
-    get insideSphere() { return this._insideSphere; }
-    get nsideForSelection() { return this._selectionnside; }
-}
-const global = new Global();
-exports["default"] = global;
-
-
-/***/ }),
-
-/***/ 396:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-/**
- * @author Fabrizio Giordano (Fab)
- */
-const gl_matrix_1 = __webpack_require__(961);
-const healpixjs_1 = __webpack_require__(138);
-const Global_js_1 = __importDefault(__webpack_require__(382));
-const Utils_js_1 = __webpack_require__(930);
-function toVec3(p) {
-    return Array.isArray(p) ? gl_matrix_1.vec3.fromValues(p[0], p[1], p[2]) : p;
-}
-class MouseHelper {
-    _xyz = null;
-    _raDecDeg = null;
-    _phiThetaDeg = null;
-    raHMS;
-    decDMS;
-    /**
-     * @param in_xyz [x, y, z]
-     * @param in_raDecDeg { ra, dec } in degrees (ICRS/J2000)
-     * @param in_phiThetaDeg { phi, theta } in degrees (spherical)
-     */
-    constructor(in_xyz, in_raDecDeg, in_phiThetaDeg) {
-        if (in_xyz != null)
-            this._xyz = in_xyz;
-        if (in_raDecDeg != null)
-            this._raDecDeg = in_raDecDeg;
-        if (in_phiThetaDeg != null)
-            this._phiThetaDeg = in_phiThetaDeg;
-        if (this._raDecDeg) {
-            this.raHMS = (0, Utils_js_1.raDegToHMS)(this._raDecDeg.ra);
-            this.decDMS = (0, Utils_js_1.decDegToDMS)(this._raDecDeg.dec);
-        }
-    }
-    /** (Formerly `computeNpix256`) Uses global.nsideForSelection. */
-    computeNpix() {
-        if (!this._xyz)
-            return null;
-        const hp = Global_js_1.default.getHealpix(Global_js_1.default.nsideForSelection);
-        const v = new healpixjs_1.Vec3(this._xyz[0], this._xyz[1], this._xyz[2]);
-        const ptg = new healpixjs_1.Pointing(v, false);
-        return hp.ang2pix(ptg, false);
-    }
-    /** Update helper state from a world-space 3D point on the unit sphere. */
-    update(mousePoint) {
-        const mp = toVec3(mousePoint);
-        const sph = (0, Utils_js_1.cartesianToSpherical)(mp);
-        const radec = (0, Utils_js_1.sphericalToAstroDeg)(sph.phi, sph.theta);
-        this._xyz = [mp[0], mp[1], mp[2]];
-        this._phiThetaDeg = sph;
-        this._raDecDeg = radec;
-        this.raHMS = (0, Utils_js_1.raDegToHMS)(radec.ra);
-        this.decDMS = (0, Utils_js_1.decDegToDMS)(radec.dec);
-    }
-    clear() {
-        this._xyz = null;
-        this._raDecDeg = null;
-        this._phiThetaDeg = null;
-        this.raHMS = undefined;
-        this.decDMS = undefined;
-    }
-    // --- getters ---
-    get xyz() {
-        return this._xyz;
-    }
-    get x() {
-        return this._xyz ? this._xyz[0] : null;
-    }
-    get y() {
-        return this._xyz ? this._xyz[1] : null;
-    }
-    get z() {
-        return this._xyz ? this._xyz[2] : null;
-    }
-    get ra() {
-        return this._raDecDeg ? this._raDecDeg.ra : null;
-    }
-    get dec() {
-        return this._raDecDeg ? this._raDecDeg.dec : null;
-    }
-    get phi() {
-        return this._phiThetaDeg ? this._phiThetaDeg.phi : null;
-    }
-    get theta() {
-        return this._phiThetaDeg ? this._phiThetaDeg.theta : null;
-    }
-    get raDecDeg() {
-        return this._raDecDeg;
-    }
-    get phiThetaDeg() {
-        return this._phiThetaDeg;
-    }
-}
-exports["default"] = MouseHelper;
-
-
-/***/ }),
-
-/***/ 403:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.MetadataManager = void 0;
-const MetadataColumn_js_1 = __webpack_require__(72);
-class MetadataManager {
-    static STANDARD_SIZE = "STANDARD_SIZE";
-    static STANDARD_HUE = "STANDARD_HUE";
-    _outlineColumnList = [];
-    _raColumnList = [];
-    _decColumnList = [];
-    _shapeColumnList = [];
-    _hueColumnList = [];
-    _selectedOutlineColumn;
-    _selectedRaColumn;
-    _selectedDecColumn;
-    _selectedShapeColumn;
-    _selectedHueColumn;
-    _selectedNameColumn;
-    _columns = [];
-    constructor(metadataColumns) {
-        metadataColumns.forEach(c => {
-            if (c.columnType == MetadataColumn_js_1.ColumnType.NUMBER) {
-                this.addHueColumn(c);
-                this.addShapeColumn(c);
-            }
-            if (c.columnType == MetadataColumn_js_1.ColumnType.GEOM_RA) {
-                this.addRaColumn(c);
-            }
-            if (c.columnType == MetadataColumn_js_1.ColumnType.GEOM_DEC) {
-                this.addDecColumn(c);
-            }
-            if (c.columnType == MetadataColumn_js_1.ColumnType.GEOM_FOOTPRINT) {
-                this.addOutlineColumn(c);
-            }
-            if (c.columnType == MetadataColumn_js_1.ColumnType.MAIN_NAME) {
-                this._selectedNameColumn = c;
-            }
-            this._columns.push(c);
-        });
-        // if (!this._selectedNameColumn) {
-        //     throw new Error("No name column found")
-        // }
-    }
-    addOutlineColumn(outlineColumn) {
-        this._outlineColumnList.push(outlineColumn);
-        this._selectedOutlineColumn = outlineColumn;
-    }
-    addRaColumn(column) {
-        this._selectedRaColumn = this._selectedRaColumn || column;
-        this._raColumnList.push(column);
-    }
-    addDecColumn(column) {
-        this._selectedDecColumn = this._selectedDecColumn || column;
-        this._decColumnList.push(column);
-    }
-    addHueColumn(column) {
-        this._hueColumnList.push(column);
-    }
-    addShapeColumn(column) {
-        this._shapeColumnList.push(column);
-    }
-    get selectedRaColumn() {
-        return this._selectedRaColumn;
-    }
-    get selectedDecColumn() {
-        return this._selectedDecColumn;
-    }
-    get selectedHueColumn() {
-        return this._selectedHueColumn;
-    }
-    get selectedShapeColumn() {
-        return this._selectedShapeColumn;
-    }
-    get selectedOutlineColumn() {
-        return this._selectedOutlineColumn;
-    }
-    get selectedNameColumn() {
-        return this._selectedNameColumn;
-    }
-    get columns() {
-        return this._columns;
-    }
-    get raColumnList() {
-        return this._raColumnList;
-    }
-    get decColumnList() {
-        return this._decColumnList;
-    }
-    get outlineColumnList() {
-        return this._outlineColumnList;
-    }
-    get hueColumnList() {
-        return this._hueColumnList;
-    }
-    get shapeColumnList() {
-        return this._shapeColumnList;
-    }
-    set selectedRaColumn(columnName) {
-        this._selectedRaColumn = this._raColumnList.find(c => c.name === columnName) || this._selectedRaColumn;
-    }
-    set selectedDecColumn(columnName) {
-        this._selectedDecColumn = this._decColumnList.find(c => c.name === columnName) || this._selectedDecColumn;
-    }
-    set selectedHueColumn(columnName) {
-        this._selectedHueColumn = this._hueColumnList.find(c => c.name === columnName);
-    }
-    set selectedShapeColumn(columnName) {
-        this._selectedShapeColumn = this._shapeColumnList.find(c => c.name === columnName);
-    }
-    set selectedNameColumn(columnName) {
-        this._selectedNameColumn = this._shapeColumnList.find(c => c.name === columnName);
-    }
-    resetShapeColumn() {
-        this._selectedShapeColumn = undefined;
-    }
-    resetHueColumn() {
-        this._selectedHueColumn = undefined;
-    }
-}
-exports.MetadataManager = MetadataManager;
-
-
-/***/ }),
-
-/***/ 409:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.xyzTileRequestScheduler = exports.XYZTileRequestScheduler = exports.XYZTileRequestError = void 0;
-class XYZTileRequestError extends Error {
-    cooldownMs;
-    constructor(message, cooldownMs) {
-        super(message);
-        this.name = 'XYZTileRequestError';
-        this.cooldownMs = cooldownMs;
-    }
-}
-exports.XYZTileRequestError = XYZTileRequestError;
-class XYZTileRequestScheduler {
-    _maxConcurrent;
-    _activeCount = 0;
-    _queue = [];
-    _inflight = new Map();
-    _hostBackoff = new Map();
-    constructor(maxConcurrent = 4) {
-        this._maxConcurrent = maxConcurrent;
-    }
-    setMaxConcurrent(maxConcurrent) {
-        this._maxConcurrent = Math.max(1, Math.floor(maxConcurrent));
-        this.pump();
-    }
-    getMaxConcurrent() {
-        return this._maxConcurrent;
-    }
-    getDebugStats() {
-        const now = Date.now();
-        const hostsInBackoff = Array.from(this._hostBackoff.entries())
-            .map(([host, state]) => ({
-            host,
-            cooldownMs: Math.max(0, state.cooldownUntil - now),
-            consecutiveFailures: state.consecutiveFailures,
-        }))
-            .filter((entry) => entry.cooldownMs > 0 || entry.consecutiveFailures > 0)
-            .sort((a, b) => b.cooldownMs - a.cooldownMs);
-        return {
-            activeRequests: this._activeCount,
-            queuedRequests: this._queue.length,
-            inflightRequests: this._inflight.size,
-            maxConcurrentRequests: this._maxConcurrent,
-            hostsInBackoff,
-        };
-    }
-    load(url) {
-        const inflight = this._inflight.get(url);
-        if (inflight) {
-            return inflight;
-        }
-        const hostCooldown = this.getHostCooldown(url);
-        const now = Date.now();
-        if (hostCooldown > now) {
-            return Promise.reject(new XYZTileRequestError(`Cooldown active for ${new URL(url).host}`, hostCooldown - now));
-        }
-        const promise = new Promise((resolve, reject) => {
-            this._queue.push({ url, resolve, reject });
-            this.pump();
-        }).finally(() => {
-            this._inflight.delete(url);
-        });
-        this._inflight.set(url, promise);
-        return promise;
-    }
-    pump() {
-        while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
-            const item = this._queue.shift();
-            if (!item) {
-                return;
-            }
-            const hostCooldown = this.getHostCooldown(item.url);
-            const now = Date.now();
-            if (hostCooldown > now) {
-                item.reject(new XYZTileRequestError(`Cooldown active for ${new URL(item.url).host}`, hostCooldown - now));
-                continue;
-            }
-            this._activeCount += 1;
-            this.fetchBlob(item)
-                .then(item.resolve)
-                .catch(item.reject)
-                .finally(() => {
-                this._activeCount -= 1;
-                this.pump();
-            });
-        }
-    }
-    async fetchBlob(item) {
-        try {
-            const response = await fetch(item.url, {
-                mode: 'cors',
-                cache: 'force-cache',
-            });
-            if (!response.ok) {
-                const cooldownMs = this.registerFailure(item.url, response.status === 429);
-                throw new XYZTileRequestError(`HTTP ${response.status} loading ${item.url}`, cooldownMs);
-            }
-            this.registerSuccess(item.url);
-            return await response.blob();
-        }
-        catch (error) {
-            if (error instanceof XYZTileRequestError) {
-                throw error;
-            }
-            const cooldownMs = this.registerFailure(item.url, false);
-            throw new XYZTileRequestError(`Network/CORS failure loading ${item.url}`, cooldownMs);
-        }
-    }
-    getHostCooldown(url) {
-        try {
-            return this._hostBackoff.get(new URL(url).host)?.cooldownUntil ?? 0;
-        }
-        catch {
-            return 0;
-        }
-    }
-    registerSuccess(url) {
-        try {
-            const host = new URL(url).host;
-            this._hostBackoff.set(host, {
-                cooldownUntil: 0,
-                consecutiveFailures: 0,
-            });
-        }
-        catch {
-            // no-op
-        }
-    }
-    registerFailure(url, isRateLimited) {
-        try {
-            const host = new URL(url).host;
-            const previous = this._hostBackoff.get(host) ?? {
-                cooldownUntil: 0,
-                consecutiveFailures: 0,
-            };
-            const consecutiveFailures = previous.consecutiveFailures + 1;
-            const baseDelayMs = isRateLimited ? 4000 : 1500;
-            const cooldownMs = Math.min(isRateLimited ? 120000 : 30000, baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)));
-            this._hostBackoff.set(host, {
-                cooldownUntil: Date.now() + cooldownMs,
-                consecutiveFailures,
-            });
-            return cooldownMs;
-        }
-        catch {
-            return isRateLimited ? 30000 : 10000;
-        }
-    }
-}
-exports.XYZTileRequestScheduler = XYZTileRequestScheduler;
-exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
-
-
-/***/ }),
-
-/***/ 475:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = void 0;
-/**
- * @author Fabrizio Giordano (Fab)
- */
-// import { Pointing, Healpix } from 'healpixjs';
-// import { degToRad } from '../../utils/Utils.js';
-const GeomUtils_js_1 = __importDefault(__webpack_require__(549));
-// import global from '../../Global.js';
-const STCSParser_js_1 = __importDefault(__webpack_require__(665));
-// export interface ParsedSTCS {
-//   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
-//   totpoints: number;
-// }
-class Footprint {
-    _polygons = []; // array of polygons (-> array of points)
-    _convexPolygons = []; // convex polygons
-    _stcs; // STC-S string
-    _valid = false;
-    _details;
-    _totPoints = 0;
-    _totConvexPoints = 0;
-    _npix256;
-    _footprintsPointsOrder;
-    _selectionObj;
-    _identifier;
-    _center; // could be typed if you have a Point type
-    /**
-     * @param in_stcs STC-S representation of the footprint
-     * @param in_details optional metadata
-     * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
-     */
-    constructor(in_stcs, in_details = [], footprintsPointsOrder) {
-        if (in_stcs) {
-            this._stcs = in_stcs.toUpperCase();
-            this._details = in_details;
-            this._totPoints = 0;
-            this._totConvexPoints = 0;
-            this._footprintsPointsOrder = footprintsPointsOrder;
-            this.computePoints();
-            this._selectionObj = this.computeSelectionObject();
-            this._valid = true;
-        }
-        else {
-            this._details = [];
-        }
-    }
-    computeSelectionObject() {
-        return GeomUtils_js_1.default.computeSelectionObject(this._polygons);
-    }
-    // /**
-    //  * Return array of HEALPix pixels covering the footprint
-    //  * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
-    //  */
-    // private computeNpix256(): number[] {
-    //   const healpix256 = new Healpix(global.nsideForSelection);
-    //   const points: Pointing[] = [];
-    //   for (const poly of this._convexPolygons) {
-    //     for (const currPoint of poly) {
-    //       const phiTheta = currPoint.computeHealpixPhiTheta();
-    //       const phiRad = degToRad(phiTheta.phi);
-    //       const thetaRad = degToRad(phiTheta.theta);
-    //       points.push(new Pointing(null, false, thetaRad, phiRad));
-    //     }
-    //   }
-    //   const rangeSet = healpix256.queryPolygonInclusive(points, 32);
-    //   return Array.from(rangeSet.r);
-    // }
-    computePoints() {
-        const res = STCSParser_js_1.default.parseSTCS(this._stcs);
-        this._polygons = res.polygons;
-        this._totPoints = res.totpoints;
-    }
-    get valid() {
-        return this._valid;
-    }
-    get totPoints() {
-        return this._totPoints;
-    }
-    get totConvexPoints() {
-        return this._totConvexPoints;
-    }
-    get polygons() {
-        return this._polygons;
-    }
-    get convexPolygons() {
-        return this._convexPolygons;
-    }
-    get identifier() {
-        return this._identifier;
-    }
-    get center() {
-        return this._center;
-    }
-    get pixels() {
-        return this._npix256;
-    }
-    get details() {
-        return this._details;
-    }
-    get selectionObj() {
-        return this._selectionObj;
-    }
-}
-exports.Footprint = Footprint;
-
-
-/***/ }),
-
-/***/ 502:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZLayer = void 0;
-const AbstractSkyEntity_js_1 = __webpack_require__(735);
-const XYZShaderProgram_js_1 = __webpack_require__(149);
-const XYZMeshBuilder_js_1 = __webpack_require__(819);
-const XYZTile_js_1 = __webpack_require__(375);
-const XYZTileProvider_js_1 = __webpack_require__(330);
-const XYZVisibleTilesManager_js_1 = __webpack_require__(937);
-class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
-    static DEFAULT_MAX_CACHED_TILES = 384;
-    _config;
-    _provider;
-    _visibleTilesManager;
-    _meshBuilder;
-    _xyzShaderProgram;
-    _tileCache = new Map();
-    _visibleTileKeys = [];
-    _tileSelectionKey = null;
-    constructor(config, webgl) {
-        super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false);
-        this._config = config;
-        this._provider = new XYZTileProvider_js_1.XYZTileProvider(config);
-        this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager(this._provider);
-        this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
-        this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
-        this.initGL(webgl);
-        this.bootstrapTiles(180, null, null);
-    }
-    get config() {
-        return this._config;
-    }
-    getDebugStats() {
-        let readyTileCount = 0;
-        let loadingTileCount = 0;
-        let coolingDownTileCount = 0;
-        const now = Date.now();
-        for (const tile of this._tileCache.values()) {
-            if (tile.ready) {
-                readyTileCount += 1;
-            }
-            if (tile.loading) {
-                loadingTileCount += 1;
-            }
-            if (tile.failedUntil > now) {
-                coolingDownTileCount += 1;
-            }
-        }
-        const currentZoom = this._visibleTileKeys.reduce((maxZoom, tileKey) => {
-            const zoom = Number.parseInt(tileKey.split('/')[0] ?? '', 10);
-            if (!Number.isFinite(zoom)) {
-                return maxZoom;
-            }
-            return maxZoom == null ? zoom : Math.max(maxZoom, zoom);
-        }, null);
-        return {
-            cacheSize: this._tileCache.size,
-            visibleTileCount: this._visibleTileKeys.length,
-            readyTileCount,
-            loadingTileCount,
-            coolingDownTileCount,
-            currentZoom,
-            tileSelectionKey: this._tileSelectionKey,
-        };
-    }
-    bootstrapTiles(fovDeg, camera, centerSphericalDeg, fovPolygon = null, viewportSphericalSamples = null) {
-        const selection = camera
-            ? this._visibleTilesManager.selectTiles({
-                fovDeg,
-                camera,
-                pMatrix: new Float32Array(),
-                centerSphericalDeg: centerSphericalDeg ?? undefined,
-                fovPolygon: fovPolygon ?? undefined,
-                viewportSphericalSamples: viewportSphericalSamples ?? undefined,
-            })
-            : {
-                key: 'initial',
-                currentTiles: this._provider.getInitialTiles(),
-                fallbackTiles: [],
-            };
-        if (selection.key === this._tileSelectionKey) {
-            return;
-        }
-        this._tileSelectionKey = selection.key;
-        const segments = this._config.segmentsPerSide ?? 16;
-        const requestedTiles = [...selection.currentTiles, ...selection.fallbackTiles];
-        this._visibleTileKeys = requestedTiles
-            .sort((a, b) => a.z - b.z)
-            .map((tileCoord) => this.getTileKey(tileCoord));
-        for (const tileCoord of requestedTiles) {
-            const tileKey = this.getTileKey(tileCoord);
-            const existingTile = this._tileCache.get(tileKey);
-            if (existingTile) {
-                existingTile.touch();
-                continue;
-            }
-            const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments);
-            const url = this._provider.getTileUrl(tileCoord);
-            const tile = new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram);
-            tile.touch();
-            this._tileCache.set(tileKey, tile);
-        }
-        this.evictCache();
-    }
-    draw(input) {
-        const vMatrix = input.camera.getCameraMatrix();
-        if (!vMatrix)
-            return;
-        this.bootstrapTiles(input.fovDeg ?? 180, input.camera, input.centerSphericalDeg ?? null, input.fovPolygon ?? null, input.viewportSphericalSamples ?? null);
-        const pMatrix = input.pMatrix;
-        const mMatrix = this.getModelMatrix();
-        for (const tileKey of this._visibleTileKeys) {
-            const tile = this._tileCache.get(tileKey);
-            if (!tile)
-                continue;
-            tile.draw(pMatrix, vMatrix, mMatrix);
-        }
-    }
-    evictCache() {
-        const maxCachedTiles = this._config.maxCachedTiles ?? XYZLayer.DEFAULT_MAX_CACHED_TILES;
-        if (this._tileCache.size <= maxCachedTiles) {
-            return;
-        }
-        const visibleKeySet = new Set(this._visibleTileKeys);
-        const candidates = Array.from(this._tileCache.entries())
-            .filter(([tileKey]) => !visibleKeySet.has(tileKey))
-            .sort((a, b) => {
-            const scoreA = Math.min(a[1].lastUsedAt || a[1].createdAt, a[1].createdAt);
-            const scoreB = Math.min(b[1].lastUsedAt || b[1].createdAt, b[1].createdAt);
-            return scoreA - scoreB;
-        });
-        for (const [tileKey, tile] of candidates) {
-            if (this._tileCache.size <= maxCachedTiles) {
-                break;
-            }
-            if (tile.loading) {
-                continue;
-            }
-            tile.dispose();
-            this._tileCache.delete(tileKey);
-        }
-    }
-    disposeTiles() {
-        for (const tile of this._tileCache.values()) {
-            tile.dispose();
-        }
-        this._tileCache.clear();
-        this._visibleTileKeys = [];
-    }
-    getTileKey(tileCoord) {
-        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
-    }
-}
-exports.XYZLayer = XYZLayer;
-
-
-/***/ }),
-
-/***/ 549:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const Point_js_1 = __webpack_require__(553);
-const Point2D_js_1 = __importDefault(__webpack_require__(559));
-const CoordsType_js_1 = __webpack_require__(145);
-class GeomUtils {
-    // Orthodromic (great-circle) distance in radians
-    static orthodromicDistance(p1, p2) {
-        return Math.acos(Math.sin(p1.decDeg * Math.PI / 180) * Math.sin(p2.decDeg * Math.PI / 180) +
-            Math.cos(p1.decDeg * Math.PI / 180) * Math.cos(p2.decDeg * Math.PI / 180) *
-                Math.cos((p2.raDeg - p1.raDeg) * Math.PI / 180));
-    }
-    /**
-     * Decide the 2D projection strategy and pre-project polygons for point-in-polygon tests.
-     * Returns the projected polygons + bbox + a flag describing the projection used:
-     * 0 → all points in same hemisphere with |Dec| > 10 → stereographic-like projection using x,y from 3D
-     * 1 → all points in equatorial belt (|Dec| < 10) → use RA/Dec directly
-     * 2 → equatorial belt and polygon crosses RA=0 → shift RA>180 by -360
-     */
-    static computeSelectionObject(polygons) {
-        let poly4selection = [];
-        let flag = 0;
-        let maxx;
-        let maxy;
-        let minx;
-        let miny;
-        const DEC_THRESHOLD = 10;
-        //  1 → northern hemisphere (Dec > +10), -1 → southern (Dec < -10), 0 → equatorial belt
-        let hemisphere = 0;
-        if (polygons[0][0].decDeg >= DEC_THRESHOLD) {
-            hemisphere = 1;
-        }
-        else if (polygons[0][0].decDeg <= -DEC_THRESHOLD) {
-            hemisphere = -1;
-        }
-        else {
-            flag = 1;
-        }
-        // Case flag = 0 → stereographic-like projection using x,y,z from 3D point
-        if (flag === 0) {
-            const first = GeomUtils.projectIn2D(polygons[0][0]);
-            maxx = minx = first.x;
-            maxy = miny = first.y;
-            for (const currpoly of polygons) {
-                const selpoly = [];
-                for (const point of currpoly) {
-                    // If a point violates the hemisphere constraint, fall back to belt logic
-                    if ((point.decDeg > hemisphere * DEC_THRESHOLD && hemisphere === -1) ||
-                        (point.decDeg < hemisphere * DEC_THRESHOLD && hemisphere === 1)) {
-                        flag = 1;
-                        poly4selection = [];
-                        break;
-                    }
-                    const p = GeomUtils.projectIn2D(point);
-                    selpoly.push(p);
-                    if (p.x > maxx)
-                        maxx = p.x;
-                    if (p.y > maxy)
-                        maxy = p.y;
-                    if (p.x < minx)
-                        minx = p.x;
-                    if (p.y < miny)
-                        miny = p.y;
-                }
-                poly4selection.push(selpoly);
-            }
-        }
-        if (flag === 0) {
-            return {
-                poly4selection,
-                flag,
-                maxx: maxx,
-                maxy: maxy,
-                minx: minx,
-                miny: miny,
-            };
-        }
-        // Case flag = 1 or 2 → work directly in (RA,Dec)
-        const RA_THRESHOLD = 180;
-        let belowThreshold = polygons[0][0].raDeg < RA_THRESHOLD;
-        maxx = minx = polygons[0][0].raDeg;
-        maxy = miny = polygons[0][0].decDeg;
-        for (const currpoly of polygons) {
-            const selpoly = [];
-            for (const point of currpoly) {
-                const p = new Point2D_js_1.default(point.raDeg, point.decDeg);
-                selpoly.push(p);
-                if (point.raDeg > maxx)
-                    maxx = point.raDeg;
-                if (point.decDeg > maxy)
-                    maxy = point.decDeg;
-                if (point.raDeg < minx)
-                    minx = point.raDeg;
-                if (point.decDeg < miny)
-                    miny = point.decDeg;
-                // Detect crossing of RA=0 meridian
-                if ((point.raDeg >= RA_THRESHOLD && belowThreshold) ||
-                    (point.raDeg <= RA_THRESHOLD && !belowThreshold)) {
-                    flag = 2;
-                    poly4selection = [];
-                    break;
-                }
-            }
-            poly4selection.push(selpoly);
-        }
-        if (flag === 1) {
-            return {
-                poly4selection,
-                flag,
-                maxx,
-                maxy,
-                minx,
-                miny,
-            };
-        }
-        // Case flag = 2 → shift RA>180 by -360 to unwrap around RA=0
-        let startRA = polygons[0][0].raDeg;
-        maxx = startRA >= RA_THRESHOLD ? startRA - 360 : startRA;
-        maxy = polygons[0][0].decDeg;
-        minx = maxx;
-        miny = maxy;
-        for (const currpoly of polygons) {
-            const selpoly = [];
-            for (const point of currpoly) {
-                const curra = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
-                if (curra > maxx)
-                    maxx = curra;
-                if (point.decDeg > maxy)
-                    maxy = point.decDeg;
-                if (curra < minx)
-                    minx = curra;
-                if (point.decDeg < miny)
-                    miny = point.decDeg;
-                selpoly.push(new Point2D_js_1.default(curra, point.decDeg));
-            }
-            poly4selection.push(selpoly);
-        }
-        return {
-            poly4selection,
-            flag,
-            maxx,
-            maxy,
-            minx,
-            miny,
-        };
-    }
-    /** Stereographic projection from 3D point on unit sphere onto plane */
-    static stereographic(point) {
-        const x = Number(point.xyz[0]);
-        const y = Number(point.xyz[1]);
-        const z = Number(point.xyz[2]);
-        return {
-            x: (2 * x) / (1 - z),
-            y: (2 * y) / (1 - z),
-        };
-    }
-    static projectIn2D(point) {
-        const p = GeomUtils.stereographic(point);
-        return new Point2D_js_1.default(p.x, p.y);
-    }
-    /**
-     * Robust point-in-polygon (ray casting) using the precomputed selection object.
-     * Works with any of the three flags (0,1,2).
-     */
-    static checkPointInsidePolygon5(selectionObj, point) {
-        let p0;
-        if (selectionObj.flag === 0) {
-            p0 = GeomUtils.projectIn2D(point);
-        }
-        else if (selectionObj.flag === 1) {
-            p0 = new Point2D_js_1.default(point.raDeg, point.decDeg);
-        }
-        else {
-            const RA_THRESHOLD = 180;
-            const raShifted = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
-            p0 = new Point2D_js_1.default(raShifted, point.decDeg);
-        }
-        const p1 = new Point2D_js_1.default(p0.x, p0.y + 2 * Math.abs(selectionObj.maxy - selectionObj.miny));
-        // quick reject by bbox
-        if (p0.x > selectionObj.maxx ||
-            p0.x < selectionObj.minx ||
-            p0.y > selectionObj.maxy ||
-            p0.y < selectionObj.miny) {
-            return false;
-        }
-        // Ray casting against each sub-polygon
-        for (const currpoly of selectionObj.poly4selection) {
-            let intersections = 0;
-            for (let i = 0; i < currpoly.length - 1; i++) {
-                const p2 = currpoly[i];
-                const p3 = currpoly[i + 1];
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            // close the polygon: last with first
-            {
-                const p2 = currpoly[currpoly.length - 1];
-                const p3 = currpoly[0];
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            if (intersections % 2 === 1) {
-                return true; // inside this subpolygon
-            }
-        }
-        return false;
-    }
-    // Legacy version kept for reference; now typed and using getters
-    static checkPointInsidePolygon4(polygons, point) {
-        const p0 = GeomUtils.projectIn2D(point);
-        let maxdist = point.raDeg + 15;
-        if (maxdist > 360)
-            maxdist = point.raDeg - 15;
-        const p1point = new Point_js_1.Point({ raDeg: maxdist, decDeg: point.decDeg }, CoordsType_js_1.CoordsType.ASTRO);
-        const p1 = GeomUtils.projectIn2D(p1point);
-        for (const currpoly of polygons) {
-            let intersections = 0;
-            for (let i = 0; i < currpoly.length - 1; i++) {
-                const p2 = GeomUtils.projectIn2D(currpoly[i]);
-                const p3 = GeomUtils.projectIn2D(currpoly[i + 1]);
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            {
-                const p2 = GeomUtils.projectIn2D(currpoly[currpoly.length - 1]);
-                const p3 = GeomUtils.projectIn2D(currpoly[0]);
-                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
-                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
-                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
-                if (denominator !== 0) {
-                    const lamda01 = numerator01 / denominator;
-                    const lambda23 = numerator23 / denominator;
-                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
-                        intersections++;
-                    }
-                }
-            }
-            if (intersections % 2 === 1)
-                return true;
-        }
-        return false;
-    }
-}
-exports["default"] = GeomUtils;
-
-
-/***/ }),
-
-/***/ 553:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-/**
- * @author Fabrizio Giordano (Fab77)
- */
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Point = void 0;
-const gl_matrix_1 = __webpack_require__(961);
-const Utils_js_1 = __webpack_require__(930);
-const CoordsType_js_1 = __webpack_require__(145);
-const Global_js_1 = __importDefault(__webpack_require__(382));
-class Point {
-    _x;
-    _y;
-    _z;
-    _xyz;
-    _raDeg;
-    _decDeg;
-    _raRad;
-    _decRad;
-    _raDecDeg;
-    constructor(in_options, in_type) {
-        this._xyz = [0, 0, 0];
-        this._raDecDeg = [0, 0];
-        // Prefer config value if present, fallback to 12
-        const MAX_DECIMALS = Global_js_1.default.MAX_DECIMALS ?? 12;
-        if (in_type === CoordsType_js_1.CoordsType.CARTESIAN) {
-            const { x, y, z } = in_options;
-            this._x = Number(x.toFixed(MAX_DECIMALS));
-            this._y = Number(y.toFixed(MAX_DECIMALS));
-            this._z = Number(z.toFixed(MAX_DECIMALS));
-            this._xyz = [this._x, this._y, this._z];
-            const [ra, dec] = this.computeAstroCoords();
-            this._raDeg = Number(ra);
-            this._decDeg = Number(dec);
-            this._raRad = (this._raDeg * Math.PI) / 180;
-            this._decRad = (this._decDeg * Math.PI) / 180;
-            this._raDecDeg = [this._raDeg, this._decDeg];
-        }
-        else if (in_type === CoordsType_js_1.CoordsType.ASTRO) {
-            const { raDeg, decDeg } = in_options;
-            this._raDeg = Number(raDeg);
-            this._decDeg = Number(decDeg);
-            this._raDecDeg = [this._raDeg, this._decDeg];
-            this._raRad = (this._raDeg * Math.PI) / 180;
-            this._decRad = (this._decDeg * Math.PI) / 180;
-            const [x, y, z] = this.computeCartesianCoords();
-            this._x = Number(x.toFixed(MAX_DECIMALS));
-            this._y = Number(y.toFixed(MAX_DECIMALS));
-            this._z = Number(z.toFixed(MAX_DECIMALS));
-            this._xyz = [this._x, this._y, this._z];
-        }
-        else if (in_type === CoordsType_js_1.CoordsType.SPHERICAL) {
-            // Not implemented in original; keep behavior
-            console.log(`${CoordsType_js_1.CoordsType.SPHERICAL} not implemented yet`);
-            this._x = 0;
-            this._y = 0;
-            this._z = 0;
-            this._raDeg = 0;
-            this._decDeg = 0;
-            this._raRad = 0;
-            this._decRad = 0;
-        }
-        else {
-            console.error('CoordsType ' + String(in_type) + ' not recognised.');
-            // Initialize to zeroed state to keep object consistent
-            this._x = 0;
-            this._y = 0;
-            this._z = 0;
-            this._raDeg = 0;
-            this._decDeg = 0;
-            this._raRad = 0;
-            this._decRad = 0;
-        }
-    }
-    computeAstroCoords() {
-        const phiThetaDeg = (0, Utils_js_1.cartesianToSpherical)(gl_matrix_1.vec3.fromValues(this._xyz[0], this._xyz[1], this._xyz[2]));
-        const rad = (0, Utils_js_1.sphericalToAstroDeg)(phiThetaDeg.phi, phiThetaDeg.theta);
-        return [rad.ra, rad.dec];
-    }
-    computeCartesianCoords() {
-        const phiThetaDeg = (0, Utils_js_1.astroDegToSpherical)(this._raDeg, this._decDeg);
-        const [x, y, z] = (0, Utils_js_1.sphericalToCartesian)(phiThetaDeg.phi, phiThetaDeg.theta, 1);
-        return [x, y, z];
-    }
-    /**
-     * @return {phi, theta} (degrees)
-     */
-    computeHealpixPhiTheta() {
-        return (0, Utils_js_1.astroDegToSpherical)(this._raDeg, this._decDeg);
-    }
-    /** Scale the vector by a given factor */
-    scale(n) {
-        return new Point({ x: this.x * n, y: this.y * n, z: this.z * n }, CoordsType_js_1.CoordsType.CARTESIAN);
-    }
-    dot(v) {
-        return this.x * v.x + this.y * v.y + this.z * v.z;
-    }
-    cross(v) {
-        return new Point({
-            x: this.y * v.z - v.y * this.z,
-            y: this.z * v.x - v.z * this.x,
-            z: this.x * v.y - v.x * this.y,
-        }, CoordsType_js_1.CoordsType.CARTESIAN);
-    }
-    norm() {
-        const d = 1 / this.length();
-        return new Point({ x: this.x * d, y: this.y * d, z: this.z * d }, CoordsType_js_1.CoordsType.CARTESIAN);
-    }
-    length() {
-        return Math.sqrt(this.lengthSquared());
-    }
-    lengthSquared() {
-        return this.x * this.x + this.y * this.y + this.z * this.z;
-    }
-    subtract(v) {
-        return new Point({ x: this.x - v.x, y: this.y - v.y, z: this.z - v.z }, CoordsType_js_1.CoordsType.CARTESIAN);
-    }
-    add(v) {
-        return new Point({ x: this.x + v.x, y: this.y + v.y, z: this.z + v.z }, CoordsType_js_1.CoordsType.CARTESIAN);
-    }
-    get x() { return this._x; }
-    get y() { return this._y; }
-    get z() { return this._z; }
-    get xyz() { return this._xyz; }
-    get raDeg() { return this._raDeg; }
-    get decDeg() { return this._decDeg; }
-    get raDecDeg() { return this._raDecDeg; }
-    toADQL() {
-        return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
-    }
-    toString() {
-        return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
-    }
-}
-exports.Point = Point;
-
-
-/***/ }),
-
-/***/ 559:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-class Point2D {
-    _x;
-    _y;
-    constructor(x, y) {
-        this._x = x;
-        this._y = y;
-    }
-    get x() {
-        return this._x;
-    }
-    get y() {
-        return this._y;
-    }
-}
-exports["default"] = Point2D;
-
-
-/***/ }),
-
-/***/ 576:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FoV = void 0;
-/**
- * FoV singleton (TypeScript)
- * - Uses computePerspectiveMatrixSingleton.pMatrix
- * - Guards acos domain (numeric safety)
- * - Uses vec3.transformMat4 instead of custom mat4*vec3
- * - Keeps original “insideSphere ? 360 - angle : angle” behavior
- */
-const gl_matrix_1 = __webpack_require__(961);
-const RayPickingUtils_js_1 = __importDefault(__webpack_require__(639));
-const Utils_js_1 = __webpack_require__(930);
-class FoV {
-    static MIN_FOV_DEG = 1e-6;
-    fovXDeg = 180;
-    fovYDeg = 180;
-    ratio = +0;
-    _minFoV = 180;
-    _webgl;
-    constructor(webgl) {
-        this._webgl = webgl;
-    }
-    /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere, healpixGridSingleton, camera, pMatrix) {
-        // const gl = webgl
-        const gl = this._webgl;
-        if (!gl || !gl.canvas) {
-            // Handle the error or assign default values
-            this.fovXDeg = 180;
-            this.fovYDeg = 180;
-            this._minFoV = this.minFoV;
-            return this;
-        }
-        // horizontal FoV: ray through (centerY)
-        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
-        const canvas = gl.canvas;
-        const rect = canvas.getBoundingClientRect();
-        const canvasWidth = rect.width;
-        const canvasHeight = rect.height;
-        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix)
-        const xFoVComputed = this.computeAngle(0, canvasHeight / 2, insideSphere, healpixGridSingleton, camera, pMatrix);
-        this.fovXDeg = xFoVComputed.angleDeg;
-        // vertical FoV: ray through (centerX)
-        // const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix)
-        const yFoVComputed = this.computeAngle(canvasWidth / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix);
-        this.fovYDeg = yFoVComputed.angleDeg;
-        this._minFoV = this.minFoV;
-        this.ratio = this.computeRatio(camera);
-        return this;
-    }
-    computeRatio(camera) {
-        // const camera = global.camera
-        if (!camera)
-            throw Error("Camera not defined");
-        const pos = camera.getCameraPosition();
-        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
-        const ratio = distanceFromCenter / this.fovYDeg;
-        return ratio;
-    }
-    changeMinFov(deg) {
-        console.log("inside changeMinFov");
-        if (this.fovYDeg <= this.fovXDeg) {
-            this.fovYDeg = deg;
-        }
-        else {
-            this.fovXDeg = deg;
-        }
-        console.log("changeMinFov: ping");
-        this.minFoV;
-        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
-    }
-    get minFoV() {
-        const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
-        this._minFoV = Math.max(minFov, FoV.MIN_FOV_DEG);
-        return this._minFoV;
-    }
-    get xFoV() {
-        return this.fovXDeg;
-    }
-    get yFoV() {
-        return this.fovYDeg;
-    }
-    computeDistanceFromAngle(angleDeg) {
-        const desiredFoV = angleDeg;
-        const distance = desiredFoV * this.ratio;
-        // return Math.abs(distance)
-        return distance;
-    }
-    /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera, pMatrix) {
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix
-        if (!pMatrix) {
-            // Handle the error or assign a default value
-            console.warn('FoV: projection matrix is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const vMatrix = camera.getCameraMatrix();
-        if (!camera) {
-            // Handle the error or assign a default value
-            console.warn('FoV: camera is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const rayWorld = RayPickingUtils_js_1.default.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix);
-        const intersectionDistance = RayPickingUtils_js_1.default.raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
-        let angleDeg;
-        if (intersectionDistance > 0) {
-            // world-space intersection point on the sphere
-            const hit = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.scale(hit, rayWorld, intersectionDistance);
-            gl_matrix_1.vec3.add(hit, camera.getCameraPosition(), hit);
-            const center = healpixGridSingleton.center;
-            // vectors from sphere center
-            const vHit = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.subtract(vHit, hit, center);
-            // reference vector: rotate world +Z into current camera orientation, then from center
-            const refWorldZ = gl_matrix_1.vec3.fromValues(center[0], center[1], center[2] + healpixGridSingleton.radius);
-            const vInv = gl_matrix_1.mat4.create();
-            gl_matrix_1.mat4.invert(vInv, camera.getCameraMatrix());
-            const refCamZ = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.transformMat4(refCamZ, refWorldZ, vInv);
-            const vRef = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.subtract(vRef, refCamZ, center);
-            // angle between vHit and vRef, doubled
-            const dot = gl_matrix_1.vec3.dot(vHit, vRef);
-            const n1 = gl_matrix_1.vec3.length(vHit);
-            const n2 = gl_matrix_1.vec3.length(vRef);
-            // numeric safety for acos
-            const c = Math.min(1, Math.max(-1, dot / (n1 * n2)));
-            const angleRad = Math.acos(c);
-            angleDeg = 2 * (0, Utils_js_1.radToDeg)(angleRad);
-        }
-        else {
-            angleDeg = 180;
-        }
-        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
-        // return insideSphere ? 360 - angleDeg : angleDeg
-        return { angleDeg: finalAngle, distance: intersectionDistance };
-    }
-    /**
-   * Computes the camera position (x,y,z) along the current view direction that would
-   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
-   * This method does NOT mutate the camera; it only returns the suggested position.
-   *
-   * Geometry: for a sphere of radius R observed from distance d (from center),
-   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
-   * along the tighter axis; we solve for d and place the camera on the current
-   * center→camera direction with that distance.
-   *
-   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
-   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
-   */
-    computeCameraPositionForMinFoV(targetMinFoVDeg) {
-        // const camera = global.camera
-        // const center = healpixGridSingleton.center
-        // const R = healpixGridSingleton.radius
-        // if (!camera) {
-        //   console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.')
-        //   return [center[0], center[1], center[2] + 2 * R]
-        // }
-        // // Clamp and validate input
-        // const eps = 1e-6
-        // const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg))
-        // const halfRad = (clamped * Math.PI / 180) * 0.5
-        // // Distance from center needed to achieve the angular diameter
-        // // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
-        // const sinHalf = Math.sin(halfRad)
-        // if (sinHalf <= 0) {
-        //   console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.')
-        //   return [center[0], center[1], center[2] + 2 * R]
-        // }
-        // let d = R / sinHalf
-        // // Ensure we remain strictly outside the sphere
-        // d = Math.max(d, R + 1e-4)
-        // // Use the current center→camera direction to keep orientation
-        // const camPos = camera.getCameraPosition()
-        // let dirX = camPos[0] - center[0]
-        // let dirY = camPos[1] - center[1]
-        // let dirZ = camPos[2] - center[2]
-        // const len = Math.hypot(dirX, dirY, dirZ)
-        // if (len < eps) {
-        //   // If somehow at the center, use +Z as a default direction
-        //   dirX = 0; dirY = 0; dirZ = 1;
-        // } else {
-        //   dirX /= len
-        //   dirY /= len
-        //   dirZ /= len
-        // }
-        // const newX = center[0] + dirX * d
-        // const newY = center[1] + dirY * d
-        // const newZ = center[2] + dirZ * d
-        // return [newX, newY, newZ]
-        return [0, 0, 0];
-    }
-    /**
-       * Computes the camera world-space position required to achieve a target FoV (deg),
-       * keeping the same viewing direction. Acts as the inverse of computeAngle().
-       *
-       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
-       * @param canvasWidth  canvas width in pixels
-       * @param canvasHeight canvas height in pixels
-       * @returns [x, y, z] coordinates for the new camera position
-       */
-    computeCameraPositionForFoV(targetFoVDeg) {
-        // const camera = global.camera;
-        // const center = healpixGridSingleton.center;
-        // const R = healpixGridSingleton.radius;
-        // if (!camera) {
-        //   console.warn("FoV.computeCameraPositionForFoV: camera missing.");
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // const eps = 1e-6;
-        // const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
-        // const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
-        // // Distance from center that yields this FoV
-        // const sinHalf = Math.sin(halfRad);
-        // if (sinHalf <= 0) {
-        //   console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // let d = R / sinHalf;
-        // // Slightly outside sphere to avoid clipping
-        // d = Math.max(d, R + 1e-4);
-        // // Get current viewing direction
-        // const camPos = camera.getCameraPosition();
-        // let dirX = camPos[0] - center[0];
-        // let dirY = camPos[1] - center[1];
-        // let dirZ = camPos[2] - center[2];
-        // const len = Math.hypot(dirX, dirY, dirZ);
-        // if (len < eps) {
-        //   dirX = 0; dirY = 0; dirZ = 1;
-        // } else {
-        //   dirX /= len;
-        //   dirY /= len;
-        //   dirZ /= len;
-        // }
-        // const newX = center[0] + dirX * d;
-        // const newY = center[1] + dirY * d;
-        // const newZ = center[2] + dirZ * d;
-        // return [newX, newY, newZ];
-        return [0, 0, 0];
-    }
-    /**
-   * Return a camera position such that the sphere's apparent angular diameter
-   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
-   * Keeps current view direction; does not mutate the camera.
-   *
-   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
-   * @returns [x,y,z] world position
-   */
-    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
-        // const camera = global.camera;
-        // const center = healpixGridSingleton.center;
-        // const R = healpixGridSingleton.radius;
-        // if (!camera) {
-        //   console.warn('computeCameraPositionForAngularDiameter: camera missing.');
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // const eps = 1e-6;
-        // const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
-        // const half = (α * Math.PI) / 360.0;
-        // const sinHalf = Math.sin(half);
-        // // d = R / sin(α/2)
-        // let d = R / sinHalf;
-        // d = Math.max(d, R + 1e-4); // stay outside
-        // // project along current center→camera direction
-        // const [cx, cy, cz] = center as [number, number, number];
-        // const [px, py, pz] = camera.getCameraPosition();
-        // let dx = px - cx, dy = py - cy, dz = pz - cz;
-        // const L = Math.hypot(dx, dy, dz);
-        // if (L < eps) { dx = 0; dy = 0; dz = 1; } else { dx /= L; dy /= L; dz /= L; }
-        // return [cx + dx * d, cy + dy * d, cz + dz * d];
-        return [0, 0, 0];
-    }
-}
-exports.FoV = FoV;
-
-
-/***/ }),
-
-/***/ 592:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FootprintSetGL = void 0;
-const Footprint_js_1 = __webpack_require__(475);
-const Utils_js_1 = __webpack_require__(930);
-const FootprintShaderProgram_js_1 = __webpack_require__(909);
-const Point_js_1 = __webpack_require__(553);
-const GeomUtils_js_1 = __importDefault(__webpack_require__(549));
-const CoordsType_js_1 = __webpack_require__(145);
-const MetadataManager_js_1 = __webpack_require__(403);
-class FootprintSetGL {
-    static ELEM_SIZE = 3;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    static CONVEXPOLY_ELEM_SIZE = 3;
-    _kind = "FootprintSetGL";
-    _ready;
-    // footprintsetProps: FootprintProps
-    _name;
-    _description;
-    // tapRepo: TapRepo
-    extHoveredIndexes;
-    oldMouseCoords;
-    healpixDensityMap;
-    totConvexPoints;
-    // footprintsInPix256: Map<number, Footprint[]>
-    // gl: GL;
-    // shaderProgram: WebGLProgram
-    vertexCataloguePositionBuffer;
-    indexBuffer;
-    hoveredVertexPositionBuffer;
-    hoveredIndexBuffer;
-    selectedVertexPositionBuffer;
-    selectedIndexBuffer;
-    indexes;
-    footprintPolygons = [];
-    vertexCataloguePosition;
-    totPoints;
-    nPrimitiveFlags = 0;
-    hoveredIndexes;
-    hoveredElementIndexes;
-    _hoveredFootprints = [];
-    hoveredVertexPosition;
-    totHoveredPoints;
-    nHoveredPrimitiveFlags = 0;
-    selectedIndexes;
-    selectedElementIndexes;
-    _selectedFootprints = [];
-    selectedVertexPosition;
-    totSelectedPoints;
-    nSlectedPrimitiveFlags = 0;
-    _shapeColor = "#00fff2ff";
-    _bufferInitialised = false;
-    _webgl;
-    _isVisible = true;
-    _metadataManager;
-    _providerUrl;
-    _footprintShaderProgram;
-    _visibleTilesManager;
-    constructor(fsetName, fsetDescription, providerUrl, metadataManager, webgl, visibleTilesManager) {
-        this._webgl = webgl;
-        this._ready = false;
-        this._visibleTilesManager = visibleTilesManager;
-        this.TYPE = "FOOTPRINT_SET";
-        this._name = fsetName;
-        this._description = fsetDescription;
-        this._providerUrl = providerUrl;
-        this._metadataManager = metadataManager;
-        this.initFootprintArrays();
-        this.oldMouseCoords = null;
-        this._footprintShaderProgram = new FootprintShaderProgram_js_1.FootprintShaderProgram(this._webgl);
-        this._footprintShaderProgram.shaderProgram;
-    }
-    initFootprintArrays() {
-        this.footprintPolygons = [];
-        this.indexes = new Uint32Array();
-        this.vertexCataloguePosition = new Float32Array();
-        this.totPoints = 0;
-        this.totConvexPoints = 0;
-        this.extHoveredIndexes = new Uint32Array();
-        this._hoveredFootprints = [];
-        this.hoveredVertexPosition = new Float32Array();
-        this.totHoveredPoints = 0;
-        this.hoveredIndexes = [];
-        this.hoveredElementIndexes = new Uint32Array();
-        this._selectedFootprints = [];
-        this.selectedVertexPosition = new Float32Array();
-        this.totSelectedPoints = 0;
-        this.selectedIndexes = [];
-        this.selectedElementIndexes = new Uint32Array();
-    }
-    initGLBuffers() {
-        if (!this._webgl)
-            return;
-        this.vertexCataloguePositionBuffer = this._webgl.createBuffer();
-        this.indexBuffer = this._webgl.createBuffer();
-        this.hoveredVertexPositionBuffer = this._webgl.createBuffer();
-        this.hoveredIndexBuffer = this._webgl.createBuffer();
-        this.selectedVertexPositionBuffer = this._webgl.createBuffer();
-        this.selectedIndexBuffer = this._webgl.createBuffer();
-    }
-    setIsVisible(visibility) {
-        this._isVisible = visibility;
-    }
-    get isVisible() {
-        return this._isVisible;
-    }
-    get shapeColor() {
-        return this._shapeColor;
-    }
-    get providerUrl() {
-        return this._providerUrl;
-    }
-    get name() {
-        return this._name;
-    }
-    get metadataManager() {
-        return this._metadataManager;
-    }
-    addFootprint(in_footprint) {
-        this.footprintPolygons.push(in_footprint);
-    }
-    // addFootprints(in_data: any[], columnsmeta: TapMetadata[]): void {
-    addFootprints(in_data, columnsmeta) {
-        this._ready = false;
-        this._metadataManager = new MetadataManager_js_1.MetadataManager(columnsmeta);
-        // const geomDataIndex = this.footprintsetProps.geomColumn?.index
-        const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
-        if (geomDataIndex < 0) {
-            throw new Error("geomColumn or its index is undefined in footprintsetProps");
-        }
-        for (let j = 0; j < in_data.length; j++) {
-            if (in_data[j][0] !== null) {
-                const footprint = new Footprint_js_1.Footprint(in_data[j][geomDataIndex], in_data[j]);
-                if (footprint._valid) {
-                    this.addFootprint(footprint);
-                    this.totPoints += footprint.totPoints;
-                    this.totConvexPoints += footprint.totConvexPoints;
-                }
-            }
-        }
-        // this.initBuffer()
-        this._ready = true;
-        this._bufferInitialised = false;
-    }
-    clearFootprints() {
-        this.initFootprintArrays();
-    }
-    initBuffer() {
-        // this._webgl = webgl
-        if (!this._webgl)
-            return;
-        this.initGLBuffers();
-        const nFootprints = this.footprintPolygons.length;
-        let npolygons = nFootprints - 1;
-        for (let j = 0; j < nFootprints; j++) {
-            npolygons += this.footprintPolygons[j].polygons.length - 1;
-        }
-        this.indexes = new Uint32Array(this.totPoints + npolygons + 1);
-        const MAX_UNSIGNED_INT = 0xffffffff;
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        this.vertexCataloguePosition = new Float32Array(3 * this.totPoints);
-        let positionIndex = 0;
-        let vIdx = 0;
-        const R = 1.0;
-        this.nPrimitiveFlags = 0;
-        for (let j = 0; j < nFootprints; j++) {
-            const footprint = this.footprintPolygons[j];
-            const footprintPoly = footprint.polygons;
-            if (j > 0) {
-                this.indexes[vIdx++] = MAX_UNSIGNED_INT;
-                this.nPrimitiveFlags++;
-            }
-            for (const poly of footprintPoly) {
-                if (poly !== footprintPoly[0]) {
-                    this.indexes[vIdx++] = MAX_UNSIGNED_INT;
-                    this.nPrimitiveFlags++;
-                }
-                for (const point of poly) {
-                    this.vertexCataloguePosition[positionIndex++] = R * point.x;
-                    this.vertexCataloguePosition[positionIndex++] = R * point.y;
-                    this.vertexCataloguePosition[positionIndex++] = R * point.z;
-                    this.indexes[vIdx++] = Math.floor((positionIndex - 1) / 3);
-                }
-            }
-        }
-        this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
-        console.log("Buffer initialized");
-    }
-    checkSelection(mouseHelper) {
-        if (!mouseHelper.x || !mouseHelper.y || !mouseHelper.z)
-            return;
-        let mousePix = mouseHelper.computeNpix();
-        if (!mousePix)
-            return;
-        this._hoveredFootprints = [];
-        this.totHoveredPoints = 0;
-        const mousePoint = new Point_js_1.Point({ x: mouseHelper.x, y: mouseHelper.y, z: mouseHelper.z }, CoordsType_js_1.CoordsType.CARTESIAN);
-        for (let i = 0; i < this.footprintPolygons.length; i++) {
-            const footprint = this.footprintPolygons[i];
-            if (!footprint.selectionObj)
-                continue;
-            if (GeomUtils_js_1.default.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
-                const details = [...footprint.details];
-                // const geomDataIndex = this.footprintsetProps.geomColumn?.index
-                const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
-                if (geomDataIndex < 0)
-                    continue;
-                details.splice(geomDataIndex, 1);
-                this._hoveredFootprints.push(footprint);
-                this.totHoveredPoints += footprint.totPoints;
-            }
-        }
-        this.initHoveringBuffer();
-    }
-    get hoveredFootprints() {
-        return {
-            // metadata: this.footprintsetProps.tapMetadataList,
-            metadata: this._metadataManager,
-            footprints: this._hoveredFootprints,
-            tableName: this._name,
-            description: this._description,
-            // provider: this.tapRepo.tapBaseUrl
-            provider: this._providerUrl,
-        };
-    }
-    get selectedFootprints() {
-        return this._selectedFootprints;
-    }
-    checkClicking(in_mouseHelper) {
-        if (in_mouseHelper.x == null ||
-            in_mouseHelper.y == null ||
-            in_mouseHelper.z == null) {
-            return [];
-        }
-        const clickedIndexes = [];
-        const mousePoint = new Point_js_1.Point({ x: in_mouseHelper.x, y: in_mouseHelper.y, z: in_mouseHelper.z }, CoordsType_js_1.CoordsType.CARTESIAN);
-        for (let i = 0; i < this.footprintPolygons.length; i++) {
-            const footprint = this.footprintPolygons[i];
-            if (!footprint.selectionObj)
-                continue;
-            if (GeomUtils_js_1.default.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
-                clickedIndexes.push(i);
-            }
-        }
-        return clickedIndexes;
-    }
-    setSelectedIndexes(selectedIndex) {
-        selectedIndex.forEach((idx) => {
-            if (idx < 0 || idx >= this.footprintPolygons.length)
-                return;
-            if (this.selectedIndexes.includes(idx)) {
-                this.selectedIndexes.splice(this.selectedIndexes.indexOf(idx), 1);
-            }
-            else {
-                this.selectedIndexes.push(idx);
-            }
-        });
-        this.refreshSelectedFootprints();
-    }
-    refreshSelectedFootprints() {
-        this._selectedFootprints = this.selectedIndexes
-            .map((idx) => this.footprintPolygons[idx])
-            .filter((footprint) => Boolean(footprint));
-        this.totSelectedPoints = this._selectedFootprints.reduce((total, footprint) => total + footprint.totPoints, 0);
-        if (this._selectedFootprints.length === 0) {
-            this.selectedVertexPosition = new Float32Array();
-            this.selectedElementIndexes = new Uint32Array();
-            this.nSlectedPrimitiveFlags = 0;
-            return;
-        }
-        this.initSelectionBuffer();
-    }
-    getFootprintsFromPointer(in_mouseHelper) {
-        const pickedIndexes = this.checkClicking(in_mouseHelper);
-        if (!pickedIndexes.length) {
-            return {
-                footprints: [],
-                pickedIndexes: [],
-            };
-        }
-        const footprints = [];
-        pickedIndexes.forEach((idx) => {
-            const footprint = this.footprintPolygons[idx];
-            if (footprint)
-                footprints.push(footprint);
-        });
-        return footprints.length ? { footprints, pickedIndexes } : null;
-    }
-    selectPrimaryFootprintFromClick(in_mouseHelper) {
-        const picked = this.getFootprintsFromPointer(in_mouseHelper);
-        const clickedIndexes = picked?.pickedIndexes ?? [];
-        this.setSelectedIndexes(clickedIndexes);
-        if (!clickedIndexes.length) {
-            return {
-                footprints: [],
-                selectionState: [],
-            };
-        }
-        const selectionState = [];
-        const selectedFootprints = [];
-        clickedIndexes.forEach((idx) => {
-            const footprint = this.footprintPolygons[idx];
-            if (!footprint)
-                return;
-            const selected = this.selectedIndexes.includes(idx);
-            selectionState.push({ footprint, selected });
-            selectedFootprints.push(footprint);
-        });
-        return selectedFootprints.length
-            ? { footprints: selectedFootprints, selectionState }
-            : null;
-    }
-    // highlightFootprint(footprint: Footprint, highlighted: boolean) {
-    //   if (highlighted) {
-    //     this._hoveredFootprints.push(footprint)
-    //     this.totHoveredPoints += footprint.totPoints
-    //   } else {
-    //     const indexOfFootprint = this._hoveredFootprints.indexOf(footprint)
-    //     this._hoveredFootprints.splice(indexOfFootprint, 1)
-    //     this.totHoveredPoints -= footprint.totPoints
-    //   }
-    //   this.initHoveringBuffer()
-    // }
-    /**
-     *
-     * @param {Footprint[]} footprints
-     */
-    // addFootprint2Selected(footprints: Footprint[]) {
-    //   let refreshBuffer = false
-    //   for (let f of footprints) {
-    //     if (!this._selectedFootprints.includes(f)) {
-    //       this._selectedFootprints.push(f)
-    //       this.totSelectedPoints += f.totPoints
-    //       refreshBuffer = true
-    //     }
-    //   }
-    //   if (refreshBuffer) {
-    //     this.initSelectionBuffer()
-    //   }
-    // }
-    /**
-     *
-     * @param {Footprint} footprint
-     */
-    // removeFootprintFromSelection(footprint: Footprint) {
-    //   const indexOfObject = this._selectedFootprints.indexOf(footprint)
-    //   if (indexOfObject >= 0) {
-    //     this._selectedFootprints.splice(indexOfObject, 1)
-    //     this.totSelectedPoints -= footprint.totPoints
-    //     if (this._selectedFootprints.length > 0) {
-    //       this.initSelectionBuffer()
-    //     }
-    //   }
-    // }
-    FootprintPolygonMatches(left, right) {
-        if (left === right)
-            return true;
-        const leftConvexPoly = left.convexPolygons;
-        const rightConvexPoly = right.convexPolygons;
-        if (leftConvexPoly !== rightConvexPoly ||
-            leftConvexPoly !== rightConvexPoly) {
-            return false;
-        }
-        if (left.details.length !== right.details.length) {
-            return false;
-        }
-        for (let i = 0; i < left.details.length; i++) {
-            if (!Object.is(left.details[i], right.details[i])) {
-                return false;
-            }
-        }
-        return true;
-    }
-    findFootprintPolygonIndex(footprint) {
-        const footprintIndex = this.footprintPolygons.indexOf(footprint);
-        if (footprintIndex >= 0) {
-            return footprintIndex;
-        }
-        return this.footprintPolygons.findIndex((candidate) => this.FootprintPolygonMatches(candidate, footprint));
-    }
-    extHighlightFootprint(footprint, highlighted) {
-        const sIdx = this.findFootprintPolygonIndex(footprint);
-        if (sIdx < 0)
-            return;
-        const base = sIdx * FootprintSetGL.ELEM_SIZE;
-        if (highlighted) {
-            if (!this.hoveredIndexes.includes(sIdx)) {
-                this.hoveredIndexes.push(sIdx);
-            }
-        }
-        else {
-            if (base + 4 >= this.vertexCataloguePosition.length)
-                return;
-            const i = this.hoveredIndexes.indexOf(sIdx);
-            if (i >= 0) {
-                this.hoveredIndexes.splice(i, 1);
-            }
-        }
-    }
-    extAddPolygons2Selected(footprint) {
-        if (!this._bufferInitialised) {
-            this.initBuffer();
-        }
-        const sIdx = this.findFootprintPolygonIndex(footprint);
-        if (sIdx < 0)
-            return;
-        const base = sIdx * FootprintSetGL.ELEM_SIZE;
-        if (!this.selectedIndexes.includes(sIdx)) {
-            this.selectedIndexes.push(sIdx);
-        }
-        else {
-            if (base + 4 >= this.vertexCataloguePosition.length)
-                return;
-            const i = this.selectedIndexes.indexOf(sIdx);
-            if (i >= 0) {
-                this.selectedIndexes.splice(i, 1);
-            }
-        }
-        this.refreshSelectedFootprints();
-    }
-    initHoveringBuffer() {
-        /*
-                TODO better approach. when creating the indexbuffer of footprints,
-                add 1 extra position for the selection (set to 0 == not selected),
-                and save the position "positionIndex" in an array (selectionIndexes).
-                When checking the selection, I get the index of the footprint, which
-                matches with the index in the selectionIndexes to retrieve the position
-                of the flag to be set to 1 in the vertexposition
-                This will ease checking the selection in the vertex/fragment shader and
-                set the pointsize and shape color.
-                */
-        if (!this._webgl)
-            return;
-        if (this._hoveredFootprints.length == 0) {
-            return;
-        }
-        let nFootprints = this._hoveredFootprints.length;
-        let npolygons = nFootprints - 1;
-        for (let j = 0; j < nFootprints; j++) {
-            npolygons += this._hoveredFootprints[j].polygons.length - 1;
-        }
-        // this._selectedIndex = new Uint16Array(this._totSelectedPoints + npolygons);
-        // let MAX_UNSIGNED_SHORT = 65535; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-        this.hoveredElementIndexes = new Uint32Array(this.totHoveredPoints + npolygons);
-        const MAX_UNSIGNED_INT = 0xffffffff; // this is used to enable and disable GL_PRIMITIVE_RESTART_FIXED_INDEX
-        // let MAX_UNSIGNED_SHORT = Number.MAX_SAFE_INTEGER;
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
-        this.hoveredVertexPosition = new Float32Array(3 * this.totHoveredPoints);
-        let positionIndex = 0;
-        let vIdx = 0;
-        let R = 1.0;
-        this.nHoveredPrimitiveFlags = 0;
-        for (let j = 0; j < nFootprints; j++) {
-            let hoveredFootprintPoly = this._hoveredFootprints[j].polygons;
-            if (j > 0) {
-                this.hoveredElementIndexes[vIdx] = MAX_UNSIGNED_INT;
-                this.nHoveredPrimitiveFlags += 1;
-                vIdx += 1;
-            }
-            for (let polyIdx = 0; polyIdx < hoveredFootprintPoly.length; polyIdx++) {
-                if (polyIdx > 0) {
-                    this.hoveredElementIndexes[vIdx] = MAX_UNSIGNED_INT;
-                    this.nHoveredPrimitiveFlags += 1;
-                    vIdx += 1;
-                }
-                const poly = hoveredFootprintPoly[polyIdx];
-                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
-                    const p = poly[pointIdx];
-                    this.hoveredVertexPosition[positionIndex] = R * p.x;
-                    this.hoveredVertexPosition[positionIndex + 1] = R * p.y;
-                    this.hoveredVertexPosition[positionIndex + 2] = R * p.z;
-                    this.hoveredElementIndexes[vIdx] = Math.floor(positionIndex / 3);
-                    vIdx += 1;
-                    positionIndex += 3;
-                }
-            }
-        }
-    }
-    initSelectionBuffer() {
-        if (!this._webgl)
-            return;
-        if (this._selectedFootprints.length == 0) {
-            return;
-        }
-        const nFootprints = this._selectedFootprints.length;
-        let npolygons = nFootprints - 1;
-        for (let j = 0; j < nFootprints; j++) {
-            npolygons += this._selectedFootprints[j].polygons.length - 1;
-        }
-        this.selectedElementIndexes = new Uint32Array(this.totSelectedPoints + npolygons);
-        const MAX_UNSIGNED_INT = 0xffffffff;
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
-        this.selectedVertexPosition = new Float32Array(3 * this.totSelectedPoints);
-        let positionIndex = 0;
-        let vIdx = 0;
-        const R = 1.0;
-        this.nSlectedPrimitiveFlags = 0;
-        for (let j = 0; j < nFootprints; j++) {
-            const footprintPoly = this._selectedFootprints[j].polygons;
-            if (j > 0) {
-                this.selectedElementIndexes[vIdx] = MAX_UNSIGNED_INT;
-                this.nSlectedPrimitiveFlags += 1;
-                vIdx += 1;
-            }
-            for (let polyIdx = 0; polyIdx < footprintPoly.length; polyIdx++) {
-                if (polyIdx > 0) {
-                    this.selectedElementIndexes[vIdx] = MAX_UNSIGNED_INT;
-                    this.nSlectedPrimitiveFlags += 1;
-                    vIdx += 1;
-                }
-                const poly = footprintPoly[polyIdx];
-                for (let pointIdx = 0; pointIdx < poly.length; pointIdx++) {
-                    const p = poly[pointIdx];
-                    this.selectedVertexPosition[positionIndex] = R * p.x;
-                    this.selectedVertexPosition[positionIndex + 1] = R * p.y;
-                    this.selectedVertexPosition[positionIndex + 2] = R * p.z;
-                    this.selectedElementIndexes[vIdx] = Math.floor(positionIndex / 3);
-                    vIdx += 1;
-                    positionIndex += 3;
-                }
-            }
-        }
-    }
-    changeColor(color) {
-        this._shapeColor = color;
-    }
-    draw(in_mMatrix, in_mouseHelper, vMatrix, pMatrix) {
-        if (!this.isVisible)
-            return;
-        if (!this._ready)
-            return;
-        if (!vMatrix)
-            return;
-        // if (!global.camera) return
-        if (!this._bufferInitialised)
-            this.initBuffer();
-        if (!this._webgl)
-            return;
-        this._footprintShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
-        // this._footprintShaderProgram.enableShaders(
-        //   computePerspectiveMatrixSingleton.pMatrix as Float32Array,
-        //   in_mMatrix,
-        //   vMatrix
-        // )
-        if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
-            this.checkSelection(in_mouseHelper);
-        }
-        if (this._hoveredFootprints.length > 0) {
-            // TODO POINT_SIZE doesn't have any effect on line thickness!! it only applies to points
-            const rgb = (0, Utils_js_1.colorHex2RGB)("#00FF00");
-            const alpha = 1.0;
-            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
-            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
-            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.hoveredVertexPositionBuffer);
-            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.hoveredVertexPosition, this._webgl.STATIC_DRAW);
-            // setting footprint position
-            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
-            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredIndexBuffer);
-            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.hoveredElementIndexes, this._webgl.STATIC_DRAW);
-            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
-            this._webgl.drawElements(this._webgl.LINE_LOOP, this.hoveredVertexPosition.length / 3 + this.nHoveredPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
-        }
-        if (this._selectedFootprints.length > 0) {
-            const rgb = (0, Utils_js_1.colorHex2RGB)("#ECB462");
-            const alpha = 1.0;
-            this._webgl.uniform4f(this._footprintShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], alpha);
-            this._webgl.uniform1f(this._footprintShaderProgram.locations.pointSize, 14.0); // <--- POINT_SIZE in LINE_LOOP is not applicable
-            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedVertexPositionBuffer);
-            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.selectedVertexPosition, this._webgl.STATIC_DRAW);
-            // setting footprint position
-            this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-            this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
-            this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedIndexBuffer);
-            this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.selectedElementIndexes, this._webgl.STATIC_DRAW);
-            // this._gl.drawElements (this._gl.LINE_LOOP, this._selectedVertexPosition.length / 3 + this._nSlectedPrimitiveFlags,this._gl.UNSIGNED_SHORT, 0);
-            this._webgl.drawElements(this._webgl.LINE_LOOP, this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
-        }
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
-        this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
-        this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
-        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexes, this._webgl.STATIC_DRAW);
-        // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
-        const shapeColor = [...(0, Utils_js_1.colorHex2RGB)(this._shapeColor), 1.0];
-        this._webgl.uniform4f(this._footprintShaderProgram.locations.color, ...shapeColor);
-        this._webgl.drawElements(this._webgl.LINE_LOOP, this.indexes.length, this._webgl.UNSIGNED_INT, 0);
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
-        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, null);
-        this.oldMouseCoords = in_mouseHelper.xyz;
-    }
-}
-exports.FootprintSetGL = FootprintSetGL;
-// export default FootprintSetGL
-
-
-/***/ }),
-
-/***/ 595:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HealpixGrid = void 0;
-const AbstractSkyEntity_js_1 = __webpack_require__(735);
-const Global_js_1 = __importDefault(__webpack_require__(382));
-const gl_matrix_1 = __webpack_require__(961);
-const FoVHelper_js_1 = __webpack_require__(610);
-const FoVUtils_js_1 = __webpack_require__(83);
-const FoV_js_1 = __webpack_require__(576);
-const CoordsType_js_1 = __webpack_require__(145);
-const Point_js_1 = __webpack_require__(553);
-const GridShaderManager_js_1 = __importDefault(__webpack_require__(707));
-const GeomUtils_js_1 = __importDefault(__webpack_require__(549));
-const GridTextHelper_js_1 = __importDefault(__webpack_require__(361));
-const Utils_js_1 = __webpack_require__(930);
-const VisibleTilesManager_js_1 = __webpack_require__(56);
-const Config_js_1 = __webpack_require__(919);
-class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
-    static ELEM_SIZE = 3;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    _visibleorder = 0;
-    showGrid = false;
-    _shaderProgram;
-    fragmentShader;
-    vertexShader;
-    defaultColor = '#ec0acaff';
-    gridText = new GridTextHelper_js_1.default();
-    // private _hipsShaderProgram: HiPSShaderProgram
-    _attribLocations = {
-        position: 0,
-        selected: 1,
-        pointSize: 2,
-        color: 3,
-    };
-    _nPrimitiveFlags = 0;
-    _vertexCataloguePositionBuffer;
-    _indexBuffer;
-    _vertexCataloguePosition = new Float32Array(0);
-    _indexes = new Uint32Array(0);
-    _fovObj;
-    static INITIAL_FOV = 180;
-    static RADIUS = 1;
-    static INITIAL_POSITION = [0.0, 0.0, 0.0];
-    static INITIAL_PhiRad = 0;
-    static INITIAL_ThetaRad = 0;
-    _visibleTilesManager;
-    constructor(webgl) {
-        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
-        this.init();
-        this._visibleTilesManager = new VisibleTilesManager_js_1.VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
-        this._visibleTilesManager.init(Config_js_1.bootSetup.insideSphere);
-    }
-    init() {
-        console.log('HealpixGridSingleton.init()');
-        this.initGL(super.webgl);
-        this._shaderProgram = super.webgl.createProgram();
-        this.initShaders();
-        const order = FoVHelper_js_1.fovHelper.getHiPSNorder(HealpixGrid.INITIAL_FOV);
-        this._visibleorder = order;
-        this._nPrimitiveFlags = 0;
-        this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
-        this._indexBuffer = super.webgl.createBuffer();
-        this._vertexCataloguePosition = new Float32Array(0);
-        this._fovObj = new FoV_js_1.FoV(super.webgl);
-    }
-    get fovObj() {
-        return this._fovObj;
-    }
-    get RADIUS() {
-        return HealpixGrid.RADIUS;
-    }
-    get INITIAL_POSITION() {
-        return HealpixGrid.INITIAL_POSITION;
-    }
-    get INITIAL_PhiRad() {
-        return HealpixGrid.INITIAL_PhiRad;
-    }
-    get INITIAL_ThetaRad() {
-        return HealpixGrid.INITIAL_ThetaRad;
-    }
-    refreshFoV(camera, pMatrix) {
-        return this._fovObj.getFoV(Global_js_1.default.insideSphere, this, camera, pMatrix);
-    }
-    getFoV() {
-        return this._fovObj;
-    }
-    getMinFoV() {
-        return this._fovObj.minFoV;
-    }
-    initShaders() {
-        const gl = super.webgl;
-        const fragmentShaderStr = GridShaderManager_js_1.default.healpixGridFS();
-        this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this.fragmentShader, fragmentShaderStr);
-        gl.compileShader(this.fragmentShader);
-        if (!gl.getShaderParameter(this.fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this.fragmentShader) || 'Fragment shader compile error');
-            return;
-        }
-        const vertexShaderStr = GridShaderManager_js_1.default.healpixGridVS();
-        this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(this.vertexShader, vertexShaderStr);
-        gl.compileShader(this.vertexShader);
-        if (!gl.getShaderParameter(this.vertexShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this.vertexShader) || 'Vertex shader compile error');
-            return;
-        }
-        gl.attachShader(this._shaderProgram, this.vertexShader);
-        gl.attachShader(this._shaderProgram, this.fragmentShader);
-        gl.linkProgram(this._shaderProgram);
-        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        gl.useProgram(this._shaderProgram);
-    }
-    initBuffers(pixels, order) {
-        this._nPrimitiveFlags = 0;
-        const healpix = Global_js_1.default.getHealpix(order);
-        const subhpx = Global_js_1.default.getHealpix(order + 1);
-        const subsubhpx = Global_js_1.default.getHealpix(order + 2);
-        let positionIndex = 0;
-        let vIdx = 0;
-        const R = 1.0;
-        const MAX_UINT = 0xffffffff;
-        this._indexes = new Uint32Array(17 * pixels.length);
-        this._vertexCataloguePosition = new Float32Array(3 * 16 * pixels.length);
-        for (let p = 0; p < pixels.length; p++) {
-            const vecs = healpix.getBoundaries(pixels[p]);
-            const cpix0 = pixels[p] << 2;
-            const cpix1 = cpix0 + 1;
-            const cpix2 = cpix0 + 2;
-            const cpix3 = cpix0 + 3;
-            const cp0vecs = subhpx.getBoundaries(cpix0);
-            const cp3vecs = subhpx.getBoundaries(cpix3);
-            // helper to push a vertex
-            const pushV = (v) => {
-                this._vertexCataloguePosition[positionIndex] = R * v.x;
-                this._vertexCataloguePosition[positionIndex + 1] = R * v.y;
-                this._vertexCataloguePosition[positionIndex + 2] = R * v.z;
-                this._indexes[vIdx] = Math.floor(positionIndex / 3);
-                vIdx += 1;
-                positionIndex += 3;
-            };
-            // v0(3/0)
-            pushV(vecs[0]);
-            // v1(15/2)
-            let subcpix3 = cpix3 << 2;
-            let subcpix3_3 = subcpix3 + 3;
-            let tmp = subsubhpx.getBoundaries(subcpix3_3);
-            pushV(tmp[1]);
-            // v1(3/1)
-            pushV(cp3vecs[1]);
-            // v0(2/2)
-            let subcpix2 = cpix2 << 2;
-            let subcpix2_2 = subcpix2 + 2;
-            tmp = subsubhpx.getBoundaries(subcpix2_2);
-            pushV(tmp[0]);
-            // v1(0/0)
-            pushV(vecs[1]);
-            // v2(2/2)
-            pushV(tmp[2]);
-            // v1(0/1)
-            pushV(cp0vecs[1]);
-            // v1(0/2)
-            let subcpix0 = cpix0 << 2;
-            let subcpix0_2 = subcpix0;
-            tmp = subsubhpx.getBoundaries(subcpix0_2);
-            pushV(tmp[1]);
-            // v2(0/0)
-            pushV(vecs[2]);
-            // v3(0/2)
-            pushV(tmp[3]);
-            // v3(0/1)
-            pushV(cp0vecs[3]);
-            // v2(5/2)
-            let subcpix1 = cpix1 << 2;
-            let subcpix1_1 = subcpix1 + 1;
-            tmp = subsubhpx.getBoundaries(subcpix1_1);
-            pushV(tmp[2]);
-            // v3(0/0)
-            pushV(vecs[3]);
-            // v0(5/2)
-            pushV(tmp[0]);
-            // v3(3/1)
-            pushV(cp3vecs[3]);
-            tmp = subsubhpx.getBoundaries(subcpix3_3);
-            pushV(tmp[3]);
-            // primitive restart
-            this._indexes[vIdx] = MAX_UINT;
-            this._nPrimitiveFlags += 1;
-            vIdx += 1;
-        }
-    }
-    // updateTiles(pixels: number[], order: number) {
-    //   return (this as any)._tileBuffer.updateTiles(pixels, order);
-    // }
-    refresh(camera, pMatrix) {
-        this.refreshFoV(camera, pMatrix);
-        const fov = this.getMinFoV();
-        // expose to global (legacy)
-        // (global as any).hipsFoV = fov;
-        // global.order = fovHelper.getHiPSNorder(fov);
-        // this._visibleorder = global.order;
-        this._visibleorder = FoVHelper_js_1.fovHelper.getHiPSNorder(fov);
-    }
-    enableShader(in_mMatrix, pMatrix, vMatrix) {
-        const gl = super.webgl;
-        gl.useProgram(this._shaderProgram);
-        // TODO move locations retrieval elsewhere
-        // Uniform locations
-        const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
-        const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-        const uColor = super.webgl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
-        // Attribute locations
-        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
-        let mvMatrix = gl_matrix_1.mat4.create();
-        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
-        mvMatrix = gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, in_mMatrix);
-        if (uMV)
-            gl.uniformMatrix4fv(uMV, false, mvMatrix);
-        if (uP)
-            gl.uniformMatrix4fv(uP, false, pMatrix);
-        if (uColor) {
-            const rgb = (0, Utils_js_1.colorHex2RGB)(this.defaultColor);
-            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
-        }
-    }
-    isVisible() {
-        return this.showGrid;
-    }
-    toggleShowGrid() {
-        this.showGrid = !this.showGrid;
-    }
-    get visibleTilesManager() {
-        return this._visibleTilesManager;
-    }
-    draw(input) {
-        const gl = super.webgl;
-        const mMatrix = this.getModelMatrix();
-        // const vMatrix = input.camera.getCameraMatrix()
-        const camera = input.camera;
-        if (!camera)
-            return;
-        const vMatrix = camera.getCameraMatrix();
-        const pMatrix = input.pMatrix;
-        if (!pMatrix)
-            return;
-        this.refresh(camera, pMatrix);
-        if (!this.showGrid) {
-            // gridTextHelper.resetDivSets();
-            this.gridText.resetDivSets();
-            return;
-        }
-        // const visibleTiles = visibleTilesManager.visibleTilesByOrder
-        const visibleTiles = this._visibleTilesManager.visibleTilesByOrder;
-        const pixels = visibleTiles.pixels;
-        const order = visibleTiles.order;
-        this.initBuffers(pixels, order);
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-        this.enableShader(mMatrix, pMatrix, vMatrix);
-        // Upload positions
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
-        gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
-        gl.vertexAttribPointer(this._attribLocations.position, HealpixGrid.ELEM_SIZE, gl.FLOAT, false, HealpixGrid.BYTES_X_ELEM * HealpixGrid.ELEM_SIZE, 0);
-        gl.enableVertexAttribArray(this._attribLocations.position);
-        // Index buffer
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexes, gl.STATIC_DRAW);
-        gl.drawElements(gl.LINE_LOOP, this._vertexCataloguePosition.length / 3 + this._nPrimitiveFlags, gl.UNSIGNED_INT, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, null);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-        // Project and label pixel centers that are inside current FoV
-        let mvMatrix = gl_matrix_1.mat4.create();
-        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
-        mvMatrix = gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
-        let mvpMatrix = gl_matrix_1.mat4.create();
-        mvpMatrix = gl_matrix_1.mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
-        // FIX: pass model & pMatrix to match FoVUtils TS signature
-        const center = FoVUtils_js_1.FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl, camera, pMatrix);
-        const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
-        for (let p = 0; p < pixels.length; p++) {
-            const pixCenter = Global_js_1.default.getHealpix(this._visibleorder).pix2vec(pixels[p]);
-            // const pixCenter = (global.getHealpix(global.order).pix2vec(pixels[p]) as BoundVec);
-            const point = new Point_js_1.Point({ x: pixCenter.x, y: pixCenter.y, z: pixCenter.z }, CoordsType_js_1.CoordsType.CARTESIAN);
-            const distance = GeomUtils_js_1.default.orthodromicDistance(center, point);
-            if (distance < fovMin) {
-                const vertex = [pixCenter.x, pixCenter.y, pixCenter.z, 1];
-                const clipspace = gl_matrix_1.vec4.create();
-                gl_matrix_1.vec4.transformMat4(clipspace, vertex, mvpMatrix);
-                // NDC divide
-                clipspace[0] /= clipspace[3];
-                clipspace[1] /= clipspace[3];
-                // clip → pixels
-                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
-                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
-                this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
-                // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
-            }
-        }
-        // gridTextHelper.resetDivSets();
-        this.gridText.resetDivSets();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    }
-    get visibleorder() {
-        return this._visibleorder;
-    }
-}
-exports.HealpixGrid = HealpixGrid;
-
-
-/***/ }),
-
-/***/ 610:
-/***/ ((__unused_webpack_module, exports) => {
-
-// FoVHelper.ts
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.fovHelper = void 0;
-class FoVHelper {
-    getHiPSNorder(fov) {
-        if (fov >= 179)
-            return 0;
-        if (fov >= 90)
-            return 1;
-        if (fov >= 30)
-            return 2;
-        if (fov >= 20)
-            return 3;
-        if (fov >= 6)
-            return 4;
-        if (fov >= 3.2)
-            return 5;
-        if (fov >= 1.6)
-            return 6;
-        if (fov >= 0.85)
-            return 7;
-        if (fov >= 0.42)
-            return 8;
-        if (fov >= 0.21)
-            return 9;
-        if (fov >= 0.12)
-            return 10;
-        if (fov >= 0.06)
-            return 11;
-        if (fov >= 0.015)
-            return 12;
-        return 13;
-    }
-    getRADegSteps(fov) {
-        let raStep;
-        let decStep;
-        if (fov >= 179) {
-            raStep = 10;
-            decStep = 10;
-        }
-        else if (fov >= 25) {
-            raStep = 9;
-            decStep = 9;
-        }
-        else if (fov >= 12.5) {
-            raStep = 8;
-            decStep = 8;
-        }
-        else if (fov >= 6) {
-            raStep = 6;
-            decStep = 6;
-        }
-        else if (fov >= 3.2) {
-            raStep = 5;
-            decStep = 5;
-        }
-        else if (fov >= 1.6) {
-            raStep = 4;
-            decStep = 4;
-        }
-        else if (fov >= 0.85) {
-            raStep = 3;
-            decStep = 3;
-        }
-        else if (fov >= 0.42) {
-            raStep = 2;
-            decStep = 2;
-        }
-        else if (fov >= 0.21) {
-            raStep = 1;
-            decStep = 1;
-        }
-        else if (fov >= 0.12) {
-            raStep = 0.5;
-            decStep = 0.5;
-        }
-        else if (fov >= 0.06) {
-            raStep = 0.25;
-            decStep = 0.25;
-        }
-        else {
-            raStep = 10;
-            decStep = 10;
-        }
-        return { raStep, decStep };
-    }
-    getRefOrder(order) {
-        switch (order) {
-            case 0:
-            case 1:
-            case 2:
-            case 3:
-                return order + 6;
-            case 4:
-            case 5:
-            case 6:
-            case 7:
-                return order + 5;
-            case 8:
-                return order + 4;
-            default:
-                return order + 3;
-        }
-    }
-}
-exports.fovHelper = new FoVHelper();
-exports["default"] = FoVHelper;
-
-
-/***/ }),
-
-/***/ 619:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.ColorMaps = exports.COLOR_MAP_SAMPLE_COUNT = void 0;
-exports.createColorMapFromSamples = createColorMapFromSamples;
-exports.COLOR_MAP_SAMPLE_COUNT = 256;
-function validateColorChannel(name, values) {
-    if (!Array.isArray(values)) {
-        throw new Error(`Channel "${name}" must be an array.`);
-    }
-    if (values.length !== exports.COLOR_MAP_SAMPLE_COUNT) {
-        throw new Error(`Channel "${name}" must contain exactly ${exports.COLOR_MAP_SAMPLE_COUNT} samples.`);
-    }
-    for (let i = 0; i < values.length; i += 1) {
-        const value = values[i];
-        if (!Number.isFinite(value)) {
-            throw new Error(`Channel "${name}" contains a non-finite value at index ${i}.`);
-        }
-        if (value < 0 || value > 255) {
-            throw new Error(`Channel "${name}" contains an out-of-range value at index ${i}. Expected 0..255.`);
-        }
-    }
-}
-function packColorChannel(values) {
-    const packed = new Float32Array(exports.COLOR_MAP_SAMPLE_COUNT * 4);
-    for (let i = 0; i < exports.COLOR_MAP_SAMPLE_COUNT; i += 1) {
-        packed[i * 4] = values[i];
-    }
-    return packed;
-}
-function createColorMapFromSamples(name, channels) {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-        throw new Error("Color map name must not be empty.");
-    }
-    validateColorChannel("r", channels.r);
-    validateColorChannel("g", channels.g);
-    validateColorChannel("b", channels.b);
-    return {
-        name: trimmedName,
-        r: packColorChannel(channels.r),
-        g: packColorChannel(channels.g),
-        b: packColorChannel(channels.b),
-    };
-}
-exports.ColorMaps = {
-    grayscale: {
-        name: 'grayscale',
-        r: new Float32Array([]),
-        g: new Float32Array([]),
-        b: new Float32Array([]),
-        // r: [],
-        // g: [],
-        // b: [],
-    },
-    native: {
-        name: 'native',
-        r: new Float32Array([]),
-        g: new Float32Array([]),
-        b: new Float32Array([]),
-        // r: [],
-        // g: [],
-        // b: [],
-    },
-    planck: {
-        name: 'planck',
-        r: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 0.769231, 0.0, 0.0, 0.0, 1.53846, 0.0, 0.0, 0.0, 2.30769, 0.0, 0.0, 0.0,
-            3.07692, 0.0, 0.0, 0.0, 3.84615, 0.0, 0.0, 0.0, 4.61538, 0.0, 0.0, 0.0, 5.38462, 0.0, 0.0,
-            0.0, 6.15385, 0.0, 0.0, 0.0, 6.92308, 0.0, 0.0, 0.0, 7.69231, 0.0, 0.0, 0.0, 8.46154, 0.0,
-            0.0, 0.0, 9.23077, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 11.5385, 0.0, 0.0, 0.0, 13.0769, 0.0,
-            0.0, 0.0, 14.6154, 0.0, 0.0, 0.0, 16.1538, 0.0, 0.0, 0.0, 17.6923, 0.0, 0.0, 0.0, 19.2308,
-            0.0, 0.0, 0.0, 20.7692, 0.0, 0.0, 0.0, 22.3077, 0.0, 0.0, 0.0, 23.8462, 0.0, 0.0, 0.0,
-            25.3846, 0.0, 0.0, 0.0, 26.9231, 0.0, 0.0, 0.0, 28.4615, 0.0, 0.0, 0.0, 30.0, 0.0, 0.0, 0.0,
-            33.8462, 0.0, 0.0, 0.0, 37.6923, 0.0, 0.0, 0.0, 41.5385, 0.0, 0.0, 0.0, 45.3846, 0.0, 0.0,
-            0.0, 49.2308, 0.0, 0.0, 0.0, 53.0769, 0.0, 0.0, 0.0, 56.9231, 0.0, 0.0, 0.0, 60.7692, 0.0,
-            0.0, 0.0, 64.6154, 0.0, 0.0, 0.0, 68.4615, 0.0, 0.0, 0.0, 72.3077, 0.0, 0.0, 0.0, 76.1538,
-            0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 88.5385, 0.0, 0.0, 0.0, 97.0769, 0.0, 0.0, 0.0, 105.615,
-            0.0, 0.0, 0.0, 114.154, 0.0, 0.0, 0.0, 122.692, 0.0, 0.0, 0.0, 131.231, 0.0, 0.0, 0.0,
-            139.769, 0.0, 0.0, 0.0, 148.308, 0.0, 0.0, 0.0, 156.846, 0.0, 0.0, 0.0, 165.385, 0.0, 0.0,
-            0.0, 173.923, 0.0, 0.0, 0.0, 182.462, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 193.846, 0.0, 0.0,
-            0.0, 196.692, 0.0, 0.0, 0.0, 199.538, 0.0, 0.0, 0.0, 202.385, 0.0, 0.0, 0.0, 205.231, 0.0,
-            0.0, 0.0, 208.077, 0.0, 0.0, 0.0, 210.923, 0.0, 0.0, 0.0, 213.769, 0.0, 0.0, 0.0, 216.615,
-            0.0, 0.0, 0.0, 219.462, 0.0, 0.0, 0.0, 222.308, 0.0, 0.0, 0.0, 225.154, 0.0, 0.0, 0.0, 228.0,
-            0.0, 0.0, 0.0, 229.182, 0.0, 0.0, 0.0, 230.364, 0.0, 0.0, 0.0, 231.545, 0.0, 0.0, 0.0,
-            232.727, 0.0, 0.0, 0.0, 233.909, 0.0, 0.0, 0.0, 235.091, 0.0, 0.0, 0.0, 236.273, 0.0, 0.0,
-            0.0, 237.455, 0.0, 0.0, 0.0, 238.636, 0.0, 0.0, 0.0, 239.818, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0,
-            0.0, 241.0, 0.0, 0.0, 0.0, 241.364, 0.0, 0.0, 0.0, 241.727, 0.0, 0.0, 0.0, 242.091, 0.0, 0.0,
-            0.0, 242.455, 0.0, 0.0, 0.0, 242.818, 0.0, 0.0, 0.0, 243.182, 0.0, 0.0, 0.0, 243.545, 0.0,
-            0.0, 0.0, 243.909, 0.0, 0.0, 0.0, 244.273, 0.0, 0.0, 0.0, 244.636, 0.0, 0.0, 0.0, 245.0, 0.0,
-            0.0, 0.0, 245.231, 0.0, 0.0, 0.0, 245.462, 0.0, 0.0, 0.0, 245.692, 0.0, 0.0, 0.0, 245.923,
-            0.0, 0.0, 0.0, 246.154, 0.0, 0.0, 0.0, 246.385, 0.0, 0.0, 0.0, 246.615, 0.0, 0.0, 0.0,
-            246.846, 0.0, 0.0, 0.0, 247.077, 0.0, 0.0, 0.0, 247.308, 0.0, 0.0, 0.0, 247.538, 0.0, 0.0,
-            0.0, 247.769, 0.0, 0.0, 0.0, 248.0, 0.0, 0.0, 0.0, 248.146, 0.0, 0.0, 0.0, 248.292, 0.0, 0.0,
-            0.0, 248.438, 0.0, 0.0, 0.0, 248.585, 0.0, 0.0, 0.0, 248.731, 0.0, 0.0, 0.0, 248.877, 0.0,
-            0.0, 0.0, 249.023, 0.0, 0.0, 0.0, 249.169, 0.0, 0.0, 0.0, 249.315, 0.0, 0.0, 0.0, 249.462,
-            0.0, 0.0, 0.0, 249.608, 0.0, 0.0, 0.0, 249.754, 0.0, 0.0, 0.0, 249.9, 0.0, 0.0, 0.0, 249.312,
-            0.0, 0.0, 0.0, 248.723, 0.0, 0.0, 0.0, 248.135, 0.0, 0.0, 0.0, 247.546, 0.0, 0.0, 0.0,
-            246.958, 0.0, 0.0, 0.0, 246.369, 0.0, 0.0, 0.0, 245.781, 0.0, 0.0, 0.0, 245.192, 0.0, 0.0,
-            0.0, 244.604, 0.0, 0.0, 0.0, 244.015, 0.0, 0.0, 0.0, 243.427, 0.0, 0.0, 0.0, 242.838, 0.0,
-            0.0, 0.0, 242.25, 0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 236.365, 0.0, 0.0, 0.0, 233.423, 0.0,
-            0.0, 0.0, 230.481, 0.0, 0.0, 0.0, 227.538, 0.0, 0.0, 0.0, 224.596, 0.0, 0.0, 0.0, 221.654,
-            0.0, 0.0, 0.0, 218.712, 0.0, 0.0, 0.0, 215.769, 0.0, 0.0, 0.0, 212.827, 0.0, 0.0, 0.0,
-            209.885, 0.0, 0.0, 0.0, 206.942, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0,
-            198.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 192.0, 0.0, 0.0, 0.0, 189.0, 0.0, 0.0, 0.0, 186.0,
-            0.0, 0.0, 0.0, 183.0, 0.0, 0.0, 0.0, 180.0, 0.0, 0.0, 0.0, 177.0, 0.0, 0.0, 0.0, 174.0, 0.0,
-            0.0, 0.0, 171.0, 0.0, 0.0, 0.0, 168.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 161.077, 0.0, 0.0,
-            0.0, 157.154, 0.0, 0.0, 0.0, 153.231, 0.0, 0.0, 0.0, 149.308, 0.0, 0.0, 0.0, 145.385, 0.0,
-            0.0, 0.0, 141.462, 0.0, 0.0, 0.0, 137.538, 0.0, 0.0, 0.0, 133.615, 0.0, 0.0, 0.0, 129.692,
-            0.0, 0.0, 0.0, 125.769, 0.0, 0.0, 0.0, 121.846, 0.0, 0.0, 0.0, 117.923, 0.0, 0.0, 0.0, 114.0,
-            0.0, 0.0, 0.0, 115.038, 0.0, 0.0, 0.0, 116.077, 0.0, 0.0, 0.0, 117.115, 0.0, 0.0, 0.0,
-            118.154, 0.0, 0.0, 0.0, 119.192, 0.0, 0.0, 0.0, 120.231, 0.0, 0.0, 0.0, 121.269, 0.0, 0.0,
-            0.0, 122.308, 0.0, 0.0, 0.0, 123.346, 0.0, 0.0, 0.0, 124.385, 0.0, 0.0, 0.0, 125.423, 0.0,
-            0.0, 0.0, 126.462, 0.0, 0.0, 0.0, 127.5, 0.0, 0.0, 0.0, 131.423, 0.0, 0.0, 0.0, 135.346, 0.0,
-            0.0, 0.0, 139.269, 0.0, 0.0, 0.0, 143.192, 0.0, 0.0, 0.0, 147.115, 0.0, 0.0, 0.0, 151.038,
-            0.0, 0.0, 0.0, 154.962, 0.0, 0.0, 0.0, 158.885, 0.0, 0.0, 0.0, 162.808, 0.0, 0.0, 0.0,
-            166.731, 0.0, 0.0, 0.0, 170.654, 0.0, 0.0, 0.0, 174.577, 0.0, 0.0, 0.0, 178.5, 0.0, 0.0, 0.0,
-            180.462, 0.0, 0.0, 0.0, 182.423, 0.0, 0.0, 0.0, 184.385, 0.0, 0.0, 0.0, 186.346, 0.0, 0.0,
-            0.0, 188.308, 0.0, 0.0, 0.0, 190.269, 0.0, 0.0, 0.0, 192.231, 0.0, 0.0, 0.0, 194.192, 0.0,
-            0.0, 0.0, 196.154, 0.0, 0.0, 0.0, 198.115, 0.0, 0.0, 0.0, 200.077, 0.0, 0.0, 0.0, 202.038,
-            0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 205.962, 0.0, 0.0, 0.0, 207.923, 0.0, 0.0, 0.0, 209.885,
-            0.0, 0.0, 0.0, 211.846, 0.0, 0.0, 0.0, 213.808, 0.0, 0.0, 0.0, 215.769, 0.0, 0.0, 0.0,
-            217.731, 0.0, 0.0, 0.0, 219.692, 0.0, 0.0, 0.0, 221.654, 0.0, 0.0, 0.0, 223.615, 0.0, 0.0,
-            0.0, 225.577, 0.0, 0.0, 0.0, 227.538, 0.0, 0.0, 0.0, 229.5, 0.0, 0.0, 0.0, 230.481, 0.0, 0.0,
-            0.0, 231.462, 0.0, 0.0, 0.0, 232.442, 0.0, 0.0, 0.0, 233.423, 0.0, 0.0, 0.0, 234.404, 0.0,
-            0.0, 0.0, 235.385, 0.0, 0.0, 0.0, 236.365, 0.0, 0.0, 0.0, 237.346, 0.0, 0.0, 0.0, 238.327,
-            0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 240.288, 0.0, 0.0, 0.0, 241.269, 0.0, 0.0, 0.0, 242.25,
-            0.0, 0.0, 0.0, 242.642, 0.0, 0.0, 0.0, 243.035, 0.0, 0.0, 0.0, 243.427, 0.0, 0.0, 0.0,
-            243.819, 0.0, 0.0, 0.0, 244.212, 0.0, 0.0, 0.0, 244.604, 0.0, 0.0, 0.0, 244.996, 0.0, 0.0,
-            0.0, 245.388, 0.0, 0.0, 0.0, 245.781, 0.0, 0.0, 0.0, 246.173, 0.0, 0.0, 0.0, 246.565, 0.0,
-            0.0, 0.0, 246.958, 0.0, 0.0, 0.0, 247.35, 0.0, 0.0, 0.0, 247.814, 0.0, 0.0, 0.0, 248.277, 0.0,
-            0.0, 0.0, 248.741, 0.0, 0.0, 0.0, 249.205, 0.0, 0.0, 0.0, 249.668, 0.0, 0.0, 0.0, 250.132,
-            0.0, 0.0, 0.0, 250.595, 0.0, 0.0, 0.0, 251.059, 0.0, 0.0, 0.0, 251.523, 0.0, 0.0, 0.0,
-            251.986, 0.0, 0.0, 0.0, 252.45, 0.0, 0.0, 0.0
-        ]),
-        g: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 1.53846, 0.0, 0.0, 0.0, 3.07692, 0.0, 0.0, 0.0, 4.61538, 0.0, 0.0, 0.0,
-            6.15385, 0.0, 0.0, 0.0, 7.69231, 0.0, 0.0, 0.0, 9.23077, 0.0, 0.0, 0.0, 10.7692, 0.0, 0.0,
-            0.0, 12.3077, 0.0, 0.0, 0.0, 13.8462, 0.0, 0.0, 0.0, 15.3846, 0.0, 0.0, 0.0, 16.9231, 0.0,
-            0.0, 0.0, 18.4615, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 32.6154, 0.0, 0.0, 0.0, 45.2308, 0.0,
-            0.0, 0.0, 57.8462, 0.0, 0.0, 0.0, 70.4615, 0.0, 0.0, 0.0, 83.0769, 0.0, 0.0, 0.0, 95.6923,
-            0.0, 0.0, 0.0, 108.308, 0.0, 0.0, 0.0, 120.923, 0.0, 0.0, 0.0, 133.538, 0.0, 0.0, 0.0,
-            146.154, 0.0, 0.0, 0.0, 158.769, 0.0, 0.0, 0.0, 171.385, 0.0, 0.0, 0.0, 184.0, 0.0, 0.0, 0.0,
-            187.923, 0.0, 0.0, 0.0, 191.846, 0.0, 0.0, 0.0, 195.769, 0.0, 0.0, 0.0, 199.692, 0.0, 0.0,
-            0.0, 203.615, 0.0, 0.0, 0.0, 207.538, 0.0, 0.0, 0.0, 211.462, 0.0, 0.0, 0.0, 215.385, 0.0,
-            0.0, 0.0, 219.308, 0.0, 0.0, 0.0, 223.231, 0.0, 0.0, 0.0, 227.154, 0.0, 0.0, 0.0, 231.077,
-            0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 235.308, 0.0, 0.0, 0.0, 235.615, 0.0, 0.0, 0.0, 235.923,
-            0.0, 0.0, 0.0, 236.231, 0.0, 0.0, 0.0, 236.538, 0.0, 0.0, 0.0, 236.846, 0.0, 0.0, 0.0,
-            237.154, 0.0, 0.0, 0.0, 237.462, 0.0, 0.0, 0.0, 237.769, 0.0, 0.0, 0.0, 238.077, 0.0, 0.0,
-            0.0, 238.385, 0.0, 0.0, 0.0, 238.692, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 239.077, 0.0, 0.0,
-            0.0, 239.154, 0.0, 0.0, 0.0, 239.231, 0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 239.385, 0.0,
-            0.0, 0.0, 239.462, 0.0, 0.0, 0.0, 239.538, 0.0, 0.0, 0.0, 239.615, 0.0, 0.0, 0.0, 239.692,
-            0.0, 0.0, 0.0, 239.769, 0.0, 0.0, 0.0, 239.846, 0.0, 0.0, 0.0, 239.923, 0.0, 0.0, 0.0, 240.0,
-            0.0, 0.0, 0.0, 240.091, 0.0, 0.0, 0.0, 240.182, 0.0, 0.0, 0.0, 240.273, 0.0, 0.0, 0.0,
-            240.364, 0.0, 0.0, 0.0, 240.455, 0.0, 0.0, 0.0, 240.545, 0.0, 0.0, 0.0, 240.636, 0.0, 0.0,
-            0.0, 240.727, 0.0, 0.0, 0.0, 240.818, 0.0, 0.0, 0.0, 240.909, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0,
-            0.0, 241.0, 0.0, 0.0, 0.0, 240.909, 0.0, 0.0, 0.0, 240.818, 0.0, 0.0, 0.0, 240.727, 0.0, 0.0,
-            0.0, 240.636, 0.0, 0.0, 0.0, 240.545, 0.0, 0.0, 0.0, 240.455, 0.0, 0.0, 0.0, 240.364, 0.0,
-            0.0, 0.0, 240.273, 0.0, 0.0, 0.0, 240.182, 0.0, 0.0, 0.0, 240.091, 0.0, 0.0, 0.0, 240.0, 0.0,
-            0.0, 0.0, 239.615, 0.0, 0.0, 0.0, 239.231, 0.0, 0.0, 0.0, 238.846, 0.0, 0.0, 0.0, 238.462,
-            0.0, 0.0, 0.0, 238.077, 0.0, 0.0, 0.0, 237.692, 0.0, 0.0, 0.0, 237.308, 0.0, 0.0, 0.0,
-            236.923, 0.0, 0.0, 0.0, 236.538, 0.0, 0.0, 0.0, 236.154, 0.0, 0.0, 0.0, 235.769, 0.0, 0.0,
-            0.0, 235.385, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 232.615, 0.0, 0.0, 0.0, 230.231, 0.0, 0.0,
-            0.0, 227.846, 0.0, 0.0, 0.0, 225.462, 0.0, 0.0, 0.0, 223.077, 0.0, 0.0, 0.0, 220.692, 0.0,
-            0.0, 0.0, 218.308, 0.0, 0.0, 0.0, 215.923, 0.0, 0.0, 0.0, 213.538, 0.0, 0.0, 0.0, 211.154,
-            0.0, 0.0, 0.0, 208.769, 0.0, 0.0, 0.0, 206.385, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 200.077,
-            0.0, 0.0, 0.0, 196.154, 0.0, 0.0, 0.0, 192.231, 0.0, 0.0, 0.0, 188.308, 0.0, 0.0, 0.0,
-            184.385, 0.0, 0.0, 0.0, 180.462, 0.0, 0.0, 0.0, 176.538, 0.0, 0.0, 0.0, 172.615, 0.0, 0.0,
-            0.0, 168.692, 0.0, 0.0, 0.0, 164.769, 0.0, 0.0, 0.0, 160.846, 0.0, 0.0, 0.0, 156.923, 0.0,
-            0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 147.115, 0.0, 0.0, 0.0, 141.231, 0.0, 0.0, 0.0, 135.346, 0.0,
-            0.0, 0.0, 129.462, 0.0, 0.0, 0.0, 123.577, 0.0, 0.0, 0.0, 117.692, 0.0, 0.0, 0.0, 111.808,
-            0.0, 0.0, 0.0, 105.923, 0.0, 0.0, 0.0, 100.038, 0.0, 0.0, 0.0, 94.1538, 0.0, 0.0, 0.0,
-            88.2692, 0.0, 0.0, 0.0, 82.3846, 0.0, 0.0, 0.0, 76.5, 0.0, 0.0, 0.0, 73.0769, 0.0, 0.0, 0.0,
-            69.6538, 0.0, 0.0, 0.0, 66.2308, 0.0, 0.0, 0.0, 62.8077, 0.0, 0.0, 0.0, 59.3846, 0.0, 0.0,
-            0.0, 55.9615, 0.0, 0.0, 0.0, 52.5385, 0.0, 0.0, 0.0, 49.1154, 0.0, 0.0, 0.0, 45.6923, 0.0,
-            0.0, 0.0, 42.2692, 0.0, 0.0, 0.0, 38.8462, 0.0, 0.0, 0.0, 35.4231, 0.0, 0.0, 0.0, 32.0, 0.0,
-            0.0, 0.0, 29.5385, 0.0, 0.0, 0.0, 27.0769, 0.0, 0.0, 0.0, 24.6154, 0.0, 0.0, 0.0, 22.1538,
-            0.0, 0.0, 0.0, 19.6923, 0.0, 0.0, 0.0, 17.2308, 0.0, 0.0, 0.0, 14.7692, 0.0, 0.0, 0.0,
-            12.3077, 0.0, 0.0, 0.0, 9.84615, 0.0, 0.0, 0.0, 7.38462, 0.0, 0.0, 0.0, 4.92308, 0.0, 0.0,
-            0.0, 2.46154, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.80769, 0.0, 0.0, 0.0, 19.6154, 0.0, 0.0,
-            0.0, 29.4231, 0.0, 0.0, 0.0, 39.2308, 0.0, 0.0, 0.0, 49.0385, 0.0, 0.0, 0.0, 58.8462, 0.0,
-            0.0, 0.0, 68.6538, 0.0, 0.0, 0.0, 78.4615, 0.0, 0.0, 0.0, 88.2692, 0.0, 0.0, 0.0, 98.0769,
-            0.0, 0.0, 0.0, 107.885, 0.0, 0.0, 0.0, 117.692, 0.0, 0.0, 0.0, 127.5, 0.0, 0.0, 0.0, 131.423,
-            0.0, 0.0, 0.0, 135.346, 0.0, 0.0, 0.0, 139.269, 0.0, 0.0, 0.0, 143.192, 0.0, 0.0, 0.0,
-            147.115, 0.0, 0.0, 0.0, 151.038, 0.0, 0.0, 0.0, 154.962, 0.0, 0.0, 0.0, 158.885, 0.0, 0.0,
-            0.0, 162.808, 0.0, 0.0, 0.0, 166.731, 0.0, 0.0, 0.0, 170.654, 0.0, 0.0, 0.0, 174.577, 0.0,
-            0.0, 0.0, 178.5, 0.0, 0.0, 0.0, 180.462, 0.0, 0.0, 0.0, 182.423, 0.0, 0.0, 0.0, 184.385, 0.0,
-            0.0, 0.0, 186.346, 0.0, 0.0, 0.0, 188.308, 0.0, 0.0, 0.0, 190.269, 0.0, 0.0, 0.0, 192.231,
-            0.0, 0.0, 0.0, 194.192, 0.0, 0.0, 0.0, 196.154, 0.0, 0.0, 0.0, 198.115, 0.0, 0.0, 0.0,
-            200.077, 0.0, 0.0, 0.0, 202.038, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 205.962, 0.0, 0.0, 0.0,
-            207.923, 0.0, 0.0, 0.0, 209.885, 0.0, 0.0, 0.0, 211.846, 0.0, 0.0, 0.0, 213.808, 0.0, 0.0,
-            0.0, 215.769, 0.0, 0.0, 0.0, 217.731, 0.0, 0.0, 0.0, 219.692, 0.0, 0.0, 0.0, 221.654, 0.0,
-            0.0, 0.0, 223.615, 0.0, 0.0, 0.0, 225.577, 0.0, 0.0, 0.0, 227.538, 0.0, 0.0, 0.0, 229.5, 0.0,
-            0.0, 0.0, 230.481, 0.0, 0.0, 0.0, 231.462, 0.0, 0.0, 0.0, 232.442, 0.0, 0.0, 0.0, 233.423,
-            0.0, 0.0, 0.0, 234.404, 0.0, 0.0, 0.0, 235.385, 0.0, 0.0, 0.0, 236.365, 0.0, 0.0, 0.0,
-            237.346, 0.0, 0.0, 0.0, 238.327, 0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 240.288, 0.0, 0.0,
-            0.0, 241.269, 0.0, 0.0, 0.0, 242.25, 0.0, 0.0, 0.0, 242.642, 0.0, 0.0, 0.0, 243.035, 0.0, 0.0,
-            0.0, 243.427, 0.0, 0.0, 0.0, 243.819, 0.0, 0.0, 0.0, 244.212, 0.0, 0.0, 0.0, 244.604, 0.0,
-            0.0, 0.0, 244.996, 0.0, 0.0, 0.0, 245.388, 0.0, 0.0, 0.0, 245.781, 0.0, 0.0, 0.0, 246.173,
-            0.0, 0.0, 0.0, 246.565, 0.0, 0.0, 0.0, 246.958, 0.0, 0.0, 0.0, 247.35, 0.0, 0.0, 0.0, 247.814,
-            0.0, 0.0, 0.0, 248.277, 0.0, 0.0, 0.0, 248.741, 0.0, 0.0, 0.0, 249.205, 0.0, 0.0, 0.0,
-            249.668, 0.0, 0.0, 0.0, 250.132, 0.0, 0.0, 0.0, 250.595, 0.0, 0.0, 0.0, 251.059, 0.0, 0.0,
-            0.0, 251.523, 0.0, 0.0, 0.0, 251.986, 0.0, 0.0, 0.0, 252.45, 0.0, 0.0, 0.0
-        ]),
-        b: new Float32Array([
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 254.615, 0.0, 0.0, 0.0, 254.231, 0.0, 0.0, 0.0, 253.846,
-            0.0, 0.0, 0.0, 253.462, 0.0, 0.0, 0.0, 253.077, 0.0, 0.0, 0.0, 252.692, 0.0, 0.0, 0.0,
-            252.308, 0.0, 0.0, 0.0, 251.923, 0.0, 0.0, 0.0, 251.538, 0.0, 0.0, 0.0, 251.154, 0.0, 0.0,
-            0.0, 250.769, 0.0, 0.0, 0.0, 250.385, 0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 249.615, 0.0, 0.0,
-            0.0, 249.231, 0.0, 0.0, 0.0, 248.846, 0.0, 0.0, 0.0, 248.462, 0.0, 0.0, 0.0, 248.077, 0.0,
-            0.0, 0.0, 247.692, 0.0, 0.0, 0.0, 247.308, 0.0, 0.0, 0.0, 246.923, 0.0, 0.0, 0.0, 246.538,
-            0.0, 0.0, 0.0, 246.154, 0.0, 0.0, 0.0, 245.769, 0.0, 0.0, 0.0, 245.385, 0.0, 0.0, 0.0, 245.0,
-            0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 233.0, 0.0,
-            0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0,
-            0.0, 218.0, 0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0,
-            208.636, 0.0, 0.0, 0.0, 205.273, 0.0, 0.0, 0.0, 201.909, 0.0, 0.0, 0.0, 198.545, 0.0, 0.0,
-            0.0, 195.182, 0.0, 0.0, 0.0, 191.818, 0.0, 0.0, 0.0, 188.455, 0.0, 0.0, 0.0, 185.091, 0.0,
-            0.0, 0.0, 181.727, 0.0, 0.0, 0.0, 178.364, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0, 171.538, 0.0,
-            0.0, 0.0, 168.077, 0.0, 0.0, 0.0, 164.615, 0.0, 0.0, 0.0, 161.154, 0.0, 0.0, 0.0, 157.692,
-            0.0, 0.0, 0.0, 154.231, 0.0, 0.0, 0.0, 150.769, 0.0, 0.0, 0.0, 147.308, 0.0, 0.0, 0.0,
-            143.846, 0.0, 0.0, 0.0, 140.385, 0.0, 0.0, 0.0, 136.923, 0.0, 0.0, 0.0, 133.462, 0.0, 0.0,
-            0.0, 130.0, 0.0, 0.0, 0.0, 122.942, 0.0, 0.0, 0.0, 115.885, 0.0, 0.0, 0.0, 108.827, 0.0, 0.0,
-            0.0, 101.769, 0.0, 0.0, 0.0, 94.7115, 0.0, 0.0, 0.0, 87.6539, 0.0, 0.0, 0.0, 80.5962, 0.0,
-            0.0, 0.0, 73.5385, 0.0, 0.0, 0.0, 66.4808, 0.0, 0.0, 0.0, 59.4231, 0.0, 0.0, 0.0, 52.3654,
-            0.0, 0.0, 0.0, 45.3077, 0.0, 0.0, 0.0, 38.25, 0.0, 0.0, 0.0, 36.2885, 0.0, 0.0, 0.0, 34.3269,
-            0.0, 0.0, 0.0, 32.3654, 0.0, 0.0, 0.0, 30.4038, 0.0, 0.0, 0.0, 28.4423, 0.0, 0.0, 0.0,
-            26.4808, 0.0, 0.0, 0.0, 24.5192, 0.0, 0.0, 0.0, 22.5577, 0.0, 0.0, 0.0, 20.5962, 0.0, 0.0,
-            0.0, 18.6346, 0.0, 0.0, 0.0, 16.6731, 0.0, 0.0, 0.0, 14.7115, 0.0, 0.0, 0.0, 12.75, 0.0, 0.0,
-            0.0, 11.7692, 0.0, 0.0, 0.0, 10.7885, 0.0, 0.0, 0.0, 9.80769, 0.0, 0.0, 0.0, 8.82692, 0.0,
-            0.0, 0.0, 7.84615, 0.0, 0.0, 0.0, 6.86539, 0.0, 0.0, 0.0, 5.88461, 0.0, 0.0, 0.0, 4.90385,
-            0.0, 0.0, 0.0, 3.92308, 0.0, 0.0, 0.0, 2.94231, 0.0, 0.0, 0.0, 1.96154, 0.0, 0.0, 0.0,
-            0.980769, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.46154, 0.0, 0.0, 0.0, 4.92308, 0.0, 0.0, 0.0,
-            7.38462, 0.0, 0.0, 0.0, 9.84616, 0.0, 0.0, 0.0, 12.3077, 0.0, 0.0, 0.0, 14.7692, 0.0, 0.0,
-            0.0, 17.2308, 0.0, 0.0, 0.0, 19.6923, 0.0, 0.0, 0.0, 22.1538, 0.0, 0.0, 0.0, 24.6154, 0.0,
-            0.0, 0.0, 27.0769, 0.0, 0.0, 0.0, 29.5385, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0,
-            0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0,
-            0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0,
-            0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 41.3077, 0.0, 0.0, 0.0,
-            50.6154, 0.0, 0.0, 0.0, 59.9231, 0.0, 0.0, 0.0, 69.2308, 0.0, 0.0, 0.0, 78.5385, 0.0, 0.0,
-            0.0, 87.8462, 0.0, 0.0, 0.0, 97.1539, 0.0, 0.0, 0.0, 106.462, 0.0, 0.0, 0.0, 115.769, 0.0,
-            0.0, 0.0, 125.077, 0.0, 0.0, 0.0, 134.385, 0.0, 0.0, 0.0, 143.692, 0.0, 0.0, 0.0, 153.0, 0.0,
-            0.0, 0.0, 156.923, 0.0, 0.0, 0.0, 160.846, 0.0, 0.0, 0.0, 164.769, 0.0, 0.0, 0.0, 168.692,
-            0.0, 0.0, 0.0, 172.615, 0.0, 0.0, 0.0, 176.538, 0.0, 0.0, 0.0, 180.462, 0.0, 0.0, 0.0,
-            184.385, 0.0, 0.0, 0.0, 188.308, 0.0, 0.0, 0.0, 192.231, 0.0, 0.0, 0.0, 196.154, 0.0, 0.0,
-            0.0, 200.077, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 205.962, 0.0, 0.0, 0.0, 207.923, 0.0, 0.0,
-            0.0, 209.885, 0.0, 0.0, 0.0, 211.846, 0.0, 0.0, 0.0, 213.808, 0.0, 0.0, 0.0, 215.769, 0.0,
-            0.0, 0.0, 217.731, 0.0, 0.0, 0.0, 219.692, 0.0, 0.0, 0.0, 221.654, 0.0, 0.0, 0.0, 223.615,
-            0.0, 0.0, 0.0, 225.577, 0.0, 0.0, 0.0, 227.538, 0.0, 0.0, 0.0, 229.5, 0.0, 0.0, 0.0, 230.481,
-            0.0, 0.0, 0.0, 231.462, 0.0, 0.0, 0.0, 232.442, 0.0, 0.0, 0.0, 233.423, 0.0, 0.0, 0.0,
-            234.404, 0.0, 0.0, 0.0, 235.385, 0.0, 0.0, 0.0, 236.365, 0.0, 0.0, 0.0, 237.346, 0.0, 0.0,
-            0.0, 238.327, 0.0, 0.0, 0.0, 239.308, 0.0, 0.0, 0.0, 240.288, 0.0, 0.0, 0.0, 241.269, 0.0,
-            0.0, 0.0, 242.25, 0.0, 0.0, 0.0, 242.838, 0.0, 0.0, 0.0, 243.427, 0.0, 0.0, 0.0, 244.015, 0.0,
-            0.0, 0.0, 244.604, 0.0, 0.0, 0.0, 245.192, 0.0, 0.0, 0.0, 245.781, 0.0, 0.0, 0.0, 246.369,
-            0.0, 0.0, 0.0, 246.958, 0.0, 0.0, 0.0, 247.546, 0.0, 0.0, 0.0, 248.135, 0.0, 0.0, 0.0,
-            248.723, 0.0, 0.0, 0.0, 249.312, 0.0, 0.0, 0.0, 249.9, 0.0, 0.0, 0.0, 250.096, 0.0, 0.0, 0.0,
-            250.292, 0.0, 0.0, 0.0, 250.488, 0.0, 0.0, 0.0, 250.685, 0.0, 0.0, 0.0, 250.881, 0.0, 0.0,
-            0.0, 251.077, 0.0, 0.0, 0.0, 251.273, 0.0, 0.0, 0.0, 251.469, 0.0, 0.0, 0.0, 251.665, 0.0,
-            0.0, 0.0, 251.862, 0.0, 0.0, 0.0, 252.058, 0.0, 0.0, 0.0, 252.254, 0.0, 0.0, 0.0, 252.45, 0.0,
-            0.0, 0.0, 252.682, 0.0, 0.0, 0.0, 252.914, 0.0, 0.0, 0.0, 253.145, 0.0, 0.0, 0.0, 253.377,
-            0.0, 0.0, 0.0, 253.609, 0.0, 0.0, 0.0, 253.841, 0.0, 0.0, 0.0, 254.073, 0.0, 0.0, 0.0,
-            254.305, 0.0, 0.0, 0.0, 254.536, 0.0, 0.0, 0.0, 254.768, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0
-        ]),
-    },
-    cmb: {
-        name: 'cmb',
-        r: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0,
-            30.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 54.0, 0.0,
-            0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0,
-            85.0, 0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0, 97.0, 0.0, 0.0, 0.0, 103.0, 0.0, 0.0, 0.0, 109.0,
-            0.0, 0.0, 0.0, 115.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 133.0, 0.0,
-            0.0, 0.0, 139.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0, 0.0, 151.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0,
-            0.0, 163.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0, 0.0, 176.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0,
-            188.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 206.0, 0.0, 0.0, 0.0, 212.0,
-            0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 236.0, 0.0,
-            0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 248.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 251.0, 0.0, 0.0,
-            0.0, 247.0, 0.0, 0.0, 0.0, 244.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0,
-            233.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 218.0,
-            0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 204.0, 0.0,
-            0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 190.0, 0.0, 0.0,
-            0.0, 186.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 179.0, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0,
-            172.0, 0.0, 0.0, 0.0, 168.0, 0.0, 0.0, 0.0, 164.0, 0.0, 0.0, 0.0, 161.0, 0.0, 0.0, 0.0, 157.0,
-            0.0, 0.0, 0.0, 154.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 143.0, 0.0,
-            0.0, 0.0, 139.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0, 128.0, 0.0, 0.0,
-            0.0, 125.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 118.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0,
-            110.0, 0.0, 0.0, 0.0, 107.0, 0.0, 0.0, 0.0, 103.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0
-        ]),
-        g: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 10.0, 0.0,
-            0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 16.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0,
-            24.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 34.0, 0.0,
-            0.0, 0.0, 37.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0,
-            48.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 56.0, 0.0, 0.0, 0.0, 58.0, 0.0,
-            0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 69.0, 0.0, 0.0, 0.0,
-            72.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 82.0, 0.0,
-            0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 88.0, 0.0, 0.0, 0.0, 90.0, 0.0, 0.0, 0.0, 93.0, 0.0, 0.0, 0.0,
-            96.0, 0.0, 0.0, 0.0, 98.0, 0.0, 0.0, 0.0, 101.0, 0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 106.0,
-            0.0, 0.0, 0.0, 109.0, 0.0, 0.0, 0.0, 112.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0, 117.0, 0.0,
-            0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 124.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0,
-            0.0, 129.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0, 134.0, 0.0, 0.0, 0.0, 137.0, 0.0, 0.0, 0.0,
-            139.0, 0.0, 0.0, 0.0, 142.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 150.0,
-            0.0, 0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 155.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 160.0, 0.0,
-            0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0,
-            0.0, 172.0, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0, 177.0, 0.0, 0.0, 0.0, 180.0, 0.0, 0.0, 0.0,
-            182.0, 0.0, 0.0, 0.0, 185.0, 0.0, 0.0, 0.0, 188.0, 0.0, 0.0, 0.0, 190.0, 0.0, 0.0, 0.0, 193.0,
-            0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 203.0, 0.0,
-            0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0,
-            0.0, 215.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0,
-            221.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 223.0,
-            0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 224.0, 0.0,
-            0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0,
-            0.0, 226.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0,
-            228.0, 0.0, 0.0, 0.0, 228.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0,
-            0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 231.0, 0.0,
-            0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0,
-            0.0, 233.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 234.0, 0.0, 0.0, 0.0,
-            234.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 236.0,
-            0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 237.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 234.0, 0.0,
-            0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0,
-            0.0, 227.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0,
-            222.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 219.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 217.0,
-            0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 214.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 211.0, 0.0,
-            0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 206.0, 0.0, 0.0,
-            0.0, 205.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 202.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0,
-            199.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 194.0,
-            0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 190.0, 0.0, 0.0, 0.0, 189.0, 0.0,
-            0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 185.0, 0.0, 0.0, 0.0, 183.0, 0.0, 0.0,
-            0.0, 182.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0, 180.0, 0.0, 0.0, 0.0, 177.0, 0.0, 0.0, 0.0,
-            175.0, 0.0, 0.0, 0.0, 172.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 165.0,
-            0.0, 0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 160.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 155.0, 0.0,
-            0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0,
-            0.0, 142.0, 0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 137.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0,
-            132.0, 0.0, 0.0, 0.0, 130.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 125.0, 0.0, 0.0, 0.0, 122.0,
-            0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 117.0, 0.0, 0.0, 0.0, 115.0, 0.0, 0.0, 0.0, 112.0, 0.0,
-            0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 107.0, 0.0, 0.0, 0.0, 105.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0,
-            0.0, 100.0, 0.0, 0.0, 0.0, 97.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 92.0, 0.0, 0.0, 0.0,
-            90.0, 0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 82.0, 0.0, 0.0, 0.0, 80.0, 0.0,
-            0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 73.0, 0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0,
-            69.0, 0.0, 0.0, 0.0, 68.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 62.0, 0.0,
-            0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0,
-            54.0, 0.0, 0.0, 0.0, 52.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 47.0, 0.0,
-            0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 43.0, 0.0, 0.0, 0.0, 41.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0,
-            38.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 34.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 31.0, 0.0,
-            0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0,
-            22.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 15.0, 0.0,
-            0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0,
-            6.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0
-        ]),
-        b: new Float32Array([
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 254.0, 0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 252.0, 0.0, 0.0, 0.0, 251.0,
-            0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 249.0, 0.0, 0.0, 0.0, 248.0, 0.0, 0.0, 0.0, 247.0, 0.0,
-            0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 244.0, 0.0, 0.0,
-            0.0, 243.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0,
-            239.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 237.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 236.0,
-            0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 234.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 232.0, 0.0,
-            0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 228.0, 0.0, 0.0,
-            0.0, 227.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0,
-            224.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 220.0,
-            0.0, 0.0, 0.0, 219.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 217.0, 0.0, 0.0, 0.0, 217.0, 0.0,
-            0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 206.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0,
-            0.0, 191.0, 0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0, 176.0, 0.0, 0.0, 0.0,
-            171.0, 0.0, 0.0, 0.0, 166.0, 0.0, 0.0, 0.0, 161.0, 0.0, 0.0, 0.0, 156.0, 0.0, 0.0, 0.0, 151.0,
-            0.0, 0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 141.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0, 0.0, 131.0, 0.0,
-            0.0, 0.0, 126.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 116.0, 0.0, 0.0, 0.0, 111.0, 0.0, 0.0,
-            0.0, 105.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 90.0, 0.0, 0.0, 0.0,
-            85.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0, 0.0, 65.0, 0.0,
-            0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0,
-            40.0, 0.0, 0.0, 0.0, 35.0, 0.0, 0.0, 0.0, 30.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 20.0, 0.0,
-            0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-        ]),
-    },
-    rainbow: {
-        name: 'rainbow',
-        r: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 18.0, 0.0,
-            0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 31.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0,
-            40.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 54.0, 0.0, 0.0, 0.0, 58.0, 0.0,
-            0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 68.0, 0.0, 0.0, 0.0, 69.0, 0.0, 0.0, 0.0,
-            72.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 79.0, 0.0, 0.0, 0.0, 80.0, 0.0,
-            0.0, 0.0, 82.0, 0.0, 0.0, 0.0, 83.0, 0.0, 0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0,
-            86.0, 0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 88.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0, 0.0, 87.0, 0.0,
-            0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0,
-            84.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 83.0, 0.0, 0.0, 0.0, 79.0, 0.0, 0.0, 0.0, 78.0, 0.0,
-            0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0, 0.0,
-            68.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 58.0, 0.0, 0.0, 0.0, 55.0, 0.0,
-            0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 43.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0,
-            36.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 16.0, 0.0,
-            0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 21.0, 0.0,
-            0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0,
-            46.0, 0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 67.0, 0.0,
-            0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 89.0, 0.0, 0.0, 0.0,
-            93.0, 0.0, 0.0, 0.0, 97.0, 0.0, 0.0, 0.0, 101.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 114.0,
-            0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 135.0, 0.0,
-            0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0,
-            0.0, 161.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0,
-            182.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 203.0,
-            0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 225.0, 0.0,
-            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 246.0, 0.0, 0.0,
-            0.0, 250.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0
-        ]),
-        g: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 4.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 16.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 25.0,
-            0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0,
-            0.0, 51.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 72.0,
-            0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 89.0, 0.0, 0.0, 0.0, 93.0, 0.0, 0.0,
-            0.0, 97.0, 0.0, 0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0,
-            119.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0, 140.0,
-            0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 161.0, 0.0,
-            0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 174.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0,
-            0.0, 187.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0,
-            208.0, 0.0, 0.0, 0.0, 216.0, 0.0, 0.0, 0.0, 220.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 229.0,
-            0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 250.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 233.0, 0.0,
-            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 216.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0,
-            0.0, 208.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0,
-            187.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 174.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0, 0.0, 165.0,
-            0.0, 0.0, 0.0, 161.0, 0.0, 0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 144.0, 0.0,
-            0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0,
-            0.0, 119.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0, 0.0,
-            97.0, 0.0, 0.0, 0.0, 89.0, 0.0, 0.0, 0.0, 85.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 76.0, 0.0,
-            0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0,
-            51.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 34.0, 0.0, 0.0, 0.0, 29.0, 0.0,
-            0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0
-        ]),
-        b: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 7.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 14.0, 0.0,
-            0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 28.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0,
-            38.0, 0.0, 0.0, 0.0, 43.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 59.0, 0.0,
-            0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 68.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0,
-            81.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 100.0,
-            0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 109.0, 0.0, 0.0, 0.0, 113.0, 0.0, 0.0, 0.0, 118.0, 0.0,
-            0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0,
-            0.0, 141.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 154.0, 0.0, 0.0, 0.0,
-            159.0, 0.0, 0.0, 0.0, 163.0, 0.0, 0.0, 0.0, 168.0, 0.0, 0.0, 0.0, 173.0, 0.0, 0.0, 0.0, 177.0,
-            0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 195.0, 0.0,
-            0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0, 214.0, 0.0, 0.0,
-            0.0, 218.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0, 0.0,
-            236.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 246.0, 0.0,
-            0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0,
-            0.0, 220.0, 0.0, 0.0, 0.0, 216.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0,
-            199.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 178.0,
-            0.0, 0.0, 0.0, 174.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 157.0, 0.0,
-            0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0,
-            0.0, 131.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0,
-            110.0, 0.0, 0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0, 0.0, 97.0, 0.0, 0.0, 0.0, 89.0,
-            0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0,
-            0.0, 63.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 42.0,
-            0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 34.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0,
-            0.0, 16.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0
-        ]),
-    },
-    eosb: {
-        name: 'eosb',
-        r: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 18.0,
-            0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 49.0, 0.0, 0.0,
-            0.0, 57.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 81.0, 0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0,
-            100.0, 0.0, 0.0, 0.0, 109.0, 0.0, 0.0, 0.0, 118.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 136.0,
-            0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 139.0, 0.0, 0.0, 0.0, 163.0, 0.0, 0.0, 0.0, 173.0, 0.0,
-            0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0,
-            0.0, 218.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0,
-            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0,
-            0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 251.0, 0.0, 0.0, 0.0, 249.0, 0.0,
-            0.0, 0.0, 247.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0,
-            0.0, 215.0, 0.0, 0.0, 0.0, 214.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 234.0, 0.0, 0.0, 0.0,
-            232.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 228.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 224.0,
-            0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 216.0, 0.0,
-            0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0,
-            0.0, 207.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0,
-            179.0, 0.0, 0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 192.0,
-            0.0, 0.0, 0.0, 190.0, 0.0, 0.0, 0.0, 188.0, 0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 184.0, 0.0,
-            0.0, 0.0, 164.0, 0.0, 0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 176.0, 0.0, 0.0,
-            0.0, 175.0, 0.0, 0.0, 0.0, 173.0, 0.0, 0.0, 0.0, 171.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0,
-            167.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0, 0.0, 159.0,
-            0.0, 0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 156.0, 0.0, 0.0, 0.0, 154.0, 0.0, 0.0, 0.0, 152.0, 0.0,
-            0.0, 0.0, 150.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 130.0, 0.0, 0.0,
-            0.0, 128.0, 0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 138.0, 0.0, 0.0, 0.0, 137.0, 0.0, 0.0, 0.0,
-            135.0, 0.0, 0.0, 0.0, 133.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 129.0, 0.0, 0.0, 0.0, 127.0,
-            0.0, 0.0, 0.0, 113.0, 0.0, 0.0, 0.0, 111.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 119.0, 0.0,
-            0.0, 0.0, 117.0, 0.0, 0.0, 0.0, 117.0, 0.0, 0.0, 0.0
-        ]),
-        g: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 7.0,
-            0.0, 0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 31.0, 0.0, 0.0, 0.0, 39.0, 0.0, 0.0,
-            0.0, 47.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 79.0,
-            0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 103.0, 0.0, 0.0, 0.0, 111.0, 0.0,
-            0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0, 129.0, 0.0, 0.0,
-            0.0, 136.0, 0.0, 0.0, 0.0, 159.0, 0.0, 0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0,
-            183.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 215.0,
-            0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 247.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0,
-            0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 229.0, 0.0,
-            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0,
-            0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0,
-            255.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 250.0,
-            0.0, 0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 233.0, 0.0,
-            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0,
-            0.0, 212.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0,
-            195.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 160.0,
-            0.0, 0.0, 0.0, 156.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 161.0, 0.0,
-            0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0,
-            0.0, 140.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 118.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0,
-            125.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 116.0,
-            0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0, 112.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0, 0.0, 97.0, 0.0,
-            0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0,
-            0.0, 97.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 93.0, 0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0, 80.0,
-            0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 82.0, 0.0, 0.0, 0.0, 80.0, 0.0, 0.0,
-            0.0, 78.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 70.0,
-            0.0, 0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 61.0, 0.0, 0.0,
-            0.0, 59.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 50.0,
-            0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0,
-            0.0, 40.0, 0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 36.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 31.0,
-            0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0,
-            0.0, 21.0, 0.0, 0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 16.0, 0.0, 0.0, 0.0, 14.0, 0.0, 0.0, 0.0, 12.0,
-            0.0, 0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-        ]),
-        b: new Float32Array([
-            116.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 136.0,
-            0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 148.0, 0.0, 0.0, 0.0, 153.0, 0.0,
-            0.0, 0.0, 157.0, 0.0, 0.0, 0.0, 145.0, 0.0, 0.0, 0.0, 149.0, 0.0, 0.0, 0.0, 170.0, 0.0, 0.0,
-            0.0, 174.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0,
-            191.0, 0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 183.0, 0.0, 0.0, 0.0, 187.0,
-            0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 216.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 225.0, 0.0,
-            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0,
-            0.0, 221.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 255.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0, 0.0,
-            239.0, 0.0, 0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 207.0,
-            0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 172.0, 0.0, 0.0, 0.0, 164.0, 0.0, 0.0, 0.0, 175.0, 0.0,
-            0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 159.0, 0.0, 0.0, 0.0, 151.0, 0.0, 0.0, 0.0, 143.0, 0.0, 0.0,
-            0.0, 135.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0,
-            93.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 87.0, 0.0, 0.0, 0.0, 79.0, 0.0, 0.0, 0.0, 71.0, 0.0,
-            0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 39.0, 0.0, 0.0, 0.0,
-            28.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 7.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0
-        ]),
-    },
-    cubehelix: {
-        name: 'cubehelix',
-        r: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0,
-            0.0, 8.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0, 0.0, 13.0,
-            0.0, 0.0, 0.0, 14.0, 0.0, 0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 18.0, 0.0, 0.0,
-            0.0, 19.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 22.0,
-            0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0,
-            0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0,
-            0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0,
-            0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 26.0,
-            0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0,
-            0.0, 24.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 23.0,
-            0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0,
-            0.0, 22.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0,
-            0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0,
-            0.0, 20.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 21.0,
-            0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0,
-            0.0, 23.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0, 0.0, 24.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 26.0,
-            0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 28.0, 0.0, 0.0, 0.0, 30.0, 0.0, 0.0,
-            0.0, 31.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 33.0, 0.0, 0.0, 0.0, 35.0, 0.0, 0.0, 0.0, 36.0,
-            0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 39.0, 0.0, 0.0, 0.0, 41.0, 0.0, 0.0, 0.0, 43.0, 0.0, 0.0,
-            0.0, 45.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 49.0, 0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 53.0,
-            0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 62.0, 0.0, 0.0,
-            0.0, 65.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 75.0,
-            0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 81.0, 0.0, 0.0, 0.0, 83.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0,
-            0.0, 89.0, 0.0, 0.0, 0.0, 92.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0, 0.0, 98.0, 0.0, 0.0, 0.0,
-            101.0, 0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 107.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 113.0,
-            0.0, 0.0, 0.0, 116.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 126.0, 0.0,
-            0.0, 0.0, 129.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0, 138.0, 0.0, 0.0,
-            0.0, 141.0, 0.0, 0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 150.0, 0.0, 0.0, 0.0,
-            153.0, 0.0, 0.0, 0.0, 155.0, 0.0, 0.0, 0.0, 158.0, 0.0, 0.0, 0.0, 161.0, 0.0, 0.0, 0.0, 164.0,
-            0.0, 0.0, 0.0, 166.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0, 171.0, 0.0, 0.0, 0.0, 174.0, 0.0,
-            0.0, 0.0, 176.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0, 183.0, 0.0, 0.0,
-            0.0, 185.0, 0.0, 0.0, 0.0, 187.0, 0.0, 0.0, 0.0, 189.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0,
-            193.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 199.0,
-            0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0, 202.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 204.0, 0.0,
-            0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 206.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0,
-            0.0, 209.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0,
-            211.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0,
-            0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 212.0, 0.0,
-            0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0, 0.0, 211.0, 0.0, 0.0,
-            0.0, 210.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0,
-            208.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 206.0,
-            0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 203.0, 0.0,
-            0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 202.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0, 0.0, 201.0, 0.0, 0.0,
-            0.0, 200.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0,
-            197.0, 0.0, 0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 195.0,
-            0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 194.0, 0.0,
-            0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0,
-            0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0,
-            193.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 194.0, 0.0, 0.0, 0.0, 195.0,
-            0.0, 0.0, 0.0, 195.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 197.0, 0.0,
-            0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 199.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0,
-            0.0, 202.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 204.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0,
-            206.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0, 0.0, 209.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 212.0,
-            0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0, 217.0, 0.0, 0.0, 0.0, 218.0, 0.0,
-            0.0, 0.0, 220.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 223.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0,
-            0.0, 227.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0, 0.0,
-            234.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 242.0,
-            0.0, 0.0, 0.0, 244.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0, 0.0, 249.0, 0.0,
-            0.0, 0.0, 251.0, 0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 255.0
-        ]),
-        g: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0,
-            0.0, 2.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 5.0, 0.0,
-            0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0, 0.0, 7.0, 0.0, 0.0, 0.0, 8.0, 0.0, 0.0, 0.0, 9.0,
-            0.0, 0.0, 0.0, 10.0, 0.0, 0.0, 0.0, 11.0, 0.0, 0.0, 0.0, 11.0, 0.0, 0.0, 0.0, 12.0, 0.0, 0.0,
-            0.0, 13.0, 0.0, 0.0, 0.0, 14.0, 0.0, 0.0, 0.0, 15.0, 0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 18.0,
-            0.0, 0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 22.0, 0.0, 0.0,
-            0.0, 24.0, 0.0, 0.0, 0.0, 25.0, 0.0, 0.0, 0.0, 26.0, 0.0, 0.0, 0.0, 28.0, 0.0, 0.0, 0.0, 29.0,
-            0.0, 0.0, 0.0, 31.0, 0.0, 0.0, 0.0, 32.0, 0.0, 0.0, 0.0, 34.0, 0.0, 0.0, 0.0, 35.0, 0.0, 0.0,
-            0.0, 37.0, 0.0, 0.0, 0.0, 38.0, 0.0, 0.0, 0.0, 40.0, 0.0, 0.0, 0.0, 41.0, 0.0, 0.0, 0.0, 43.0,
-            0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0,
-            0.0, 52.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 58.0,
-            0.0, 0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 62.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0,
-            0.0, 67.0, 0.0, 0.0, 0.0, 69.0, 0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0, 73.0, 0.0, 0.0, 0.0, 74.0,
-            0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 79.0, 0.0, 0.0, 0.0, 81.0, 0.0, 0.0,
-            0.0, 83.0, 0.0, 0.0, 0.0, 84.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0, 0.0, 88.0, 0.0, 0.0, 0.0, 89.0,
-            0.0, 0.0, 0.0, 91.0, 0.0, 0.0, 0.0, 92.0, 0.0, 0.0, 0.0, 94.0, 0.0, 0.0, 0.0, 95.0, 0.0, 0.0,
-            0.0, 97.0, 0.0, 0.0, 0.0, 98.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0, 0.0, 101.0, 0.0, 0.0, 0.0,
-            102.0, 0.0, 0.0, 0.0, 103.0, 0.0, 0.0, 0.0, 104.0, 0.0, 0.0, 0.0, 106.0, 0.0, 0.0, 0.0, 107.0,
-            0.0, 0.0, 0.0, 108.0, 0.0, 0.0, 0.0, 109.0, 0.0, 0.0, 0.0, 110.0, 0.0, 0.0, 0.0, 111.0, 0.0,
-            0.0, 0.0, 112.0, 0.0, 0.0, 0.0, 113.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0,
-            0.0, 115.0, 0.0, 0.0, 0.0, 116.0, 0.0, 0.0, 0.0, 116.0, 0.0, 0.0, 0.0, 117.0, 0.0, 0.0, 0.0,
-            118.0, 0.0, 0.0, 0.0, 118.0, 0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 119.0, 0.0, 0.0, 0.0, 120.0,
-            0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0,
-            0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0,
-            0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0,
-            122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0,
-            0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 122.0, 0.0,
-            0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0,
-            0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0,
-            121.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0,
-            0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0,
-            0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0,
-            0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 121.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0,
-            122.0, 0.0, 0.0, 0.0, 122.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 123.0, 0.0, 0.0, 0.0, 124.0,
-            0.0, 0.0, 0.0, 124.0, 0.0, 0.0, 0.0, 125.0, 0.0, 0.0, 0.0, 125.0, 0.0, 0.0, 0.0, 126.0, 0.0,
-            0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 128.0, 0.0, 0.0, 0.0, 129.0, 0.0, 0.0,
-            0.0, 130.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 131.0, 0.0, 0.0, 0.0, 132.0, 0.0, 0.0, 0.0,
-            133.0, 0.0, 0.0, 0.0, 135.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0, 0.0, 137.0, 0.0, 0.0, 0.0, 138.0,
-            0.0, 0.0, 0.0, 139.0, 0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 142.0, 0.0, 0.0, 0.0, 143.0, 0.0,
-            0.0, 0.0, 144.0, 0.0, 0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 147.0, 0.0, 0.0, 0.0, 149.0, 0.0, 0.0,
-            0.0, 150.0, 0.0, 0.0, 0.0, 152.0, 0.0, 0.0, 0.0, 154.0, 0.0, 0.0, 0.0, 155.0, 0.0, 0.0, 0.0,
-            157.0, 0.0, 0.0, 0.0, 158.0, 0.0, 0.0, 0.0, 160.0, 0.0, 0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 164.0,
-            0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 167.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0, 171.0, 0.0,
-            0.0, 0.0, 172.0, 0.0, 0.0, 0.0, 174.0, 0.0, 0.0, 0.0, 176.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0,
-            0.0, 180.0, 0.0, 0.0, 0.0, 182.0, 0.0, 0.0, 0.0, 183.0, 0.0, 0.0, 0.0, 185.0, 0.0, 0.0, 0.0,
-            187.0, 0.0, 0.0, 0.0, 189.0, 0.0, 0.0, 0.0, 191.0, 0.0, 0.0, 0.0, 193.0, 0.0, 0.0, 0.0, 194.0,
-            0.0, 0.0, 0.0, 196.0, 0.0, 0.0, 0.0, 198.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 202.0, 0.0,
-            0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0, 0.0, 207.0, 0.0, 0.0, 0.0, 208.0, 0.0, 0.0,
-            0.0, 210.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 213.0, 0.0, 0.0, 0.0, 215.0, 0.0, 0.0, 0.0,
-            216.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 219.0, 0.0, 0.0, 0.0, 221.0, 0.0, 0.0, 0.0, 222.0,
-            0.0, 0.0, 0.0, 224.0, 0.0, 0.0, 0.0, 225.0, 0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 228.0, 0.0,
-            0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 230.0, 0.0, 0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 232.0, 0.0, 0.0,
-            0.0, 233.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0, 0.0, 236.0, 0.0, 0.0, 0.0, 237.0, 0.0, 0.0, 0.0,
-            238.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 241.0,
-            0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 244.0, 0.0, 0.0, 0.0, 244.0, 0.0,
-            0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0,
-            0.0, 248.0, 0.0, 0.0, 0.0, 248.0, 0.0, 0.0, 0.0, 249.0, 0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0,
-            250.0, 0.0, 0.0, 0.0, 251.0, 0.0, 0.0, 0.0, 251.0, 0.0, 0.0, 0.0, 252.0, 0.0, 0.0, 0.0, 252.0,
-            0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 253.0, 0.0, 0.0, 0.0, 254.0, 0.0, 0.0, 0.0, 255.0, 0.0,
-            0.0, 0.0
-        ]),
-        b: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0, 0.0, 0.0, 0.0, 6.0, 0.0, 0.0,
-            0.0, 8.0, 0.0, 0.0, 0.0, 9.0, 0.0, 0.0, 0.0, 11.0, 0.0, 0.0, 0.0, 13.0, 0.0, 0.0, 0.0, 15.0,
-            0.0, 0.0, 0.0, 17.0, 0.0, 0.0, 0.0, 19.0, 0.0, 0.0, 0.0, 21.0, 0.0, 0.0, 0.0, 23.0, 0.0, 0.0,
-            0.0, 25.0, 0.0, 0.0, 0.0, 27.0, 0.0, 0.0, 0.0, 29.0, 0.0, 0.0, 0.0, 31.0, 0.0, 0.0, 0.0, 33.0,
-            0.0, 0.0, 0.0, 35.0, 0.0, 0.0, 0.0, 37.0, 0.0, 0.0, 0.0, 39.0, 0.0, 0.0, 0.0, 41.0, 0.0, 0.0,
-            0.0, 43.0, 0.0, 0.0, 0.0, 45.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 50.0,
-            0.0, 0.0, 0.0, 52.0, 0.0, 0.0, 0.0, 54.0, 0.0, 0.0, 0.0, 56.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0,
-            0.0, 59.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0, 0.0, 62.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 65.0,
-            0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 69.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0,
-            0.0, 71.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 73.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 74.0,
-            0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0,
-            0.0, 77.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0,
-            0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0,
-            0.0, 77.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 77.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 76.0,
-            0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 75.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 73.0, 0.0, 0.0,
-            0.0, 73.0, 0.0, 0.0, 0.0, 72.0, 0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0, 70.0, 0.0, 0.0, 0.0, 69.0,
-            0.0, 0.0, 0.0, 68.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0, 0.0, 66.0, 0.0, 0.0,
-            0.0, 65.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 63.0, 0.0, 0.0, 0.0, 61.0, 0.0, 0.0, 0.0, 60.0,
-            0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 58.0, 0.0, 0.0, 0.0, 58.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0,
-            0.0, 56.0, 0.0, 0.0, 0.0, 55.0, 0.0, 0.0, 0.0, 54.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 52.0,
-            0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0, 0.0, 49.0, 0.0, 0.0,
-            0.0, 49.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 47.0,
-            0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0,
-            0.0, 46.0, 0.0, 0.0, 0.0, 46.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 47.0, 0.0, 0.0, 0.0, 47.0,
-            0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 48.0, 0.0, 0.0, 0.0, 49.0, 0.0, 0.0, 0.0, 50.0, 0.0, 0.0,
-            0.0, 50.0, 0.0, 0.0, 0.0, 51.0, 0.0, 0.0, 0.0, 52.0, 0.0, 0.0, 0.0, 53.0, 0.0, 0.0, 0.0, 55.0,
-            0.0, 0.0, 0.0, 56.0, 0.0, 0.0, 0.0, 57.0, 0.0, 0.0, 0.0, 59.0, 0.0, 0.0, 0.0, 60.0, 0.0, 0.0,
-            0.0, 62.0, 0.0, 0.0, 0.0, 64.0, 0.0, 0.0, 0.0, 65.0, 0.0, 0.0, 0.0, 67.0, 0.0, 0.0, 0.0, 69.0,
-            0.0, 0.0, 0.0, 71.0, 0.0, 0.0, 0.0, 74.0, 0.0, 0.0, 0.0, 76.0, 0.0, 0.0, 0.0, 78.0, 0.0, 0.0,
-            0.0, 81.0, 0.0, 0.0, 0.0, 83.0, 0.0, 0.0, 0.0, 86.0, 0.0, 0.0, 0.0, 88.0, 0.0, 0.0, 0.0, 91.0,
-            0.0, 0.0, 0.0, 94.0, 0.0, 0.0, 0.0, 96.0, 0.0, 0.0, 0.0, 99.0, 0.0, 0.0, 0.0, 102.0, 0.0, 0.0,
-            0.0, 105.0, 0.0, 0.0, 0.0, 108.0, 0.0, 0.0, 0.0, 111.0, 0.0, 0.0, 0.0, 114.0, 0.0, 0.0, 0.0,
-            117.0, 0.0, 0.0, 0.0, 120.0, 0.0, 0.0, 0.0, 124.0, 0.0, 0.0, 0.0, 127.0, 0.0, 0.0, 0.0, 130.0,
-            0.0, 0.0, 0.0, 133.0, 0.0, 0.0, 0.0, 136.0, 0.0, 0.0, 0.0, 140.0, 0.0, 0.0, 0.0, 143.0, 0.0,
-            0.0, 0.0, 146.0, 0.0, 0.0, 0.0, 149.0, 0.0, 0.0, 0.0, 153.0, 0.0, 0.0, 0.0, 156.0, 0.0, 0.0,
-            0.0, 159.0, 0.0, 0.0, 0.0, 162.0, 0.0, 0.0, 0.0, 165.0, 0.0, 0.0, 0.0, 169.0, 0.0, 0.0, 0.0,
-            172.0, 0.0, 0.0, 0.0, 175.0, 0.0, 0.0, 0.0, 178.0, 0.0, 0.0, 0.0, 181.0, 0.0, 0.0, 0.0, 184.0,
-            0.0, 0.0, 0.0, 186.0, 0.0, 0.0, 0.0, 189.0, 0.0, 0.0, 0.0, 192.0, 0.0, 0.0, 0.0, 195.0, 0.0,
-            0.0, 0.0, 197.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 203.0, 0.0, 0.0, 0.0, 205.0, 0.0, 0.0,
-            0.0, 207.0, 0.0, 0.0, 0.0, 210.0, 0.0, 0.0, 0.0, 212.0, 0.0, 0.0, 0.0, 214.0, 0.0, 0.0, 0.0,
-            216.0, 0.0, 0.0, 0.0, 218.0, 0.0, 0.0, 0.0, 220.0, 0.0, 0.0, 0.0, 222.0, 0.0, 0.0, 0.0, 224.0,
-            0.0, 0.0, 0.0, 226.0, 0.0, 0.0, 0.0, 227.0, 0.0, 0.0, 0.0, 229.0, 0.0, 0.0, 0.0, 230.0, 0.0,
-            0.0, 0.0, 231.0, 0.0, 0.0, 0.0, 233.0, 0.0, 0.0, 0.0, 234.0, 0.0, 0.0, 0.0, 235.0, 0.0, 0.0,
-            0.0, 236.0, 0.0, 0.0, 0.0, 237.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0,
-            239.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 242.0,
-            0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0,
-            0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0,
-            0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0,
-            242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 241.0,
-            0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 241.0, 0.0, 0.0, 0.0, 240.0, 0.0,
-            0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0,
-            0.0, 239.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0,
-            238.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 238.0,
-            0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 238.0, 0.0, 0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 239.0, 0.0,
-            0.0, 0.0, 239.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0, 0.0, 240.0, 0.0, 0.0,
-            0.0, 241.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 242.0, 0.0, 0.0, 0.0, 243.0, 0.0, 0.0, 0.0,
-            244.0, 0.0, 0.0, 0.0, 245.0, 0.0, 0.0, 0.0, 246.0, 0.0, 0.0, 0.0, 247.0, 0.0, 0.0, 0.0, 248.0,
-            0.0, 0.0, 0.0, 249.0, 0.0, 0.0, 0.0, 250.0, 0.0, 0.0, 0.0, 252.0, 0.0, 0.0, 0.0, 253.0, 0.0,
-            0.0, 0.0, 255.0, 0.0, 0.0, 0.0
-        ]),
-    },
-    hot: {
-        name: 'hot',
-        r: new Float32Array([
-            0.0, 4.0, 8.0, 12.0, 16.0, 20.0, 24.0, 28.0, 32.0, 36.0, 40.0, 44.0, 48.0, 52.0, 56.0, 60.0,
-            64.0, 68.0, 72.0, 76.0, 80.0, 84.0, 88.0, 92.0, 96.0, 100.0, 104.0, 108.0, 112.0, 116.0,
-            120.0, 124.0, 128.0, 132.0, 136.0, 140.0, 144.0, 148.0, 152.0, 156.0, 160.0, 164.0, 168.0,
-            172.0, 176.0, 180.0, 184.0, 188.0, 192.0, 196.0, 200.0, 204.0, 208.0, 212.0, 216.0, 220.0,
-            224.0, 228.0, 232.0, 236.0, 240.0, 244.0, 248.0, 252.0, 255.0, 255.0, 255.0, 255.0, 255.0,
-            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
-            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
-            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
-            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
-            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
-            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0,
-            255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0, 255.0
-        ]),
-        g: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.30769,
-            4.61538, 6.92308, 9.23077, 11.5385, 13.8462, 16.1538, 18.4615, 20.7692, 23.0769, 25.3846, 27.6923,
-            30.0, 32.3077, 34.6154, 36.9231, 39.2308, 41.5385, 43.8462, 46.1538, 48.4615, 50.7692, 53.0769,
-            55.3846, 57.6923, 60.0, 62.3077, 64.6154, 66.9231, 69.2308, 71.5385, 73.8462, 76.1538, 78.4615,
-            80.7692, 83.0769, 85.3846, 87.6923, 90.0, 92.3077, 94.6154, 96.9231, 99.2308, 101.538, 103.846, 106.154,
-            108.462, 110.769, 113.077, 115.385, 117.692, 120.0, 122.308, 124.615, 126.923, 129.231, 131.538,
-            133.846, 136.154, 138.462, 140.769, 143.077, 145.385, 147.692, 150.0, 152.308, 154.615, 156.923,
-            159.231, 161.538, 163.846, 166.154, 168.462, 170.769, 173.077, 175.385, 177.692, 180.0, 182.308,
-            184.615, 186.923, 189.231, 191.538, 193.846, 196.154, 198.462, 200.769, 203.077, 205.385,
-            207.692, 210.0, 212.308, 214.615, 216.923, 219.231, 221.538, 223.846, 226.154, 228.462, 230.769,
-            233.077, 235.385, 237.692, 240.0, 242.308, 244.615, 246.923, 249.231, 251.538, 253.846, 255.0,
-            255.0, 255.0, 255.0, 255.0, 255.0, 255.0
-        ]),
-        b: new Float32Array([
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.980769,
-            1.96154, 2.94231, 3.92308, 4.90385, 5.88461, 6.86539, 7.84615, 8.82692, 9.80769, 10.7885, 11.7692, 12.75,
-            13.7308, 14.7115, 15.6923, 16.6731, 17.6538, 18.6346, 19.6154, 20.5962, 21.5769, 22.5577, 23.5385,
-            24.5192, 25.5, 26.4808, 27.4615, 28.4423, 29.4231, 30.4038, 31.3846, 32.3654, 33.3462, 34.3269,
-            35.3077, 36.2885, 37.2692, 38.25, 39.2308, 40.2115, 41.1923, 42.1731, 43.1538, 44.1346, 45.1154, 46.0962,
-            47.0769, 48.0577, 49.0385, 50.0192, 51.0, 51.9808, 52.9615, 53.9423, 54.9231, 55.9038, 56.8846,
-            57.8654, 58.8462, 59.8269, 60.8077, 61.7885, 62.7692, 63.75, 64.7308, 65.7115, 66.6923, 67.6731,
-            68.6538, 69.6346, 70.6154, 71.5962, 72.5769, 73.5577, 74.5385, 75.5192, 76.5, 77.4808, 78.4615, 79.4423,
-            80.4231, 81.4038, 82.3846, 83.3654, 84.3462, 85.3269, 86.3077, 87.2885, 88.2692, 89.25, 90.2308,
-            91.2115, 92.1923, 93.1731, 94.1538, 95.1346, 96.1154, 97.0962, 98.0769, 99.0577, 100.038,
-            101.019, 102.0, 102.981, 103.962, 104.942, 105.923, 106.904, 107.885, 108.865, 109.846, 110.827,
-            111.808, 112.788, 113.769, 114.75, 115.731, 116.711, 117.692, 118.673, 119.654, 120.634,
-            121.615, 122.596, 123.577, 124.557, 125.538, 126.519, 127.5
-        ])
-    },
-    gray: {
-        name: 'gray',
-        r: new Float32Array([
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
-            47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66,
-            67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
-            89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107,
-            108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123,
-            124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138,
-            139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152,
-            153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164,
-            165, 166, 167, 168, 169, 170, 171, 172,
-            173, 174, 175, 176, 177,
-            178, 179,
-            180,
-            181,
-            182,
-            183,
-            184,
-            185,
-            186,
-            187,
-            188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200,
-            201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212,
-            213, 214, 215, 216, 217, 218, 219, 220,
-            221, 222,
-            223,
-            224,
-            225,
-            226,
-            227,
-            228,
-            229,
-            230,
-            231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242,
-            243, 244, 245, 246, 247, 248, 249, 250,
-            251,
-            252,
-            253,
-            254,
-            255
-        ]),
-        g: new Float32Array([
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45,
-            46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
-            57,
-            58,
-            59,
-            60,
-            61,
-            62,
-            63,
-            64,
-            65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82,
-            83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94,
-            95,
-            96,
-            97,
-            98,
-            99,
-            100,
-            101,
-            102,
-            103,
-            104,
-            105, 106, 107, 108, 109, 110, 111, 112, 113, 114,
-            115,
-            116,
-            117,
-            118,
-            119,
-            120,
-            121,
-            122,
-            123,
-            124,
-            125, 126, 127, 128, 129, 130, 131, 132, 133, 134,
-            135,
-            136,
-            137,
-            138,
-            139,
-            140,
-            141,
-            142,
-            143,
-            144,
-            145, 146, 147, 148, 149, 150, 151, 152, 153, 154,
-            155,
-            156,
-            157,
-            158,
-            159,
-            160,
-            161,
-            162,
-            163,
-            164,
-            165, 166, 167, 168, 169, 170, 171, 172, 173, 174,
-            175,
-            176,
-            177,
-            178,
-            179,
-            180,
-            181,
-            182,
-            183,
-            184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196,
-            197, 198, 199, 200, 201, 202, 203, 204, 205, 206,
-            207,
-            208,
-            209,
-            210,
-            211,
-            212,
-            213,
-            214,
-            215,
-            216, 217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227,
-            228, 229, 230, 231, 232, 233, 234, 235, 236, 237,
-            238,
-            239,
-            240,
-            241,
-            242,
-            243,
-            244,
-            245,
-            246,
-            247, 248, 249, 250,
-            251,
-            252,
-            253,
-            254,
-            255
-        ]),
-        b: new Float32Array([
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
-            59,
-            60,
-            61,
-            62,
-            63,
-            64,
-            65,
-            66,
-            67,
-            68,
-            69,
-            70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
-            89,
-            90,
-            91,
-            92,
-            93,
-            94,
-            95,
-            96,
-            97,
-            98,
-            99,
-            100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
-            117,
-            118,
-            119,
-            120,
-            121,
-            122,
-            123,
-            124,
-            125,
-            126,
-            127,
-            128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144,
-            145,
-            146,
-            147,
-            148,
-            149,
-            150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164,
-            165,
-            166,
-            167,
-            168,
-            169,
-            170,
-            171,
-            172,
-            173,
-            174,
-            175,
-            176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192,
-            193,
-            194,
-            195,
-            196,
-            197,
-            198,
-            199,
-            200,
-            201,
-            202,
-            203,
-            204, 205, 206, 207, 208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220,
-            221,
-            222,
-            223,
-            224,
-            225,
-            226,
-            227,
-            228,
-            229,
-            230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240,
-            241,
-            242,
-            243,
-            244,
-            245,
-            246,
-            247,
-            248,
-            249,
-            250,
-            251,
-            252,
-            253,
-            254,
-            255
-        ])
-    },
-};
-exports["default"] = exports.ColorMaps;
-
-
-/***/ }),
-
-/***/ 639:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-/**
- * @author Fabrizio Giordano (Fab)
- */
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const gl_matrix_1 = __webpack_require__(961);
-class RayPickingUtils {
-    static lastNearestVisibleObjectIdx = -1;
-    /** Get index of the last object found under the mouse (if any). */
-    static getNearestVisibleObjectIdx() {
-        return this.lastNearestVisibleObjectIdx;
-    }
-    /**
-     * Builds a world-space ray from mouse coords.
-     * @param mouseX ClientX (page pixels)
-     * @param mouseY ClientY (page pixels)
-     * @param pMatrix Projection matrix
-     * @returns World-space direction (normalized) as a vec3
-     */
-    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
-        const gl = webgl;
-        const canvas = gl.canvas;
-        const rect = canvas.getBoundingClientRect();
-        // mouseX / mouseY are already local to the canvas (CSS pixels)
-        const canvasMX = mouseX;
-        const canvasMY = mouseY;
-        // Use rect.width / rect.height (CSS) for NDC
-        const x = (2.0 * canvasMX) / rect.width - 1.0;
-        const y = 1.0 - (2.0 * canvasMY) / rect.height;
-        const z = -1.0;
-        const rayClip = [x, y, z, 1.0];
-        const pInv = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.invert(pInv, pMatrix);
-        const rayEye4 = [0, 0, 0, 0];
-        RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
-        // direction in eye space
-        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
-        const vInv = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.invert(vInv, vMatrix);
-        const rayWorld4 = [0, 0, 0, 0];
-        RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
-        const rayWorld = gl_matrix_1.vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
-        gl_matrix_1.vec3.normalize(rayWorld, rayWorld);
-        return rayWorld;
-    }
-    /** a*b (4x4 * vec4) → vec4 (in `out`) */
-    static mat4MultiplyVec4(a, b, out) {
-        const d = b[0], e = b[1], g = b[2], w = b[3];
-        out[0] = a[0] * d + a[4] * e + a[8] * g + a[12] * w;
-        out[1] = a[1] * d + a[5] * e + a[9] * g + a[13] * w;
-        out[2] = a[2] * d + a[6] * e + a[10] * g + a[14] * w;
-        out[3] = a[3] * d + a[7] * e + a[11] * g + a[15] * w;
-        return out;
-    }
-    /**
-     * Ray–sphere intersection (world space).
-     * @returns distance `t` along the ray to the first hit, or `-1` if no hit.
-     */
-    static raySphere(rayOrigWorld, rayDirectionWorld, healpixGridSingleton) {
-        let intersectionDistance = -1;
-        const L = gl_matrix_1.vec3.create();
-        gl_matrix_1.vec3.subtract(L, rayOrigWorld, healpixGridSingleton.center);
-        const b = gl_matrix_1.vec3.dot(rayDirectionWorld, L);
-        const c = gl_matrix_1.vec3.dot(L, L) - healpixGridSingleton.radius * healpixGridSingleton.radius;
-        const disc = b * b - c;
-        if (disc > 0.0) {
-            const s = Math.sqrt(disc);
-            const ta = -b + s;
-            const tb = -b - s;
-            if (ta < 0.0 && tb < 0.0) {
-                // behind camera
-            }
-            else if (tb < 0.0) {
-                intersectionDistance = ta;
-            }
-            else {
-                intersectionDistance = Math.min(ta, tb);
-            }
-        }
-        else if (disc === 0.0) {
-            const t = -b; // tangent
-            if (t >= 0.0) {
-                intersectionDistance = t;
-            }
-        }
-        return intersectionDistance;
-    }
-    /**
-     * Compute intersection with a single model (defaults to the Healpix grid).
-     * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
-     */
-    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera, pMatrix) {
-        const vMatrix = camera.getCameraMatrix();
-        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
-        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
-        let intersectionModelPoint = [];
-        if (t >= 0) {
-            // world intersection
-            const worldHit = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.scale(worldHit, rayWorld, t);
-            gl_matrix_1.vec3.add(worldHit, camera.getCameraPosition(), worldHit);
-            // world → model
-            const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
-            const modelHit4 = [0, 0, 0, 0];
-            // RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
-            RayPickingUtils.mat4MultiplyVec4(healpixGrid.getModelMatrixInverse(), worldHit4, modelHit4);
-            intersectionModelPoint = [modelHit4[0], modelHit4[1], modelHit4[2]];
-        }
-        return intersectionModelPoint;
-    }
-}
-exports["default"] = RayPickingUtils;
-
-
-/***/ }),
-
-/***/ 665:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-/**
- * @author Fabrizio Giordano (Fab77)
- */
-const Point_js_1 = __webpack_require__(553);
-const CoordsType_js_1 = __webpack_require__(145);
-const Global_js_1 = __importDefault(__webpack_require__(382));
-class STCSParser {
-    static parseSTCS(stcs) {
-        const stcsParsed = STCSParser.cleanStcs(stcs);
-        let totPoints = 0;
-        const polygons = [];
-        if (stcsParsed.includes("POLYGON")) {
-            return STCSParser.parsePolygon(stcsParsed);
-        }
-        else if (stcsParsed.includes("CIRCLE")) {
-            return STCSParser.parseCircle(stcsParsed);
-        }
-        else {
-            console.warn("STCS not recognised");
-        }
-        return { totpoints: totPoints, polygons };
-    }
-    static cleanStcs(stcs) {
-        // Uppercase once
-        let s = stcs.toUpperCase();
-        // Remove tokens
-        s = s
-            .replace(/'ICRS'/g, '')
-            .replace(/\bICRS\b/g, '')
-            .replace(/\bJ2000\b/g, '')
-            .replace(/\bUNION\b/g, '')
-            .replace(/\bTOPOCENTER\b/g, '');
-        // Remove parentheses
-        s = s.replace(/[()]/g, '');
-        // Collapse extra spaces and trim
-        s = s.replace(/ {2,}/g, ' ').trim();
-        return s;
-    }
-    static parsePolygon(stcs) {
-        let totPoints = 0;
-        const polygons = [];
-        const MAX_DECIMALS = Global_js_1.default.MAX_DECIMALS ?? 12;
-        const polys = stcs.split("POLYGON ");
-        for (let i = 1; i < polys.length; i++) {
-            const currPoly = [];
-            const points = polys[i].trim().split(" ");
-            // If first point is repeated as last, remove the duplicate
-            const p0 = Number(parseFloat(points[0]).toFixed(MAX_DECIMALS));
-            const p1 = Number(parseFloat(points[1]).toFixed(MAX_DECIMALS));
-            const plast0 = Number(parseFloat(points[points.length - 2]).toFixed(MAX_DECIMALS));
-            const plast1 = Number(parseFloat(points[points.length - 1]).toFixed(MAX_DECIMALS));
-            if (p0 === plast0 && p1 === plast1) {
-                points.splice(points.length - 2, 2);
-            }
-            if (points.length > 2) {
-                for (let p = 0; p < points.length - 1; p += 2) {
-                    const raDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
-                    const decDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
-                    const point = new Point_js_1.Point({ raDeg, decDeg }, CoordsType_js_1.CoordsType.ASTRO);
-                    currPoly.push(point);
-                    totPoints += 1;
-                }
-                polygons.push(currPoly);
-            }
-        }
-        return { totpoints: totPoints, polygons };
-    }
-    // Example format: "CIRCLE ICRS 8.739685 4.38147 0.027833"
-    static parseCircle(stcs) {
-        let totPoints = 0;
-        const polygons = [];
-        const polys = stcs.split("CIRCLE ");
-        for (let i = 1; i < polys.length; i++) {
-            const currPoly = [];
-            const tokens = polys[i].trim().split(" ");
-            const ra = Number(tokens[0]);
-            const dec = Number(tokens[1]);
-            const radius = Number(tokens[2]);
-            const POINTS_PER_QUADRANT = 6;
-            const npoints = POINTS_PER_QUADRANT * 4;
-            const alpha = (2 * Math.PI) / npoints;
-            // Generate points around the circle
-            for (let p = npoints; p > 0; p--) {
-                const curra = radius * Math.cos(p * alpha) + ra;
-                const curdec = radius * Math.sin(p * alpha) + dec;
-                const point = new Point_js_1.Point({ raDeg: curra, decDeg: curdec }, CoordsType_js_1.CoordsType.ASTRO);
-                currPoly.push(point);
-                totPoints += 1;
-            }
-            polygons.push(currPoly);
-        }
-        return { totpoints: totPoints, polygons };
-    }
-}
-exports["default"] = STCSParser;
-
-
-/***/ }),
-
-/***/ 685:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.PerspectiveMatrixManager = void 0;
-const gl_matrix_1 = __webpack_require__(961);
-class PerspectiveMatrixManager {
-    _pMatrix;
-    _aspectRatio = 1;
-    constructor(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
-        this._pMatrix = this.computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane, insideSphere);
-    }
-    get pMatrix() {
-        return this._pMatrix;
-    }
-    set pMatrix(pMatrix) {
-        this._pMatrix = pMatrix;
-    }
-    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
-        this._aspectRatio = canvas.width / canvas.height;
-        const p = gl_matrix_1.mat4.create();
-        let farPlane;
-        if (insideSphere) {
-            // Inside the sphere: cap slightly beyond radius
-            farPlane = 1.1;
-        }
-        else {
-            const camMat = camera.getCameraMatrix();
-            const distCamera = -Number(camMat[14]); // camera z translation
-            const r = 1; // HiPS sphere radius (inject real value if available)
-            // Guard against negative due to rounding/logic
-            const c2 = Math.sqrt(Math.max(distCamera ** 2 - r ** 2, 0));
-            const beta = Math.atan2(c2, r);
-            const cf = c2 * Math.sin(beta);
-            farPlane = cf > 0 ? cf : r;
-        }
-        gl_matrix_1.mat4.perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
-        this._pMatrix = p;
-        return p;
-    }
-}
-exports.PerspectiveMatrixManager = PerspectiveMatrixManager;
-
-
-/***/ }),
-
-/***/ 707:
-/***/ ((__unused_webpack_module, exports) => {
-
-// GridShaderManager.ts
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-class GridShaderManager {
-    static healpixGridVS() {
-        return `#version 300 es
-        in vec4 aCatPosition;
-        uniform mat4 uMVMatrix;
-        uniform mat4 uPMatrix;
-
-        void main() {
-            gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-            gl_PointSize = 7.0;
-        }`;
-    }
-    static healpixGridFS() {
-        return `#version 300 es
-        precision mediump float;
-
-        uniform vec4 u_fragcolor;
-        out vec4 fragColor;
-
-        void main() {
-            // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-            fragColor = u_fragcolor;
-        }`;
-    }
-}
-exports["default"] = GridShaderManager;
-
-
-/***/ }),
-
-/***/ 723:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const Config_js_1 = __webpack_require__(919);
-const Camera_js_1 = __importDefault(__webpack_require__(734));
-const RayPickingUtils_js_1 = __importDefault(__webpack_require__(639));
-const Global_js_1 = __importDefault(__webpack_require__(382));
-const MouseHelper_js_1 = __importDefault(__webpack_require__(396));
-const Utils_js_1 = __webpack_require__(930);
-const HiPS_js_1 = __webpack_require__(726);
-const PerspectiveMatrixManager_js_1 = __webpack_require__(685);
-const Point_js_1 = __webpack_require__(553);
-const FoVUtils_js_1 = __webpack_require__(83);
-const EquatorialGrid_js_1 = __webpack_require__(839);
-const HealpixGrid_js_1 = __webpack_require__(595);
-const CoordsType_js_1 = __webpack_require__(145);
-const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
-const XYZLayer_js_1 = __webpack_require__(502);
-const XYZTileRequestScheduler_js_1 = __webpack_require__(409);
-/**
- * AstroSphere — main WebGL scene controller (TS port)
- */
-class AstroSphere {
-    static MIN_WHEEL_SCALE = 0.85;
-    static MAX_WHEEL_SCALE = 1.8;
-    _camera;
-    _perspectiveMatrixManager;
-    centralPoinCoords;
-    mousePointCoords;
-    canvas;
-    _healpixGrid;
-    _equatorialGrid;
-    mouseHelper;
-    mouseDown = false;
-    lastMouseX = null;
-    lastMouseY = null;
-    inertiaX = 0.0;
-    inertiaY = 0.0;
-    zoomInertia = 0.0;
-    pointerDownX = null;
-    pointerDownY = null;
-    pointerDownAt = 0;
-    _activeHiPS = null;
-    _activeXYZ = null;
-    _activeBaseLayer = null;
-    startup = true;
-    fov;
-    activeCatalogues = [];
-    activeFootprintSets = [];
-    _webgl;
-    _selectedColorMap;
-    _cameraStatusChanged = false;
-    lastHoveredSource = null;
-    lastHoveredCatalogue = null;
-    zoomSensitivity = 1.0;
-    constructor(canvas, webgl) {
-        console.log('[AstroSphere] new instance for canvas', canvas.id);
-        // Keep global GL context (as in original JS)
-        this._webgl = webgl;
-        this.mouseHelper = new MouseHelper_js_1.default();
-        this.canvas = canvas;
-        const nativeColorMap = 'native';
-        this._selectedColorMap = ColorMaps_js_1.default[nativeColorMap];
-        Global_js_1.default.insideSphere = Config_js_1.bootSetup.insideSphere;
-        this.initCamera();
-        this._healpixGrid = new HealpixGrid_js_1.HealpixGrid(this._webgl);
-        this._perspectiveMatrixManager = new PerspectiveMatrixManager_js_1.PerspectiveMatrixManager(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Config_js_1.bootSetup.insideSphere);
-        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Config_js_1.bootSetup.insideSphere);
-        this._equatorialGrid = new EquatorialGrid_js_1.EquatorialGrid(this._webgl, this._healpixGrid);
-        this._equatorialGrid.init(this._healpixGrid.getMinFoV());
-        this.updateCentralPoint();
-        this.startup = true;
-        this.addEventListeners(canvas);
-        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
-        this._camera.refreshFoV(this.fov.minFoV);
-    }
-    initCamera() {
-        if (Config_js_1.bootSetup.insideSphere) {
-            this._camera = new Camera_js_1.default([0.0, 0.0, -0.005], true);
-        }
-        else {
-            this._camera = new Camera_js_1.default([0.0, 0.0, 4.0], false);
-        }
-    }
-    setCamera(camera) {
-        this._camera = camera;
-    }
-    setCameraRotationSensitivity(value) {
-        this._camera.setRotationSensitivity(value);
-    }
-    getCameraRotationSensitivity() {
-        return this._camera.getRotationSensitivity();
-    }
-    get healpixGrid() {
-        return this._healpixGrid;
-    }
-    get equatorialGrid() {
-        return this._equatorialGrid;
-    }
-    // This is a lickely a duplication of FoVUtils.getCenterJ2000(this.canvas)
-    updateCentralPoint() {
-        const sphericalCoords = this.getPhiThetaDeg(this.canvas);
-        const astroCoords = (0, Utils_js_1.sphericalToAstroDeg)(sphericalCoords.phi, sphericalCoords.theta);
-        const raHMS = (0, Utils_js_1.raDegToHMS)(astroCoords.ra);
-        const decDMS = (0, Utils_js_1.decDegToDMS)(astroCoords.dec);
-        this.centralPoinCoords = {
-            astroDeg: astroCoords,
-            sphericalDeg: sphericalCoords,
-            raHMS: raHMS,
-            decDMS: decDMS
-        };
-        return this.centralPoinCoords;
-    }
-    updateLastMousePoint() {
-        const sphericalCoords = { phi: this.mouseHelper.phi, theta: this.mouseHelper.theta };
-        const astroCoords = { ra: this.mouseHelper.ra, dec: this.mouseHelper.dec };
-        const raHMS = this.mouseHelper.raHMS;
-        const decDMS = this.mouseHelper.decDMS;
-        this.mousePointCoords = {
-            astroDeg: astroCoords,
-            sphericalDeg: sphericalCoords,
-            raHMS: raHMS,
-            decDMS: decDMS
-        };
-        return this.mousePointCoords;
-    }
-    clearLastMousePoint() {
-        this.mousePointCoords = undefined;
-    }
-    // This should call FoVUtils.getJ200Centre(this.canvas)
-    getCentralPointCoordinates() {
-        return this.centralPoinCoords;
-    }
-    getLastMousePointCoordinates() {
-        return this.mousePointCoords;
-    }
-    clamp(value, min, max) {
-        return Math.min(max, Math.max(min, value));
-    }
-    computeZoomStep(currentFov, deltaY) {
-        const direction = deltaY < 0 ? -1 : 1;
-        const wheelScale = this.clamp(Math.abs(deltaY) / 120, AstroSphere.MIN_WHEEL_SCALE, AstroSphere.MAX_WHEEL_SCALE);
-        // Continuous wheel response:
-        // - broad FoV stays responsive without large jumps
-        // - narrow FoV keeps a usable floor to avoid the 0.1 -> 0.02 deg stall
-        const baseMagnitude = this.clamp(0.0012 + 0.0025 * Math.sqrt(Math.max(currentFov, 0)), 0.0012, 0.04);
-        return direction * baseMagnitude * wheelScale * this.zoomSensitivity;
-    }
-    setZoomSensitivity(value) {
-        this.zoomSensitivity = this.clamp(value, 0.2, 3);
-    }
-    getZoomSensitivity() {
-        return this.zoomSensitivity;
-    }
-    emitCameraChanged(reason) {
-        // avoid dispatch before scene is ready
-        if (!this._activeHiPS)
-            return;
-        if (!this._healpixGrid?.fovObj)
-            return;
-        const detail = this.getCurrentStatus();
-        if (!detail)
-            return;
-        // optional debug
-        // console.log('[AstroSphere] emit camera-changed:', reason);
-        this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
-            detail,
-            bubbles: true,
-            composed: true,
-        }));
-    }
-    addEventListeners(canvas) {
-        if (Global_js_1.default.debug) {
-            console.log('[AstroSphere::addEventListeners]');
-        }
-        const CLICK_MAX_DISTANCE_PX = 4;
-        const CLICK_MAX_DURATION_MS = 250;
-        const rect = canvas.getBoundingClientRect();
-        this.lastMouseX = rect.left; // locale al canvas
-        this.lastMouseY = rect.top;
-        const handleMouseDown = (event) => {
-            canvas.setPointerCapture(event.pointerId);
-            this.mouseDown = true;
-            const rect = canvas.getBoundingClientRect();
-            this.lastMouseX = event.clientX - rect.left; // locale al canvas
-            this.lastMouseY = event.clientY - rect.top; // locale al canvas
-            this.pointerDownX = this.lastMouseX;
-            this.pointerDownY = this.lastMouseY;
-            this.pointerDownAt = Date.now();
-            const mousePoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(this.lastMouseX, this.lastMouseY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-            if (mousePoint && mousePoint.length > 0) {
-                this.mouseHelper.update(mousePoint);
-                this.updateLastMousePoint();
-            }
-            else {
-                this.clearLastMousePoint();
-            }
-            event.preventDefault();
-            return false;
-        };
-        const handleMouseUp = (event) => {
-            canvas.releasePointerCapture(event.pointerId);
-            this.mouseDown = false;
-            document.body.style.cursor = 'auto';
-            if (event.button !== 0) {
-                event.preventDefault();
-                return false;
-            }
-            const rect = canvas.getBoundingClientRect();
-            const localX = event.clientX - rect.left;
-            const localY = event.clientY - rect.top;
-            this.lastMouseX = localX;
-            this.lastMouseY = localY;
-            const moveDist = Math.hypot(localX - (this.pointerDownX ?? localX), localY - (this.pointerDownY ?? localY));
-            const elapsedMs = Date.now() - this.pointerDownAt;
-            const isClick = moveDist <= CLICK_MAX_DISTANCE_PX && elapsedMs <= CLICK_MAX_DURATION_MS;
-            if (isClick) {
-                const mousePoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-                if (mousePoint && mousePoint.length > 0) {
-                    this.mouseHelper.update(mousePoint);
-                    this.updateLastMousePoint();
-                    for (const cat of this.activeCatalogues) {
-                        const clickResult = cat.selectPrimarySourceFromClick(this.mouseHelper);
-                        if (!clickResult?.sources.length)
-                            continue;
-                        this._webgl.canvas.dispatchEvent(new CustomEvent('source-clicked', {
-                            detail: {
-                                source: clickResult.sources,
-                                selectionState: clickResult.selectionState,
-                                catalogue: cat,
-                            },
-                            bubbles: true,
-                            composed: true,
-                        }));
-                    }
-                    for (const fset of this.activeFootprintSets) {
-                        const clickResult = fset.selectPrimaryFootprintFromClick(this.mouseHelper);
-                        if (!clickResult?.footprints.length)
-                            continue;
-                        this._webgl.canvas.dispatchEvent(new CustomEvent('footprint-clicked', {
-                            detail: {
-                                footprint: clickResult.footprints,
-                                selectionState: clickResult.selectionState,
-                                footprintSet: fset,
-                            },
-                            bubbles: true,
-                            composed: true,
-                        }));
-                    }
-                }
-            }
-            else {
-                this.clearLastMousePoint();
-            }
-        };
-        const handleMouseMove = (event) => {
-            const rect = canvas.getBoundingClientRect();
-            // 🔹 canvas-local coordinates
-            const localX = event.clientX - rect.left;
-            const localY = event.clientY - rect.top;
-            const newX = localX;
-            const newY = localY;
-            // if (!healpixGridSingleton) return;
-            if (!this._healpixGrid)
-                return;
-            if (this.mouseDown) {
-                document.body.style.cursor = 'grab';
-                // Rotation deltas – either use client-space or local-space, but be consistent
-                const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
-                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
-                this.inertiaX += 0.1 * deltaX;
-                this.inertiaY += 0.1 * deltaY;
-                this.updateCentralPoint();
-            }
-            else {
-                // Use canvas-local coords for picking
-                const mousePoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-                if (mousePoint && mousePoint.length > 0) {
-                    this.mouseHelper.update(mousePoint);
-                    this.updateLastMousePoint();
-                }
-                else {
-                    this.clearLastMousePoint();
-                }
-            }
-            if (!this.centralPoinCoords) {
-                this.updateCentralPoint();
-            }
-            this.lastMouseX = newX;
-            this.lastMouseY = newY;
-            // During drag, camera rotation is applied in the render loop via inertia.
-            // Defer the camera-changed event to that loop so coordinates reflect the
-            // actual updated camera state instead of the pre-rotation state.
-            this._cameraStatusChanged = true;
-            event.preventDefault();
-        };
-        const handleMouseWheel = (event) => {
-            const currentFov = this._healpixGrid.getMinFoV();
-            const zoomStep = this.computeZoomStep(currentFov, event.deltaY);
-            // Apply wheel zoom immediately and discard any queued inertia so reversing
-            // direction feels responsive instead of "buffered".
-            this.zoomInertia = 0;
-            this._camera.zoom(zoomStep);
-            this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
-            this._camera.refreshFoV(this.fov.minFoV);
-            this._cameraStatusChanged = true;
-            this.emitCameraChanged('wheel');
-            event.preventDefault();
-        };
-        const handleContextMenu = (event) => {
-            event.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            const localX = event.clientX - rect.left;
-            const localY = event.clientY - rect.top;
-            const mousePoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-            if (!mousePoint || mousePoint.length === 0) {
-                return false;
-            }
-            this.mouseHelper.update(mousePoint);
-            this.updateLastMousePoint();
-            for (const cat of this.activeCatalogues) {
-                const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
-                if (!pickResult?.sources.length)
-                    continue;
-                this._webgl.canvas.dispatchEvent(new CustomEvent('source-contextmenu', {
-                    detail: {
-                        source: pickResult.sources,
-                        catalogue: cat,
-                        clientX: event.clientX,
-                        clientY: event.clientY,
-                    },
-                    bubbles: true,
-                    composed: true,
-                }));
-                break;
-            }
-            for (const fset of this.activeFootprintSets) {
-                const pickResult = fset.getFootprintsFromPointer(this.mouseHelper);
-                if (!pickResult?.footprints.length)
-                    continue;
-                this._webgl.canvas.dispatchEvent(new CustomEvent('footprint-contextmenu', {
-                    detail: {
-                        footprint: pickResult.footprints,
-                        footprintSet: fset,
-                        clientX: event.clientX,
-                        clientY: event.clientY,
-                    },
-                    bubbles: true,
-                    composed: true,
-                }));
-                break;
-            }
-            return false;
-        };
-        const onKeyDown = (evt) => {
-            if (!evt.ctrlKey) {
-                return;
-            }
-            // console.log('[AstroSphere::onKeyDown] key=', evt.key)
-            switch (evt.key) {
-                case '1':
-                    // Free camera
-                    this._camera.clearRotationLock();
-                    break;
-                case '2':
-                    // Lock X axis rotation
-                    this._camera.setRotationLock({ x: true, y: false, z: false });
-                    break;
-                case '3':
-                    // Lock Y axis rotation
-                    this._camera.setRotationLock({ x: false, y: true, z: false });
-                    break;
-                case '4':
-                    // Lock Z axis rotation
-                    this._camera.setRotationLock({ x: false, y: false, z: true });
-                    break;
-            }
-        };
-        console.log('[AstroSphere] registering pointer and wheel listeners on canvas');
-        canvas.onpointerdown = handleMouseDown;
-        canvas.onpointerup = handleMouseUp;
-        canvas.onpointermove = handleMouseMove;
-        canvas.onpointerleave = () => {
-            this.clearLastMousePoint();
-            this._cameraStatusChanged = true;
-            this.emitCameraChanged('pointerleave');
-        };
-        console.log('[AstroSphere] adding wheel event listener with passive: false');
-        canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
-        canvas.addEventListener('contextmenu', handleContextMenu);
-        console.log('[AstroSphere] registering global keydown listener on document');
-        document.addEventListener('keydown', onKeyDown, { capture: true });
-    }
-    // REVIEW THIS METHOD AND MOVE IT 
-    getPhiThetaDeg(canvas) {
-        const rect = canvas.getBoundingClientRect();
-        const maxX = rect.width;
-        const maxY = rect.height;
-        const pickerPoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-        return (0, Utils_js_1.cartesianToSpherical)(pickerPoint);
-    }
-    collectViewportSphericalSamples(sampleCount = 5) {
-        const rect = this.canvas.getBoundingClientRect();
-        const width = rect.width;
-        const height = rect.height;
-        const samples = [];
-        for (let ix = 0; ix < sampleCount; ix++) {
-            const x = sampleCount === 1 ? width / 2 : (ix / (sampleCount - 1)) * width;
-            for (let iy = 0; iy < sampleCount; iy++) {
-                const y = sampleCount === 1 ? height / 2 : (iy / (sampleCount - 1)) * height;
-                const hit = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(x, y, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-                if (hit && hit.length > 0) {
-                    samples.push((0, Utils_js_1.cartesianToSpherical)(hit));
-                }
-            }
-        }
-        return samples;
-    }
-    activateHiPS(hipsDescriptor) {
-        this._activeHiPS = new HiPS_js_1.HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
-        this._activeBaseLayer = 'hips';
-    }
-    activateXYZ(config) {
-        this._activeXYZ = new XYZLayer_js_1.XYZLayer(config, this._webgl);
-        this._activeBaseLayer = 'xyz';
-    }
-    // Catalogue section
-    async showCatalogue(cat) {
-        // console.log(cat)
-        if (cat)
-            this.activeCatalogues.push(cat);
-        return cat;
-    }
-    deleteCatalogue(catalogue) {
-        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
-    }
-    // End Catalogue section
-    // Footprint section
-    async showFootprintSet(fset) {
-        // console.log(fset)
-        if (fset)
-            this.activeFootprintSets.push(fset);
-        return fset;
-    }
-    deleteFootprintSet(footprintSet) {
-        this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
-    }
-    getHoveredFootprints() {
-        let footprintsHovered = [];
-        this.activeFootprintSets.forEach(fset => {
-            footprintsHovered.push(fset.hoveredFootprints);
-        });
-        return footprintsHovered;
-    }
-    // End Footprint section
-    goTo(raDeg, decDeg) {
-        this._camera.goTo(raDeg, decDeg);
-    }
-    getFoV() {
-        return this.fov;
-    }
-    getFoVPolygon() {
-        if (this.healpixGrid == null)
-            throw new Error(`healpixGrid is ${this.healpixGrid}`);
-        return FoVUtils_js_1.FoVUtils.getFoVPolygon(this._camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl, this._perspectiveMatrixManager.pMatrix);
-    }
-    changeFoV(deg) {
-        const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg);
-        this._camera.translate(distance);
-        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
-        this._camera.refreshFoV(this.fov.minFoV);
-    }
-    changeFoV2(deg) {
-        const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
-        this._camera.setCameraPosition(newCameraPos);
-    }
-    changeFoV3(deg) {
-        const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
-        this._camera.setCameraPosition(newPos);
-        // Recompute projection after moving the camera
-        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, false);
-    }
-    getInsideSphere() {
-        return Global_js_1.default.insideSphere;
-    }
-    toggleInsideSphere() {
-        Global_js_1.default.insideSphere = !Global_js_1.default.insideSphere;
-        // console.log(global.insideSphere)
-        this._camera.toggleInsideSphere();
-    }
-    // imposta posizione camera
-    setCameraPosition(pos) {
-        this._camera.setCameraPosition(pos);
-        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
-    }
-    // imposta orientamento camera tramite view matrix
-    setCameraMatrix(viewMatrix) {
-        this._camera.setCameraMatrix(viewMatrix);
-        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
-    }
-    _refreshingStatus = false;
-    // set completo camera (pos + orientamento)
-    applyFullCameraState(detail, applyColor) {
-        this._refreshingStatus = true;
-        this._camera = detail.camera;
-        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
-        this._healpixGrid.setModelMatrix(detail.mMatrix);
-        this._perspectiveMatrixManager.pMatrix = detail.pMatrix;
-        this.setCameraMatrix(detail.vMatrix);
-        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
-        if (applyColor) {
-            this._activeHiPS?.changeColorMap(detail.colorMap);
-        }
-        this._refreshingStatus = false;
-    }
-    getCurrentStatus() {
-        this.updateCentralPoint();
-        const centralradeg = this.centralPoinCoords?.astroDeg.ra;
-        const centraldecdeg = this.centralPoinCoords?.astroDeg.dec;
-        // if (!centraldecdeg || !centralradeg) {
-        if (centralradeg == null || centraldecdeg == null) {
-            return null;
-        }
-        // if (this._rotating && centraldecdeg && centralradeg) {
-        const detail = {
-            fovDeg: this.fov.minFoV,
-            fovXDeg: this.fov.xFoV,
-            fovYDeg: this.fov.yFoV,
-            position: this._camera.getCameraPosition(),
-            vMatrix: this._camera.getCameraMatrix(),
-            pMatrix: this._perspectiveMatrixManager.pMatrix,
-            mMatrix: this._healpixGrid.getModelMatrix(),
-            camera: this._camera,
-            timestamp: performance.now(),
-            centralPoint: new Point_js_1.Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType_js_1.CoordsType.ASTRO),
-            mouseHoverPoint: this.mousePointCoords,
-            colorMap: this._selectedColorMap,
-            getFoVPolygon: this.getFoVPolygon(),
-        };
-        return detail;
-        // }
-        // return null
-    }
-    changeColorMap(cm) {
-        if (!this._activeHiPS)
-            return;
-        this._selectedColorMap = cm;
-        this._activeHiPS?.changeColorMap(cm);
-    }
-    prevFov = 0;
-    prevCentralRaDeg = null;
-    prevCentralDecDeg = null;
-    get activeHiPS() {
-        return this._activeHiPS;
-    }
-    get activeXYZ() {
-        return this._activeXYZ;
-    }
-    getXYZDebugStats() {
-        return {
-            activeBaseLayer: this._activeBaseLayer,
-            layer: this._activeXYZ?.getDebugStats() ?? null,
-            requests: XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getDebugStats(),
-        };
-    }
-    draw(canvas) {
-        if (this._refreshingStatus)
-            return;
-        if (!this._webgl)
-            return;
-        if (!this._activeHiPS && !this._activeXYZ)
-            return;
-        if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
-            return;
-        if (this._healpixGrid.fovObj === undefined)
-            return;
-        // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
-        // global.gl.getExtension('OES_element_index_uint')
-        // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
-        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
-        let cameraRotated = false;
-        let THETA = 0;
-        let PHI = 0;
-        this._webgl.viewport(0, 0, this._webgl.drawingBufferWidth, this._webgl.drawingBufferHeight);
-        this._webgl.clear(this._webgl.COLOR_BUFFER_BIT | this._webgl.DEPTH_BUFFER_BIT);
-        // Zoom inertia
-        if (this.zoomInertia !== 0) {
-            if (Math.abs(this.zoomInertia) > 0.0001) {
-                this._camera.zoom(this.zoomInertia);
-                this.zoomInertia *= 0.95;
-                this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
-                this._camera.refreshFoV(this.fov.minFoV);
-                if (this.prevFov !== this.fov.minFoV) {
-                    if (!this.centralPoinCoords) {
-                        this.centralPoinCoords = this.updateCentralPoint();
-                    }
-                    this.prevFov = this.fov.minFoV;
-                }
-            }
-            else {
-                this.zoomInertia = 0;
-            }
-            this._cameraStatusChanged = true;
-        }
-        // Rotation inertia
-        if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
-            cameraRotated = true;
-            THETA = this.inertiaY;
-            PHI = this.inertiaX;
-            this.inertiaX *= 0.95;
-            this.inertiaY *= 0.95;
-            this._camera.rotate(PHI, THETA);
-            this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
-        }
-        else {
-            this.inertiaY = 0;
-            this.inertiaX = 0;
-        }
-        // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
-        if (cameraRotated) {
-            // Ricalcola il punto centrale
-            const center = this.updateCentralPoint();
-            const centralRaDeg = center.astroDeg.ra;
-            const centralDecDeg = center.astroDeg.dec;
-            // Evita spam: emetti solo se è cambiato abbastanza
-            const raChanged = this.prevCentralRaDeg === null ||
-                Math.abs(centralRaDeg - this.prevCentralRaDeg) > 1e-5;
-            const decChanged = this.prevCentralDecDeg === null ||
-                Math.abs(centralDecDeg - this.prevCentralDecDeg) > 1e-5;
-            if (raChanged || decChanged) {
-                this.prevCentralRaDeg = centralRaDeg;
-                this.prevCentralDecDeg = centralDecDeg;
-            }
-        }
-        if (this._cameraStatusChanged) {
-            const detail = this.getCurrentStatus();
-            if (detail) {
-                // console.log('[AstroSphere::draw] emitting camera-changed event due to camera status change', detail)
-                // console.log('[AstroSphere::draw] inertia', this.zoomInertia, this.inertiaX, this.inertiaY)
-                this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
-                    detail,
-                    bubbles: true, composed: true,
-                }));
-            }
-            if (!this.startup) {
-                this._cameraStatusChanged = false;
-            }
-        }
-        // GL state
-        this._webgl.disable(this._webgl.DEPTH_TEST);
-        this._webgl.enable(this._webgl.BLEND);
-        this._webgl.enable(this._webgl.CULL_FACE);
-        this._webgl.cullFace(Global_js_1.default.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
-        this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
-            const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
-            this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
-        }
-        // DRAW HiPS
-        const skyEntityDrawInput = {
-            fovDeg: this._healpixGrid.getMinFoV(),
-            camera: this._camera,
-            pMatrix: this._perspectiveMatrixManager.pMatrix,
-            centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
-            fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
-            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(5) : undefined,
-        };
-        if (this._activeBaseLayer === 'hips') {
-            this._activeHiPS?.draw(skyEntityDrawInput);
-        }
-        if (this._activeBaseLayer === 'xyz') {
-            this._activeXYZ?.draw(skyEntityDrawInput);
-        }
-        this._healpixGrid.draw(skyEntityDrawInput);
-        this._equatorialGrid.draw(skyEntityDrawInput);
-        this._webgl.enable(this._webgl.DEPTH_TEST);
-        this._webgl.disable(this._webgl.CULL_FACE);
-        if (this.startup) {
-            this.startup = false;
-            const phiTheta = this.getPhiThetaDeg(canvas);
-            const raDecDeg = (0, Utils_js_1.sphericalToAstroDeg)(phiTheta.phi, phiTheta.theta);
-            const raHMS = (0, Utils_js_1.raDegToHMS)(raDecDeg.ra);
-            const decDMS = (0, Utils_js_1.decDegToDMS)(raDecDeg.dec);
-            this.prevFov = this._healpixGrid.getMinFoV();
-            this._cameraStatusChanged = true;
-            console.log('(startup coords)', {
-                raDeg: raDecDeg.ra,
-                decDeg: raDecDeg.dec,
-                raHMS,
-                decDMS,
-            });
-        }
-        this.activeCatalogues.forEach(cat => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
-            if (activeModelMatrix) {
-                cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
-            }
-        });
-        this.emitHoveredSourceIfChanged();
-        this.activeFootprintSets.forEach(fst => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
-            if (activeModelMatrix) {
-                fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
-            }
-        });
-    }
-    emitHoveredSourceIfChanged() {
-        let nextHoveredSource = null;
-        let nextHoveredCatalogue = null;
-        for (const cat of this.activeCatalogues) {
-            const hovered = cat.getPrimaryHoveredSource();
-            if (!hovered)
-                continue;
-            nextHoveredSource = hovered;
-            nextHoveredCatalogue = cat;
-            break;
-        }
-        const unchanged = nextHoveredSource === this.lastHoveredSource
-            && nextHoveredCatalogue === this.lastHoveredCatalogue;
-        if (unchanged)
-            return;
-        this.lastHoveredSource = nextHoveredSource;
-        this.lastHoveredCatalogue = nextHoveredCatalogue;
-        this._webgl.canvas.dispatchEvent(new CustomEvent('source-hovered', {
-            detail: { source: nextHoveredSource, catalogue: nextHoveredCatalogue },
-            bubbles: true,
-            composed: true,
-        }));
-    }
-}
-exports["default"] = AstroSphere;
-
-
-/***/ }),
-
-/***/ 726:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HiPS = void 0;
-/**
- * @author Fabrizio Giordano (Fab77)
- */
-const AbstractSkyEntity_js_1 = __webpack_require__(735);
-const FoVHelper_js_1 = __webpack_require__(610);
-const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
-// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
-// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
-const AncestorTile_js_1 = __importDefault(__webpack_require__(885));
-const AllSky_js_1 = __importDefault(__webpack_require__(368));
-class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
-    _ancestorTiles;
-    _allSkyTile;
-    _descriptor;
-    _format;
-    _baseurl;
-    _maxorder;
-    _minorder;
-    _visibleorder = 3;
-    _allSky = true;
-    samplerIdx = 0;
-    colorMapIdx = 0;
-    colorMap = ColorMaps_js_1.default['native'];
-    _healpixGrid;
-    // exposed read-only helpers
-    get maxOrder() { return this._maxorder; }
-    get minOrder() { return this._minorder; }
-    get baseURL() { return this._baseurl; }
-    get format() { return this._format; }
-    get propertiesRawText() { return this._descriptor.propertiesRawText; }
-    get properties() { return this._descriptor.properties; }
-    constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
-        super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
-        this._descriptor = descriptor;
-        // this.initGL((global as any).gl as WebGL2RenderingContext)
-        this.initGL(webgl);
-        this._healpixGrid = healpixGrid;
-        // newTileBuffer.addHiPS(this)
-        this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this);
-        // DEBUG logs kept from JS (optional)
-        // eslint-disable-next-line no-console
-        console.log('HiPS frame ' + descriptor.hipsFrame);
-        // eslint-disable-next-line no-console
-        console.log('HiPS minOrder ' + descriptor.minOrder);
-        this._format = descriptor.imgFormats[0];
-        this._baseurl = descriptor.url;
-        this._maxorder = descriptor.maxOrder;
-        this._minorder = descriptor.minOrder;
-        this.initShaders();
-        // pick initial order from a starting FoV
-        const fov = 180;
-        let order = FoVHelper_js_1.fovHelper.getHiPSNorder(fov);
-        this._visibleorder = Math.min(order, this._maxorder);
-        this._ancestorTiles = [];
-        this._allSkyTile = null;
-        // auto-detect all-sky: original code forces true
-        this._allSky = true;
-        if (this._allSky) {
-            this._allSkyTile = new AllSky_js_1.default(this, this._webgl, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram);
-        }
-        else {
-            for (let t = 0; t < 12; t++) {
-                this._ancestorTiles.push(new AncestorTile_js_1.default(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl));
-            }
-        }
-    }
-    getProperty(key) {
-        return this._descriptor.getProperty(key);
-    }
-    changeFormat(format) {
-        this._format = format;
-        // original code referenced _tileBuffer; if you have one, wire it back.
-        // Keeping calls no-op to avoid breaking at runtime if _tileBuffer is undefined.
-        // (newVisibleTilesManager + TileBuffer drive the actual tile lifecycle)
-        // @ts-ignore
-        if (this._tileBuffer?.clearAll)
-            this._tileBuffer.clearAll();
-        // @ts-ignore
-        if (this._tileBuffer)
-            this._tileBuffer._format = this._format;
-        const pixelByOrder = this.isGalacticHips
-            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
-            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder;
-        // const pixelByOrder =
-        //   this.isGalacticHips
-        //     ? visibleTilesManager.galVisibleTilesByOrder
-        //     : visibleTilesManager.visibleTilesByOrder
-        // @ts-ignore
-        if (this._tileBuffer?.updateTiles)
-            this._tileBuffer.updateTiles(pixelByOrder.pixels, pixelByOrder.order);
-    }
-    /**
-     * Shader colormap switcher
-     * 0 -> native
-     * 1 -> grayscale
-     * 2 -> planck
-     * 3 -> cmb
-     * 4 -> rainbow
-     * 5 -> eosb
-     * 6 -> cubehelix
-     */
-    changeColorMap(colorMap) {
-        console.log('HiPS.changeColorMap -> shaderProgram', super.hipsShaderProgram.shaderProgram);
-        this.colorMap = colorMap;
-        switch (colorMap.name) {
-            case 'grayscale':
-                this.colorMapIdx = 1;
-                // hipsShaderProgram.setGrayscaleShader()
-                this.colorMap = ColorMaps_js_1.default['grayscale'];
-                super.hipsShaderProgram.setGrayscaleShader();
-                break;
-            case 'planck':
-                this.colorMapIdx = 2;
-                this.colorMap = ColorMaps_js_1.default['planck'];
-                // hipsShaderProgram.setColorMapShader()
-                super.hipsShaderProgram.setColorMapShader();
-                break;
-            case 'cmb':
-                this.colorMapIdx = 3;
-                this.colorMap = ColorMaps_js_1.default['cmb'];
-                // hipsShaderProgram.setColorMapShader()
-                super.hipsShaderProgram.setColorMapShader();
-                break;
-            case 'rainbow':
-                this.colorMapIdx = 4;
-                this.colorMap = ColorMaps_js_1.default['rainbow'];
-                // hipsShaderProgram.setColorMapShader()
-                super.hipsShaderProgram.setColorMapShader();
-                break;
-            case 'eosb':
-                this.colorMapIdx = 5;
-                this.colorMap = ColorMaps_js_1.default['eosb'];
-                super.hipsShaderProgram.setColorMapShader();
-                // hipsShaderProgram.setColorMapShader()
-                break;
-            case 'cubehelix':
-                this.colorMapIdx = 6;
-                this.colorMap = ColorMaps_js_1.default['cubehelix'];
-                super.hipsShaderProgram.setColorMapShader();
-                // hipsShaderProgram.setColorMapShader()
-                break;
-            case 'hot':
-                this.colorMapIdx = 7;
-                this.colorMap = ColorMaps_js_1.default['hot'];
-                super.hipsShaderProgram.setColorMapShader();
-                // hipsShaderProgram.setColorMapShader()
-                break;
-            case 'gray':
-                this.colorMapIdx = 8;
-                this.colorMap = ColorMaps_js_1.default['gray'];
-                super.hipsShaderProgram.setColorMapShader();
-                // hipsShaderProgram.setColorMapShader()
-                break;
-            case 'native':
-                this.colorMapIdx = 0;
-                this.colorMap = ColorMaps_js_1.default['native'];
-                super.hipsShaderProgram.setNativeShader();
-                break;
-            default:
-                this.colorMapIdx = 9;
-                this.colorMap = colorMap;
-                super.hipsShaderProgram.setColorMapShader();
-        }
-    }
-    initShaders() {
-        super.hipsShaderProgram.enableProgram();
-        // hipsShaderProgram.enableProgram()
-        // this.shaderProgram = super.hipsShaderProgram.shaderProgram
-        // this.shaderProgram = hipsShaderProgram.shaderProgram
-    }
-    getCurrentHealpixOrder() {
-        return this._visibleorder;
-    }
-    refresh() {
-        // const fov = healpixGridSingleton.getMinFoV()
-        const fov = this._healpixGrid.getMinFoV();
-        this._visibleorder = Math.min(FoVHelper_js_1.fovHelper.getHiPSNorder(fov), this._maxorder);
-    }
-    draw(input) {
-        const vMatrix = input.camera.getCameraMatrix();
-        if (!vMatrix)
-            return;
-        const pMatrix = input.pMatrix;
-        if (!pMatrix)
-            return;
-        this.refresh();
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
-        const mMatrix = this.getModelMatrix();
-        super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
-        if (this._allSky && this._allSkyTile) {
-            if (this.isGalacticHips) {
-                this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.galAncestorsMap, 
-                // visibleTilesManager.galVisibleTilesByOrder.order,
-                // visibleTilesManager.galAncestorsMap,
-                pMatrix, vMatrix, mMatrix, this.colorMapIdx);
-            }
-            else {
-                this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.ancestorsMap, 
-                // visibleTilesManager.visibleTilesByOrder.order,
-                // visibleTilesManager.ancestorsMap,
-                pMatrix, vMatrix, mMatrix, this.colorMapIdx);
-            }
-            return;
-        }
-        // Non all-sky path
-        const order = this.isGalacticHips
-            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
-            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order;
-        // ? visibleTilesManager.galVisibleTilesByOrder.order
-        // : visibleTilesManager.visibleTilesByOrder.order
-        const map = this.isGalacticHips
-            ? this._healpixGrid.visibleTilesManager.galAncestorsMap
-            : this._healpixGrid.visibleTilesManager.ancestorsMap;
-        // ? visibleTilesManager.galAncestorsMap
-        // : visibleTilesManager.ancestorsMap
-        this._ancestorTiles.forEach((ancestor) => {
-            ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
-        });
-    }
-}
-exports.HiPS = HiPS;
-
-
-/***/ }),
-
-/***/ 734:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-/**
- * @author Fabrizio Giordano (Fab)
- */
-const gl_matrix_1 = __webpack_require__(961);
-const Utils_js_1 = __webpack_require__(930);
-const Global_js_1 = __importDefault(__webpack_require__(382));
-class Camera {
-    insideSphere = false;
-    cam_pos = gl_matrix_1.vec3.create(); // camera position
-    cam_speed = 1.0;
-    vMatrix = gl_matrix_1.mat4.create(); // view matrix
-    T = gl_matrix_1.mat4.create(); // translation matrix
-    R = gl_matrix_1.mat4.create(); // rotation matrix
-    // Optional state used in rotate helpers
-    FoV = 180.0;
-    previousFoV = 180.0;
-    move = gl_matrix_1.vec3.create();
-    phi = 0; // accumulated yaw (radians)
-    theta = 0; // accumulated pitch (radians)
-    rotationSensitivity = 1.0;
-    // lock rotation around world axes
-    lockRotX = false;
-    lockRotY = false;
-    lockRotZ = false;
-    constructor(in_position, in_sphere) {
-        this.init(in_position, in_sphere);
-    }
-    init(in_position, in_sphere) {
-        this.insideSphere = in_sphere;
-        this.cam_pos = gl_matrix_1.vec3.clone(in_position);
-        this.vMatrix = gl_matrix_1.mat4.create();
-        this.T = gl_matrix_1.mat4.create();
-        this.R = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.translate(this.T, this.T, [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]]);
-        // reset helpers
-        this.FoV = this.previousFoV = 180.0;
-        this.move = gl_matrix_1.vec3.clone([0, 0, 0]);
-        const raDeg = 0;
-        const decDeg = 0;
-        this.goTo(raDeg, decDeg);
-    }
-    goTo(raDeg, decDeg) {
-        this.goToPhiTheta((0, Utils_js_1.astroDegToSpherical)(raDeg, decDeg));
-    }
-    goToPhiTheta(ptDeg) {
-        const xyz = (0, Utils_js_1.sphericalToCartesian)(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
-        let cameraMatrix = gl_matrix_1.mat4.create();
-        cameraMatrix = gl_matrix_1.mat4.translate(cameraMatrix, cameraMatrix, gl_matrix_1.vec3.fromValues(xyz[0], xyz[1], xyz[2]));
-        const focusPoint = [0.0, 0.0, 0.0];
-        const cameraUp = gl_matrix_1.vec3.clone([0.0, 1.0, 0.0]);
-        const cameraPos = [cameraMatrix[12], cameraMatrix[13], cameraMatrix[14]];
-        cameraMatrix = gl_matrix_1.mat4.targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
-        this.R = gl_matrix_1.mat4.clone(cameraMatrix);
-        this.R[12] = 0;
-        this.R[13] = 0;
-        this.R[14] = 0;
-        const viewMatrix = gl_matrix_1.mat4.create();
-        if (this.cam_pos[2] !== 0) {
-            gl_matrix_1.mat4.invert(viewMatrix, cameraMatrix);
-        }
-        this.vMatrix = viewMatrix;
-    }
-    toggleInsideSphere() {
-        // if (inside !== global.insideSphere) {
-        //   global.insideSphere = inside;
-        if (Global_js_1.default.insideSphere) {
-            if (this.cam_pos[2] <= 2) {
-                this.cam_pos[2] = -2 + this.cam_pos[2];
-            }
-            else {
-                this.cam_pos[2] = -0.005;
-            }
-        }
-        else {
-            this.cam_pos[2] = 2.0 + this.cam_pos[2];
-        }
-        gl_matrix_1.mat4.translate(this.T, gl_matrix_1.mat4.create(), this.cam_pos);
-        this.refreshViewMatrix();
-        // }
-    }
-    zoom(inertia) {
-        this.move = gl_matrix_1.vec3.clone([0, 0, 0]);
-        this.move[2] += this.cam_speed * inertia;
-        if (Global_js_1.default.insideSphere) {
-            if (this.cam_pos[2] + this.move[2] >= -0.005 && inertia > 0) {
-                this.cam_pos[2] = -0.005;
-                inertia = 0;
-            }
-            else if (this.cam_pos[2] + this.move[2] <= -0.9885 && inertia < 0) {
-                this.cam_pos[2] = -0.9885;
-                inertia = 0;
-            }
-            else {
-                this.cam_pos[2] += this.move[2];
-            }
-        }
-        else {
-            // Keep zoom responsive near the sphere surface without the abrupt
-            // threshold jumps that made the 0.2 -> 0.05 deg range feel sticky.
-            const distanceFromSurface = Math.max(this.cam_pos[2] - 1, 1e-6);
-            const normalizedDistance = Math.min(1, distanceFromSurface / 0.3);
-            const zoomScale = 0.015 + 0.985 * Math.pow(normalizedDistance, 1.2);
-            this.move[2] *= zoomScale;
-            if (this.cam_pos[2] + this.move[2] <= 1.000001 && inertia < 0) {
-                this.cam_pos[2] = 1.000001;
-            }
-            else {
-                this.cam_pos[2] += this.move[2];
-            }
-        }
-        const identity = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.translate(this.T, identity, this.cam_pos);
-        this.refreshViewMatrix();
-    }
-    /**
-     * Move the camera forward/backward along its current viewing direction.
-     * Positive distance moves *forward* (toward where the camera is looking),
-     * negative distance moves *backward*.
-     *
-     * This does not enforce inside/outside-sphere bounds; if you want clamping,
-     * handle it before calling or we can extend this to mimic `zoom()` bounds.
-     */
-    moveAlongView(distance) {
-        // World-space forward vector: transform camera-space -Z by inverse rotation
-        const R_inverse = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.invert(R_inverse, this.R);
-        const forwardCam = gl_matrix_1.vec3.fromValues(0, 0, -1); // camera looks along -Z in its local space
-        const fwdWorld = gl_matrix_1.vec3.create();
-        gl_matrix_1.vec3.transformMat4(fwdWorld, forwardCam, R_inverse);
-        // Normalise to get direction only
-        const len = Math.hypot(fwdWorld[0], fwdWorld[1], fwdWorld[2]);
-        if (len > 0) {
-            fwdWorld[0] /= len;
-            fwdWorld[1] /= len;
-            fwdWorld[2] /= len;
-        }
-        // Update camera position
-        this.cam_pos[0] += fwdWorld[0] * distance;
-        this.cam_pos[1] += fwdWorld[1] * distance;
-        this.cam_pos[2] += fwdWorld[2] * distance;
-        // Rebuild translation matrix and view matrix
-        const identity = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.translate(this.T, identity, this.cam_pos);
-        this.refreshViewMatrix();
-    }
-    translate(distance) {
-        this.cam_pos[2] = distance + 1;
-        const identity = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.translate(this.T, identity, this.cam_pos);
-        this.refreshViewMatrix();
-    }
-    rotateX(sign) {
-        if (this.lockRotX)
-            return;
-        const factorRad = sign * 0.01;
-        this.theta += factorRad;
-        gl_matrix_1.mat4.rotate(this.R, this.R, factorRad, [1, 0, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateY(sign) {
-        if (this.lockRotY)
-            return;
-        const factorRad = sign * 0.01;
-        this.phi += factorRad;
-        gl_matrix_1.mat4.rotate(this.R, this.R, factorRad, [0, 1, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateZ(sign) {
-        if (this.lockRotZ)
-            return;
-        const factorRad = sign * 0.01;
-        // this.phi += factorRad;
-        gl_matrix_1.mat4.rotate(this.R, this.R, factorRad, [0, 0, 1]);
-        this.refreshViewMatrix();
-    }
-    rotateXRadian(radian) {
-        if (this.lockRotX)
-            return;
-        gl_matrix_1.mat4.rotate(this.R, this.R, radian, [1, 0, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateYRadian(radian) {
-        if (this.lockRotY)
-            return;
-        this.phi += radian;
-        gl_matrix_1.mat4.rotate(this.R, this.R, radian, [0, 1, 0]);
-        this.refreshViewMatrix();
-    }
-    rotateZRadian(radian) {
-        if (this.lockRotZ)
-            return;
-        gl_matrix_1.mat4.rotate(this.R, this.R, radian, [0, 0, 1]);
-        this.refreshViewMatrix();
-    }
-    rotate(phi, theta) {
-        // If Z is locked, completely disable orbit rotation
-        if (this.lockRotZ) {
-            return;
-        }
-        const totRot = Math.sqrt(phi * phi + theta * theta);
-        if (totRot === 0)
-            return;
-        // If both X and Y rotations are locked, nothing to do
-        if (this.lockRotX && this.lockRotY) {
-            return;
-        }
-        const pos = this.getCameraPosition();
-        const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-        const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
-        const normalizedDistance = Math.min(1, distanceFromSurface / 0.45);
-        const distanceFactor = 0.02 + 0.98 * Math.pow(normalizedDistance, 1.55);
-        // Keep tiny FoV more stable and predictable while preserving responsiveness
-        // at medium and wide fields of view.
-        const normalizedFoV = Math.min(1, this.FoV / 18);
-        const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
-        const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
-        // Build an axis from phi/theta, but zero components that are locked
-        let axisX = this.lockRotX ? 0 : theta;
-        let axisY = this.lockRotY ? 0 : phi;
-        const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
-        // If after locking we have no axis left, do nothing
-        if (axisLen === 0) {
-            return;
-        }
-        axisX /= axisLen;
-        axisY /= axisLen;
-        gl_matrix_1.mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
-        this.refreshViewMatrix();
-    }
-    setRotationSensitivity(value) {
-        this.rotationSensitivity = Math.min(3, Math.max(0.2, value));
-    }
-    getRotationSensitivity() {
-        return this.rotationSensitivity;
-    }
-    // rotate(phi: number, theta: number): void {
-    //   // totRot is the magnitude of the requested rotation
-    //   const totRot = Math.sqrt(phi * phi + theta * theta);
-    //   if (totRot === 0) return;
-    //   // If both X and Y rotations are locked, nothing to do
-    //   if (this.lockRotX && this.lockRotY) {
-    //     return;
-    //   }
-    //   const pos = this.getCameraPosition();
-    //   const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-    //   const usedRot = (totRot * (dist2Center - 1)) / 3.0;
-    //   // Build an axis from phi/theta, but zero components that are locked
-    //   let axisX = this.lockRotX ? 0 : theta;
-    //   let axisY = this.lockRotY ? 0 : phi;
-    //   const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
-    //   // If after locking we have no axis left, do nothing
-    //   if (axisLen === 0) {
-    //     return;
-    //   }
-    //   axisX /= axisLen;
-    //   axisY /= axisLen;
-    //   mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
-    //   this.refreshViewMatrix();
-    // }
-    // rotate(phi: number, theta: number): void {
-    //   const totRot = Math.sqrt(phi * phi + theta * theta);
-    //   if (totRot === 0) return;
-    //   const pos = this.getCameraPosition();
-    //   const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-    //   const usedRot = (totRot * (dist2Center - 1)) / 3.0;
-    //   mat4.rotate(this.R, this.R, -usedRot, [theta / totRot, phi / totRot, 0]);
-    //   this.refreshViewMatrix();
-    // }
-    refreshViewMatrix() {
-        const T_inverse = gl_matrix_1.mat4.create();
-        const R_inverse = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.invert(T_inverse, this.T);
-        gl_matrix_1.mat4.invert(R_inverse, this.R);
-        gl_matrix_1.mat4.multiply(this.vMatrix, T_inverse, R_inverse);
-    }
-    refreshFoV(currentFoV) {
-        this.previousFoV = this.FoV;
-        this.FoV = currentFoV;
-    }
-    getCameraMatrix() {
-        return this.vMatrix;
-    }
-    getCameraPosition() {
-        const inv = gl_matrix_1.mat4.create();
-        if (!gl_matrix_1.mat4.invert(inv, this.vMatrix)) {
-            // fallback — we already maintain cam_pos
-            return [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]];
-        }
-        return [inv[12], inv[13], inv[14]];
-    }
-    setCameraMatrix(viewMatrix) {
-        this.vMatrix = viewMatrix;
-    }
-    setCameraPosition(position) {
-        // Update authoritative position
-        this.cam_pos = gl_matrix_1.vec3.fromValues(position[0], position[1], position[2]);
-        // Rebuild translation matrix from cam_pos
-        gl_matrix_1.mat4.translate(this.T, gl_matrix_1.mat4.create(), this.cam_pos);
-        // Do NOT touch this.R here (keep orientation)
-        // Recompute view: vMatrix = inv(T) * inv(R)
-        this.refreshViewMatrix();
-    }
-    getCameraAngle() {
-        const [x, y, z] = this.getCameraPosition();
-        const posVec = gl_matrix_1.vec3.fromValues(x, y, z);
-        const ptDeg = (0, Utils_js_1.cartesianToSpherical)(posVec);
-        // eslint-disable-next-line no-console
-        console.log("[Camera::getCameraAngle]", ptDeg);
-        return ptDeg;
-    }
-    /**
-     * Lock/unlock rotation around world axes X, Y, Z.
-     * Passing `undefined` leaves that axis as-is.
-     */
-    setRotationLock(options) {
-        if (options.x !== undefined)
-            this.lockRotX = options.x;
-        if (options.y !== undefined)
-            this.lockRotY = options.y;
-        if (options.z !== undefined)
-            this.lockRotZ = options.z;
-    }
-    /** Convenience helpers */
-    clearRotationLock() {
-        this.lockRotX = this.lockRotY = this.lockRotZ = false;
-    }
-    isRotationLockedX() { return this.lockRotX; }
-    isRotationLockedY() { return this.lockRotY; }
-    isRotationLockedZ() { return this.lockRotZ; }
-}
-exports["default"] = Camera;
-
-
-/***/ }),
-
-/***/ 735:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-/**
- * @author Fabrizio Giordano (Fab)
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AbstractSkyEntity = void 0;
-const gl_matrix_1 = __webpack_require__(961);
-const HiPSShaderProgram_js_1 = __webpack_require__(786);
-class AbstractSkyEntity {
-    // Public-ish properties used elsewhere in the app
-    refreshMe = false;
-    fovX_deg = 180;
-    fovY_deg = 180;
-    xRad;
-    yRad;
-    prevFoV = this.fovX_deg;
-    _name;
-    // public insideSphere: boolean = bootSetup.insideSphere
-    // Picking/sphere
-    center;
-    radius;
-    isGalacticHips;
-    // GL resources
-    vertexTextureCoordBuffer = null;
-    vertexPositionBuffer = null;
-    vertexIndexBuffer = null;
-    shaderProgram = null;
-    // Matrices
-    T = gl_matrix_1.mat4.create();
-    R = gl_matrix_1.mat4.create();
-    modelMatrix = gl_matrix_1.mat4.create();
-    inverseModelMatrix = gl_matrix_1.mat4.create();
-    // Precomputed transform from galactic to equatorial (already inverted)
-    galacticMatrixInverted = gl_matrix_1.mat4.create();
-    _webgl;
-    _hipsShaderProgram;
-    // protected _visibleTilesManager: VisibleTilesManager
-    // protected _tileBuffer: TileBuffer
-    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, webgl, isGalacticHips) {
-        this._webgl = webgl;
-        this.xRad = in_xRad;
-        this.yRad = in_yRad;
-        this._name = in_name;
-        this.center = gl_matrix_1.vec3.clone(in_position);
-        this.radius = in_radius;
-        // this.insideSphere = global.insideSphere
-        this.isGalacticHips = !!isGalacticHips;
-        // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
-        gl_matrix_1.mat4.set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
-        // this._tileBuffer = new TileBuffer(1, this._webgl)
-        // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
-        // this._visibleTilesManager = new VisibleTilesManager()
-        this._hipsShaderProgram = new HiPSShaderProgram_js_1.HiPSShaderProgram(this._webgl);
-    }
-    get name() {
-        return this._name;
-    }
-    get hipsShaderProgram() {
-        return this._hipsShaderProgram;
-    }
-    // get tileBuffer() {
-    //   return this._tileBuffer
-    // }
-    get webgl() {
-        return this._webgl;
-    }
-    /** GL setup and initial model transform */
-    initGL(gl) {
-        // GL resources
-        this.vertexTextureCoordBuffer = gl.createBuffer();
-        this.vertexPositionBuffer = gl.createBuffer();
-        this.vertexIndexBuffer = gl.createBuffer();
-        this.shaderProgram = gl.createProgram();
-        // Reset object transforms
-        this.T = gl_matrix_1.mat4.create();
-        this.R = gl_matrix_1.mat4.create();
-        this.modelMatrix = gl_matrix_1.mat4.create();
-        this.inverseModelMatrix = gl_matrix_1.mat4.create();
-        // Initial pose
-        this.translate(this.center);
-        this.rotate(this.xRad, this.yRad);
-    }
-    translate(translation) {
-        gl_matrix_1.mat4.translate(this.T, this.T, translation);
-        this.refreshModelMatrix();
-    }
-    rotate(rad1, rad2) {
-        gl_matrix_1.mat4.rotate(this.R, this.R, rad2, [0, 0, 1]);
-        gl_matrix_1.mat4.rotate(this.R, this.R, rad1, [1, 0, 0]);
-        this.refreshModelMatrix();
-    }
-    rotateFromZero(rad1, rad2) {
-        gl_matrix_1.mat4.identity(this.R);
-        gl_matrix_1.mat4.rotate(this.R, this.R, rad1, [1, 0, 0]);
-        gl_matrix_1.mat4.rotate(this.R, this.R, rad2, [0, 0, 1]);
-        this.refreshModelMatrix();
-    }
-    refreshModelMatrix() {
-        const R_inverse = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.invert(R_inverse, this.R);
-        gl_matrix_1.mat4.multiply(this.modelMatrix, this.T, R_inverse);
-        // Apply galactic frame transform if needed
-        if (this.isGalacticHips) {
-            gl_matrix_1.mat4.multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
-        }
-    }
-    getModelMatrixInverse() {
-        gl_matrix_1.mat4.identity(this.inverseModelMatrix);
-        gl_matrix_1.mat4.invert(this.inverseModelMatrix, this.modelMatrix);
-        return this.inverseModelMatrix;
-    }
-    getModelMatrix() {
-        return this.modelMatrix;
-    }
-    setModelMatrix(modelMatrix) {
-        this.modelMatrix = modelMatrix;
-    }
-    /** Children with hierarchical geometry (e.g., HiPS) can override this. */
-    setGeometryNeedsToBeRefreshed() {
-        this.refreshGeometryOnFoVChanged = false;
-    }
-    // Helpers operating on raw mat4 buffers (kept from your JS)
-    rotateX(m, angle) {
-        const c = Math.cos(angle);
-        const s = Math.sin(angle);
-        const mv1 = m[1], mv5 = m[5], mv9 = m[9];
-        m[1] = m[1] * c - m[2] * s;
-        m[5] = m[5] * c - m[6] * s;
-        m[9] = m[9] * c - m[10] * s;
-        m[2] = m[2] * c + mv1 * s;
-        m[6] = m[6] * c + mv5 * s;
-        m[10] = m[10] * c + mv9 * s;
-        return m;
-    }
-    rotateY(m, angle) {
-        const c = Math.cos(angle);
-        const s = Math.sin(angle);
-        const mv0 = m[0], mv4 = m[4], mv8 = m[8];
-        m[0] = c * m[0] + s * m[2];
-        m[4] = c * m[4] + s * m[6];
-        m[8] = c * m[8] + s * m[10];
-        m[2] = c * m[2] - s * mv0;
-        m[6] = c * m[6] - s * mv4;
-        m[10] = c * m[10] - s * mv8;
-        return m;
-    }
-}
-exports.AbstractSkyEntity = AbstractSkyEntity;
-
-
-/***/ }),
-
-/***/ 772:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.AstroViewer = void 0;
-// import global from './Global.js'
-const AstroSphere_js_1 = __importDefault(__webpack_require__(723));
-const HiPSDescriptor_js_1 = __webpack_require__(87);
-const CatalogueGL_js_1 = __webpack_require__(232);
-const FootprintSetGL_js_1 = __webpack_require__(592);
-const Config_js_1 = __webpack_require__(919);
-const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
-const XYZTileRequestScheduler_js_1 = __webpack_require__(409);
-// & {
-//   viewportWidth: number
-//   viewportHeight: number
-// }
-class AstroViewer {
-    astroSphere;
-    canvas;
-    webgl;
-    rafId = null;
-    webglContextList = new Map();
-    viewfinderEl = null;
-    viewfinderVisible = Config_js_1.bootSetup.showViewfinder;
-    viewfinderColor = 'rgba(75,148,226,0.68)';
-    // API
-    run() {
-        return this.tick();
-    }
-    // CATALOGUES
-    createCatalogue(catalogueName, catalogueDescription, providerUrl, metadataManager) {
-        return new CatalogueGL_js_1.CatalogueGL(catalogueName, catalogueDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
-    }
-    showCatalogue(catalogue) {
-        this.astroSphere.showCatalogue(catalogue);
-    }
-    hideCatalogue(catalogue, isVisible) {
-        catalogue.setIsVisible(isVisible);
-    }
-    deleteCatalogue(catalogue) {
-        this.astroSphere.deleteCatalogue(catalogue);
-    }
-    changeCatalogueRA(catalogue, raColumnName) {
-        catalogue.changeMetaRA(raColumnName);
-        // catalogue.catalogueProps.changeCatalogueMetaRA(raColumnName)
-        return catalogue;
-    }
-    changeCatalogueDec(catalogue, decColumnName) {
-        catalogue.changeMetaDec(decColumnName);
-        // catalogue.catalogueProps.changeCatalogueMetaDec(decColumnName)
-        return catalogue;
-    }
-    changeCatalogueColor(catalogue, hexColor) {
-        catalogue.changeColor(hexColor);
-        // catalogue.catalogueProps.changeColor(hexColor)
-        return catalogue;
-    }
-    setCatalogueShapeHue(catalogue, metadataColumnName) {
-        catalogue.changeMetaShapeHue(metadataColumnName);
-        return catalogue;
-    }
-    setCatalogueShapeSize(catalogue, metadataColumnName) {
-        catalogue.changeMetaShapeSize(metadataColumnName);
-        return catalogue;
-    }
-    //FOOTPRINT
-    createFootprintSet(footprintSetName, footprintSetDescription, providerUrl, metadataManager) {
-        return new FootprintSetGL_js_1.FootprintSetGL(footprintSetName, footprintSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
-    }
-    showFootprintSet(footprintSet) {
-        this.astroSphere.showFootprintSet(footprintSet);
-    }
-    hideFootprintSet(footprintSet, isVisible) {
-        footprintSet.setIsVisible(isVisible);
-    }
-    deleteFootprintSet(footprintSet) {
-        this.astroSphere.deleteFootprintSet(footprintSet);
-    }
-    changeFootprintSetColor(footprintSet, hexColor) {
-        // footprintSet.footprintsetProps.changeColor(hexColor)
-        footprintSet.changeColor(hexColor);
-    }
-    getHoveredFootprints() {
-        return this.astroSphere.getHoveredFootprints();
-    }
-    // HIPS
-    getDefaultHiPSURL() {
-        return Config_js_1.bootSetup.defaultHipsUrl;
-    }
-    activateHiPS(hipsDescriptor) {
-        this.astroSphere.activateHiPS(hipsDescriptor);
-    }
-    activateXYZ(config) {
-        this.astroSphere.activateXYZ(config);
-    }
-    setXYZMaxConcurrentRequests(value) {
-        XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.setMaxConcurrent(value);
-    }
-    getXYZMaxConcurrentRequests() {
-        return XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getMaxConcurrent();
-    }
-    getXYZDebugStats() {
-        return this.astroSphere.getXYZDebugStats();
-    }
-    async loadHiPS(baseUrl) {
-        const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
-        const resp = await fetch(hipsUrl + 'properties');
-        if (!resp.ok)
-            throw new Error(`HTTP ${resp.status} fetching properties`);
-        const propsText = await resp.text();
-        const desc = new HiPSDescriptor_js_1.HiPSDescriptor(propsText, hipsUrl);
-        this.astroSphere.activateHiPS(desc);
-        return desc.surveyName;
-        // this.activateHiPS(desc);
-    }
-    // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
-    changeColorMap(colorMapName) {
-        const colorMap = ColorMaps_js_1.default[colorMapName];
-        // hips.changeColorMap(colorMap)
-        this.astroSphere.changeColorMap(colorMap);
-    }
-    changeCustomColorMap(colorMap) {
-        this.astroSphere.changeColorMap(colorMap);
-    }
-    getActiveHiPS() {
-        return this.astroSphere.activeHiPS;
-    }
-    getActiveXYZ() {
-        return this.astroSphere.activeXYZ;
-    }
-    // Camera: GOTOs and COORDS
-    setCamera(camera) {
-        this.astroSphere.setCamera(camera);
-    }
-    setCameraPosition(pos) {
-        this.astroSphere.setCameraPosition(pos);
-    }
-    setCameraMatrix(viewMatrix) {
-        this.astroSphere.setCameraMatrix(viewMatrix);
-    }
-    restoreAstroViewerState(detail, applyColorMap) {
-        this.astroSphere.applyFullCameraState(detail, applyColorMap);
-    }
-    getCurrentAstroViewerStatus() {
-        return this.astroSphere.getCurrentStatus();
-    }
-    goTo(raDeg, decDeg) {
-        // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
-        this.astroSphere.goTo(raDeg, decDeg);
-    }
-    getCenterCoordinates() {
-        return this.astroSphere.getCentralPointCoordinates();
-    }
-    getCoordinatesFromMouse() {
-        return this.astroSphere.getLastMousePointCoordinates();
-    }
-    // GRIDs
-    setModelMatrix(modelMatrix) {
-        this.astroSphere.healpixGrid.setModelMatrix(modelMatrix);
-    }
-    toggleHealpixGrid() {
-        // healpixGridSingleton.toggleShowGrid()
-        this.astroSphere.healpixGrid.toggleShowGrid();
-    }
-    isHealpixGridVisible() {
-        // return healpixGridSingleton.isVisible()
-        return this.astroSphere.healpixGrid.isVisible();
-    }
-    toggleEquatorialGrid() {
-        // equatorialGridSingleton.toggleShowGrid()
-        return this.astroSphere.equatorialGrid.toggleShowGrid();
-    }
-    isEquatorialGridVisible() {
-        // return equatorialGridSingleton.isVisible()
-        return this.astroSphere.equatorialGrid.isVisible();
-    }
-    // FOV
-    getFoV() {
-        return this.astroSphere.getFoV();
-    }
-    getFoVPolygon() {
-        return this.astroSphere.getFoVPolygon();
-    }
-    changeFoV(deg) {
-        this, this.astroSphere.changeFoV(deg);
-    }
-    changeFoV2(deg) {
-        this, this.astroSphere.changeFoV2(deg);
-    }
-    changeFoV3(deg) {
-        this, this.astroSphere.changeFoV3(deg);
-    }
-    getInsideSphere() {
-        return this.astroSphere.getInsideSphere();
-    }
-    toggleInsideSphere() {
-        this.astroSphere.toggleInsideSphere();
-    }
-    toggleViewfinder() {
-        this.viewfinderVisible = !this.viewfinderVisible;
-        this.syncViewfinderVisibility();
-        return this.viewfinderVisible;
-    }
-    setViewfinderVisible(visible) {
-        this.viewfinderVisible = visible;
-        this.syncViewfinderVisibility();
-    }
-    isViewfinderVisible() {
-        return this.viewfinderVisible;
-    }
-    setViewfinderColor(color) {
-        this.viewfinderColor = color;
-        this.syncViewfinderColor();
-    }
-    getViewfinderColor() {
-        return this.viewfinderColor;
-    }
-    setRotationSensitivity(value) {
-        this.astroSphere.setCameraRotationSensitivity(value);
-    }
-    getRotationSensitivity() {
-        return this.astroSphere.getCameraRotationSensitivity();
-    }
-    setZoomSensitivity(value) {
-        this.astroSphere.setZoomSensitivity(value);
-    }
-    getZoomSensitivity() {
-        return this.astroSphere.getZoomSensitivity();
-    }
-    // Internal
-    constructor(canvasEl) {
-        this.init(canvasEl);
-        this.webglContextList = new Map();
-    }
-    init(canvasEl) {
-        console.log('init webgl');
-        this.canvas = canvasEl;
-        this.initViewfinder();
-        const gl = this.canvas.getContext('webgl2', { alpha: false });
-        if (!gl) {
-            alert('Could not initialise WebGL, sorry :-(');
-            throw new Error('WebGL2 not available');
-        }
-        // Extend with custom fields used elsewhere
-        this.webgl = gl;
-        // this.webgl.viewportWidth = this.canvas.width
-        // this.webgl.viewportHeight = this.canvas.height
-        try {
-            // 1/255 = 0.00392156862
-            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
-        }
-        catch (e) {
-            console.log('Error instantiating WebGL context');
-        }
-        this.initListeners();
-        // ; (global as any).gl = this.webgl
-        this.astroSphere = new AstroSphere_js_1.default(this.canvas, this.webgl);
-    }
-    initViewfinder() {
-        const parent = this.canvas.parentElement;
-        if (!parent)
-            return;
-        if (window.getComputedStyle(parent).position === 'static') {
-            parent.style.position = 'relative';
-        }
-        const viewfinder = document.createElement('div');
-        viewfinder.setAttribute('data-astro-viewfinder', 'true');
-        viewfinder.setAttribute('aria-hidden', 'true');
-        viewfinder.style.position = 'absolute';
-        viewfinder.style.left = '50%';
-        viewfinder.style.top = '50%';
-        viewfinder.style.width = '44px';
-        viewfinder.style.height = '44px';
-        viewfinder.style.transform = 'translate(-50%, -50%)';
-        viewfinder.style.pointerEvents = 'none';
-        viewfinder.style.zIndex = '1';
-        viewfinder.style.boxSizing = 'border-box';
-        const segments = [
-            { left: '50%', top: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
-            { left: '50%', bottom: '7px', width: '1px', height: '11px', transform: 'translateX(-50%)' },
-            { left: '7px', top: '50%', width: '11px', height: '1px', transform: 'translateY(-50%)' },
-            { right: '7px', top: '50%', width: '11px', height: '1px', transform: 'translateY(-50%)' },
-        ];
-        for (const segmentDef of segments) {
-            const segment = document.createElement('div');
-            segment.style.position = 'absolute';
-            segment.style.left = segmentDef.left ?? 'auto';
-            segment.style.right = segmentDef.right ?? 'auto';
-            segment.style.top = segmentDef.top ?? 'auto';
-            segment.style.bottom = segmentDef.bottom ?? 'auto';
-            segment.style.width = segmentDef.width;
-            segment.style.height = segmentDef.height;
-            segment.style.transform = segmentDef.transform;
-            segment.style.background = 'currentColor';
-            segment.style.borderRadius = '999px';
-            segment.style.boxShadow = '0 0 0 1px rgba(0, 0, 0, 0.14)';
-            viewfinder.appendChild(segment);
-        }
-        parent.appendChild(viewfinder);
-        this.viewfinderEl = viewfinder;
-        this.syncViewfinderVisibility();
-        this.syncViewfinderColor();
-    }
-    syncViewfinderVisibility() {
-        if (!this.viewfinderEl)
-            return;
-        this.viewfinderEl.style.display = this.viewfinderVisible ? 'block' : 'none';
-    }
-    syncViewfinderColor() {
-        if (!this.viewfinderEl)
-            return;
-        this.viewfinderEl.style.color = this.viewfinderColor;
-    }
-    initListeners() {
-        console.log('inside initListeners');
-        const resizeCanvas = () => {
-            console.log('[resizeCanvas]');
-            const rect = this.canvas.getBoundingClientRect();
-            const dpr = window.devicePixelRatio || 1;
-            const newWidth = Math.max(1, Math.floor(rect.width * dpr));
-            const newHeight = Math.max(1, Math.floor(rect.height * dpr));
-            if (this.canvas.width !== newWidth || this.canvas.height !== newHeight) {
-                this.canvas.width = newWidth;
-                this.canvas.height = newHeight;
-                // this.webgl.viewportWidth = this.canvas.width
-                // this.webgl.viewportHeight = this.canvas.height
-                this.webgl.viewport(0, 0, this.canvas.width, this.canvas.height);
-            }
-        };
-        const handleContextLost = (event) => {
-            console.log('[handleContextLost]');
-            event.preventDefault();
-            if (this.rafId !== null) {
-                cancelAnimationFrame(this.rafId);
-                this.rafId = null;
-            }
-        };
-        const handleContextRestored = (_event) => {
-            console.log('[handleContextRestored]');
-            // this.webgl.viewportWidth = this.canvas.width
-            // this.webgl.viewportHeight = this.canvas.height
-            this.webgl.clearColor(0 * 0.00392156862, 16 * 0.00392156862, 50 * 0.00392156862, 0.7);
-            this.webgl.enable(this.webgl.DEPTH_TEST);
-            this.rafId = requestAnimationFrame(() => this.tick());
-        };
-        // 🔥 ResizeObserver per pannelli / split / layout dinamici
-        if ('ResizeObserver' in window) {
-            const ro = new ResizeObserver(() => {
-                resizeCanvas();
-            });
-            // Osserva il canvas o il suo parent (a tua scelta)
-            ro.observe(this.canvas);
-        }
-        window.addEventListener('resize', resizeCanvas);
-        this.canvas.addEventListener('webglcontextlost', handleContextLost, false);
-        this.canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
-        resizeCanvas();
-    }
-    tick() {
-        this.drawScene();
-        this.rafId = requestAnimationFrame(() => this.tick());
-        return this.rafId;
-    }
-    drawScene() {
-        this.astroSphere.draw(this.canvas);
-    }
-}
-exports.AstroViewer = AstroViewer;
-
-
-/***/ }),
-
-/***/ 786:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.HiPSShaderProgram = void 0;
-// HiPSShaderProgram.ts
-const ShaderManager_js_1 = __importDefault(__webpack_require__(947));
-const ColorMaps_js_1 = __webpack_require__(619);
-// export default class HiPSShaderProgram {
-class HiPSShaderProgram {
-    _colorMapBlockIndex = null;
-    _runtimeColorMap;
-    _shaderProgram;
-    _vertexShader;
-    _fragmentShader;
-    _UBO_colorMapBuffer = null;
-    _UBO_colorMapVariableInfo = {
-        r_palette: { index: 0, offset: 0 },
-        g_palette: { index: 0, offset: 0 },
-        b_palette: { index: 0, offset: 0 }
-    };
-    gl_uniforms;
-    gl_attributes;
-    locations;
-    _webgl;
-    constructor(webgl) {
-        this._webgl = webgl;
-        this.gl_uniforms = {
-            sampler: 'uSampler0',
-            factor: 'uFactor0',
-            m_perspective: 'uPMatrix',
-            m_model: 'uMMatrix',
-            m_view: 'uVMatrix',
-            colormapIdx: 'cmapIdx',
-            colormap_red: 'r',
-            colormap_green: 'g',
-            colormap_blue: 'b'
-        };
-        this.gl_attributes = {
-            vertex_pos: 'aVertexPosition',
-            text_coords: 'aTextureCoord'
-        };
-        this.locations = {
-            pMatrix: null,
-            mMatrix: null,
-            vMatrix: null,
-            sampler: null,
-            textureAlpha: null,
-            clorMapIdx: null,
-            vertexPositionAttribute: -1,
-            textureCoordAttribute: -1
-        };
-    }
-    get shaderProgram() {
-        const gl = this._webgl;
-        if (!this._shaderProgram) {
-            // const gl = global.gl as GL
-            this._shaderProgram = gl.createProgram();
-            this.initShaders();
-        }
-        ;
-        gl.useProgram(this._shaderProgram);
-        return this._shaderProgram;
-    }
-    setRuntimeColorMap(colorMap) {
-        this._runtimeColorMap = colorMap;
-    }
-    initShaders() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        const fragmentShaderStr = ShaderManager_js_1.default.hipsNativeFS();
-        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
-        gl.compileShader(this._fragmentShader);
-        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
-            return;
-        }
-        const vertexShaderStr = ShaderManager_js_1.default.hipsVS();
-        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(this._vertexShader, vertexShaderStr);
-        gl.compileShader(this._vertexShader);
-        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
-            return;
-        }
-        gl.attachShader(this._shaderProgram, this._vertexShader);
-        gl.attachShader(this._shaderProgram, this._fragmentShader);
-        gl.linkProgram(this._shaderProgram);
-        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-    }
-    enableProgram() {
-        // (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
-        this._webgl.useProgram(this.shaderProgram);
-    }
-    setGrayscaleShader() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        gl.detachShader(this.shaderProgram, this._fragmentShader);
-        const fragmentShaderStr = ShaderManager_js_1.default.hipsGrayscaleFS();
-        this.changeFSShader(fragmentShaderStr);
-    }
-    setNativeShader() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        gl.detachShader(this.shaderProgram, this._fragmentShader);
-        const fragmentShaderStr = ShaderManager_js_1.default.hipsNativeFS();
-        this.changeFSShader(fragmentShaderStr);
-    }
-    setColorMapShader() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        // Swap fragment shader
-        gl.detachShader(this.shaderProgram, this._fragmentShader);
-        const fragmentShaderStr = ShaderManager_js_1.default.hipsColorMapFS();
-        this.changeFSShader(fragmentShaderStr);
-        // UBO discovery for the "colormap" block
-        const blockIndex = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
-        // INVALID_INDEX == 0xFFFFFFFF in WebGL2
-        if (blockIndex === gl.INVALID_INDEX) {
-            console.warn('HiPSShaderProgram: uniform block "colormap" not found in hipsColorMapFS()');
-            this._colorMapBlockIndex = null;
-            this._UBO_colorMapBuffer = null;
-            return; // do NOT proceed with UBO setup
-        }
-        this._colorMapBlockIndex = blockIndex;
-        // const blockSize = gl.getActiveUniformBlockParameter(
-        //   this.shaderProgram as WebGLProgram,
-        //   blockIndex,
-        //   gl.UNIFORM_BLOCK_DATA_SIZE
-        // ) as number
-        const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'];
-        const uboVariableIndices = gl.getUniformIndices(this.shaderProgram, uboVariableNames);
-        const uboVariableOffsets = gl.getActiveUniforms(this.shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
-        // Create buffer only once
-        if (!this._UBO_colorMapBuffer) {
-            this._UBO_colorMapBuffer = gl.createBuffer();
-            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
-            // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
-            const BYTES = 12288; // 3 * 4096
-            gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW);
-            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-            gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer);
-        }
-        // Store offsets
-        uboVariableNames.forEach((name, index) => {
-            this._UBO_colorMapVariableInfo[name] = {
-                index: uboVariableIndices[index],
-                offset: uboVariableOffsets[index]
-            };
-        });
-    }
-    changeFSShader(fragmentShaderStr) {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
-        gl.compileShader(this._fragmentShader);
-        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
-            return;
-        }
-        gl.attachShader(this.shaderProgram, this._fragmentShader);
-        gl.linkProgram(this.shaderProgram);
-        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        gl.useProgram(this.shaderProgram);
-    }
-    enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        gl.useProgram(this.shaderProgram);
-        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
-        this.locations.mMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model);
-        this.locations.vMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_view);
-        this.locations.sampler = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.sampler);
-        this.locations.textureAlpha = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.factor);
-        this.locations.clorMapIdx = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.colormapIdx);
-        // NEW
-        // if (this.locations.clorMapIdx) {
-        gl.uniform1i(this.locations.clorMapIdx, colorMapIdx);
-        // }
-        // Make sampler explicit: we always use TEXTURE0 in your draw code
-        if (this.locations.sampler) {
-            gl.uniform1i(this.locations.sampler, 0);
-        }
-        // END NEW
-        this.locations.vertexPositionAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.textureCoordAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.text_coords);
-        if (colorMapIdx >= 2 && this._UBO_colorMapBuffer && this._colorMapBlockIndex !== null) {
-            gl.uniformBlockBinding(this.shaderProgram, this._colorMapBlockIndex, 0);
-            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
-            let currentColorMap;
-            if (colorMapIdx === 2) {
-                currentColorMap = {
-                    r: ColorMaps_js_1.ColorMaps.planck.r,
-                    g: ColorMaps_js_1.ColorMaps.planck.g,
-                    b: ColorMaps_js_1.ColorMaps.planck.b,
-                };
-            }
-            else if (colorMapIdx === 3) {
-                currentColorMap = {
-                    r: ColorMaps_js_1.ColorMaps.cmb.r,
-                    g: ColorMaps_js_1.ColorMaps.cmb.g,
-                    b: ColorMaps_js_1.ColorMaps.cmb.b,
-                };
-            }
-            else if (colorMapIdx === 4) {
-                currentColorMap = {
-                    r: ColorMaps_js_1.ColorMaps.rainbow.r,
-                    g: ColorMaps_js_1.ColorMaps.rainbow.g,
-                    b: ColorMaps_js_1.ColorMaps.rainbow.b,
-                };
-            }
-            else if (colorMapIdx === 5) {
-                currentColorMap = {
-                    r: ColorMaps_js_1.ColorMaps.eosb.r,
-                    g: ColorMaps_js_1.ColorMaps.eosb.g,
-                    b: ColorMaps_js_1.ColorMaps.eosb.b,
-                };
-            }
-            else if (colorMapIdx === 6) {
-                currentColorMap = {
-                    r: ColorMaps_js_1.ColorMaps.cubehelix.r,
-                    g: ColorMaps_js_1.ColorMaps.cubehelix.g,
-                    b: ColorMaps_js_1.ColorMaps.cubehelix.b,
-                };
-            }
-            else if (colorMapIdx === 7) {
-                currentColorMap = {
-                    r: ColorMaps_js_1.ColorMaps.hot.r,
-                    g: ColorMaps_js_1.ColorMaps.hot.g,
-                    b: ColorMaps_js_1.ColorMaps.hot.b,
-                };
-            }
-            else if (colorMapIdx === 8) {
-                currentColorMap = {
-                    r: ColorMaps_js_1.ColorMaps.gray.r,
-                    g: ColorMaps_js_1.ColorMaps.gray.g,
-                    b: ColorMaps_js_1.ColorMaps.gray.b,
-                };
-            }
-            if (!currentColorMap) {
-                currentColorMap = this._runtimeColorMap;
-            }
-            if (currentColorMap) {
-                const info = this._UBO_colorMapVariableInfo;
-                gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0);
-                gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0);
-            }
-            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
-        }
-        gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
-        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
-        gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
-    }
-}
-exports.HiPSShaderProgram = HiPSShaderProgram;
-
-
-/***/ }),
-
-/***/ 819:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZMeshBuilder = void 0;
-const Utils_js_1 = __webpack_require__(930);
-const MAX_MERCATOR_LAT = 85.0511287798066;
-function mercatorYToLatDeg(yNormalized) {
-    const mercator = Math.PI * (1 - 2 * yNormalized);
-    return (Math.atan(Math.sinh(mercator)) * 180) / Math.PI;
-}
-function wrapLonToPhi(lonDeg) {
-    return lonDeg < 0 ? lonDeg + 360 : lonDeg;
-}
-class XYZMeshBuilder {
-    buildTileMesh(tile, segmentsPerSide = 16) {
-        const segments = Math.max(1, Math.floor(segmentsPerSide));
-        const gridSize = segments + 1;
-        const vertexCount = gridSize * gridSize;
-        const positions = new Float32Array(vertexCount * 3);
-        const uvs = new Float32Array(vertexCount * 2);
-        const tileCount = 2 ** tile.z;
-        let p = 0;
-        let uv = 0;
-        for (let row = 0; row <= segments; row++) {
-            const v = row / segments;
-            const yNormalized = (tile.y + v) / tileCount;
-            const latDeg = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, mercatorYToLatDeg(yNormalized)));
-            const thetaDeg = 90 - latDeg;
-            for (let col = 0; col <= segments; col++) {
-                const u = col / segments;
-                const xNormalized = (tile.x + u) / tileCount;
-                const lonDeg = xNormalized * 360 - 180;
-                const phiDeg = wrapLonToPhi(lonDeg);
-                const [x, y, z] = (0, Utils_js_1.sphericalToCartesian)(phiDeg, thetaDeg, 1);
-                positions[p++] = x;
-                positions[p++] = y;
-                positions[p++] = z;
-                uvs[uv++] = u;
-                uvs[uv++] = 1 - v;
-            }
-        }
-        const triangleCount = segments * segments * 2;
-        const rawIndices = new Uint32Array(triangleCount * 3);
-        let i = 0;
-        for (let row = 0; row < segments; row++) {
-            for (let col = 0; col < segments; col++) {
-                const topLeft = row * gridSize + col;
-                const topRight = topLeft + 1;
-                const bottomLeft = topLeft + gridSize;
-                const bottomRight = bottomLeft + 1;
-                rawIndices[i++] = topLeft;
-                rawIndices[i++] = bottomLeft;
-                rawIndices[i++] = topRight;
-                rawIndices[i++] = topRight;
-                rawIndices[i++] = bottomLeft;
-                rawIndices[i++] = bottomRight;
-            }
-        }
-        const indices = rawIndices.length > 65535 ? rawIndices : new Uint16Array(rawIndices);
-        return { positions, uvs, indices };
-    }
-}
-exports.XYZMeshBuilder = XYZMeshBuilder;
-
-
-/***/ }),
-
-/***/ 839:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.EquatorialGrid = void 0;
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
-const gl_matrix_1 = __webpack_require__(961);
-const FoVHelper_js_1 = __webpack_require__(610);
-const Utils_js_1 = __webpack_require__(930);
-const GridShaderManager_js_1 = __importDefault(__webpack_require__(707));
-const Point_js_1 = __webpack_require__(553);
-const CoordsType_js_1 = __webpack_require__(145);
-const FoVUtils_js_1 = __webpack_require__(83);
-const GridTextHelper_js_1 = __importDefault(__webpack_require__(361));
-const HealpixGrid_js_1 = __webpack_require__(595);
-const AbstractSkyEntity_js_1 = __webpack_require__(735);
-/** Equatorial grid rendered as RA/Dec great-circle line loops */
-class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
-    static ELEM_SIZE = 3;
-    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
-    showGrid = false;
-    // private _gl: GL;
-    _shaderProgram;
-    _vertexShader;
-    _fragmentShader;
-    defaultColor = '#41d421';
-    gridText = new GridTextHelper_js_1.default();
-    _attribLocations = {
-        position: 0,
-        selected: 1,
-        pointSize: 2,
-        color: 3,
-    };
-    _phiVertexPositionBuffer;
-    _thetaVertexPositionBuffer;
-    _fov;
-    // Step sizes (degrees + radians) and label caches
-    _phiStep = 0;
-    _phiStepRad = 0;
-    _thetaStep = 0;
-    _thetaStepRad = 0;
-    _phiArray = [];
-    _thetaArray = [];
-    // For placing text labels near current view center:
-    //  - _dec4Labels: key = RA(deg), value = points along that RA ring (for Dec labels)
-    //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
-    _dec4Labels = new Map();
-    _ra4Labels = new Map();
-    _healpixGrid;
-    /**
-     * @param radius Not used by current implementation (sphere is unit-radius)
-     * @param fov    Field of view in degrees
-     */
-    constructor(webgl, healpixGrid) {
-        super(HealpixGrid_js_1.HealpixGrid.RADIUS, HealpixGrid_js_1.HealpixGrid.INITIAL_POSITION, HealpixGrid_js_1.HealpixGrid.INITIAL_PhiRad, HealpixGrid_js_1.HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
-        this._healpixGrid = healpixGrid;
-    }
-    init(fov) {
-        this._fov = fov;
-        this.initGL(super.webgl);
-        // Program & buffers
-        this._shaderProgram = super.webgl.createProgram();
-        this.initShaders();
-        this._phiVertexPositionBuffer = super.webgl.createBuffer();
-        this._thetaVertexPositionBuffer = super.webgl.createBuffer();
-        // Build initial RA/Dec line buffers
-        this.initBuffers(this._fov);
-    }
-    /** Compile/link shaders and fetch uniform/attribute locations */
-    initShaders() {
-        // Fragment
-        const fsSource = GridShaderManager_js_1.default.healpixGridFS();
-        this._fragmentShader = super.webgl.createShader(super.webgl.FRAGMENT_SHADER);
-        super.webgl.shaderSource(this._fragmentShader, fsSource);
-        super.webgl.compileShader(this._fragmentShader);
-        if (!super.webgl.getShaderParameter(this._fragmentShader, super.webgl.COMPILE_STATUS)) {
-            // Keep identical behavior (alert) but surface errors in console too
-            const log = super.webgl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
-            console.error(log);
-            alert(log);
-            return;
-        }
-        // Vertex
-        const vsSource = GridShaderManager_js_1.default.healpixGridVS();
-        this._vertexShader = super.webgl.createShader(super.webgl.VERTEX_SHADER);
-        super.webgl.shaderSource(this._vertexShader, vsSource);
-        super.webgl.compileShader(this._vertexShader);
-        if (!super.webgl.getShaderParameter(this._vertexShader, super.webgl.COMPILE_STATUS)) {
-            const log = super.webgl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
-            console.error(log);
-            alert(log);
-            return;
-        }
-        // Link
-        super.webgl.attachShader(this._shaderProgram, this._vertexShader);
-        super.webgl.attachShader(this._shaderProgram, this._fragmentShader);
-        super.webgl.linkProgram(this._shaderProgram);
-        if (!super.webgl.getProgramParameter(this._shaderProgram, super.webgl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        super.webgl.useProgram(this._shaderProgram);
-    }
-    /** Build RA/Dec line vertex arrays based on FoV step helper */
-    initBuffers(fovDeg) {
-        const R = 1.0;
-        const steps = FoVHelper_js_1.fovHelper.getRADegSteps(fovDeg);
-        const phiStep = steps.raStep; // RA step (deg)
-        const thetaStep = steps.decStep; // Dec step (deg)
-        this._phiStep = phiStep;
-        this._phiStepRad = (0, Utils_js_1.degToRad)(phiStep);
-        this._thetaStep = thetaStep;
-        this._thetaStepRad = (0, Utils_js_1.degToRad)(thetaStep);
-        this._ra4Labels = new Map();
-        this._dec4Labels = new Map();
-        this._phiArray = [];
-        this._thetaArray = [];
-        // Lines of constant Dec (varying RA): for each Dec, a ring with vertices every phiStep°
-        for (let theta = thetaStep; theta < 180; theta += thetaStep) {
-            const phiVertexPosition = new Float32Array((360 / phiStep) * 3);
-            const thetaRad = (0, Utils_js_1.degToRad)(theta);
-            for (let phi = 0; phi < 360; phi += phiStep) {
-                const phiRad = (0, Utils_js_1.degToRad)(phi);
-                const x = R * Math.sin(thetaRad) * Math.cos(phiRad);
-                const y = R * Math.sin(thetaRad) * Math.sin(phiRad);
-                const z = R * Math.cos(thetaRad);
-                const idx = Math.floor(phi / phiStep);
-                phiVertexPosition[3 * idx + 0] = x;
-                phiVertexPosition[3 * idx + 1] = y;
-                phiVertexPosition[3 * idx + 2] = z;
-                if (!this._dec4Labels.has(phi))
-                    this._dec4Labels.set(phi, []);
-                this._dec4Labels.get(phi).push([x, y, z]);
-            }
-            this._phiArray.push(phiVertexPosition);
-        }
-        // Lines of constant RA (varying Dec): for each RA, a ring with vertices every thetaStep°
-        for (let phi = 0; phi < 360; phi += phiStep) {
-            const thetaVertexPosition = new Float32Array((360 / thetaStep) * 3);
-            const phiRad = (0, Utils_js_1.degToRad)(phi);
-            for (let theta = 0; theta < 360; theta += thetaStep) {
-                const thetaRad = (0, Utils_js_1.degToRad)(theta);
-                const x = R * Math.sin(thetaRad) * Math.cos(phiRad);
-                const y = R * Math.sin(thetaRad) * Math.sin(phiRad);
-                const z = R * Math.cos(thetaRad);
-                const idx = Math.floor(theta / thetaStep);
-                thetaVertexPosition[3 * idx + 0] = x;
-                thetaVertexPosition[3 * idx + 1] = y;
-                thetaVertexPosition[3 * idx + 2] = z;
-                const decKey = 90 - theta; // original code’s keying for RA labels
-                if (!this._ra4Labels.has(decKey))
-                    this._ra4Labels.set(decKey, []);
-                this._ra4Labels.get(decKey).push([x, y, z]);
-            }
-            this._thetaArray.push(thetaVertexPosition);
-        }
-    }
-    /** Update buffers when FoV (in degrees) changes */
-    refresh(fovDeg) {
-        // const fovDeg = healpixGridSingleton.getMinFoV()
-        if (this._fov !== fovDeg) {
-            this._fov = fovDeg;
-            this.initBuffers(this._fov);
-        }
-    }
-    vectorDistance(p1, p2) {
-        const dx = p1.x - p2.x;
-        const dy = p1.y - p2.y;
-        const dz = p1.z - p2.z;
-        return Math.sqrt(dx * dx + dy * dy + dz * dz);
-    }
-    enableShader(mMatrix, pMatrix, vMatrix) {
-        const gl = super.webgl;
-        gl.useProgram(this._shaderProgram);
-        // uMVMatrix = camera * model
-        const mvMatrix = gl_matrix_1.mat4.create();
-        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
-        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
-        // TODO move locations retrieval elsewhere
-        // Uniform locations
-        const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
-        const uPMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
-        const uColor = gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
-        // Attribute locations
-        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
-        if (uMVMatrixLoc)
-            gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
-        if (uPMatrixLoc)
-            gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
-        if (uColor) {
-            const rgb = (0, Utils_js_1.colorHex2RGB)(this.defaultColor);
-            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
-        }
-    }
-    isVisible() {
-        return this.showGrid;
-    }
-    toggleShowGrid() {
-        this.showGrid = !this.showGrid;
-    }
-    /**
-     * @param mMatrix model matrix associated with current HiPS (or scene) transform
-     * @param fovObj  current field-of-view (degrees). If your FoV type differs,
-     *                pass the numeric value here; this signature matches original usage.
-     */
-    draw(input) {
-        const fovDeg = input.fovDeg;
-        if (!fovDeg)
-            return;
-        const gl = super.webgl;
-        const mMatrix = this.getModelMatrix();
-        const camera = input.camera;
-        if (!camera)
-            return;
-        const vMatrix = camera.getCameraMatrix();
-        const pMatrix = input.pMatrix;
-        if (!pMatrix)
-            return;
-        if (!vMatrix)
-            return;
-        if (this._thetaArray.length === 0)
-            return;
-        this.refresh(fovDeg);
-        if (!this.showGrid) {
-            // gridTextHelper.resetDivSets();
-            this.gridText.resetDivSets();
-            return;
-        }
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
-        this.enableShader(mMatrix, pMatrix, vMatrix);
-        // Draw Dec rings
-        for (let i = 0; i < this._phiArray.length; i++) {
-            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
-            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._phiArray[i], super.webgl.STATIC_DRAW);
-            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
-            super.webgl.enableVertexAttribArray(this._attribLocations.position);
-            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._phiStep);
-        }
-        // Draw RA rings
-        for (let j = 0; j < this._thetaArray.length; j++) {
-            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._thetaVertexPositionBuffer);
-            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._thetaArray[j], super.webgl.STATIC_DRAW);
-            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
-            super.webgl.enableVertexAttribArray(this._attribLocations.position);
-            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
-        }
-        // Label layout (HTML overlay)
-        const center = FoVUtils_js_1.FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera, pMatrix);
-        // MVP = P * V * M
-        const mvMatrix = gl_matrix_1.mat4.create();
-        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
-        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
-        const mvpMatrix = gl_matrix_1.mat4.create();
-        gl_matrix_1.mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
-        // Dec labels (loop over RA keys)
-        for (const [raDegKey, points] of this._dec4Labels.entries()) {
-            if (Math.abs(raDegKey - center.raDeg) <= this._phiStep) {
-                for (let p = 0; p < points.length; p++) {
-                    const [x, y, z] = points[p];
-                    const phiPoint = [x, y, z, 1];
-                    const point = new Point_js_1.Point({ x, y, z }, CoordsType_js_1.CoordsType.CARTESIAN);
-                    const decDeg = point.decDeg;
-                    if (Math.abs(decDeg - center.decDeg) < 60) {
-                        const clipspace = gl_matrix_1.vec4.create();
-                        gl_matrix_1.vec4.transformMat4(clipspace, phiPoint, mvpMatrix);
-                        // perspective divide
-                        clipspace[0] /= clipspace[3];
-                        clipspace[1] /= clipspace[3];
-                        // clip->pixel
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
-                        this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
-                        // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
-                    }
-                }
-            }
-        }
-        // RA labels (loop over Dec keys)
-        for (const [decDegKey, points] of this._ra4Labels.entries()) {
-            if (Math.abs(decDegKey - center.decDeg) <= this._thetaStep) {
-                for (let p = 0; p < points.length; p++) {
-                    const [x, y, z] = points[p];
-                    const phiPoint = [x, y, z, 1];
-                    const point = new Point_js_1.Point({ x, y, z }, CoordsType_js_1.CoordsType.CARTESIAN);
-                    const d = this.vectorDistance(point, center);
-                    const raDeg = point.raDeg;
-                    if (d < (0, Utils_js_1.degToRad)(50)) {
-                        const clipspace = gl_matrix_1.vec4.create();
-                        gl_matrix_1.vec4.transformMat4(clipspace, phiPoint, mvpMatrix);
-                        clipspace[0] /= clipspace[3];
-                        clipspace[1] /= clipspace[3];
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
-                        // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
-                        this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
-                    }
-                }
-            }
-        }
-        this.gridText.resetDivSets();
-        // gridTextHelper.resetDivSets();
-        // Cleanup
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-    }
-}
-exports.EquatorialGrid = EquatorialGrid;
-// const equatorialGridSingleton = new EquatorialGrid();
-// export default equatorialGridSingleton;
-
-
-/***/ }),
-
-/***/ 885:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const Global_js_1 = __importDefault(__webpack_require__(382));
-const FoVHelper_js_1 = __webpack_require__(610);
-class AncestorTile {
-    _hips;
-    _tileno;
-    _baseurl;
-    _order;
-    _ready = false;
-    _format;
-    _isGalacticHips;
-    opacity = 1.0;
-    _hipsShaderIndex = 0;
-    _pixels = [];
-    _texture = null;
-    _image;
-    _texurl = '';
-    vertexPosition;
-    vertexPositionBuffer;
-    vertexIndices;
-    vertexIndexBuffer;
-    _tileBuffer;
-    _hipsShaderProgram;
-    _webgl;
-    constructor(tileno, order, hips, tileBuffer, hipsShaderProgram, webgl) {
-        this._hipsShaderProgram = hipsShaderProgram;
-        this._tileBuffer = tileBuffer;
-        this._hips = hips;
-        this._tileno = tileno;
-        this._webgl = webgl;
-        this._format = hips.format;
-        this._baseurl = hips.baseURL;
-        this._isGalacticHips = hips.isGalacticHips;
-        this._order = order;
-        this.initImage();
-    }
-    // Kept for API parity; there is no interval created in this class.
-    destroyIntervals() {
-        // no-op
-    }
-    initImage() {
-        const dirnumber = Math.floor(this._tileno / 10000) * 10000;
-        this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
-        this._image = new Image();
-        this._image.onload = () => this.imageLoaded();
-        this._image.onerror = () => {
-            console.error('File not found? %s', this._texurl);
-        };
-        this._image.crossOrigin = 'anonymous';
-        // If you ever need FITS handling, call this.loadImage() instead.
-        this._image.src = this._texurl;
-    }
-    imageLoaded() {
-        this.textureLoaded();
-        this.initModelBuffer();
-        const gl = this._webgl;
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
-        this._ready = true;
-    }
-    textureLoaded() {
-        // hipsShaderProgram.enableProgram()
-        this._hipsShaderProgram.enableProgram();
-        const gl = this._webgl;
-        this._texture = gl.createTexture();
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        if (!gl.isTexture(this._texture)) {
-            console.log('error in texture');
-        }
-    }
-    initModelBuffer() {
-        const gl = this._webgl;
-        this.vertexPosition = [];
-        this.vertexPositionBuffer = [];
-        this.vertexIndices = new Uint16Array();
-        // this.vertexIndexBuffer created later
-        const reforder = FoVHelper_js_1.fovHelper.getRefOrder(this._order);
-        const orighealpix = Global_js_1.default.getHealpix(this._order);
-        const origxyf = orighealpix.nest2xyf(this._tileno);
-        const orderjump = reforder - this._order;
-        const dxmin = origxyf.ix << orderjump;
-        const dxmax = (origxyf.ix << orderjump) + (1 << orderjump);
-        const dymin = origxyf.iy << orderjump;
-        const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
-        const healpix = Global_js_1.default.getHealpix(reforder);
-        this._pixels = [];
-        // Using getBoundaries (like the JS source)
-        this.setupPositionAndTexture4Quadrant(dxmin, dxmax / 2, dymin, dymax / 2, 0, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant(dxmax / 2, dxmax, dymin, dymax / 2, 1, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant(dxmin, dxmax / 2, dymax / 2, dymax, 2, healpix, orderjump, origxyf);
-        this.setupPositionAndTexture4Quadrant(dxmax / 2, dxmax, dymax / 2, dymax, 3, healpix, orderjump, origxyf);
-        const pixelsXQuadrant = this.vertexPosition[0].length / 20;
-        this.vertexIndices = this.computeVertexIndices(pixelsXQuadrant);
-        this.vertexIndexBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndices, gl.STATIC_DRAW);
-    }
-    computeVertexIndices(pixelsXQuadrant) {
-        const vertexIndices = new Uint16Array(6 * pixelsXQuadrant);
-        let baseFaceIndex = 0;
-        for (let j = 0; j < pixelsXQuadrant; j++) {
-            vertexIndices[6 * j] = baseFaceIndex;
-            vertexIndices[6 * j + 1] = baseFaceIndex + 1;
-            vertexIndices[6 * j + 2] = baseFaceIndex + 2;
-            vertexIndices[6 * j + 3] = baseFaceIndex + 2;
-            vertexIndices[6 * j + 4] = baseFaceIndex + 3;
-            vertexIndices[6 * j + 5] = baseFaceIndex;
-            baseFaceIndex += 4;
-        }
-        return vertexIndices;
-    }
-    // Version that uses getPointsForXyfNoStep (kept for reference; not used in this class)
-    setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
-        const step = 1 / (1 << orderjump);
-        let p = 0;
-        for (let dx = dxmin; dx < dxmax; dx++) {
-            for (let dy = dymin; dy < dymax; dy++) {
-                const facesVec3Array = healpix.getPointsForXyfNoStep(dx, dy, origxyf.face);
-                const uindex = dy - (origxyf.iy << orderjump);
-                const vindex = dx - (origxyf.ix << orderjump);
-                this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x;
-                this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y;
-                this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z;
-                this.vertexPosition[qidx][20 * p + 3] = step + step * uindex;
-                this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex);
-                this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x;
-                this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y;
-                this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z;
-                this.vertexPosition[qidx][20 * p + 8] = step + step * uindex;
-                this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex;
-                this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x;
-                this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y;
-                this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z;
-                this.vertexPosition[qidx][20 * p + 13] = step * uindex;
-                this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex;
-                this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x;
-                this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y;
-                this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z;
-                this.vertexPosition[qidx][20 * p + 18] = step * uindex;
-                this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex);
-                p++;
-            }
-        }
-        this.vertexPositionBuffer[qidx] = this._webgl.createBuffer();
-        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexPosition[qidx], this._webgl.STATIC_DRAW);
-    }
-    // Version used by the original JS, collecting _pixels via xyf2nest + getBoundaries
-    setupPositionAndTexture4Quadrant(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
-        const gl = this._webgl;
-        this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
-        const step = 1 / (1 << orderjump);
-        let p = 0;
-        for (let dx = dxmin; dx < dxmax; dx++) {
-            for (let dy = dymin; dy < dymax; dy++) {
-                const ipix3 = healpix.xyf2nest(dx, dy, origxyf.face);
-                this._pixels.push(ipix3);
-                const facesVec3Array = healpix.getBoundaries(ipix3);
-                const uindex = dy - (origxyf.iy << orderjump);
-                const vindex = dx - (origxyf.ix << orderjump);
-                this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x;
-                this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y;
-                this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z;
-                this.vertexPosition[qidx][20 * p + 3] = step + step * uindex;
-                this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex);
-                this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x;
-                this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y;
-                this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z;
-                this.vertexPosition[qidx][20 * p + 8] = step + step * uindex;
-                this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex;
-                this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x;
-                this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y;
-                this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z;
-                this.vertexPosition[qidx][20 * p + 13] = step * uindex;
-                this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex;
-                this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x;
-                this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y;
-                this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z;
-                this.vertexPosition[qidx][20 * p + 18] = step * uindex;
-                this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex);
-                p++;
-            }
-        }
-        this.vertexPositionBuffer[qidx] = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition[qidx], gl.STATIC_DRAW);
-    }
-    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        if (!this._ready)
-            return false;
-        // this._image.onload = () => this.imageLoaded()
-        let quadrantsToDraw = new Set([0, 1, 2, 3]);
-        if (visibleOrder > this._order) {
-            const q = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
-            if (q)
-                quadrantsToDraw = q;
-        }
-        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        const gl = this._webgl;
-        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
-        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
-        const elemno = this.vertexIndices.length;
-        quadrantsToDraw.forEach((qidx) => {
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
-            gl.vertexAttribPointer(this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
-            gl.vertexAttribPointer(this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
-            gl.drawElements(gl.TRIANGLES, elemno, gl.UNSIGNED_SHORT, 0);
-        });
-        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
-        return true;
-    }
-    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        const quadrantsToDraw = new Set([0, 1, 2, 3]);
-        const childrenOrder = this._order + 1;
-        if (!visibleTilesMap.has(childrenOrder))
-            return;
-        for (let c = 0; c < 4; c++) {
-            const childTileNo = (this._tileno << 2) + c;
-            const visibleChildren = visibleTilesMap.get(childrenOrder);
-            if (visibleChildren.includes(childTileNo)) {
-                const childTile = this._isGalacticHips
-                    ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-                    : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
-                // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
-                childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram);
-                if (childTile._ready) {
-                    quadrantsToDraw.delete(childTile._tileno - (this._tileno << 2));
-                }
-            }
-        }
-        return quadrantsToDraw;
-    }
-}
-exports["default"] = AncestorTile;
-
-
-/***/ }),
-
-/***/ 909:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FootprintShaderProgram = void 0;
-// HiPSShaderProgram.ts
-const gl_matrix_1 = __webpack_require__(961);
-const ShaderManager_js_1 = __importDefault(__webpack_require__(947));
-class FootprintShaderProgram {
-    // export default class FootprintShaderProgram {
-    _shaderProgram;
-    _vertexShader;
-    _fragmentShader;
-    gl_uniforms;
-    gl_attributes;
-    locations;
-    _webgl;
-    constructor(webgl) {
-        this._webgl = webgl;
-        this.gl_uniforms = {
-            vertex_color: 'u_fragcolor',
-            m_perspective: 'uPMatrix',
-            m_model_view: 'uMVMatrix',
-            point_size: 'u_pointsize'
-        };
-        this.gl_attributes = {
-            vertex_pos: 'aCatPosition'
-        };
-        this.locations = {
-            pMatrix: null,
-            mvMatrix: null,
-            color: null,
-            position: -1,
-            pointSize: -1
-        };
-    }
-    get shaderProgram() {
-        if (!this._shaderProgram) {
-            const gl = this._webgl;
-            // const gl = global.gl as GL
-            this._shaderProgram = gl.createProgram();
-            this.initShaders();
-        }
-        return this._shaderProgram;
-    }
-    initShaders() {
-        const gl = this._webgl;
-        // const gl = global.gl as GL
-        const fragmentShaderStr = ShaderManager_js_1.default.footprintFS();
-        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
-        gl.compileShader(this._fragmentShader);
-        console.log('FS log:', gl.getShaderInfoLog(this._fragmentShader) || 'ok');
-        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
-            return;
-        }
-        const vertexShaderStr = ShaderManager_js_1.default.footprintVS();
-        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(this._vertexShader, vertexShaderStr);
-        gl.compileShader(this._vertexShader);
-        console.log('VS log:', gl.getShaderInfoLog(this._vertexShader) || 'ok');
-        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
-            return;
-        }
-        gl.attachShader(this.shaderProgram, this._vertexShader);
-        gl.attachShader(this.shaderProgram, this._fragmentShader);
-        gl.linkProgram(this.shaderProgram);
-        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        gl.useProgram(this.shaderProgram);
-        this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.pointSize = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.point_size);
-        this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
-    }
-    enableShaders(pMatrix, modelMatrix, viewMatrix) {
-        const gl = this._webgl;
-        // const gl = global.gl as GL
-        gl.useProgram(this.shaderProgram);
-        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
-        this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
-        let mvMatrix = gl_matrix_1.mat4.create();
-        mvMatrix = gl_matrix_1.mat4.multiply(mvMatrix, viewMatrix, modelMatrix);
-        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
-        gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
-    }
-}
-exports.FootprintShaderProgram = FootprintShaderProgram;
-// export const footprintShaderProgram = new FootprintShaderProgram()
-
-
-/***/ }),
-
-/***/ 919:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.bootSetup = exports.tapRepos = exports.hipsNodes = void 0;
-exports.hipsNodes = [
-    "https://skies.esac.esa.int/",
-    "https://alasky.cds.unistra.fr/",
-];
-// If you want to re-enable multiple TAP repos, just uncomment and extend the array
-// export const tapRepos: string[] = [
-//   "https://archive.eso.org/tap_cat/",
-//   "https://archive.eso.org/tap_obs/",
-//   "https://sky.esa.int/esasky-tap/tap/",
-//   "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/argus",
-// ];
-exports.tapRepos = [
-    "https://sky.esa.int/esasky-tap/tap/",
-];
-exports.bootSetup = {
-    insideSphere: false,
-    defaultHips: "",
-    camera_fov_deg: 34,
-    camera_fov_rad: 34 * Math.PI / 180.0,
-    camera_near_plane: 0.00001,
-    camera_far_plane: 2.5,
-    corsProxyUrl: "http://localhost:4000/",
-    useCORSProxy: false,
-    maxDecimals: 15,
-    // defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
-    defaultHipsUrl: "https://cdn.skies.esac.esa.int/DSSColor/",
-    version: "Astrobrowser v1.0.0",
-    debug: false,
-    insideView: false,
-    showViewfinder: false,
-};
-
-
-/***/ }),
-
-/***/ 930:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.cartesianToSpherical = cartesianToSpherical;
-exports.colorHex2RGB = colorHex2RGB;
-exports.degToRad = degToRad;
-exports.radToDeg = radToDeg;
-exports.sphericalToAstroDeg = sphericalToAstroDeg;
-exports.sphericalToCartesian = sphericalToCartesian;
-exports.astroDegToSpherical = astroDegToSpherical;
-exports.raDegToHMS = raDegToHMS;
-exports.decDegToDMS = decDegToDMS;
-/**
- * @author Fabrizio Giordano (Fab)
- */
-const gl_matrix_1 = __webpack_require__(961);
-// results in degrees
-function cartesianToSpherical(xyz) {
-    const dotXYZ = gl_matrix_1.vec3.dot(xyz, xyz);
-    const r = Math.sqrt(dotXYZ);
-    let theta = Math.acos(xyz[2] / r);
-    theta = radToDeg(theta);
-    // NB: in atan(y/x) is written with params switched atan2(x, y)
-    let phi = Math.atan2(xyz[1], xyz[0]);
-    phi = radToDeg(phi);
-    if (phi < 0) {
-        phi += 360;
-    }
-    return { phi, theta };
-}
-function colorHex2RGB(hexColor) {
-    const hex1 = hexColor.substring(1, 3);
-    const hex2 = hexColor.substring(3, 5);
-    const hex3 = hexColor.substring(5, 7);
-    const dec1 = parseInt(hex1, 16);
-    const dec2 = parseInt(hex2, 16);
-    const dec3 = parseInt(hex3, 16);
-    const rgb1 = (dec1 / 255).toFixed(2);
-    const rgb2 = (dec2 / 255).toFixed(2);
-    const rgb3 = (dec3 / 255).toFixed(2);
-    return [parseFloat(rgb1), parseFloat(rgb2), parseFloat(rgb3)];
-}
-function degToRad(degrees) {
-    return (degrees / 180) * Math.PI;
-}
-function radToDeg(radians) {
-    return (radians * 180) / Math.PI;
-}
-function sphericalToAstroDeg(phiDeg, thetaDeg) {
-    let raDeg = phiDeg;
-    if (raDeg < 0) {
-        raDeg += 360;
-    }
-    const decDeg = 90 - thetaDeg;
-    return { ra: raDeg, dec: decDeg };
-}
-function sphericalToCartesian(phiDeg, thetaDeg, r = 1) {
-    const x = r * Math.sin(degToRad(thetaDeg)) * Math.cos(degToRad(phiDeg));
-    const y = r * Math.sin(degToRad(thetaDeg)) * Math.sin(degToRad(phiDeg));
-    const z = r * Math.cos(degToRad(thetaDeg));
-    return [x, y, z];
-}
-function astroDegToSpherical(raDeg, decDeg) {
-    let phiDeg = raDeg;
-    if (phiDeg < 0) {
-        phiDeg += 360;
-    }
-    const thetaDeg = 90 - decDeg;
-    return { phi: phiDeg, theta: thetaDeg };
-}
-function raDegToHMS(raDeg) {
-    const h = Math.floor(raDeg / 15);
-    const m = Math.floor((raDeg / 15 - h) * 60);
-    const s = (raDeg / 15 - h - m / 60) * 3600;
-    return { h, m, s };
-}
-function decDegToDMS(decDeg) {
-    let sign = 1;
-    if (decDeg < 0) {
-        sign = -1;
-    }
-    const decDegAbs = Math.abs(decDeg);
-    let d = Math.trunc(decDegAbs);
-    const m = Math.trunc((decDegAbs - d) * 60);
-    const s = (decDegAbs - d - m / 60) * 3600;
-    d = d * sign;
-    return { d, m, s };
-}
-
-
-/***/ }),
-
-/***/ 937:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZVisibleTilesManager = void 0;
-class XYZVisibleTilesManager {
-    _provider;
-    constructor(provider) {
-        this._provider = provider;
-    }
-    selectTiles(input) {
-        const currentZoom = this._provider.resolveZoom(input.fovDeg ?? 180);
-        const currentTiles = this._provider.getVisibleTilesAtZoom(currentZoom, input.centerSphericalDeg ?? null, input.fovPolygon ?? [], input.viewportSphericalSamples ?? [], 1);
-        const fallbackMap = new Map();
-        for (let z = currentZoom - 1; z >= this._provider.minZoom; z--) {
-            const dz = currentZoom - z;
-            for (const tile of currentTiles) {
-                const fallback = {
-                    z,
-                    x: tile.x >> dz,
-                    y: tile.y >> dz,
-                };
-                fallbackMap.set(`${fallback.z}/${fallback.x}/${fallback.y}`, fallback);
-            }
-        }
-        const key = `${currentZoom}:${currentTiles.map((tile) => `${tile.x}/${tile.y}`).join('|')}`;
-        return {
-            key,
-            currentTiles,
-            fallbackTiles: Array.from(fallbackMap.values()),
-        };
-    }
-}
-exports.XYZVisibleTilesManager = XYZVisibleTilesManager;
-
-
-/***/ }),
-
-/***/ 940:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.CatalogueShaderProgram = void 0;
-// HiPSShaderProgram.ts
-const gl_matrix_1 = __webpack_require__(961);
-const ShaderManager_js_1 = __importDefault(__webpack_require__(947));
-// export default class CatalogueShaderProgram {
-class CatalogueShaderProgram {
-    _shaderProgram;
-    _vertexShader;
-    _fragmentShader;
-    gl_uniforms;
-    gl_attributes;
-    locations;
-    _webgl;
-    constructor(webgl) {
-        this._webgl = webgl;
-        this.gl_uniforms = {
-            vertex_color: 'u_fragcolor',
-            m_perspective: 'uPMatrix',
-            m_model_view: 'uMVMatrix'
-        };
-        this.gl_attributes = {
-            vertex_pos: 'aCatPosition',
-            vertex_selected: 'a_selected',
-            point_size: 'a_pointsize',
-            point_hue: 'a_brightness'
-        };
-        this.locations = {
-            pMatrix: null,
-            mvMatrix: null,
-            color: null,
-            position: -1,
-            hovered: -1,
-            pointSize: -1,
-            brightness: -1
-        };
-    }
-    get shaderProgram() {
-        if (!this._shaderProgram) {
-            // const gl = global.gl as GL
-            const gl = this._webgl;
-            this._shaderProgram = gl.createProgram();
-            this.initShaders();
-        }
-        return this._shaderProgram;
-    }
-    initShaders() {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        const fragmentShaderStr = ShaderManager_js_1.default.catalogueFS();
-        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
-        gl.compileShader(this._fragmentShader);
-        console.log('FS log:', gl.getShaderInfoLog(this._fragmentShader) || 'ok');
-        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
-            return;
-        }
-        const vertexShaderStr = ShaderManager_js_1.default.catalogueVS();
-        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(this._vertexShader, vertexShaderStr);
-        gl.compileShader(this._vertexShader);
-        console.log('VS log:', gl.getShaderInfoLog(this._vertexShader) || 'ok');
-        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
-            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
-            return;
-        }
-        gl.attachShader(this.shaderProgram, this._vertexShader);
-        gl.attachShader(this.shaderProgram, this._fragmentShader);
-        gl.linkProgram(this.shaderProgram);
-        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
-            alert('Could not initialise shaders');
-        }
-        // shaderUtility.useProgram(this.shaderProgram)
-        gl.useProgram(this.shaderProgram);
-        this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
-        this.locations.hovered = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_selected);
-        this.locations.pointSize = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_size);
-        this.locations.brightness = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_hue);
-        this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
-    }
-    enableShaders(pMatrix, modelMatrix, viewMatrix) {
-        // const gl = global.gl as GL
-        const gl = this._webgl;
-        // shaderUtility.useProgram(this.shaderProgram)
-        gl.useProgram(this.shaderProgram);
-        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
-        this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
-        let mvMatrix = gl_matrix_1.mat4.create();
-        mvMatrix = gl_matrix_1.mat4.multiply(mvMatrix, viewMatrix, modelMatrix);
-        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
-        gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
-    }
-}
-exports.CatalogueShaderProgram = CatalogueShaderProgram;
-// export const catalogueShaderProgram = new CatalogueShaderProgram()
-
-
-/***/ }),
-
-/***/ 947:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-// ShaderManager.ts
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-class ShaderManager {
-    static catalogueVS() {
-        return `#version 300 es
-    in vec4 aCatPosition;
-    in float a_selected;
-    in float a_pointsize;
-    in float a_brightness;
-
-    out float v_selected;
-    out float v_brightness;
-    out lowp vec4 vColor;  // not used
-
-    uniform mat4 uPMatrix;
-    uniform mat4 uMVMatrix;
-
-    void main() {
-
-      gl_Position = (uPMatrix * uMVMatrix * aCatPosition);
-      gl_PointSize = a_pointsize;
-      v_selected = a_selected;
-      v_brightness = a_brightness;
-    }`;
-    }
-    static catalogueFS() {
-        return `#version 300 es
-    precision mediump float;
-    
-    #ifdef GL_OES_standard_derivatives
-    #extension GL_OES_standard_derivatives : enable
-    #endif
-
-    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
-
-    // precision mediump float;
-
-    in float v_selected;
-    in float v_brightness;
-
-    uniform vec4 u_fragcolor;
-
-    out vec4 fragColor;
-
-    // varying float v_selected;
-    // varying float v_brightness;
-
-    const float EPSILON = 1e-10;
-    
-    vec3 RGBtoHCV(in vec3 rgb) {
-      // RGB [0..1] to Hue-Chroma-Value [0..1]
-      // Based on work by Sam Hocevar and Emil Persson
-      vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
-      vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
-      float c = q.x - min(q.w, q.y);
-      float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
-      return vec3(h, c, q.x);
-    }
-
-    vec3 RGBtoHSL(in vec3 rgb) {
-      // RGB [0..1] to Hue-Saturation-Lightness [0..1]
-      vec3 hcv = RGBtoHCV(rgb);
-      //vec3 hcv = vec3(1., 1., 1.);
-      float z = hcv.z - hcv.y * 0.5;
-      float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
-      return vec3(hcv.x, s, z);
-    }
-
-    vec3 HUEtoRGB(in float hue){
-      // Hue [0..1] to RGB [0..1]
-      // See http://www.chilliant.com/rgb2hsv.html
-      vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
-      return clamp(rgb, 0., 1.);
-    }
-
-    vec3 HSLtoRGB(in vec3 hsl) {
-      // Hue-Saturation-Lightness [0..1] to RGB [0..1]
-      vec3 rgb = HUEtoRGB(hsl.x);
-      float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
-      return (rgb - 0.5) * c + hsl.z;
-    }
-  
-    void main() {
-
-      float r = 0.0, delta = 0.0, alpha = 1.0;
-      vec2 cxy = 2.0 * gl_PointCoord - 1.0;
-      r = dot(cxy, cxy);
-      if (r > 1.0) {
-        discard;
-      }
-
-      #ifdef GL_OES_standard_derivatives
-        delta = fwidth(r);
-        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
-      #endif
-
-      if (v_selected == 1.0){
-        // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-        fragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-      } else if (v_selected == 2.0){
-        // gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
-        fragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
-      }else{
-        if (r < 0.4) {
-          discard;
-        }
-        if ( v_brightness >= -1.0 && v_brightness <= 1.0) {
-          // Round-trip RGB->HSL->RGB with time-dependent lightness
-          vec3 hsl = RGBtoHSL(vec3(u_fragcolor));
-          //hsl.z = pow(hsl.z, sin(iTime) + 1.5);
-          // hsl.z = pow(hsl.z, v_brightness + 1.5);
-          hsl.z = pow(hsl.z, v_brightness + 1.5);
-          vec3 hslcolor = HSLtoRGB(hsl);
-          // gl_FragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
-          fragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
-        } else {
-          // gl_FragColor = u_fragcolor * (alpha);
-          fragColor = u_fragcolor * (alpha);
-        }
-      }
-    }`;
-    }
-    static footprintVS() {
-        return `#version 300 es
-    precision highp float;
-
-    layout(location = 0) in vec4 aCatPosition;
-
-    uniform float u_pointsize;
-    uniform mat4 uMVMatrix;
-    uniform mat4 uPMatrix;
-
-    void main() {
-      gl_Position = uPMatrix * uMVMatrix * aCatPosition;
-      gl_PointSize = u_pointsize;   // Works in WebGL2
-    }`;
-    }
-    static footprintFS() {
-        return `#version 300 es
-    precision mediump float;
-
-    uniform vec4 u_fragcolor;
-    out vec4 fragColor;
-
-    void main() {
-      fragColor = u_fragcolor;
-    }`;
-    }
-    static hipsVS() {
-        return `#version 300 es
-    in vec3 aVertexPosition;
-    in vec2 aTextureCoord;
-
-    uniform mat4 uMMatrix;
-    uniform mat4 uVMatrix;
-    uniform mat4 uPMatrix;
-
-    out vec2 vTextureCoord;
-
-    void main() {
-      gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
-      vTextureCoord = aTextureCoord;
-    }`;
-    }
-    static hipsNativeFS() {
-        return `#version 300 es
-    precision mediump float;
-
-    in vec2 vTextureCoord;
-
-    uniform sampler2D uSampler0;
-    uniform sampler2D uSampler1;
-    uniform sampler2D uSampler2;
-    uniform sampler2D uSampler3;
-    uniform sampler2D uSampler4;
-    uniform sampler2D uSampler5;
-    uniform sampler2D uSampler6;
-    uniform sampler2D uSampler7;
-
-    uniform float uFactor0;
-    uniform float uFactor1;
-    uniform float uFactor2;
-    uniform float uFactor3;
-    uniform float uFactor4;
-    uniform float uFactor5;
-    uniform float uFactor6;
-    uniform float uFactor7;
-
-    out vec4 fragColor;
-
-    void main() {
-      vec3 finalColor = vec3(0.0);
-
-      if (uFactor0 >= 0.0){
-        vec4 mycolor;
-        #if __VERSION__ > 120
-          vec4 color0 = texture(uSampler0, vTextureCoord);
-        #else
-          vec4 color0 = texture2D(uSampler0, vTextureCoord);
-        #endif
-        mycolor = color0;
-        finalColor += mycolor.rgb * uFactor0;
-      } else if (uFactor7 >= 0.0){
-        finalColor = vec3(1.0, 0.0, 0.0);
-      }
-      fragColor = vec4(finalColor, 1.0);
-    }`;
-    }
-    static hipsGrayscaleFS() {
-        return `#version 300 es
-    precision mediump float;
-
-    in vec2 vTextureCoord;
-
-    uniform sampler2D uSampler0;
-    uniform sampler2D uSampler1;
-    uniform sampler2D uSampler2;
-    uniform sampler2D uSampler3;
-    uniform sampler2D uSampler4;
-    uniform sampler2D uSampler5;
-    uniform sampler2D uSampler6;
-    uniform sampler2D uSampler7;
-
-    uniform float uFactor0;
-    uniform float uFactor1;
-    uniform float uFactor2;
-    uniform float uFactor3;
-    uniform float uFactor4;
-    uniform float uFactor5;
-    uniform float uFactor6;
-    uniform float uFactor7;
-
-    out vec4 fragColor;
-
-    void main() {
-      vec3 finalColor = vec3(0.0);
-
-      if (uFactor0 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color0 = texture(uSampler0, vTextureCoord);
-        #else
-          vec4 color0 = texture2D(uSampler0, vTextureCoord);
-        #endif
-        float gray = 0.21 * color0.r + 0.71 * color0.g + 0.07 * color0.b;
-        finalColor = color0.rgb * (1.0 - uFactor0) + vec3(gray) * uFactor0;
-      }
-      if (uFactor1 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color1 = texture(uSampler1, vTextureCoord);
-        #else
-          vec4 color1 = texture2D(uSampler1, vTextureCoord);
-        #endif
-        finalColor += color1.rgb * uFactor1;
-      }
-      if (uFactor2 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color2 = texture(uSampler2, vTextureCoord);
-        #else
-          vec4 color2 = texture2D(uSampler2, vTextureCoord);
-        #endif
-        finalColor += color2.rgb * uFactor2;
-      }
-      if (uFactor3 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color3 = texture(uSampler3, vTextureCoord);
-        #else
-          vec4 color3 = texture2D(uSampler3, vTextureCoord);
-        #endif
-        finalColor += color3.rgb * uFactor3;
-      }
-      if (uFactor4 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color4 = texture(uSampler4, vTextureCoord);
-        #else
-          vec4 color4 = texture2D(uSampler4, vTextureCoord);
-        #endif
-        finalColor += color4.rgb * uFactor4;
-      }
-      if (uFactor5 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color5 = texture(uSampler5, vTextureCoord);
-        #else
-          vec4 color5 = texture2D(uSampler5, vTextureCoord);
-        #endif
-        finalColor += color5.rgb * uFactor5;
-      }
-      if (uFactor6 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color6 = texture(uSampler6, vTextureCoord);
-        #else
-          vec4 color6 = texture2D(uSampler6, vTextureCoord);
-        #endif
-        finalColor += color6.rgb * uFactor6;
-      }
-      if (uFactor7 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color7 = texture(uSampler7, vTextureCoord);
-        #else
-          vec4 color7 = texture2D(uSampler7, vTextureCoord);
-        #endif
-        finalColor += color7.rgb * uFactor7;
-      }
-      fragColor = vec4(finalColor, 1.0);
-    }`;
-    }
-    static hipsColorMapFS() {
-        return `#version 300 es
-    precision mediump float;
-
-    in vec2 vTextureCoord;
-
-    // UBO
-    layout (std140) uniform colormap {
-      float r_palette[256];
-      float g_palette[256];
-      float b_palette[256];
-    };
-
-    uniform sampler2D uSampler0;
-    uniform float uFactor0;
-
-    out vec4 fragColor;
-
-    void main() {
-      #if __VERSION__ > 120
-        vec4 color0 = texture(uSampler0, vTextureCoord);
-      #else
-        vec4 color0 = texture2D(uSampler0, vTextureCoord);
-      #endif
-
-      int x = int(color0.r * 255.0);
-      float px = r_palette[x] / 256.0;
-
-      int y = int(color0.g * 255.0);
-      float py = g_palette[y] / 256.0;
-
-      int z = int(color0.b * 255.0);
-      float pz = b_palette[z] / 256.0;
-
-      // uFactor0 reserved for future blending if needed
-      fragColor = vec4(px, py, pz, 1.0);
-    }`;
-    }
-}
-exports["default"] = ShaderManager;
-
-
-/***/ }),
-
-/***/ 961:
+/***/ 1961:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 // ESM COMPAT FLAG
@@ -19533,6 +12745,7012 @@ var vec2_forEach = function () {
 
 
 
+/***/ }),
+
+/***/ 2056:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.VisibleTilesManager = void 0;
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+const healpixjs_1 = __webpack_require__(1138);
+const RayPickingUtils_js_1 = __importDefault(__webpack_require__(4639));
+// import { newTileBuffer } from './TileBuffer.js';
+const TileBuffer_js_1 = __webpack_require__(4006);
+const gl_matrix_1 = __webpack_require__(1961);
+// import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
+// import {HealpixGridSingleton} from '../grid/HealpixGridSingleton.js';
+const Config_js_1 = __webpack_require__(2919);
+class VisibleTilesManager {
+    _visibleTilesByOrder;
+    _ancestorsMap;
+    initialised;
+    _galVisibleTilesByOrder;
+    _galAncestorsMap;
+    _galacticMatrixInverted;
+    _galacticMatrix;
+    insideSphere = Config_js_1.bootSetup.insideSphere;
+    _tileBuffer;
+    _healpixGrid;
+    _webgl;
+    constructor(webgl, hipsShaderProgram, healpixGrid) {
+        this._webgl = webgl;
+        this._healpixGrid = healpixGrid;
+        this._visibleTilesByOrder = { pixels: [], order: 0 };
+        this._ancestorsMap = new Map();
+        this.initialised = false;
+        this._galVisibleTilesByOrder = { pixels: [], order: 0 };
+        this._galAncestorsMap = new Map();
+        // Matrices for galactic <-> equatorial
+        this._galacticMatrixInverted = gl_matrix_1.mat4.create();
+        this._galacticMatrix = gl_matrix_1.mat4.create();
+        // From https://observablehq.com/@fil/galactic-rotations (single-precision friendly)
+        // This matrix is (galactic -> equatorial); we store its inverse too.
+        gl_matrix_1.mat4.set(this._galacticMatrixInverted, -0.054876, -0.873437, -0.483835, 0, 0.494109, -0.44483, 0.746982, -0, -0.867666, -0.198076, 0.455984, 0, 0, 0, 0, 1);
+        gl_matrix_1.mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
+        this._tileBuffer = new TileBuffer_js_1.TileBuffer(1, webgl, hipsShaderProgram, this);
+    }
+    get healpixGrid() {
+        return this._healpixGrid;
+    }
+    get tileBuffer() {
+        return this._tileBuffer;
+    }
+    init(insideSphere) {
+        this.initialised = true;
+        this.insideSphere = insideSphere;
+        // this.computeVisiblePixels();
+        // setInterval(() => this.computeVisiblePixels(), 500);
+    }
+    getVisibleOrder() {
+        // return healpixGridSingleton.visibleorder;
+        return this._healpixGrid.visibleorder;
+    }
+    // computeVisiblePixels(): void {
+    computeVisiblePixels(order, webgl, camera, pMatrix) {
+        if (!this.initialised)
+            return;
+        // let order = healpixGridSingleton.visibleorder;
+        if (Global_js_1.default.insideSphere && order < 3) {
+            order = 3;
+        }
+        this._ancestorsMap.set(order, []);
+        this._galAncestorsMap.set(order, []);
+        let pixels = [];
+        let galTiles = [];
+        if (order === 0) {
+            const geomhealpix = Global_js_1.default.getHealpix(0);
+            const npix = geomhealpix.getNPix();
+            for (let i = 0; i < npix; i++) {
+                pixels.push(i);
+                this._ancestorsMap.get(order).push(i);
+                galTiles.push(i);
+                this._galAncestorsMap.get(order).push(i);
+            }
+        }
+        else {
+            const geomhealpix = Global_js_1.default.getHealpix(order);
+            // const maxX = (global.gl as GL).canvas.width;
+            // const maxY = (global.gl as GL).canvas.height;
+            const maxX = webgl.canvas.width;
+            const maxY = webgl.canvas.height;
+            // Sample a grid of screen points, project to the sphere, then to galactic
+            for (let i = 0; i <= maxX; i += maxX / 30) {
+                for (let j = 0; j <= maxY; j += maxY / 30) {
+                    const hit = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(i, j, this._healpixGrid, this._webgl, camera, pMatrix);
+                    if (hit.length > 0) {
+                        // Equatorial -> Galactic (use _galacticMatrix)
+                        const galVec = gl_matrix_1.vec4.create();
+                        gl_matrix_1.vec4.transformMat4(galVec, [hit[0], hit[1], hit[2], 1], this._galacticMatrix);
+                        // Index in galactic HEALPix
+                        const galPoint = new healpixjs_1.Pointing(new healpixjs_1.Vec3(galVec[0], galVec[1], galVec[2]));
+                        const galTileNo = geomhealpix.ang2pix(galPoint);
+                        // Index in equatorial HEALPix
+                        const curPoint = new healpixjs_1.Pointing(new healpixjs_1.Vec3(hit[0], hit[1], hit[2]));
+                        const currPixNo = geomhealpix.ang2pix(curPoint);
+                        if (!pixels.includes(currPixNo)) {
+                            pixels.push(currPixNo);
+                            this._ancestorsMap.get(order).push(currPixNo);
+                            // newTileBuffer.addTile(order, currPixNo);
+                            this._tileBuffer.addTile(order, currPixNo);
+                        }
+                        if (!galTiles.includes(galTileNo)) {
+                            galTiles.push(galTileNo);
+                            this._galAncestorsMap.get(order).push(galTileNo);
+                            // newTileBuffer.addGalTile(order, galTileNo);
+                            this._tileBuffer.addGalTile(order, galTileNo);
+                        }
+                    }
+                }
+            }
+        }
+        this._visibleTilesByOrder = { pixels: pixels, order: order };
+        this._galVisibleTilesByOrder = { pixels: galTiles, order: order };
+        // Build ancestor pyramids down to order 0
+        for (let o = 1; o < order; o++) {
+            const tgtOrder = order - o;
+            const list = this._ancestorsMap.get(tgtOrder) ?? [];
+            this._ancestorsMap.set(tgtOrder, list);
+            for (let p = 0; p < pixels.length; p++) {
+                const parent = pixels[p] >> (2 * o);
+                if (!list.includes(parent)) {
+                    list.push(parent);
+                    // newTileBuffer.addTile(tgtOrder, parent);
+                    this._tileBuffer.addTile(tgtOrder, parent);
+                }
+            }
+        }
+        for (let o = 1; o < order; o++) {
+            const tgtOrder = order - o;
+            const list = this._galAncestorsMap.get(tgtOrder) ?? [];
+            this._galAncestorsMap.set(tgtOrder, list);
+            for (let p = 0; p < galTiles.length; p++) {
+                const parent = galTiles[p] >> (2 * o);
+                if (!list.includes(parent)) {
+                    list.push(parent);
+                    // newTileBuffer.addGalTile(tgtOrder, parent);
+                    this._tileBuffer.addGalTile(tgtOrder, parent);
+                }
+            }
+        }
+    }
+    get visibleTilesByOrder() {
+        return this._visibleTilesByOrder;
+    }
+    get ancestorsMap() {
+        return this._ancestorsMap;
+    }
+    get galVisibleTilesByOrder() {
+        return this._galVisibleTilesByOrder;
+    }
+    get galAncestorsMap() {
+        return this._galAncestorsMap;
+    }
+    get visibleOrder() {
+        return this._visibleTilesByOrder.order;
+    }
+}
+exports.VisibleTilesManager = VisibleTilesManager;
+// export const visibleTilesManager = new VisibleTilesManager();
+
+
+/***/ }),
+
+/***/ 2330:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZTileProvider = void 0;
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+const MAX_MERCATOR_LAT = 85.0511287798066;
+class XYZTileProvider {
+    _config;
+    constructor(config) {
+        this._config = config;
+    }
+    get config() {
+        return this._config;
+    }
+    get minZoom() {
+        return Math.max(0, Math.floor(this._config.minZoom ?? 0));
+    }
+    get maxZoom() {
+        return Math.max(this.minZoom, Math.floor(this._config.maxZoom ?? 6));
+    }
+    getInitialTiles() {
+        return this.getVisibleTilesAtZoom(1, null, [], [], 1);
+    }
+    getTileUrl(tile) {
+        if (this._config.urlResolver) {
+            return this._config.urlResolver(tile);
+        }
+        const effectiveY = this.getEffectiveTileY(tile);
+        const subdomain = this.getSubdomain(tile);
+        return this._config.urlTemplate
+            .replace(/\{z\}/g, String(tile.z))
+            .replace(/\{x\}/g, String(tile.x))
+            .replace(/\{y\}/g, String(effectiveY))
+            .replace(/\{s\}/g, subdomain);
+    }
+    resolveZoom(fovDeg) {
+        const safeFov = Math.max(0.01, Math.min(180, fovDeg));
+        const targetTileWidthDeg = Math.max(0.01, safeFov / 2);
+        const rawZoom = Math.ceil(Math.log2(360 / targetTileWidthDeg));
+        return this.clampZoom(rawZoom);
+    }
+    clampZoom(zoom) {
+        return Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
+    }
+    getEffectiveTileY(tile) {
+        if (!this._config.flipY) {
+            return tile.y;
+        }
+        const dim = 2 ** tile.z;
+        return dim - 1 - tile.y;
+    }
+    getSubdomain(tile) {
+        const subdomains = this._config.subdomains ?? [];
+        if (subdomains.length === 0) {
+            return '';
+        }
+        const index = Math.abs(tile.x + tile.y + tile.z) % subdomains.length;
+        return subdomains[index] ?? '';
+    }
+    getVisibleTilesAtZoom(z, centerSphericalDeg, fovPolygon, viewportSphericalSamples, padding = 1) {
+        const dim = 2 ** z;
+        const center = this.resolveViewCenter(null, centerSphericalDeg);
+        const normalizedCenterLon = this.normalizeLonAround(center.lonDeg, center.lonDeg);
+        const polygonPoints = fovPolygon.length > 0
+            ? fovPolygon.map((point) => ({
+                lonDeg: this.normalizeLonAround(point.raDeg > 180 ? point.raDeg - 360 : point.raDeg, normalizedCenterLon),
+                latDeg: point.decDeg,
+            }))
+            : [center];
+        const samplePoints = viewportSphericalSamples.map((sample) => ({
+            lonDeg: this.normalizeLonAround(sample.phi > 180 ? sample.phi - 360 : sample.phi, normalizedCenterLon),
+            latDeg: 90 - sample.theta,
+        }));
+        const coveragePoints = [center, ...polygonPoints, ...samplePoints];
+        let minLon = normalizedCenterLon;
+        let maxLon = normalizedCenterLon;
+        let minLat = center.latDeg;
+        let maxLat = center.latDeg;
+        for (const point of coveragePoints) {
+            minLon = Math.min(minLon, point.lonDeg);
+            maxLon = Math.max(maxLon, point.lonDeg);
+            minLat = Math.min(minLat, point.latDeg);
+            maxLat = Math.max(maxLat, point.latDeg);
+        }
+        const adaptivePadding = Math.max(padding, Math.min(3, Math.max(1, Math.ceil(z / 3))));
+        const minX = Math.floor(((minLon + 180) / 360) * dim) - adaptivePadding;
+        const maxX = Math.floor(((maxLon + 180) / 360) * dim) + adaptivePadding;
+        const minY = Math.floor(this.latToTileY(maxLat, z)) - adaptivePadding;
+        const maxY = Math.floor(this.latToTileY(minLat, z)) + adaptivePadding;
+        const tiles = [];
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                tiles.push({
+                    z,
+                    x: this.wrapTileX(x, dim),
+                    y: this.clampTileY(y, dim),
+                });
+            }
+        }
+        for (const point of coveragePoints) {
+            const centerTileX = Math.floor(((point.lonDeg + 180) / 360) * dim);
+            const centerTileY = Math.floor(this.latToTileY(point.latDeg, z));
+            for (let dx = -adaptivePadding; dx <= adaptivePadding; dx++) {
+                for (let dy = -adaptivePadding; dy <= adaptivePadding; dy++) {
+                    tiles.push({
+                        z,
+                        x: this.wrapTileX(centerTileX + dx, dim),
+                        y: this.clampTileY(centerTileY + dy, dim),
+                    });
+                }
+            }
+        }
+        return this.deduplicateTiles(tiles);
+    }
+    resolveViewCenter(camera, centerSphericalDeg) {
+        if (centerSphericalDeg) {
+            return {
+                lonDeg: centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi,
+                latDeg: 90 - centerSphericalDeg.theta,
+            };
+        }
+        if (!camera) {
+            return { lonDeg: 0, latDeg: 0 };
+        }
+        const [x, y, z] = camera.getCameraPosition();
+        const len = Math.hypot(x, y, z);
+        if (!Number.isFinite(len) || len === 0) {
+            return { lonDeg: 0, latDeg: 0 };
+        }
+        const scale = Global_js_1.default.insideSphere ? 1 / len : -1 / len;
+        const vx = x * scale;
+        const vy = y * scale;
+        const vz = z * scale;
+        const lonDeg = (Math.atan2(vy, vx) * 180) / Math.PI;
+        const latDeg = (Math.asin(Math.max(-1, Math.min(1, vz))) * 180) / Math.PI;
+        return { lonDeg, latDeg };
+    }
+    latToTileY(latDeg, z) {
+        const lat = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, latDeg));
+        const latRad = (lat * Math.PI) / 180;
+        const n = 2 ** z;
+        return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * n;
+    }
+    wrapTileX(x, dim) {
+        return ((x % dim) + dim) % dim;
+    }
+    normalizeLonAround(lonDeg, referenceLonDeg) {
+        let lon = lonDeg;
+        while (lon - referenceLonDeg > 180)
+            lon -= 360;
+        while (lon - referenceLonDeg < -180)
+            lon += 360;
+        return lon;
+    }
+    clampTileY(y, dim) {
+        return Math.max(0, Math.min(dim - 1, y));
+    }
+    deduplicateTiles(tiles) {
+        const unique = new Map();
+        for (const tile of tiles) {
+            unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
+        }
+        return Array.from(unique.values());
+    }
+}
+exports.XYZTileProvider = XYZTileProvider;
+
+
+/***/ }),
+
+/***/ 2368:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+class AllSky {
+    _ready = false;
+    _hips;
+    _format;
+    _baseurl;
+    _isGalacticHips;
+    _order = 3;
+    opacity = 1.0;
+    _hipsShaderIndex = 0;
+    _texture = null;
+    _image;
+    _texurl;
+    _textureLoaded = false;
+    _maxTiles = 0;
+    _numFacesXTile = 0;
+    _numFaces = 0;
+    vertexPosition;
+    vertexPositionBuffer;
+    vertexIndexBuffer;
+    vidx = 0;
+    _webgl;
+    _tileBuffer;
+    _hipsShaderProgram;
+    constructor(hips, webgl, tileBuffer, hipsShaderProgram) {
+        this._tileBuffer = tileBuffer;
+        this._hips = hips;
+        this._webgl = webgl;
+        this._format = hips.format;
+        this._baseurl = hips.baseURL;
+        this._isGalacticHips = hips.isGalacticHips;
+        this._hipsShaderProgram = hipsShaderProgram;
+        this.initImage();
+    }
+    initImage() {
+        this._image = new Image();
+        this._texurl = `${this._baseurl}/Norder3/Allsky.${this._format}`;
+        this._image.onload = () => this.imageLoaded();
+        this._image.onerror = () => {
+            console.error('File not found? %s', this._texurl);
+        };
+        this._image.setAttribute('crossorigin', 'anonymous');
+        this._image.src = this._texurl;
+    }
+    imageLoaded() {
+        this.textureLoaded();
+        this.initModelBuffer();
+        this._textureLoaded = true;
+        this._ready = true;
+    }
+    textureLoaded() {
+        // hipsShaderProgram.enableProgram()
+        this._hipsShaderProgram.enableProgram();
+        const gl = this._webgl;
+        this._texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        // gl.uniform1i(hipsShaderProgram.shaderProgram.samplerUniform, this._hipsShaderIndex)
+        if (!gl.isTexture(this._texture)) {
+            console.log('error in texture');
+        }
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        const useMipmaps = true;
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, useMipmaps ? gl.LINEAR_MIPMAP_LINEAR : gl.LINEAR);
+        // MAG filter: ONLY NEAREST or LINEAR are valid
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR_MIPMAP_LINEAR)
+        // gl.generateMipmap(gl.TEXTURE_2D)
+        if (useMipmaps)
+            gl.generateMipmap(gl.TEXTURE_2D);
+    }
+    initModelBuffer() {
+        const gl = this._webgl;
+        const orderjump = 1;
+        const tgtHpxOrder = this._order + orderjump;
+        const healpix = Global_js_1.default.getHealpix(this._order);
+        this._maxTiles = healpix.getNPix();
+        const tgtHealpix = Global_js_1.default.getHealpix(tgtHpxOrder);
+        this._numFacesXTile = 4 ** orderjump; // used in gl.draw
+        this._numFaces = this._numFacesXTile * this._maxTiles;
+        this.vertexPosition = new Float32Array(20 * this._numFaces);
+        let sindex = 0;
+        let tindex = 0;
+        this.vidx = 0;
+        for (let t = 0; t < this._maxTiles; t++) {
+            const xyf = healpix.nest2xyf(t);
+            const dxmin = xyf.ix << orderjump;
+            const dxmax = (xyf.ix << orderjump) + (1 << orderjump);
+            const dymin = xyf.iy << orderjump;
+            const dymax = (xyf.iy << orderjump) + (1 << orderjump);
+            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, tgtHealpix, xyf, 0, 0);
+            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, tgtHealpix, xyf, 0, 1);
+            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, tgtHealpix, xyf, 1, 0);
+            this.setupPositionAndTexture4Quadrant(sindex, tindex, dxmin + (dxmax - dxmin) / 2, dxmax, dymin + (dymax - dymin) / 2, dymax, tgtHealpix, xyf, 1, 1);
+            sindex++;
+            if (sindex === 27) {
+                tindex++;
+                sindex = 0;
+            }
+        }
+        const vertexIndices = new Uint16Array(6 * this._numFaces);
+        let baseFaceIndex = 0;
+        for (let i = 0; i < this._numFaces; i++) {
+            vertexIndices[6 * i] = baseFaceIndex;
+            vertexIndices[6 * i + 1] = baseFaceIndex + 1;
+            vertexIndices[6 * i + 2] = baseFaceIndex + 3;
+            vertexIndices[6 * i + 3] = baseFaceIndex + 1;
+            vertexIndices[6 * i + 4] = baseFaceIndex + 2;
+            vertexIndices[6 * i + 5] = baseFaceIndex + 3;
+            baseFaceIndex += 4;
+        }
+        this.vertexPositionBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition, gl.STATIC_DRAW);
+        this.vertexIndexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, vertexIndices, gl.STATIC_DRAW);
+    }
+    setupPositionAndTexture4Quadrant(sindex, tindex, dxmin, dxmax, dymin, dymax, tgthealpix, xyf, qx, qy) {
+        let facesVec3Array = [];
+        const factor = 2 ** (tgthealpix.order - 3);
+        const s_step = 1 / (27 * factor); // 0.037037037...
+        const t_step = 1 / (29 * factor); // 0.034482759...
+        const s_pixel_size = s_step / 64;
+        const t_pixel_size = t_step / 64;
+        const base_s = factor * s_step * sindex + s_step * qx;
+        const base_t = factor * t_step * tindex + t_step * qy;
+        for (let dx = dxmin; dx < dxmax; dx++) {
+            for (let dy = dymin; dy < dymax; dy++) {
+                facesVec3Array = tgthealpix.getPointsForXyfNoStep(dx, dy, xyf.face);
+                // bottom right
+                this.vertexPosition[20 * this.vidx] = facesVec3Array[0].x;
+                this.vertexPosition[20 * this.vidx + 1] = facesVec3Array[0].y;
+                this.vertexPosition[20 * this.vidx + 2] = facesVec3Array[0].z;
+                this.vertexPosition[20 * this.vidx + 3] = s_step + base_s - s_pixel_size;
+                this.vertexPosition[20 * this.vidx + 4] = 1 - (t_step + base_t) + t_pixel_size;
+                // top right
+                this.vertexPosition[20 * this.vidx + 5] = facesVec3Array[1].x;
+                this.vertexPosition[20 * this.vidx + 6] = facesVec3Array[1].y;
+                this.vertexPosition[20 * this.vidx + 7] = facesVec3Array[1].z;
+                this.vertexPosition[20 * this.vidx + 8] = s_step + base_s - s_pixel_size;
+                this.vertexPosition[20 * this.vidx + 9] = 1 - base_t - t_pixel_size;
+                // top left
+                this.vertexPosition[20 * this.vidx + 10] = facesVec3Array[2].x;
+                this.vertexPosition[20 * this.vidx + 11] = facesVec3Array[2].y;
+                this.vertexPosition[20 * this.vidx + 12] = facesVec3Array[2].z;
+                this.vertexPosition[20 * this.vidx + 13] = base_s + s_pixel_size;
+                this.vertexPosition[20 * this.vidx + 14] = 1 - base_t - t_pixel_size;
+                // bottom left
+                this.vertexPosition[20 * this.vidx + 15] = facesVec3Array[3].x;
+                this.vertexPosition[20 * this.vidx + 16] = facesVec3Array[3].y;
+                this.vertexPosition[20 * this.vidx + 17] = facesVec3Array[3].z;
+                this.vertexPosition[20 * this.vidx + 18] = base_s + s_pixel_size;
+                this.vertexPosition[20 * this.vidx + 19] = 1 - (t_step + base_t) + t_pixel_size;
+                this.vidx++;
+            }
+        }
+    }
+    /**
+     * Renders the all-sky layer and, when available, delegates to higher-resolution child tiles.
+     * Returns `true` if it attempted to draw (ready), `false` if still not ready.
+     */
+    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (!this._ready)
+            return false;
+        let allSkyTiles2Skip = [];
+        if (visibleOrder >= this._order) {
+            const skipped = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
+            if (skipped)
+                allSkyTiles2Skip = skipped;
+        }
+        const gl = this._webgl;
+        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.vertexPositionAttribute)
+        // gl.enableVertexAttribArray((hipsShaderProgram as any).locations.textureCoordAttribute)
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        // gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity)
+        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        gl.vertexAttribPointer(
+        // hipsShaderProgram.locations.vertexPositionAttribute,
+        this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
+        gl.vertexAttribPointer(
+        // hipsShaderProgram.locations.textureCoordAttribute,
+        this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+        for (let t = 0; t < this._maxTiles; t++) {
+            if (!allSkyTiles2Skip.includes(t)) {
+                gl.drawElements(gl.TRIANGLES, 6 * this._numFacesXTile, gl.UNSIGNED_SHORT, 12 * t * this._numFacesXTile);
+            }
+        }
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        // gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute)
+        // gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute)
+        return true;
+    }
+    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        const childrenOrder = this._order;
+        if (!visibleTilesMap.has(childrenOrder))
+            return;
+        const visibleTiles = visibleTilesMap.get(childrenOrder);
+        const allSkyTiles2Skip = [];
+        for (let i = 0; i < visibleTiles.length; i++) {
+            const tileno = visibleTiles[i];
+            const childTile = this._isGalacticHips
+                ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
+                : this._tileBuffer.getTile(tileno, childrenOrder, this._hips);
+            // const childTile = this._isGalacticHips
+            //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
+            //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
+            // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+            childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram);
+            if (childTile.getReadyState()) {
+                allSkyTiles2Skip.push(tileno);
+            }
+        }
+        return allSkyTiles2Skip;
+    }
+}
+exports["default"] = AllSky;
+
+
+/***/ }),
+
+/***/ 2475:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Footprint = void 0;
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+// import { Pointing, Healpix } from 'healpixjs';
+// import { degToRad } from '../../utils/Utils.js';
+const GeomUtils_js_1 = __importDefault(__webpack_require__(2930));
+// import global from '../../Global.js';
+const STCSParser_js_1 = __importDefault(__webpack_require__(9665));
+// export interface ParsedSTCS {
+//   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
+//   totpoints: number;
+// }
+class Footprint {
+    _polygons = []; // array of polygons (-> array of points)
+    _convexPolygons = []; // convex polygons
+    _stcs; // STC-S string
+    _valid = false;
+    _details;
+    _totPoints = 0;
+    _totConvexPoints = 0;
+    _npix256;
+    _footprintsPointsOrder;
+    _selectionObj;
+    _identifier;
+    _center; // could be typed if you have a Point type
+    /**
+     * @param in_stcs STC-S representation of the footprint
+     * @param in_details optional metadata
+     * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
+     */
+    constructor(in_stcs, in_details = [], footprintsPointsOrder) {
+        if (in_stcs) {
+            this._stcs = in_stcs.toUpperCase();
+            this._details = in_details;
+            this._totPoints = 0;
+            this._totConvexPoints = 0;
+            this._footprintsPointsOrder = footprintsPointsOrder;
+            this.computePoints();
+            this._selectionObj = this.computeSelectionObject();
+            this._valid = true;
+        }
+        else {
+            this._details = [];
+        }
+    }
+    computeSelectionObject() {
+        return GeomUtils_js_1.default.computeSelectionObject(this._polygons);
+    }
+    // /**
+    //  * Return array of HEALPix pixels covering the footprint
+    //  * NOTE: despite the name, nside is not fixed at 256. It comes from Global.js
+    //  */
+    // private computeNpix256(): number[] {
+    //   const healpix256 = new Healpix(global.nsideForSelection);
+    //   const points: Pointing[] = [];
+    //   for (const poly of this._convexPolygons) {
+    //     for (const currPoint of poly) {
+    //       const phiTheta = currPoint.computeHealpixPhiTheta();
+    //       const phiRad = degToRad(phiTheta.phi);
+    //       const thetaRad = degToRad(phiTheta.theta);
+    //       points.push(new Pointing(null, false, thetaRad, phiRad));
+    //     }
+    //   }
+    //   const rangeSet = healpix256.queryPolygonInclusive(points, 32);
+    //   return Array.from(rangeSet.r);
+    // }
+    computePoints() {
+        const res = STCSParser_js_1.default.parseSTCS(this._stcs);
+        this._polygons = res.polygons;
+        this._totPoints = res.totpoints;
+    }
+    get valid() {
+        return this._valid;
+    }
+    get totPoints() {
+        return this._totPoints;
+    }
+    get totConvexPoints() {
+        return this._totConvexPoints;
+    }
+    get polygons() {
+        return this._polygons;
+    }
+    get convexPolygons() {
+        return this._convexPolygons;
+    }
+    get identifier() {
+        return this._identifier;
+    }
+    get center() {
+        return this._center;
+    }
+    get pixels() {
+        return this._npix256;
+    }
+    get details() {
+        return this._details;
+    }
+    get selectionObj() {
+        return this._selectionObj;
+    }
+}
+exports.Footprint = Footprint;
+
+
+/***/ }),
+
+/***/ 2502:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZLayer = void 0;
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const XYZShaderProgram_js_1 = __webpack_require__(149);
+const XYZMeshBuilder_js_1 = __webpack_require__(8819);
+const XYZTile_js_1 = __webpack_require__(1375);
+const XYZTileProvider_js_1 = __webpack_require__(2330);
+const XYZVisibleTilesManager_js_1 = __webpack_require__(6937);
+class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    static DEFAULT_MAX_CACHED_TILES = 384;
+    _config;
+    _provider;
+    _visibleTilesManager;
+    _meshBuilder;
+    _xyzShaderProgram;
+    _tileCache = new Map();
+    _visibleTileKeys = [];
+    _tilePriorities = new Map();
+    _tileSelectionKey = null;
+    _currentTileCount = 0;
+    _fallbackTileCount = 0;
+    constructor(config, webgl) {
+        super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false);
+        this._config = config;
+        this._provider = new XYZTileProvider_js_1.XYZTileProvider(config);
+        this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager(this._provider);
+        this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
+        this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
+        this.initGL(webgl);
+        this.bootstrapTiles(180, null, null);
+    }
+    get config() {
+        return this._config;
+    }
+    getDebugStats() {
+        let readyTileCount = 0;
+        let loadingTileCount = 0;
+        let coolingDownTileCount = 0;
+        const now = Date.now();
+        for (const tile of this._tileCache.values()) {
+            if (tile.ready) {
+                readyTileCount += 1;
+            }
+            if (tile.loading) {
+                loadingTileCount += 1;
+            }
+            if (tile.failedUntil > now) {
+                coolingDownTileCount += 1;
+            }
+        }
+        const currentZoom = this._visibleTileKeys.reduce((maxZoom, tileKey) => {
+            const zoom = Number.parseInt(tileKey.split('/')[0] ?? '', 10);
+            if (!Number.isFinite(zoom)) {
+                return maxZoom;
+            }
+            return maxZoom == null ? zoom : Math.max(maxZoom, zoom);
+        }, null);
+        return {
+            cacheSize: this._tileCache.size,
+            visibleTileCount: this._visibleTileKeys.length,
+            currentTileCount: this._currentTileCount,
+            fallbackTileCount: this._fallbackTileCount,
+            readyTileCount,
+            loadingTileCount,
+            coolingDownTileCount,
+            currentZoom,
+            tileSelectionKey: this._tileSelectionKey,
+            isSettling: false,
+            coarseTileCount: 0,
+            hasPendingSelection: false,
+            pendingSelectionKey: null,
+        };
+    }
+    bootstrapTiles(fovDeg, camera, centerSphericalDeg, fovPolygon = null, viewportSphericalSamples = null) {
+        const selection = camera
+            ? this._visibleTilesManager.selectTiles({
+                fovDeg,
+                camera,
+                pMatrix: new Float32Array(),
+                centerSphericalDeg: centerSphericalDeg ?? undefined,
+                fovPolygon: fovPolygon ?? undefined,
+                viewportSphericalSamples: viewportSphericalSamples ?? undefined,
+            })
+            : {
+                key: 'initial',
+                currentTiles: this._provider.getInitialTiles(),
+                fallbackTiles: [],
+                currentZoom: 1,
+            };
+        if (selection.key === this._tileSelectionKey) {
+            return;
+        }
+        this._tileSelectionKey = selection.key;
+        this._currentTileCount = selection.currentTiles.length;
+        this._fallbackTileCount = selection.fallbackTiles.length;
+        const segments = this._config.segmentsPerSide ?? 16;
+        const prioritizedCurrentTiles = selection.currentTiles.map((tileCoord, index) => ({
+            tileCoord,
+            priority: 10000 + (selection.currentTiles.length - index),
+        }));
+        const prioritizedFallbackTiles = selection.fallbackTiles.map((tileCoord, index) => ({
+            tileCoord,
+            priority: 1000 + (selection.fallbackTiles.length - index),
+        }));
+        const requestedTiles = [...prioritizedCurrentTiles, ...prioritizedFallbackTiles];
+        this._tilePriorities.clear();
+        this._visibleTileKeys = requestedTiles
+            .sort((a, b) => a.tileCoord.z - b.tileCoord.z)
+            .map(({ tileCoord, priority }) => {
+            const tileKey = this.getTileKey(tileCoord);
+            this._tilePriorities.set(tileKey, priority);
+            return tileKey;
+        });
+        for (const { tileCoord, priority } of requestedTiles) {
+            const tileKey = this.getTileKey(tileCoord);
+            const existingTile = this._tileCache.get(tileKey);
+            if (existingTile) {
+                existingTile.touch();
+                existingTile.primeLoad(priority);
+                continue;
+            }
+            const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments);
+            const url = this._provider.getTileUrl(tileCoord);
+            const tile = new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram);
+            tile.touch();
+            tile.primeLoad(priority);
+            this._tileCache.set(tileKey, tile);
+        }
+        this.evictCache();
+    }
+    draw(input) {
+        const vMatrix = input.camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
+        this.bootstrapTiles(input.fovDeg ?? 180, input.camera, input.centerSphericalDeg ?? null, input.fovPolygon ?? null, input.viewportSphericalSamples ?? null);
+        const pMatrix = input.pMatrix;
+        const mMatrix = this.getModelMatrix();
+        for (const tileKey of this._visibleTileKeys) {
+            const tile = this._tileCache.get(tileKey);
+            if (!tile)
+                continue;
+            tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0);
+        }
+    }
+    evictCache() {
+        const maxCachedTiles = this._config.maxCachedTiles ?? XYZLayer.DEFAULT_MAX_CACHED_TILES;
+        if (this._tileCache.size <= maxCachedTiles) {
+            return;
+        }
+        const visibleKeySet = new Set(this._visibleTileKeys);
+        const candidates = Array.from(this._tileCache.entries())
+            .filter(([tileKey]) => !visibleKeySet.has(tileKey))
+            .sort((a, b) => {
+            const scoreA = Math.min(a[1].lastUsedAt || a[1].createdAt, a[1].createdAt);
+            const scoreB = Math.min(b[1].lastUsedAt || b[1].createdAt, b[1].createdAt);
+            return scoreA - scoreB;
+        });
+        for (const [tileKey, tile] of candidates) {
+            if (this._tileCache.size <= maxCachedTiles) {
+                break;
+            }
+            if (tile.loading) {
+                continue;
+            }
+            tile.dispose();
+            this._tileCache.delete(tileKey);
+        }
+    }
+    disposeTiles() {
+        for (const tile of this._tileCache.values()) {
+            tile.dispose();
+        }
+        this._tileCache.clear();
+        this._visibleTileKeys = [];
+    }
+    getTileKey(tileCoord) {
+        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
+    }
+}
+exports.XYZLayer = XYZLayer;
+
+
+/***/ }),
+
+/***/ 2885:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+const FoVHelper_js_1 = __webpack_require__(229);
+class AncestorTile {
+    _hips;
+    _tileno;
+    _baseurl;
+    _order;
+    _ready = false;
+    _format;
+    _isGalacticHips;
+    opacity = 1.0;
+    _hipsShaderIndex = 0;
+    _pixels = [];
+    _texture = null;
+    _image;
+    _texurl = '';
+    vertexPosition;
+    vertexPositionBuffer;
+    vertexIndices;
+    vertexIndexBuffer;
+    _tileBuffer;
+    _hipsShaderProgram;
+    _webgl;
+    constructor(tileno, order, hips, tileBuffer, hipsShaderProgram, webgl) {
+        this._hipsShaderProgram = hipsShaderProgram;
+        this._tileBuffer = tileBuffer;
+        this._hips = hips;
+        this._tileno = tileno;
+        this._webgl = webgl;
+        this._format = hips.format;
+        this._baseurl = hips.baseURL;
+        this._isGalacticHips = hips.isGalacticHips;
+        this._order = order;
+        this.initImage();
+    }
+    // Kept for API parity; there is no interval created in this class.
+    destroyIntervals() {
+        // no-op
+    }
+    initImage() {
+        const dirnumber = Math.floor(this._tileno / 10000) * 10000;
+        this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
+        this._image = new Image();
+        this._image.onload = () => this.imageLoaded();
+        this._image.onerror = () => {
+            console.error('File not found? %s', this._texurl);
+        };
+        this._image.crossOrigin = 'anonymous';
+        // If you ever need FITS handling, call this.loadImage() instead.
+        this._image.src = this._texurl;
+    }
+    imageLoaded() {
+        this.textureLoaded();
+        this.initModelBuffer();
+        const gl = this._webgl;
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
+        this._ready = true;
+    }
+    textureLoaded() {
+        // hipsShaderProgram.enableProgram()
+        this._hipsShaderProgram.enableProgram();
+        const gl = this._webgl;
+        this._texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        if (!gl.isTexture(this._texture)) {
+            console.log('error in texture');
+        }
+    }
+    initModelBuffer() {
+        const gl = this._webgl;
+        this.vertexPosition = [];
+        this.vertexPositionBuffer = [];
+        this.vertexIndices = new Uint16Array();
+        // this.vertexIndexBuffer created later
+        const reforder = FoVHelper_js_1.fovHelper.getRefOrder(this._order);
+        const orighealpix = Global_js_1.default.getHealpix(this._order);
+        const origxyf = orighealpix.nest2xyf(this._tileno);
+        const orderjump = reforder - this._order;
+        const dxmin = origxyf.ix << orderjump;
+        const dxmax = (origxyf.ix << orderjump) + (1 << orderjump);
+        const dymin = origxyf.iy << orderjump;
+        const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
+        const healpix = Global_js_1.default.getHealpix(reforder);
+        this._pixels = [];
+        // Using getBoundaries (like the JS source)
+        this.setupPositionAndTexture4Quadrant(dxmin, dxmax / 2, dymin, dymax / 2, 0, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant(dxmax / 2, dxmax, dymin, dymax / 2, 1, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant(dxmin, dxmax / 2, dymax / 2, dymax, 2, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant(dxmax / 2, dxmax, dymax / 2, dymax, 3, healpix, orderjump, origxyf);
+        const pixelsXQuadrant = this.vertexPosition[0].length / 20;
+        this.vertexIndices = this.computeVertexIndices(pixelsXQuadrant);
+        this.vertexIndexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndices, gl.STATIC_DRAW);
+    }
+    computeVertexIndices(pixelsXQuadrant) {
+        const vertexIndices = new Uint16Array(6 * pixelsXQuadrant);
+        let baseFaceIndex = 0;
+        for (let j = 0; j < pixelsXQuadrant; j++) {
+            vertexIndices[6 * j] = baseFaceIndex;
+            vertexIndices[6 * j + 1] = baseFaceIndex + 1;
+            vertexIndices[6 * j + 2] = baseFaceIndex + 2;
+            vertexIndices[6 * j + 3] = baseFaceIndex + 2;
+            vertexIndices[6 * j + 4] = baseFaceIndex + 3;
+            vertexIndices[6 * j + 5] = baseFaceIndex;
+            baseFaceIndex += 4;
+        }
+        return vertexIndices;
+    }
+    // Version that uses getPointsForXyfNoStep (kept for reference; not used in this class)
+    setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
+        this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
+        const step = 1 / (1 << orderjump);
+        let p = 0;
+        for (let dx = dxmin; dx < dxmax; dx++) {
+            for (let dy = dymin; dy < dymax; dy++) {
+                const facesVec3Array = healpix.getPointsForXyfNoStep(dx, dy, origxyf.face);
+                const uindex = dy - (origxyf.iy << orderjump);
+                const vindex = dx - (origxyf.ix << orderjump);
+                this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x;
+                this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y;
+                this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z;
+                this.vertexPosition[qidx][20 * p + 3] = step + step * uindex;
+                this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex);
+                this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x;
+                this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y;
+                this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z;
+                this.vertexPosition[qidx][20 * p + 8] = step + step * uindex;
+                this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex;
+                this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x;
+                this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y;
+                this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z;
+                this.vertexPosition[qidx][20 * p + 13] = step * uindex;
+                this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex;
+                this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x;
+                this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y;
+                this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z;
+                this.vertexPosition[qidx][20 * p + 18] = step * uindex;
+                this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex);
+                p++;
+            }
+        }
+        this.vertexPositionBuffer[qidx] = this._webgl.createBuffer();
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexPosition[qidx], this._webgl.STATIC_DRAW);
+    }
+    // Version used by the original JS, collecting _pixels via xyf2nest + getBoundaries
+    setupPositionAndTexture4Quadrant(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
+        const gl = this._webgl;
+        this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
+        const step = 1 / (1 << orderjump);
+        let p = 0;
+        for (let dx = dxmin; dx < dxmax; dx++) {
+            for (let dy = dymin; dy < dymax; dy++) {
+                const ipix3 = healpix.xyf2nest(dx, dy, origxyf.face);
+                this._pixels.push(ipix3);
+                const facesVec3Array = healpix.getBoundaries(ipix3);
+                const uindex = dy - (origxyf.iy << orderjump);
+                const vindex = dx - (origxyf.ix << orderjump);
+                this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x;
+                this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y;
+                this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z;
+                this.vertexPosition[qidx][20 * p + 3] = step + step * uindex;
+                this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex);
+                this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x;
+                this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y;
+                this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z;
+                this.vertexPosition[qidx][20 * p + 8] = step + step * uindex;
+                this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex;
+                this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x;
+                this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y;
+                this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z;
+                this.vertexPosition[qidx][20 * p + 13] = step * uindex;
+                this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex;
+                this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x;
+                this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y;
+                this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z;
+                this.vertexPosition[qidx][20 * p + 18] = step * uindex;
+                this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex);
+                p++;
+            }
+        }
+        this.vertexPositionBuffer[qidx] = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition[qidx], gl.STATIC_DRAW);
+    }
+    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (!this._ready)
+            return false;
+        // this._image.onload = () => this.imageLoaded()
+        let quadrantsToDraw = new Set([0, 1, 2, 3]);
+        if (visibleOrder > this._order) {
+            const q = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx);
+            if (q)
+                quadrantsToDraw = q;
+        }
+        this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        const gl = this._webgl;
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        const elemno = this.vertexIndices.length;
+        quadrantsToDraw.forEach((qidx) => {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+            gl.vertexAttribPointer(this._hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
+            gl.vertexAttribPointer(this._hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+            gl.drawElements(gl.TRIANGLES, elemno, gl.UNSIGNED_SHORT, 0);
+        });
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute);
+        return true;
+    }
+    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        const quadrantsToDraw = new Set([0, 1, 2, 3]);
+        const childrenOrder = this._order + 1;
+        if (!visibleTilesMap.has(childrenOrder))
+            return;
+        for (let c = 0; c < 4; c++) {
+            const childTileNo = (this._tileno << 2) + c;
+            const visibleChildren = visibleTilesMap.get(childrenOrder);
+            if (visibleChildren.includes(childTileNo)) {
+                const childTile = this._isGalacticHips
+                    ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                    : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+                childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram);
+                if (childTile._ready) {
+                    quadrantsToDraw.delete(childTile._tileno - (this._tileno << 2));
+                }
+            }
+        }
+        return quadrantsToDraw;
+    }
+}
+exports["default"] = AncestorTile;
+
+
+/***/ }),
+
+/***/ 2919:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.bootSetup = exports.tapRepos = exports.hipsNodes = void 0;
+exports.hipsNodes = [
+    "https://skies.esac.esa.int/",
+    "https://alasky.cds.unistra.fr/",
+];
+// If you want to re-enable multiple TAP repos, just uncomment and extend the array
+// export const tapRepos: string[] = [
+//   "https://archive.eso.org/tap_cat/",
+//   "https://archive.eso.org/tap_obs/",
+//   "https://sky.esa.int/esasky-tap/tap/",
+//   "https://ws.cadc-ccda.hia-iha.nrc-cnrc.gc.ca/argus",
+// ];
+exports.tapRepos = [
+    "https://sky.esa.int/esasky-tap/tap/",
+];
+exports.bootSetup = {
+    insideSphere: false,
+    defaultHips: "",
+    camera_fov_deg: 34,
+    camera_fov_rad: 34 * Math.PI / 180.0,
+    camera_near_plane: 0.00001,
+    camera_far_plane: 2.5,
+    corsProxyUrl: "http://localhost:4000/",
+    useCORSProxy: false,
+    maxDecimals: 15,
+    // defaultHipsUrl: "//alasky.u-strasbg.fr/DSS/DSSColor/",
+    defaultHipsUrl: "https://cdn.skies.esac.esa.int/DSSColor/",
+    version: "Astrobrowser v1.0.0",
+    debug: false,
+    insideView: false,
+    showViewfinder: false,
+};
+
+
+/***/ }),
+
+/***/ 2930:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const Point_js_1 = __webpack_require__(6553);
+const Point2D_js_1 = __importDefault(__webpack_require__(7559));
+const CoordsType_js_1 = __webpack_require__(8145);
+class GeomUtils {
+    // Orthodromic (great-circle) distance in radians
+    static orthodromicDistance(p1, p2) {
+        return Math.acos(Math.sin(p1.decDeg * Math.PI / 180) * Math.sin(p2.decDeg * Math.PI / 180) +
+            Math.cos(p1.decDeg * Math.PI / 180) * Math.cos(p2.decDeg * Math.PI / 180) *
+                Math.cos((p2.raDeg - p1.raDeg) * Math.PI / 180));
+    }
+    /**
+     * Decide the 2D projection strategy and pre-project polygons for point-in-polygon tests.
+     * Returns the projected polygons + bbox + a flag describing the projection used:
+     * 0 → all points in same hemisphere with |Dec| > 10 → stereographic-like projection using x,y from 3D
+     * 1 → all points in equatorial belt (|Dec| < 10) → use RA/Dec directly
+     * 2 → equatorial belt and polygon crosses RA=0 → shift RA>180 by -360
+     */
+    static computeSelectionObject(polygons) {
+        let poly4selection = [];
+        let flag = 0;
+        let maxx;
+        let maxy;
+        let minx;
+        let miny;
+        const DEC_THRESHOLD = 10;
+        //  1 → northern hemisphere (Dec > +10), -1 → southern (Dec < -10), 0 → equatorial belt
+        let hemisphere = 0;
+        if (polygons[0][0].decDeg >= DEC_THRESHOLD) {
+            hemisphere = 1;
+        }
+        else if (polygons[0][0].decDeg <= -DEC_THRESHOLD) {
+            hemisphere = -1;
+        }
+        else {
+            flag = 1;
+        }
+        // Case flag = 0 → stereographic-like projection using x,y,z from 3D point
+        if (flag === 0) {
+            const first = GeomUtils.projectIn2D(polygons[0][0]);
+            maxx = minx = first.x;
+            maxy = miny = first.y;
+            for (const currpoly of polygons) {
+                const selpoly = [];
+                for (const point of currpoly) {
+                    // If a point violates the hemisphere constraint, fall back to belt logic
+                    if ((point.decDeg > hemisphere * DEC_THRESHOLD && hemisphere === -1) ||
+                        (point.decDeg < hemisphere * DEC_THRESHOLD && hemisphere === 1)) {
+                        flag = 1;
+                        poly4selection = [];
+                        break;
+                    }
+                    const p = GeomUtils.projectIn2D(point);
+                    selpoly.push(p);
+                    if (p.x > maxx)
+                        maxx = p.x;
+                    if (p.y > maxy)
+                        maxy = p.y;
+                    if (p.x < minx)
+                        minx = p.x;
+                    if (p.y < miny)
+                        miny = p.y;
+                }
+                poly4selection.push(selpoly);
+            }
+        }
+        if (flag === 0) {
+            return {
+                poly4selection,
+                flag,
+                maxx: maxx,
+                maxy: maxy,
+                minx: minx,
+                miny: miny,
+            };
+        }
+        // Case flag = 1 or 2 → work directly in (RA,Dec)
+        const RA_THRESHOLD = 180;
+        let belowThreshold = polygons[0][0].raDeg < RA_THRESHOLD;
+        maxx = minx = polygons[0][0].raDeg;
+        maxy = miny = polygons[0][0].decDeg;
+        for (const currpoly of polygons) {
+            const selpoly = [];
+            for (const point of currpoly) {
+                const p = new Point2D_js_1.default(point.raDeg, point.decDeg);
+                selpoly.push(p);
+                if (point.raDeg > maxx)
+                    maxx = point.raDeg;
+                if (point.decDeg > maxy)
+                    maxy = point.decDeg;
+                if (point.raDeg < minx)
+                    minx = point.raDeg;
+                if (point.decDeg < miny)
+                    miny = point.decDeg;
+                // Detect crossing of RA=0 meridian
+                if ((point.raDeg >= RA_THRESHOLD && belowThreshold) ||
+                    (point.raDeg <= RA_THRESHOLD && !belowThreshold)) {
+                    flag = 2;
+                    poly4selection = [];
+                    break;
+                }
+            }
+            poly4selection.push(selpoly);
+        }
+        if (flag === 1) {
+            return {
+                poly4selection,
+                flag,
+                maxx,
+                maxy,
+                minx,
+                miny,
+            };
+        }
+        // Case flag = 2 → shift RA>180 by -360 to unwrap around RA=0
+        let startRA = polygons[0][0].raDeg;
+        maxx = startRA >= RA_THRESHOLD ? startRA - 360 : startRA;
+        maxy = polygons[0][0].decDeg;
+        minx = maxx;
+        miny = maxy;
+        for (const currpoly of polygons) {
+            const selpoly = [];
+            for (const point of currpoly) {
+                const curra = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
+                if (curra > maxx)
+                    maxx = curra;
+                if (point.decDeg > maxy)
+                    maxy = point.decDeg;
+                if (curra < minx)
+                    minx = curra;
+                if (point.decDeg < miny)
+                    miny = point.decDeg;
+                selpoly.push(new Point2D_js_1.default(curra, point.decDeg));
+            }
+            poly4selection.push(selpoly);
+        }
+        return {
+            poly4selection,
+            flag,
+            maxx,
+            maxy,
+            minx,
+            miny,
+        };
+    }
+    /** Stereographic projection from 3D point on unit sphere onto plane */
+    static stereographic(point) {
+        const x = Number(point.xyz[0]);
+        const y = Number(point.xyz[1]);
+        const z = Number(point.xyz[2]);
+        return {
+            x: (2 * x) / (1 - z),
+            y: (2 * y) / (1 - z),
+        };
+    }
+    static projectIn2D(point) {
+        const p = GeomUtils.stereographic(point);
+        return new Point2D_js_1.default(p.x, p.y);
+    }
+    /**
+     * Robust point-in-polygon (ray casting) using the precomputed selection object.
+     * Works with any of the three flags (0,1,2).
+     */
+    static checkPointInsidePolygon5(selectionObj, point) {
+        let p0;
+        if (selectionObj.flag === 0) {
+            p0 = GeomUtils.projectIn2D(point);
+        }
+        else if (selectionObj.flag === 1) {
+            p0 = new Point2D_js_1.default(point.raDeg, point.decDeg);
+        }
+        else {
+            const RA_THRESHOLD = 180;
+            const raShifted = point.raDeg >= RA_THRESHOLD ? point.raDeg - 360 : point.raDeg;
+            p0 = new Point2D_js_1.default(raShifted, point.decDeg);
+        }
+        const p1 = new Point2D_js_1.default(p0.x, p0.y + 2 * Math.abs(selectionObj.maxy - selectionObj.miny));
+        // quick reject by bbox
+        if (p0.x > selectionObj.maxx ||
+            p0.x < selectionObj.minx ||
+            p0.y > selectionObj.maxy ||
+            p0.y < selectionObj.miny) {
+            return false;
+        }
+        // Ray casting against each sub-polygon
+        for (const currpoly of selectionObj.poly4selection) {
+            let intersections = 0;
+            for (let i = 0; i < currpoly.length - 1; i++) {
+                const p2 = currpoly[i];
+                const p3 = currpoly[i + 1];
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            // close the polygon: last with first
+            {
+                const p2 = currpoly[currpoly.length - 1];
+                const p3 = currpoly[0];
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            if (intersections % 2 === 1) {
+                return true; // inside this subpolygon
+            }
+        }
+        return false;
+    }
+    // Legacy version kept for reference; now typed and using getters
+    static checkPointInsidePolygon4(polygons, point) {
+        const p0 = GeomUtils.projectIn2D(point);
+        let maxdist = point.raDeg + 15;
+        if (maxdist > 360)
+            maxdist = point.raDeg - 15;
+        const p1point = new Point_js_1.Point({ raDeg: maxdist, decDeg: point.decDeg }, CoordsType_js_1.CoordsType.ASTRO);
+        const p1 = GeomUtils.projectIn2D(p1point);
+        for (const currpoly of polygons) {
+            let intersections = 0;
+            for (let i = 0; i < currpoly.length - 1; i++) {
+                const p2 = GeomUtils.projectIn2D(currpoly[i]);
+                const p3 = GeomUtils.projectIn2D(currpoly[i + 1]);
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            {
+                const p2 = GeomUtils.projectIn2D(currpoly[currpoly.length - 1]);
+                const p3 = GeomUtils.projectIn2D(currpoly[0]);
+                const denominator = (p3.y - p2.y) * (p1.x - p0.x) - (p3.x - p2.x) * (p1.y - p0.y);
+                const numerator01 = (p3.x - p2.x) * (p0.y - p2.y) - (p3.y - p2.y) * (p0.x - p2.x);
+                const numerator23 = (p1.x - p0.x) * (p0.y - p2.y) - (p1.y - p0.y) * (p0.x - p2.x);
+                if (denominator !== 0) {
+                    const lamda01 = numerator01 / denominator;
+                    const lambda23 = numerator23 / denominator;
+                    if (lamda01 >= 0 && lamda01 <= 1 && lambda23 >= 0 && lambda23 <= 1) {
+                        intersections++;
+                    }
+                }
+            }
+            if (intersections % 2 === 1)
+                return true;
+        }
+        return false;
+    }
+}
+exports["default"] = GeomUtils;
+
+
+/***/ }),
+
+/***/ 3559:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CatalogueShaderProgram = void 0;
+// HiPSShaderProgram.ts
+const gl_matrix_1 = __webpack_require__(1961);
+const ShaderManager_js_1 = __importDefault(__webpack_require__(5947));
+// export default class CatalogueShaderProgram {
+class CatalogueShaderProgram {
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    gl_uniforms;
+    gl_attributes;
+    locations;
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
+        this.gl_uniforms = {
+            vertex_color: 'u_fragcolor',
+            m_perspective: 'uPMatrix',
+            m_model_view: 'uMVMatrix'
+        };
+        this.gl_attributes = {
+            vertex_pos: 'aCatPosition',
+            vertex_selected: 'a_selected',
+            point_size: 'a_pointsize',
+            point_hue: 'a_brightness'
+        };
+        this.locations = {
+            pMatrix: null,
+            mvMatrix: null,
+            color: null,
+            position: -1,
+            hovered: -1,
+            pointSize: -1,
+            brightness: -1
+        };
+    }
+    get shaderProgram() {
+        if (!this._shaderProgram) {
+            // const gl = global.gl as GL
+            const gl = this._webgl;
+            this._shaderProgram = gl.createProgram();
+            this.initShaders();
+        }
+        return this._shaderProgram;
+    }
+    initShaders() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        const fragmentShaderStr = ShaderManager_js_1.default.catalogueFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        console.log('FS log:', gl.getShaderInfoLog(this._fragmentShader) || 'ok');
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = ShaderManager_js_1.default.catalogueVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vertexShaderStr);
+        gl.compileShader(this._vertexShader);
+        console.log('VS log:', gl.getShaderInfoLog(this._vertexShader) || 'ok');
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this.shaderProgram, this._vertexShader);
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        // shaderUtility.useProgram(this.shaderProgram)
+        gl.useProgram(this.shaderProgram);
+        this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.hovered = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_selected);
+        this.locations.pointSize = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_size);
+        this.locations.brightness = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.point_hue);
+        this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
+    }
+    enableShaders(pMatrix, modelMatrix, viewMatrix) {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        // shaderUtility.useProgram(this.shaderProgram)
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
+        let mvMatrix = gl_matrix_1.mat4.create();
+        mvMatrix = gl_matrix_1.mat4.multiply(mvMatrix, viewMatrix, modelMatrix);
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
+    }
+}
+exports.CatalogueShaderProgram = CatalogueShaderProgram;
+// export const catalogueShaderProgram = new CatalogueShaderProgram()
+
+
+/***/ }),
+
+/***/ 3576:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FoV = void 0;
+/**
+ * FoV singleton (TypeScript)
+ * - Uses computePerspectiveMatrixSingleton.pMatrix
+ * - Guards acos domain (numeric safety)
+ * - Uses vec3.transformMat4 instead of custom mat4*vec3
+ * - Keeps original “insideSphere ? 360 - angle : angle” behavior
+ */
+const gl_matrix_1 = __webpack_require__(1961);
+const RayPickingUtils_js_1 = __importDefault(__webpack_require__(4639));
+const Utils_js_1 = __webpack_require__(7930);
+class FoV {
+    static MIN_FOV_DEG = 1e-6;
+    fovXDeg = 180;
+    fovYDeg = 180;
+    ratio = +0;
+    _minFoV = 180;
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
+    }
+    /** Recomputes FoV for current camera + projection */
+    getFoV(insideSphere, healpixGridSingleton, camera, pMatrix) {
+        // const gl = webgl
+        const gl = this._webgl;
+        if (!gl || !gl.canvas) {
+            // Handle the error or assign default values
+            this.fovXDeg = 180;
+            this.fovYDeg = 180;
+            this._minFoV = this.minFoV;
+            return this;
+        }
+        // horizontal FoV: ray through (centerY)
+        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const canvasWidth = rect.width;
+        const canvasHeight = rect.height;
+        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix)
+        const xFoVComputed = this.computeAngle(0, canvasHeight / 2, insideSphere, healpixGridSingleton, camera, pMatrix);
+        this.fovXDeg = xFoVComputed.angleDeg;
+        // vertical FoV: ray through (centerX)
+        // const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix)
+        const yFoVComputed = this.computeAngle(canvasWidth / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix);
+        this.fovYDeg = yFoVComputed.angleDeg;
+        this._minFoV = this.minFoV;
+        this.ratio = this.computeRatio(camera);
+        return this;
+    }
+    computeRatio(camera) {
+        // const camera = global.camera
+        if (!camera)
+            throw Error("Camera not defined");
+        const pos = camera.getCameraPosition();
+        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
+        const ratio = distanceFromCenter / this.fovYDeg;
+        return ratio;
+    }
+    changeMinFov(deg) {
+        console.log("inside changeMinFov");
+        if (this.fovYDeg <= this.fovXDeg) {
+            this.fovYDeg = deg;
+        }
+        else {
+            this.fovXDeg = deg;
+        }
+        console.log("changeMinFov: ping");
+        this.minFoV;
+        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
+    }
+    get minFoV() {
+        const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        this._minFoV = Math.max(minFov, FoV.MIN_FOV_DEG);
+        return this._minFoV;
+    }
+    get xFoV() {
+        return this.fovXDeg;
+    }
+    get yFoV() {
+        return this.fovYDeg;
+    }
+    computeDistanceFromAngle(angleDeg) {
+        const desiredFoV = angleDeg;
+        const distance = desiredFoV * this.ratio;
+        // return Math.abs(distance)
+        return distance;
+    }
+    /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
+    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera, pMatrix) {
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix
+        if (!pMatrix) {
+            // Handle the error or assign a default value
+            console.warn('FoV: projection matrix is null');
+            return { angleDeg: 180, distance: 1 };
+        }
+        const vMatrix = camera.getCameraMatrix();
+        if (!camera) {
+            // Handle the error or assign a default value
+            console.warn('FoV: camera is null');
+            return { angleDeg: 180, distance: 1 };
+        }
+        const rayWorld = RayPickingUtils_js_1.default.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix);
+        const intersectionDistance = RayPickingUtils_js_1.default.raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
+        let angleDeg;
+        if (intersectionDistance > 0) {
+            // world-space intersection point on the sphere
+            const hit = gl_matrix_1.vec3.create();
+            gl_matrix_1.vec3.scale(hit, rayWorld, intersectionDistance);
+            gl_matrix_1.vec3.add(hit, camera.getCameraPosition(), hit);
+            const center = healpixGridSingleton.center;
+            // vectors from sphere center
+            const vHit = gl_matrix_1.vec3.create();
+            gl_matrix_1.vec3.subtract(vHit, hit, center);
+            // reference vector: rotate world +Z into current camera orientation, then from center
+            const refWorldZ = gl_matrix_1.vec3.fromValues(center[0], center[1], center[2] + healpixGridSingleton.radius);
+            const vInv = gl_matrix_1.mat4.create();
+            gl_matrix_1.mat4.invert(vInv, camera.getCameraMatrix());
+            const refCamZ = gl_matrix_1.vec3.create();
+            gl_matrix_1.vec3.transformMat4(refCamZ, refWorldZ, vInv);
+            const vRef = gl_matrix_1.vec3.create();
+            gl_matrix_1.vec3.subtract(vRef, refCamZ, center);
+            // angle between vHit and vRef, doubled
+            const dot = gl_matrix_1.vec3.dot(vHit, vRef);
+            const n1 = gl_matrix_1.vec3.length(vHit);
+            const n2 = gl_matrix_1.vec3.length(vRef);
+            // numeric safety for acos
+            const c = Math.min(1, Math.max(-1, dot / (n1 * n2)));
+            const angleRad = Math.acos(c);
+            angleDeg = 2 * (0, Utils_js_1.radToDeg)(angleRad);
+        }
+        else {
+            angleDeg = 180;
+        }
+        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
+        // return insideSphere ? 360 - angleDeg : angleDeg
+        return { angleDeg: finalAngle, distance: intersectionDistance };
+    }
+    /**
+   * Computes the camera position (x,y,z) along the current view direction that would
+   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
+   * This method does NOT mutate the camera; it only returns the suggested position.
+   *
+   * Geometry: for a sphere of radius R observed from distance d (from center),
+   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
+   * along the tighter axis; we solve for d and place the camera on the current
+   * center→camera direction with that distance.
+   *
+   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
+   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
+   */
+    computeCameraPositionForMinFoV(targetMinFoVDeg) {
+        // const camera = global.camera
+        // const center = healpixGridSingleton.center
+        // const R = healpixGridSingleton.radius
+        // if (!camera) {
+        //   console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.')
+        //   return [center[0], center[1], center[2] + 2 * R]
+        // }
+        // // Clamp and validate input
+        // const eps = 1e-6
+        // const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg))
+        // const halfRad = (clamped * Math.PI / 180) * 0.5
+        // // Distance from center needed to achieve the angular diameter
+        // // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
+        // const sinHalf = Math.sin(halfRad)
+        // if (sinHalf <= 0) {
+        //   console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.')
+        //   return [center[0], center[1], center[2] + 2 * R]
+        // }
+        // let d = R / sinHalf
+        // // Ensure we remain strictly outside the sphere
+        // d = Math.max(d, R + 1e-4)
+        // // Use the current center→camera direction to keep orientation
+        // const camPos = camera.getCameraPosition()
+        // let dirX = camPos[0] - center[0]
+        // let dirY = camPos[1] - center[1]
+        // let dirZ = camPos[2] - center[2]
+        // const len = Math.hypot(dirX, dirY, dirZ)
+        // if (len < eps) {
+        //   // If somehow at the center, use +Z as a default direction
+        //   dirX = 0; dirY = 0; dirZ = 1;
+        // } else {
+        //   dirX /= len
+        //   dirY /= len
+        //   dirZ /= len
+        // }
+        // const newX = center[0] + dirX * d
+        // const newY = center[1] + dirY * d
+        // const newZ = center[2] + dirZ * d
+        // return [newX, newY, newZ]
+        return [0, 0, 0];
+    }
+    /**
+       * Computes the camera world-space position required to achieve a target FoV (deg),
+       * keeping the same viewing direction. Acts as the inverse of computeAngle().
+       *
+       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
+       * @param canvasWidth  canvas width in pixels
+       * @param canvasHeight canvas height in pixels
+       * @returns [x, y, z] coordinates for the new camera position
+       */
+    computeCameraPositionForFoV(targetFoVDeg) {
+        // const camera = global.camera;
+        // const center = healpixGridSingleton.center;
+        // const R = healpixGridSingleton.radius;
+        // if (!camera) {
+        //   console.warn("FoV.computeCameraPositionForFoV: camera missing.");
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // const eps = 1e-6;
+        // const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
+        // const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
+        // // Distance from center that yields this FoV
+        // const sinHalf = Math.sin(halfRad);
+        // if (sinHalf <= 0) {
+        //   console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // let d = R / sinHalf;
+        // // Slightly outside sphere to avoid clipping
+        // d = Math.max(d, R + 1e-4);
+        // // Get current viewing direction
+        // const camPos = camera.getCameraPosition();
+        // let dirX = camPos[0] - center[0];
+        // let dirY = camPos[1] - center[1];
+        // let dirZ = camPos[2] - center[2];
+        // const len = Math.hypot(dirX, dirY, dirZ);
+        // if (len < eps) {
+        //   dirX = 0; dirY = 0; dirZ = 1;
+        // } else {
+        //   dirX /= len;
+        //   dirY /= len;
+        //   dirZ /= len;
+        // }
+        // const newX = center[0] + dirX * d;
+        // const newY = center[1] + dirY * d;
+        // const newZ = center[2] + dirZ * d;
+        // return [newX, newY, newZ];
+        return [0, 0, 0];
+    }
+    /**
+   * Return a camera position such that the sphere's apparent angular diameter
+   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
+   * Keeps current view direction; does not mutate the camera.
+   *
+   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
+   * @returns [x,y,z] world position
+   */
+    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
+        // const camera = global.camera;
+        // const center = healpixGridSingleton.center;
+        // const R = healpixGridSingleton.radius;
+        // if (!camera) {
+        //   console.warn('computeCameraPositionForAngularDiameter: camera missing.');
+        //   return [center[0], center[1], center[2] + 2 * R];
+        // }
+        // const eps = 1e-6;
+        // const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
+        // const half = (α * Math.PI) / 360.0;
+        // const sinHalf = Math.sin(half);
+        // // d = R / sin(α/2)
+        // let d = R / sinHalf;
+        // d = Math.max(d, R + 1e-4); // stay outside
+        // // project along current center→camera direction
+        // const [cx, cy, cz] = center as [number, number, number];
+        // const [px, py, pz] = camera.getCameraPosition();
+        // let dx = px - cx, dy = py - cy, dz = pz - cz;
+        // const L = Math.hypot(dx, dy, dz);
+        // if (L < eps) { dx = 0; dy = 0; dz = 1; } else { dx /= L; dy /= L; dz /= L; }
+        // return [cx + dx * d, cy + dy * d, cz + dz * d];
+        return [0, 0, 0];
+    }
+}
+exports.FoV = FoV;
+
+
+/***/ }),
+
+/***/ 3726:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HiPS = void 0;
+/**
+ * @author Fabrizio Giordano (Fab77)
+ */
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const FoVHelper_js_1 = __webpack_require__(229);
+const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
+// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
+// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
+const AncestorTile_js_1 = __importDefault(__webpack_require__(2885));
+const AllSky_js_1 = __importDefault(__webpack_require__(2368));
+class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    _ancestorTiles;
+    _allSkyTile;
+    _descriptor;
+    _format;
+    _baseurl;
+    _maxorder;
+    _minorder;
+    _visibleorder = 3;
+    _allSky = true;
+    samplerIdx = 0;
+    colorMapIdx = 0;
+    colorMap = ColorMaps_js_1.default['native'];
+    _healpixGrid;
+    // exposed read-only helpers
+    get maxOrder() { return this._maxorder; }
+    get minOrder() { return this._minorder; }
+    get baseURL() { return this._baseurl; }
+    get format() { return this._format; }
+    get propertiesRawText() { return this._descriptor.propertiesRawText; }
+    get properties() { return this._descriptor.properties; }
+    constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
+        super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
+        this._descriptor = descriptor;
+        // this.initGL((global as any).gl as WebGL2RenderingContext)
+        this.initGL(webgl);
+        this._healpixGrid = healpixGrid;
+        // newTileBuffer.addHiPS(this)
+        this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this);
+        // DEBUG logs kept from JS (optional)
+        // eslint-disable-next-line no-console
+        console.log('HiPS frame ' + descriptor.hipsFrame);
+        // eslint-disable-next-line no-console
+        console.log('HiPS minOrder ' + descriptor.minOrder);
+        this._format = descriptor.imgFormats[0];
+        this._baseurl = descriptor.url;
+        this._maxorder = descriptor.maxOrder;
+        this._minorder = descriptor.minOrder;
+        this.initShaders();
+        // pick initial order from a starting FoV
+        const fov = 180;
+        let order = FoVHelper_js_1.fovHelper.getHiPSNorder(fov);
+        this._visibleorder = Math.min(order, this._maxorder);
+        this._ancestorTiles = [];
+        this._allSkyTile = null;
+        // auto-detect all-sky: original code forces true
+        this._allSky = true;
+        if (this._allSky) {
+            this._allSkyTile = new AllSky_js_1.default(this, this._webgl, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram);
+        }
+        else {
+            for (let t = 0; t < 12; t++) {
+                this._ancestorTiles.push(new AncestorTile_js_1.default(t, 0, this, this._healpixGrid.visibleTilesManager.tileBuffer, super.hipsShaderProgram, this._webgl));
+            }
+        }
+    }
+    getProperty(key) {
+        return this._descriptor.getProperty(key);
+    }
+    changeFormat(format) {
+        this._format = format;
+        // original code referenced _tileBuffer; if you have one, wire it back.
+        // Keeping calls no-op to avoid breaking at runtime if _tileBuffer is undefined.
+        // (newVisibleTilesManager + TileBuffer drive the actual tile lifecycle)
+        // @ts-ignore
+        if (this._tileBuffer?.clearAll)
+            this._tileBuffer.clearAll();
+        // @ts-ignore
+        if (this._tileBuffer)
+            this._tileBuffer._format = this._format;
+        const pixelByOrder = this.isGalacticHips
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder;
+        // const pixelByOrder =
+        //   this.isGalacticHips
+        //     ? visibleTilesManager.galVisibleTilesByOrder
+        //     : visibleTilesManager.visibleTilesByOrder
+        // @ts-ignore
+        if (this._tileBuffer?.updateTiles)
+            this._tileBuffer.updateTiles(pixelByOrder.pixels, pixelByOrder.order);
+    }
+    /**
+     * Shader colormap switcher
+     * 0 -> native
+     * 1 -> grayscale
+     * 2 -> planck
+     * 3 -> cmb
+     * 4 -> rainbow
+     * 5 -> eosb
+     * 6 -> cubehelix
+     */
+    changeColorMap(colorMap) {
+        console.log('HiPS.changeColorMap -> shaderProgram', super.hipsShaderProgram.shaderProgram);
+        this.colorMap = colorMap;
+        switch (colorMap.name) {
+            case 'grayscale':
+                this.colorMapIdx = 1;
+                // hipsShaderProgram.setGrayscaleShader()
+                this.colorMap = ColorMaps_js_1.default['grayscale'];
+                super.hipsShaderProgram.setGrayscaleShader();
+                break;
+            case 'planck':
+                this.colorMapIdx = 2;
+                this.colorMap = ColorMaps_js_1.default['planck'];
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
+                break;
+            case 'cmb':
+                this.colorMapIdx = 3;
+                this.colorMap = ColorMaps_js_1.default['cmb'];
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
+                break;
+            case 'rainbow':
+                this.colorMapIdx = 4;
+                this.colorMap = ColorMaps_js_1.default['rainbow'];
+                // hipsShaderProgram.setColorMapShader()
+                super.hipsShaderProgram.setColorMapShader();
+                break;
+            case 'eosb':
+                this.colorMapIdx = 5;
+                this.colorMap = ColorMaps_js_1.default['eosb'];
+                super.hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                break;
+            case 'cubehelix':
+                this.colorMapIdx = 6;
+                this.colorMap = ColorMaps_js_1.default['cubehelix'];
+                super.hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                break;
+            case 'hot':
+                this.colorMapIdx = 7;
+                this.colorMap = ColorMaps_js_1.default['hot'];
+                super.hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                break;
+            case 'gray':
+                this.colorMapIdx = 8;
+                this.colorMap = ColorMaps_js_1.default['gray'];
+                super.hipsShaderProgram.setColorMapShader();
+                // hipsShaderProgram.setColorMapShader()
+                break;
+            case 'native':
+                this.colorMapIdx = 0;
+                this.colorMap = ColorMaps_js_1.default['native'];
+                super.hipsShaderProgram.setNativeShader();
+                break;
+            default:
+                this.colorMapIdx = 9;
+                this.colorMap = colorMap;
+                super.hipsShaderProgram.setColorMapShader();
+        }
+    }
+    initShaders() {
+        super.hipsShaderProgram.enableProgram();
+        // hipsShaderProgram.enableProgram()
+        // this.shaderProgram = super.hipsShaderProgram.shaderProgram
+        // this.shaderProgram = hipsShaderProgram.shaderProgram
+    }
+    getCurrentHealpixOrder() {
+        return this._visibleorder;
+    }
+    refresh() {
+        // const fov = healpixGridSingleton.getMinFoV()
+        const fov = this._healpixGrid.getMinFoV();
+        this._visibleorder = Math.min(FoVHelper_js_1.fovHelper.getHiPSNorder(fov), this._maxorder);
+    }
+    draw(input) {
+        const vMatrix = input.camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refresh();
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
+        const mMatrix = this.getModelMatrix();
+        super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
+        if (this._allSky && this._allSkyTile) {
+            if (this.isGalacticHips) {
+                this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.galAncestorsMap, 
+                // visibleTilesManager.galVisibleTilesByOrder.order,
+                // visibleTilesManager.galAncestorsMap,
+                pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+            }
+            else {
+                this._allSkyTile.draw(this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order, this._healpixGrid.visibleTilesManager.ancestorsMap, 
+                // visibleTilesManager.visibleTilesByOrder.order,
+                // visibleTilesManager.ancestorsMap,
+                pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+            }
+            return;
+        }
+        // Non all-sky path
+        const order = this.isGalacticHips
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order;
+        // ? visibleTilesManager.galVisibleTilesByOrder.order
+        // : visibleTilesManager.visibleTilesByOrder.order
+        const map = this.isGalacticHips
+            ? this._healpixGrid.visibleTilesManager.galAncestorsMap
+            : this._healpixGrid.visibleTilesManager.ancestorsMap;
+        // ? visibleTilesManager.galAncestorsMap
+        // : visibleTilesManager.ancestorsMap
+        this._ancestorTiles.forEach((ancestor) => {
+            ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
+        });
+    }
+}
+exports.HiPS = HiPS;
+
+
+/***/ }),
+
+/***/ 3768:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WMTSAdapter = void 0;
+function replaceTokens(template, values) {
+    return Object.entries(values).reduce((result, [key, value]) => result.replace(new RegExp(`\\{${key}\\}`, 'g'), value), template);
+}
+class WMTSAdapter {
+    _config;
+    constructor(config) {
+        this._config = config;
+    }
+    toXYZLayerConfig() {
+        const inferredMaxZoom = this.getInferredMaxZoom();
+        return {
+            urlTemplate: this._config.urlTemplate ?? this._config.baseUrl,
+            minZoom: this._config.minZoom,
+            maxZoom: inferredMaxZoom,
+            segmentsPerSide: this._config.segmentsPerSide,
+            tileSize: this._config.tileSize,
+            maxCachedTiles: this._config.maxCachedTiles,
+            subdomains: this._config.subdomains,
+            attribution: this._config.attribution,
+            flipY: this._config.flipY,
+            urlResolver: (tile) => this.getTileUrl(tile),
+        };
+    }
+    getInferredMaxZoom() {
+        const matrixLabelCount = this._config.matrixLabels?.length ?? 0;
+        const maxFromLabels = matrixLabelCount > 0 ? matrixLabelCount - 1 : undefined;
+        if (maxFromLabels == null) {
+            return this._config.maxZoom;
+        }
+        if (this._config.maxZoom == null) {
+            return maxFromLabels;
+        }
+        return Math.min(this._config.maxZoom, maxFromLabels);
+    }
+    getTileUrl(tile) {
+        return this._config.requestEncoding === 'rest'
+            ? this.buildRestUrl(tile)
+            : this.buildKvpUrl(tile);
+    }
+    buildRestUrl(tile) {
+        const template = this._config.urlTemplate ?? this._config.baseUrl;
+        const values = this.getCommonTokenValues(tile);
+        const resolved = replaceTokens(template, values);
+        return resolved.replace(/(?<!:)\/{2,}/g, '/');
+    }
+    buildKvpUrl(tile) {
+        const baseUrl = new URL(this._config.baseUrl);
+        const values = this.getCommonTokenValues(tile);
+        const params = baseUrl.searchParams;
+        params.set('SERVICE', 'WMTS');
+        params.set('REQUEST', 'GetTile');
+        params.set('VERSION', this._config.version ?? '1.0.0');
+        params.set('LAYER', this._config.layer);
+        params.set('STYLE', this._config.style ?? 'default');
+        params.set('FORMAT', this._config.format ?? 'image/png');
+        params.set('TILEMATRIXSET', this._config.tileMatrixSet);
+        params.set('TILEMATRIX', values.TileMatrix);
+        params.set('TILEROW', values.TileRow);
+        params.set('TILECOL', values.TileCol);
+        for (const [key, value] of Object.entries(this._config.dimensions ?? {})) {
+            params.set(key, value);
+        }
+        return baseUrl.toString();
+    }
+    getCommonTokenValues(tile) {
+        const dim = 2 ** tile.z;
+        const effectiveY = this._config.flipY ? dim - 1 - tile.y : tile.y;
+        const matrixLabel = this._config.matrixLabels?.[tile.z] ?? String(tile.z);
+        const tileFormat = this._config.format ?? 'image/png';
+        const tileFormatExtension = tileFormat.replace(/^image\//, '');
+        return {
+            Layer: this._config.layer,
+            Style: this._config.style ?? 'default',
+            Time: this._config.time ?? '',
+            TileMatrixSet: this._config.tileMatrixSet,
+            TileMatrix: matrixLabel,
+            TileRow: String(effectiveY),
+            TileCol: String(tile.x),
+            Format: tileFormatExtension,
+            TileFormat: tileFormat,
+            TileFormatExtension: tileFormatExtension,
+            ...Object.fromEntries(Object.entries(this._config.dimensions ?? {}).map(([key, value]) => [key, value])),
+        };
+    }
+}
+exports.WMTSAdapter = WMTSAdapter;
+
+
+/***/ }),
+
+/***/ 4006:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TileBuffer = void 0;
+// TileBuffer.ts
+const Tile_js_1 = __importDefault(__webpack_require__(8256)); // adjust if your file is named differently
+// export default class TileBuffer {
+class TileBuffer {
+    // Equatorial
+    _tiles;
+    _cachedTiles;
+    _activeHiPS;
+    // Galactic
+    _galTiles;
+    _galCachedTiles;
+    _galActiveHiPS;
+    _cacheAliveMilliSeconds;
+    _cleanerId;
+    _webgl;
+    _visibleTileManager;
+    _hipsShaderProgram;
+    constructor(minutesToLiveInCache = 1, webgl, hipsShaderProgram, visibleTileManager) {
+        this._hipsShaderProgram = hipsShaderProgram;
+        this._visibleTileManager = visibleTileManager;
+        this._webgl = webgl;
+        this._tiles = new Map();
+        this._cachedTiles = new Map();
+        this._activeHiPS = new Map();
+        this._galTiles = new Map();
+        this._galCachedTiles = new Map();
+        this._galActiveHiPS = new Map();
+        this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
+        this._cleanerId = window.setInterval(() => {
+            this.cacheCleaner();
+        }, 10_000);
+    }
+    /** Register an equatorial HiPS into the buffer. */
+    addHiPS(hips) {
+        if (this._activeHiPS.has(hips)) {
+            console.error('HiPS already present in TileBuffer');
+            return;
+        }
+        this._activeHiPS.set(hips, new Map());
+    }
+    /** Register a galactic HiPS into the buffer. */
+    addGalHiPS(hips) {
+        if (this._galActiveHiPS.has(hips)) {
+            console.error('HiPS already present in TileBuffer');
+            return;
+        }
+        this._galActiveHiPS.set(hips, new Map());
+    }
+    /** Preload/add tile for every registered equatorial HiPS. */
+    addTile(order, tileno) {
+        for (const hips of this._activeHiPS.keys()) {
+            if (order > hips.maxOrder) {
+                continue;
+            }
+            this.getTile(tileno, order, hips);
+        }
+    }
+    /** Preload/add tile for every registered galactic HiPS. */
+    addGalTile(order, tileno) {
+        for (const hips of this._galActiveHiPS.keys()) {
+            if (order > hips.maxOrder) {
+                continue;
+            }
+            this.getGalTile(tileno, order, hips);
+        }
+    }
+    /** Fetch (or create) an equatorial tile, reviving from cache if present. */
+    getTile(tileno, order, hips) {
+        const tileKey = this.key(order, tileno, hips.baseURL);
+        if (!this._tiles.has(tileKey)) {
+            if (this._cachedTiles.has(tileKey)) {
+                const tile = this._cachedTiles.get(tileKey);
+                this._tiles.set(tileKey, tile);
+                this._cachedTiles.delete(tileKey);
+                tile.resetCacheTime0();
+            }
+            else {
+                // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+                const tile = new Tile_js_1.default(tileno, order, hips, this, this._webgl, this._visibleTileManager);
+                this._tiles.set(tileKey, tile);
+            }
+        }
+        return this._tiles.get(tileKey);
+    }
+    /** Fetch (or create) a galactic tile, reviving from cache if present. */
+    getGalTile(tileno, order, hips) {
+        const tileKey = this.key(order, tileno, hips.baseURL);
+        if (!this._galTiles.has(tileKey)) {
+            if (this._galCachedTiles.has(tileKey)) {
+                const tile = this._galCachedTiles.get(tileKey);
+                this._galTiles.set(tileKey, tile);
+                this._galCachedTiles.delete(tileKey);
+                tile.resetCacheTime0();
+            }
+            else {
+                // const tile = new Tile(tileno, order, hips as any, this, this._webgl, this._visibleTileManager, this._hipsShaderProgram)
+                const tile = new Tile_js_1.default(tileno, order, hips, this, this._webgl, this._visibleTileManager);
+                this._galTiles.set(tileKey, tile);
+            }
+        }
+        return this._galTiles.get(tileKey);
+    }
+    /** Move a tile (equatorial or galactic) into cache. */
+    moveTileToCache(tileno, order, hips) {
+        const tileKey = this.key(order, tileno, hips.baseURL);
+        if (this._tiles.has(tileKey)) {
+            const tile = this._tiles.get(tileKey);
+            tile.setCacheTime0();
+            this._cachedTiles.set(tileKey, tile);
+            this._tiles.delete(tileKey);
+        }
+        if (this._galTiles.has(tileKey)) {
+            const tile = this._galTiles.get(tileKey);
+            tile.setCacheTime0();
+            this._galCachedTiles.set(tileKey, tile);
+            this._galTiles.delete(tileKey);
+        }
+    }
+    /** Periodically purge stale cached tiles. */
+    cacheCleaner() {
+        const now = Date.now();
+        for (const [tileKey, tile] of this._cachedTiles) {
+            const t0 = tile.cacheTime0;
+            if (!tile.inView && t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds) {
+                tile.destroyIntervals();
+                this._cachedTiles.delete(tileKey);
+            }
+        }
+        for (const [tileKey, tile] of this._galCachedTiles) {
+            const t0 = tile.cacheTime0;
+            if (!tile.inView && t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds) {
+                tile.destroyIntervals();
+                this._galCachedTiles.delete(tileKey);
+            }
+        }
+    }
+    /** Compose a stable key for maps. */
+    key(order, tileno, baseURL) {
+        return `${order}#${tileno}#${baseURL}`;
+    }
+    /** Optional: call to stop internal timers if you dispose this buffer. */
+    dispose() {
+        window.clearInterval(this._cleanerId);
+    }
+}
+exports.TileBuffer = TileBuffer;
+// Singleton (kept for compatibility with your original export)
+// export const newTileBuffer = new TileBuffer()
+
+
+/***/ }),
+
+/***/ 4382:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const healpixjs_1 = __webpack_require__(1138);
+const Config_js_1 = __webpack_require__(2919);
+class Global {
+    // --- cached / runtime state ---
+    // private _camera: Camera | null;
+    // private _gl: GL | null;
+    _healpix;
+    // --- config/state flags ---
+    _selectionnside;
+    // private _healpix4footprints: boolean;
+    _useCORSProxy;
+    _corsProxyUrl;
+    _maxDecimals;
+    _debug;
+    _insideSphere;
+    _version;
+    constructor() {
+        this._useCORSProxy = Config_js_1.bootSetup.useCORSProxy;
+        this._corsProxyUrl = Config_js_1.bootSetup.corsProxyUrl;
+        this._maxDecimals = Config_js_1.bootSetup.maxDecimals;
+        this._debug = Config_js_1.bootSetup.debug;
+        this._insideSphere = Config_js_1.bootSetup.insideView;
+        this._version = Config_js_1.bootSetup.version;
+        this._healpix = {};
+        this._selectionnside = 32;
+    }
+    init() {
+        console.log('Global.init()');
+    }
+    // --- getters/setters ---
+    get version() { return this._version; }
+    set corsProxyUrl(url) { this._corsProxyUrl = url; }
+    get corsProxyUrl() { return this._corsProxyUrl; }
+    get useCORSProxy() { return this._useCORSProxy; }
+    set useCORSProxy(enabled) { this._useCORSProxy = enabled; }
+    get debug() { return this._debug; }
+    getHealpix(order) {
+        if (this._healpix[order] === undefined) {
+            // order is HEALPix "order" ⇒ nside = 2^order
+            this._healpix[order] = new healpixjs_1.Healpix(Math.pow(2, order));
+        }
+        return this._healpix[order];
+    }
+    get MAX_DECIMALS() { return this._maxDecimals; }
+    set insideSphere(v) { this._insideSphere = v; }
+    get insideSphere() { return this._insideSphere; }
+    get nsideForSelection() { return this._selectionnside; }
+}
+const global = new Global();
+exports["default"] = global;
+
+
+/***/ }),
+
+/***/ 4396:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+const gl_matrix_1 = __webpack_require__(1961);
+const healpixjs_1 = __webpack_require__(1138);
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+const Utils_js_1 = __webpack_require__(7930);
+function toVec3(p) {
+    return Array.isArray(p) ? gl_matrix_1.vec3.fromValues(p[0], p[1], p[2]) : p;
+}
+class MouseHelper {
+    _xyz = null;
+    _raDecDeg = null;
+    _phiThetaDeg = null;
+    raHMS;
+    decDMS;
+    /**
+     * @param in_xyz [x, y, z]
+     * @param in_raDecDeg { ra, dec } in degrees (ICRS/J2000)
+     * @param in_phiThetaDeg { phi, theta } in degrees (spherical)
+     */
+    constructor(in_xyz, in_raDecDeg, in_phiThetaDeg) {
+        if (in_xyz != null)
+            this._xyz = in_xyz;
+        if (in_raDecDeg != null)
+            this._raDecDeg = in_raDecDeg;
+        if (in_phiThetaDeg != null)
+            this._phiThetaDeg = in_phiThetaDeg;
+        if (this._raDecDeg) {
+            this.raHMS = (0, Utils_js_1.raDegToHMS)(this._raDecDeg.ra);
+            this.decDMS = (0, Utils_js_1.decDegToDMS)(this._raDecDeg.dec);
+        }
+    }
+    /** (Formerly `computeNpix256`) Uses global.nsideForSelection. */
+    computeNpix() {
+        if (!this._xyz)
+            return null;
+        const hp = Global_js_1.default.getHealpix(Global_js_1.default.nsideForSelection);
+        const v = new healpixjs_1.Vec3(this._xyz[0], this._xyz[1], this._xyz[2]);
+        const ptg = new healpixjs_1.Pointing(v, false);
+        return hp.ang2pix(ptg, false);
+    }
+    /** Update helper state from a world-space 3D point on the unit sphere. */
+    update(mousePoint) {
+        const mp = toVec3(mousePoint);
+        const sph = (0, Utils_js_1.cartesianToSpherical)(mp);
+        const radec = (0, Utils_js_1.sphericalToAstroDeg)(sph.phi, sph.theta);
+        this._xyz = [mp[0], mp[1], mp[2]];
+        this._phiThetaDeg = sph;
+        this._raDecDeg = radec;
+        this.raHMS = (0, Utils_js_1.raDegToHMS)(radec.ra);
+        this.decDMS = (0, Utils_js_1.decDegToDMS)(radec.dec);
+    }
+    clear() {
+        this._xyz = null;
+        this._raDecDeg = null;
+        this._phiThetaDeg = null;
+        this.raHMS = undefined;
+        this.decDMS = undefined;
+    }
+    // --- getters ---
+    get xyz() {
+        return this._xyz;
+    }
+    get x() {
+        return this._xyz ? this._xyz[0] : null;
+    }
+    get y() {
+        return this._xyz ? this._xyz[1] : null;
+    }
+    get z() {
+        return this._xyz ? this._xyz[2] : null;
+    }
+    get ra() {
+        return this._raDecDeg ? this._raDecDeg.ra : null;
+    }
+    get dec() {
+        return this._raDecDeg ? this._raDecDeg.dec : null;
+    }
+    get phi() {
+        return this._phiThetaDeg ? this._phiThetaDeg.phi : null;
+    }
+    get theta() {
+        return this._phiThetaDeg ? this._phiThetaDeg.theta : null;
+    }
+    get raDecDeg() {
+        return this._raDecDeg;
+    }
+    get phiThetaDeg() {
+        return this._phiThetaDeg;
+    }
+}
+exports["default"] = MouseHelper;
+
+
+/***/ }),
+
+/***/ 4595:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HealpixGrid = void 0;
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+const gl_matrix_1 = __webpack_require__(1961);
+const FoVHelper_js_1 = __webpack_require__(229);
+const FoVUtils_js_1 = __webpack_require__(8083);
+const FoV_js_1 = __webpack_require__(3576);
+const CoordsType_js_1 = __webpack_require__(8145);
+const Point_js_1 = __webpack_require__(6553);
+const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
+const GeomUtils_js_1 = __importDefault(__webpack_require__(2930));
+const GridTextHelper_js_1 = __importDefault(__webpack_require__(5361));
+const Utils_js_1 = __webpack_require__(7930);
+const VisibleTilesManager_js_1 = __webpack_require__(2056);
+const Config_js_1 = __webpack_require__(2919);
+class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    _visibleorder = 0;
+    showGrid = false;
+    _shaderProgram;
+    fragmentShader;
+    vertexShader;
+    defaultColor = '#ec0acaff';
+    gridText = new GridTextHelper_js_1.default();
+    // private _hipsShaderProgram: HiPSShaderProgram
+    _attribLocations = {
+        position: 0,
+        selected: 1,
+        pointSize: 2,
+        color: 3,
+    };
+    _nPrimitiveFlags = 0;
+    _vertexCataloguePositionBuffer;
+    _indexBuffer;
+    _vertexCataloguePosition = new Float32Array(0);
+    _indexes = new Uint32Array(0);
+    _fovObj;
+    static INITIAL_FOV = 180;
+    static RADIUS = 1;
+    static INITIAL_POSITION = [0.0, 0.0, 0.0];
+    static INITIAL_PhiRad = 0;
+    static INITIAL_ThetaRad = 0;
+    _visibleTilesManager;
+    constructor(webgl) {
+        super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
+        this.init();
+        this._visibleTilesManager = new VisibleTilesManager_js_1.VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
+        this._visibleTilesManager.init(Config_js_1.bootSetup.insideSphere);
+    }
+    init() {
+        console.log('HealpixGridSingleton.init()');
+        this.initGL(super.webgl);
+        this._shaderProgram = super.webgl.createProgram();
+        this.initShaders();
+        const order = FoVHelper_js_1.fovHelper.getHiPSNorder(HealpixGrid.INITIAL_FOV);
+        this._visibleorder = order;
+        this._nPrimitiveFlags = 0;
+        this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
+        this._indexBuffer = super.webgl.createBuffer();
+        this._vertexCataloguePosition = new Float32Array(0);
+        this._fovObj = new FoV_js_1.FoV(super.webgl);
+    }
+    get fovObj() {
+        return this._fovObj;
+    }
+    get RADIUS() {
+        return HealpixGrid.RADIUS;
+    }
+    get INITIAL_POSITION() {
+        return HealpixGrid.INITIAL_POSITION;
+    }
+    get INITIAL_PhiRad() {
+        return HealpixGrid.INITIAL_PhiRad;
+    }
+    get INITIAL_ThetaRad() {
+        return HealpixGrid.INITIAL_ThetaRad;
+    }
+    refreshFoV(camera, pMatrix) {
+        return this._fovObj.getFoV(Global_js_1.default.insideSphere, this, camera, pMatrix);
+    }
+    getFoV() {
+        return this._fovObj;
+    }
+    getMinFoV() {
+        return this._fovObj.minFoV;
+    }
+    initShaders() {
+        const gl = super.webgl;
+        const fragmentShaderStr = GridShaderManager_js_1.default.healpixGridFS();
+        this.fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this.fragmentShader, fragmentShaderStr);
+        gl.compileShader(this.fragmentShader);
+        if (!gl.getShaderParameter(this.fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this.fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = GridShaderManager_js_1.default.healpixGridVS();
+        this.vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this.vertexShader, vertexShaderStr);
+        gl.compileShader(this.vertexShader);
+        if (!gl.getShaderParameter(this.vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this.vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this._shaderProgram, this.vertexShader);
+        gl.attachShader(this._shaderProgram, this.fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this._shaderProgram);
+    }
+    initBuffers(pixels, order) {
+        this._nPrimitiveFlags = 0;
+        const healpix = Global_js_1.default.getHealpix(order);
+        const subhpx = Global_js_1.default.getHealpix(order + 1);
+        const subsubhpx = Global_js_1.default.getHealpix(order + 2);
+        let positionIndex = 0;
+        let vIdx = 0;
+        const R = 1.0;
+        const MAX_UINT = 0xffffffff;
+        this._indexes = new Uint32Array(17 * pixels.length);
+        this._vertexCataloguePosition = new Float32Array(3 * 16 * pixels.length);
+        for (let p = 0; p < pixels.length; p++) {
+            const vecs = healpix.getBoundaries(pixels[p]);
+            const cpix0 = pixels[p] << 2;
+            const cpix1 = cpix0 + 1;
+            const cpix2 = cpix0 + 2;
+            const cpix3 = cpix0 + 3;
+            const cp0vecs = subhpx.getBoundaries(cpix0);
+            const cp3vecs = subhpx.getBoundaries(cpix3);
+            // helper to push a vertex
+            const pushV = (v) => {
+                this._vertexCataloguePosition[positionIndex] = R * v.x;
+                this._vertexCataloguePosition[positionIndex + 1] = R * v.y;
+                this._vertexCataloguePosition[positionIndex + 2] = R * v.z;
+                this._indexes[vIdx] = Math.floor(positionIndex / 3);
+                vIdx += 1;
+                positionIndex += 3;
+            };
+            // v0(3/0)
+            pushV(vecs[0]);
+            // v1(15/2)
+            let subcpix3 = cpix3 << 2;
+            let subcpix3_3 = subcpix3 + 3;
+            let tmp = subsubhpx.getBoundaries(subcpix3_3);
+            pushV(tmp[1]);
+            // v1(3/1)
+            pushV(cp3vecs[1]);
+            // v0(2/2)
+            let subcpix2 = cpix2 << 2;
+            let subcpix2_2 = subcpix2 + 2;
+            tmp = subsubhpx.getBoundaries(subcpix2_2);
+            pushV(tmp[0]);
+            // v1(0/0)
+            pushV(vecs[1]);
+            // v2(2/2)
+            pushV(tmp[2]);
+            // v1(0/1)
+            pushV(cp0vecs[1]);
+            // v1(0/2)
+            let subcpix0 = cpix0 << 2;
+            let subcpix0_2 = subcpix0;
+            tmp = subsubhpx.getBoundaries(subcpix0_2);
+            pushV(tmp[1]);
+            // v2(0/0)
+            pushV(vecs[2]);
+            // v3(0/2)
+            pushV(tmp[3]);
+            // v3(0/1)
+            pushV(cp0vecs[3]);
+            // v2(5/2)
+            let subcpix1 = cpix1 << 2;
+            let subcpix1_1 = subcpix1 + 1;
+            tmp = subsubhpx.getBoundaries(subcpix1_1);
+            pushV(tmp[2]);
+            // v3(0/0)
+            pushV(vecs[3]);
+            // v0(5/2)
+            pushV(tmp[0]);
+            // v3(3/1)
+            pushV(cp3vecs[3]);
+            tmp = subsubhpx.getBoundaries(subcpix3_3);
+            pushV(tmp[3]);
+            // primitive restart
+            this._indexes[vIdx] = MAX_UINT;
+            this._nPrimitiveFlags += 1;
+            vIdx += 1;
+        }
+    }
+    // updateTiles(pixels: number[], order: number) {
+    //   return (this as any)._tileBuffer.updateTiles(pixels, order);
+    // }
+    refresh(camera, pMatrix) {
+        this.refreshFoV(camera, pMatrix);
+        const fov = this.getMinFoV();
+        // expose to global (legacy)
+        // (global as any).hipsFoV = fov;
+        // global.order = fovHelper.getHiPSNorder(fov);
+        // this._visibleorder = global.order;
+        this._visibleorder = FoVHelper_js_1.fovHelper.getHiPSNorder(fov);
+    }
+    enableShader(in_mMatrix, pMatrix, vMatrix) {
+        const gl = super.webgl;
+        gl.useProgram(this._shaderProgram);
+        // TODO move locations retrieval elsewhere
+        // Uniform locations
+        const uMV = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uP = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = super.webgl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        // Attribute locations
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        let mvMatrix = gl_matrix_1.mat4.create();
+        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), in_mMatrix);
+        mvMatrix = gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, in_mMatrix);
+        if (uMV)
+            gl.uniformMatrix4fv(uMV, false, mvMatrix);
+        if (uP)
+            gl.uniformMatrix4fv(uP, false, pMatrix);
+        if (uColor) {
+            const rgb = (0, Utils_js_1.colorHex2RGB)(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    isVisible() {
+        return this.showGrid;
+    }
+    toggleShowGrid() {
+        this.showGrid = !this.showGrid;
+    }
+    get visibleTilesManager() {
+        return this._visibleTilesManager;
+    }
+    draw(input) {
+        const gl = super.webgl;
+        const mMatrix = this.getModelMatrix();
+        // const vMatrix = input.camera.getCameraMatrix()
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const vMatrix = camera.getCameraMatrix();
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refresh(camera, pMatrix);
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
+            return;
+        }
+        // const visibleTiles = visibleTilesManager.visibleTilesByOrder
+        const visibleTiles = this._visibleTilesManager.visibleTilesByOrder;
+        const pixels = visibleTiles.pixels;
+        const order = visibleTiles.order;
+        this.initBuffers(pixels, order);
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+        this.enableShader(mMatrix, pMatrix, vMatrix);
+        // Upload positions
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._vertexCataloguePositionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, this._vertexCataloguePosition, gl.STATIC_DRAW);
+        gl.vertexAttribPointer(this._attribLocations.position, HealpixGrid.ELEM_SIZE, gl.FLOAT, false, HealpixGrid.BYTES_X_ELEM * HealpixGrid.ELEM_SIZE, 0);
+        gl.enableVertexAttribArray(this._attribLocations.position);
+        // Index buffer
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this._indexes, gl.STATIC_DRAW);
+        gl.drawElements(gl.LINE_LOOP, this._vertexCataloguePosition.length / 3 + this._nPrimitiveFlags, gl.UNSIGNED_INT, 0);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+        // Project and label pixel centers that are inside current FoV
+        let mvMatrix = gl_matrix_1.mat4.create();
+        // mvMatrix = mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix(), mMatrix);
+        mvMatrix = gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        let mvpMatrix = gl_matrix_1.mat4.create();
+        mvpMatrix = gl_matrix_1.mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
+        // FIX: pass model & pMatrix to match FoVUtils TS signature
+        const center = FoVUtils_js_1.FoVUtils.getCenterJ2000(gl.canvas, this, this._webgl, camera, pMatrix);
+        const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
+        for (let p = 0; p < pixels.length; p++) {
+            const pixCenter = Global_js_1.default.getHealpix(this._visibleorder).pix2vec(pixels[p]);
+            // const pixCenter = (global.getHealpix(global.order).pix2vec(pixels[p]) as BoundVec);
+            const point = new Point_js_1.Point({ x: pixCenter.x, y: pixCenter.y, z: pixCenter.z }, CoordsType_js_1.CoordsType.CARTESIAN);
+            const distance = GeomUtils_js_1.default.orthodromicDistance(center, point);
+            if (distance < fovMin) {
+                const vertex = [pixCenter.x, pixCenter.y, pixCenter.z, 1];
+                const clipspace = gl_matrix_1.vec4.create();
+                gl_matrix_1.vec4.transformMat4(clipspace, vertex, mvpMatrix);
+                // NDC divide
+                clipspace[0] /= clipspace[3];
+                clipspace[1] /= clipspace[3];
+                // clip → pixels
+                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
+                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
+                this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+                // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
+            }
+        }
+        // gridTextHelper.resetDivSets();
+        this.gridText.resetDivSets();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    get visibleorder() {
+        return this._visibleorder;
+    }
+}
+exports.HealpixGrid = HealpixGrid;
+
+
+/***/ }),
+
+/***/ 4639:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const gl_matrix_1 = __webpack_require__(1961);
+class RayPickingUtils {
+    static lastNearestVisibleObjectIdx = -1;
+    /** Get index of the last object found under the mouse (if any). */
+    static getNearestVisibleObjectIdx() {
+        return this.lastNearestVisibleObjectIdx;
+    }
+    /**
+     * Builds a world-space ray from mouse coords.
+     * @param mouseX ClientX (page pixels)
+     * @param mouseY ClientY (page pixels)
+     * @param pMatrix Projection matrix
+     * @returns World-space direction (normalized) as a vec3
+     */
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
+        const gl = webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        // mouseX / mouseY are already local to the canvas (CSS pixels)
+        const canvasMX = mouseX;
+        const canvasMY = mouseY;
+        // Use rect.width / rect.height (CSS) for NDC
+        const x = (2.0 * canvasMX) / rect.width - 1.0;
+        const y = 1.0 - (2.0 * canvasMY) / rect.height;
+        const z = -1.0;
+        const rayClip = [x, y, z, 1.0];
+        const pInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(pInv, pMatrix);
+        const rayEye4 = [0, 0, 0, 0];
+        RayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+        // direction in eye space
+        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+        const vInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(vInv, vMatrix);
+        const rayWorld4 = [0, 0, 0, 0];
+        RayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+        const rayWorld = gl_matrix_1.vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+        gl_matrix_1.vec3.normalize(rayWorld, rayWorld);
+        return rayWorld;
+    }
+    /** a*b (4x4 * vec4) → vec4 (in `out`) */
+    static mat4MultiplyVec4(a, b, out) {
+        const d = b[0], e = b[1], g = b[2], w = b[3];
+        out[0] = a[0] * d + a[4] * e + a[8] * g + a[12] * w;
+        out[1] = a[1] * d + a[5] * e + a[9] * g + a[13] * w;
+        out[2] = a[2] * d + a[6] * e + a[10] * g + a[14] * w;
+        out[3] = a[3] * d + a[7] * e + a[11] * g + a[15] * w;
+        return out;
+    }
+    /**
+     * Ray–sphere intersection (world space).
+     * @returns distance `t` along the ray to the first hit, or `-1` if no hit.
+     */
+    static raySphere(rayOrigWorld, rayDirectionWorld, healpixGridSingleton) {
+        let intersectionDistance = -1;
+        const L = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.subtract(L, rayOrigWorld, healpixGridSingleton.center);
+        const b = gl_matrix_1.vec3.dot(rayDirectionWorld, L);
+        const c = gl_matrix_1.vec3.dot(L, L) - healpixGridSingleton.radius * healpixGridSingleton.radius;
+        const disc = b * b - c;
+        if (disc > 0.0) {
+            const s = Math.sqrt(disc);
+            const ta = -b + s;
+            const tb = -b - s;
+            if (ta < 0.0 && tb < 0.0) {
+                // behind camera
+            }
+            else if (tb < 0.0) {
+                intersectionDistance = ta;
+            }
+            else {
+                intersectionDistance = Math.min(ta, tb);
+            }
+        }
+        else if (disc === 0.0) {
+            const t = -b; // tangent
+            if (t >= 0.0) {
+                intersectionDistance = t;
+            }
+        }
+        return intersectionDistance;
+    }
+    /**
+     * Compute intersection with a single model (defaults to the Healpix grid).
+     * @returns model-space intersection point (vec3) if hit, otherwise empty array; and the picked model.
+     */
+    static getIntersectionPointWithSingleModel(mouseX, mouseY, healpixGrid, webgl, camera, pMatrix) {
+        const vMatrix = camera.getCameraMatrix();
+        const rayWorld = RayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
+        const t = RayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, healpixGrid);
+        let intersectionModelPoint = [];
+        if (t >= 0) {
+            // world intersection
+            const worldHit = gl_matrix_1.vec3.create();
+            gl_matrix_1.vec3.scale(worldHit, rayWorld, t);
+            gl_matrix_1.vec3.add(worldHit, camera.getCameraPosition(), worldHit);
+            // world → model
+            const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
+            const modelHit4 = [0, 0, 0, 0];
+            // RayPickingUtils.mat4MultiplyVec4(healpixGridSingleton.getModelMatrixInverse(), worldHit4, modelHit4);
+            RayPickingUtils.mat4MultiplyVec4(healpixGrid.getModelMatrixInverse(), worldHit4, modelHit4);
+            intersectionModelPoint = [modelHit4[0], modelHit4[1], modelHit4[2]];
+        }
+        return intersectionModelPoint;
+    }
+}
+exports["default"] = RayPickingUtils;
+
+
+/***/ }),
+
+/***/ 4707:
+/***/ ((__unused_webpack_module, exports) => {
+
+// GridShaderManager.ts
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+class GridShaderManager {
+    static healpixGridVS() {
+        return `#version 300 es
+        in vec4 aCatPosition;
+        uniform mat4 uMVMatrix;
+        uniform mat4 uPMatrix;
+
+        void main() {
+            gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+            gl_PointSize = 7.0;
+        }`;
+    }
+    static healpixGridFS() {
+        return `#version 300 es
+        precision mediump float;
+
+        uniform vec4 u_fragcolor;
+        out vec4 fragColor;
+
+        void main() {
+            // fragColor = vec4(1.0, 0.0, 0.0, 1.0);
+            fragColor = u_fragcolor;
+        }`;
+    }
+}
+exports["default"] = GridShaderManager;
+
+
+/***/ }),
+
+/***/ 4723:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const Config_js_1 = __webpack_require__(2919);
+const Camera_js_1 = __importDefault(__webpack_require__(7734));
+const RayPickingUtils_js_1 = __importDefault(__webpack_require__(4639));
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+const MouseHelper_js_1 = __importDefault(__webpack_require__(4396));
+const Utils_js_1 = __webpack_require__(7930);
+const HiPS_js_1 = __webpack_require__(3726);
+const PerspectiveMatrixManager_js_1 = __webpack_require__(9685);
+const Point_js_1 = __webpack_require__(6553);
+const FoVUtils_js_1 = __webpack_require__(8083);
+const EquatorialGrid_js_1 = __webpack_require__(9839);
+const HealpixGrid_js_1 = __webpack_require__(4595);
+const CoordsType_js_1 = __webpack_require__(8145);
+const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
+const XYZLayer_js_1 = __webpack_require__(2502);
+const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
+const WMTSAdapter_js_1 = __webpack_require__(3768);
+/**
+ * AstroSphere — main WebGL scene controller (TS port)
+ */
+class AstroSphere {
+    static MIN_WHEEL_SCALE = 0.85;
+    static MAX_WHEEL_SCALE = 1.8;
+    _camera;
+    _perspectiveMatrixManager;
+    centralPoinCoords;
+    mousePointCoords;
+    canvas;
+    _healpixGrid;
+    _equatorialGrid;
+    mouseHelper;
+    mouseDown = false;
+    lastMouseX = null;
+    lastMouseY = null;
+    inertiaX = 0.0;
+    inertiaY = 0.0;
+    zoomInertia = 0.0;
+    pointerDownX = null;
+    pointerDownY = null;
+    pointerDownAt = 0;
+    _activeHiPS = null;
+    _activeXYZ = null;
+    _activeBaseLayer = null;
+    startup = true;
+    fov;
+    activeCatalogues = [];
+    activeFootprintSets = [];
+    _webgl;
+    _selectedColorMap;
+    _cameraStatusChanged = false;
+    lastHoveredSource = null;
+    lastHoveredCatalogue = null;
+    zoomSensitivity = 1.0;
+    constructor(canvas, webgl) {
+        console.log('[AstroSphere] new instance for canvas', canvas.id);
+        // Keep global GL context (as in original JS)
+        this._webgl = webgl;
+        this.mouseHelper = new MouseHelper_js_1.default();
+        this.canvas = canvas;
+        const nativeColorMap = 'native';
+        this._selectedColorMap = ColorMaps_js_1.default[nativeColorMap];
+        Global_js_1.default.insideSphere = Config_js_1.bootSetup.insideSphere;
+        this.initCamera();
+        this._healpixGrid = new HealpixGrid_js_1.HealpixGrid(this._webgl);
+        this._perspectiveMatrixManager = new PerspectiveMatrixManager_js_1.PerspectiveMatrixManager(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Config_js_1.bootSetup.insideSphere);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Config_js_1.bootSetup.insideSphere);
+        this._equatorialGrid = new EquatorialGrid_js_1.EquatorialGrid(this._webgl, this._healpixGrid);
+        this._equatorialGrid.init(this._healpixGrid.getMinFoV());
+        this.updateCentralPoint();
+        this.startup = true;
+        this.addEventListeners(canvas);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this._camera.refreshFoV(this.fov.minFoV);
+    }
+    initCamera() {
+        if (Config_js_1.bootSetup.insideSphere) {
+            this._camera = new Camera_js_1.default([0.0, 0.0, -0.005], true);
+        }
+        else {
+            this._camera = new Camera_js_1.default([0.0, 0.0, 4.0], false);
+        }
+    }
+    setCamera(camera) {
+        this._camera = camera;
+    }
+    setCameraRotationSensitivity(value) {
+        this._camera.setRotationSensitivity(value);
+    }
+    getCameraRotationSensitivity() {
+        return this._camera.getRotationSensitivity();
+    }
+    get healpixGrid() {
+        return this._healpixGrid;
+    }
+    get equatorialGrid() {
+        return this._equatorialGrid;
+    }
+    // This is a lickely a duplication of FoVUtils.getCenterJ2000(this.canvas)
+    updateCentralPoint() {
+        const sphericalCoords = this.getPhiThetaDeg(this.canvas);
+        const astroCoords = (0, Utils_js_1.sphericalToAstroDeg)(sphericalCoords.phi, sphericalCoords.theta);
+        const raHMS = (0, Utils_js_1.raDegToHMS)(astroCoords.ra);
+        const decDMS = (0, Utils_js_1.decDegToDMS)(astroCoords.dec);
+        this.centralPoinCoords = {
+            astroDeg: astroCoords,
+            sphericalDeg: sphericalCoords,
+            raHMS: raHMS,
+            decDMS: decDMS
+        };
+        return this.centralPoinCoords;
+    }
+    updateLastMousePoint() {
+        const sphericalCoords = { phi: this.mouseHelper.phi, theta: this.mouseHelper.theta };
+        const astroCoords = { ra: this.mouseHelper.ra, dec: this.mouseHelper.dec };
+        const raHMS = this.mouseHelper.raHMS;
+        const decDMS = this.mouseHelper.decDMS;
+        this.mousePointCoords = {
+            astroDeg: astroCoords,
+            sphericalDeg: sphericalCoords,
+            raHMS: raHMS,
+            decDMS: decDMS
+        };
+        return this.mousePointCoords;
+    }
+    clearLastMousePoint() {
+        this.mousePointCoords = undefined;
+    }
+    // This should call FoVUtils.getJ200Centre(this.canvas)
+    getCentralPointCoordinates() {
+        return this.centralPoinCoords;
+    }
+    getLastMousePointCoordinates() {
+        return this.mousePointCoords;
+    }
+    clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+    }
+    computeZoomStep(currentFov, deltaY) {
+        const direction = deltaY < 0 ? -1 : 1;
+        const wheelScale = this.clamp(Math.abs(deltaY) / 120, AstroSphere.MIN_WHEEL_SCALE, AstroSphere.MAX_WHEEL_SCALE);
+        // Continuous wheel response:
+        // - broad FoV stays responsive without large jumps
+        // - narrow FoV keeps a usable floor to avoid the 0.1 -> 0.02 deg stall
+        const baseMagnitude = this.clamp(0.0012 + 0.0025 * Math.sqrt(Math.max(currentFov, 0)), 0.0012, 0.04);
+        return direction * baseMagnitude * wheelScale * this.zoomSensitivity;
+    }
+    setZoomSensitivity(value) {
+        this.zoomSensitivity = this.clamp(value, 0.2, 3);
+    }
+    getZoomSensitivity() {
+        return this.zoomSensitivity;
+    }
+    emitCameraChanged(reason) {
+        // avoid dispatch before scene is ready
+        if (!this._activeHiPS)
+            return;
+        if (!this._healpixGrid?.fovObj)
+            return;
+        const detail = this.getCurrentStatus();
+        if (!detail)
+            return;
+        // optional debug
+        // console.log('[AstroSphere] emit camera-changed:', reason);
+        this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
+            detail,
+            bubbles: true,
+            composed: true,
+        }));
+    }
+    addEventListeners(canvas) {
+        if (Global_js_1.default.debug) {
+            console.log('[AstroSphere::addEventListeners]');
+        }
+        const CLICK_MAX_DISTANCE_PX = 4;
+        const CLICK_MAX_DURATION_MS = 250;
+        const rect = canvas.getBoundingClientRect();
+        this.lastMouseX = rect.left; // locale al canvas
+        this.lastMouseY = rect.top;
+        const handleMouseDown = (event) => {
+            canvas.setPointerCapture(event.pointerId);
+            this.mouseDown = true;
+            const rect = canvas.getBoundingClientRect();
+            this.lastMouseX = event.clientX - rect.left; // locale al canvas
+            this.lastMouseY = event.clientY - rect.top; // locale al canvas
+            this.pointerDownX = this.lastMouseX;
+            this.pointerDownY = this.lastMouseY;
+            this.pointerDownAt = Date.now();
+            const mousePoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(this.lastMouseX, this.lastMouseY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+            if (mousePoint && mousePoint.length > 0) {
+                this.mouseHelper.update(mousePoint);
+                this.updateLastMousePoint();
+            }
+            else {
+                this.clearLastMousePoint();
+            }
+            event.preventDefault();
+            return false;
+        };
+        const handleMouseUp = (event) => {
+            canvas.releasePointerCapture(event.pointerId);
+            this.mouseDown = false;
+            document.body.style.cursor = 'auto';
+            if (event.button !== 0) {
+                event.preventDefault();
+                return false;
+            }
+            const rect = canvas.getBoundingClientRect();
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            this.lastMouseX = localX;
+            this.lastMouseY = localY;
+            const moveDist = Math.hypot(localX - (this.pointerDownX ?? localX), localY - (this.pointerDownY ?? localY));
+            const elapsedMs = Date.now() - this.pointerDownAt;
+            const isClick = moveDist <= CLICK_MAX_DISTANCE_PX && elapsedMs <= CLICK_MAX_DURATION_MS;
+            if (isClick) {
+                const mousePoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (mousePoint && mousePoint.length > 0) {
+                    this.mouseHelper.update(mousePoint);
+                    this.updateLastMousePoint();
+                    for (const cat of this.activeCatalogues) {
+                        const clickResult = cat.selectPrimarySourceFromClick(this.mouseHelper);
+                        if (!clickResult?.sources.length)
+                            continue;
+                        this._webgl.canvas.dispatchEvent(new CustomEvent('source-clicked', {
+                            detail: {
+                                source: clickResult.sources,
+                                selectionState: clickResult.selectionState,
+                                catalogue: cat,
+                            },
+                            bubbles: true,
+                            composed: true,
+                        }));
+                    }
+                    for (const fset of this.activeFootprintSets) {
+                        const clickResult = fset.selectPrimaryFootprintFromClick(this.mouseHelper);
+                        if (!clickResult?.footprints.length)
+                            continue;
+                        this._webgl.canvas.dispatchEvent(new CustomEvent('footprint-clicked', {
+                            detail: {
+                                footprint: clickResult.footprints,
+                                selectionState: clickResult.selectionState,
+                                footprintSet: fset,
+                            },
+                            bubbles: true,
+                            composed: true,
+                        }));
+                    }
+                }
+            }
+            else {
+                this.clearLastMousePoint();
+            }
+        };
+        const handleMouseMove = (event) => {
+            const rect = canvas.getBoundingClientRect();
+            // 🔹 canvas-local coordinates
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            const newX = localX;
+            const newY = localY;
+            // if (!healpixGridSingleton) return;
+            if (!this._healpixGrid)
+                return;
+            if (this.mouseDown) {
+                document.body.style.cursor = 'grab';
+                // Rotation deltas – either use client-space or local-space, but be consistent
+                const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
+                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
+                this.inertiaX += 0.1 * deltaX;
+                this.inertiaY += 0.1 * deltaY;
+                this.updateCentralPoint();
+            }
+            else {
+                // Use canvas-local coords for picking
+                const mousePoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (mousePoint && mousePoint.length > 0) {
+                    this.mouseHelper.update(mousePoint);
+                    this.updateLastMousePoint();
+                }
+                else {
+                    this.clearLastMousePoint();
+                }
+            }
+            if (!this.centralPoinCoords) {
+                this.updateCentralPoint();
+            }
+            this.lastMouseX = newX;
+            this.lastMouseY = newY;
+            // During drag, camera rotation is applied in the render loop via inertia.
+            // Defer the camera-changed event to that loop so coordinates reflect the
+            // actual updated camera state instead of the pre-rotation state.
+            this._cameraStatusChanged = true;
+            event.preventDefault();
+        };
+        const handleMouseWheel = (event) => {
+            const currentFov = this._healpixGrid.getMinFoV();
+            const zoomStep = this.computeZoomStep(currentFov, event.deltaY);
+            // Apply wheel zoom immediately and discard any queued inertia so reversing
+            // direction feels responsive instead of "buffered".
+            this.zoomInertia = 0;
+            this._camera.zoom(zoomStep);
+            this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+            this._camera.refreshFoV(this.fov.minFoV);
+            this._cameraStatusChanged = true;
+            this.emitCameraChanged('wheel');
+            event.preventDefault();
+        };
+        const handleContextMenu = (event) => {
+            event.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const localX = event.clientX - rect.left;
+            const localY = event.clientY - rect.top;
+            const mousePoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(localX, localY, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+            if (!mousePoint || mousePoint.length === 0) {
+                return false;
+            }
+            this.mouseHelper.update(mousePoint);
+            this.updateLastMousePoint();
+            for (const cat of this.activeCatalogues) {
+                const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
+                if (!pickResult?.sources.length)
+                    continue;
+                this._webgl.canvas.dispatchEvent(new CustomEvent('source-contextmenu', {
+                    detail: {
+                        source: pickResult.sources,
+                        catalogue: cat,
+                        clientX: event.clientX,
+                        clientY: event.clientY,
+                    },
+                    bubbles: true,
+                    composed: true,
+                }));
+                break;
+            }
+            for (const fset of this.activeFootprintSets) {
+                const pickResult = fset.getFootprintsFromPointer(this.mouseHelper);
+                if (!pickResult?.footprints.length)
+                    continue;
+                this._webgl.canvas.dispatchEvent(new CustomEvent('footprint-contextmenu', {
+                    detail: {
+                        footprint: pickResult.footprints,
+                        footprintSet: fset,
+                        clientX: event.clientX,
+                        clientY: event.clientY,
+                    },
+                    bubbles: true,
+                    composed: true,
+                }));
+                break;
+            }
+            return false;
+        };
+        const onKeyDown = (evt) => {
+            if (!evt.ctrlKey) {
+                return;
+            }
+            // console.log('[AstroSphere::onKeyDown] key=', evt.key)
+            switch (evt.key) {
+                case '1':
+                    // Free camera
+                    this._camera.clearRotationLock();
+                    break;
+                case '2':
+                    // Lock X axis rotation
+                    this._camera.setRotationLock({ x: true, y: false, z: false });
+                    break;
+                case '3':
+                    // Lock Y axis rotation
+                    this._camera.setRotationLock({ x: false, y: true, z: false });
+                    break;
+                case '4':
+                    // Lock Z axis rotation
+                    this._camera.setRotationLock({ x: false, y: false, z: true });
+                    break;
+            }
+        };
+        console.log('[AstroSphere] registering pointer and wheel listeners on canvas');
+        canvas.onpointerdown = handleMouseDown;
+        canvas.onpointerup = handleMouseUp;
+        canvas.onpointermove = handleMouseMove;
+        canvas.onpointerleave = () => {
+            this.clearLastMousePoint();
+            this._cameraStatusChanged = true;
+            this.emitCameraChanged('pointerleave');
+        };
+        console.log('[AstroSphere] adding wheel event listener with passive: false');
+        canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
+        canvas.addEventListener('contextmenu', handleContextMenu);
+        console.log('[AstroSphere] registering global keydown listener on document');
+        document.addEventListener('keydown', onKeyDown, { capture: true });
+    }
+    // REVIEW THIS METHOD AND MOVE IT 
+    getPhiThetaDeg(canvas) {
+        const rect = canvas.getBoundingClientRect();
+        const maxX = rect.width;
+        const maxY = rect.height;
+        const pickerPoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        return (0, Utils_js_1.cartesianToSpherical)(pickerPoint);
+    }
+    collectViewportSphericalSamples(sampleCount = 5) {
+        const rect = this.canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const samples = [];
+        for (let ix = 0; ix < sampleCount; ix++) {
+            const x = sampleCount === 1 ? width / 2 : (ix / (sampleCount - 1)) * width;
+            for (let iy = 0; iy < sampleCount; iy++) {
+                const y = sampleCount === 1 ? height / 2 : (iy / (sampleCount - 1)) * height;
+                const hit = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(x, y, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (hit && hit.length > 0) {
+                    samples.push((0, Utils_js_1.cartesianToSpherical)(hit));
+                }
+            }
+        }
+        return samples;
+    }
+    activateHiPS(hipsDescriptor) {
+        this._activeHiPS = new HiPS_js_1.HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
+        this._activeBaseLayer = 'hips';
+    }
+    activateXYZ(config) {
+        this._activeXYZ = new XYZLayer_js_1.XYZLayer(config, this._webgl);
+        this._activeBaseLayer = 'xyz';
+    }
+    activateWMTS(config) {
+        const adapter = new WMTSAdapter_js_1.WMTSAdapter(config);
+        this._activeXYZ = new XYZLayer_js_1.XYZLayer(adapter.toXYZLayerConfig(), this._webgl);
+        this._activeBaseLayer = 'xyz';
+    }
+    // Catalogue section
+    async showCatalogue(cat) {
+        // console.log(cat)
+        if (cat)
+            this.activeCatalogues.push(cat);
+        return cat;
+    }
+    deleteCatalogue(catalogue) {
+        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
+    }
+    // End Catalogue section
+    // Footprint section
+    async showFootprintSet(fset) {
+        // console.log(fset)
+        if (fset)
+            this.activeFootprintSets.push(fset);
+        return fset;
+    }
+    deleteFootprintSet(footprintSet) {
+        this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
+    }
+    getHoveredFootprints() {
+        let footprintsHovered = [];
+        this.activeFootprintSets.forEach(fset => {
+            footprintsHovered.push(fset.hoveredFootprints);
+        });
+        return footprintsHovered;
+    }
+    // End Footprint section
+    goTo(raDeg, decDeg) {
+        this._camera.goTo(raDeg, decDeg);
+    }
+    getFoV() {
+        return this.fov;
+    }
+    getFoVPolygon() {
+        if (this.healpixGrid == null)
+            throw new Error(`healpixGrid is ${this.healpixGrid}`);
+        return FoVUtils_js_1.FoVUtils.getFoVPolygon(this._camera, this.canvas, this._healpixGrid, this._healpixGrid, this._webgl, this._perspectiveMatrixManager.pMatrix);
+    }
+    changeFoV(deg) {
+        const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg);
+        this._camera.translate(distance);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this._camera.refreshFoV(this.fov.minFoV);
+    }
+    changeFoV2(deg) {
+        const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
+        this._camera.setCameraPosition(newCameraPos);
+    }
+    changeFoV3(deg) {
+        const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
+        this._camera.setCameraPosition(newPos);
+        // Recompute projection after moving the camera
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, false);
+    }
+    getInsideSphere() {
+        return Global_js_1.default.insideSphere;
+    }
+    toggleInsideSphere() {
+        Global_js_1.default.insideSphere = !Global_js_1.default.insideSphere;
+        // console.log(global.insideSphere)
+        this._camera.toggleInsideSphere();
+    }
+    // imposta posizione camera
+    setCameraPosition(pos) {
+        this._camera.setCameraPosition(pos);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+    }
+    // imposta orientamento camera tramite view matrix
+    setCameraMatrix(viewMatrix) {
+        this._camera.setCameraMatrix(viewMatrix);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+    }
+    _refreshingStatus = false;
+    // set completo camera (pos + orientamento)
+    applyFullCameraState(detail, applyColor) {
+        this._refreshingStatus = true;
+        this._camera = detail.camera;
+        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
+        this._healpixGrid.setModelMatrix(detail.mMatrix);
+        this._perspectiveMatrixManager.pMatrix = detail.pMatrix;
+        this.setCameraMatrix(detail.vMatrix);
+        // this.goTo(detail.centralPoint.raDeg, detail.centralPoint.decDeg)
+        if (applyColor) {
+            this._activeHiPS?.changeColorMap(detail.colorMap);
+        }
+        this._refreshingStatus = false;
+    }
+    getCurrentStatus() {
+        this.updateCentralPoint();
+        const centralradeg = this.centralPoinCoords?.astroDeg.ra;
+        const centraldecdeg = this.centralPoinCoords?.astroDeg.dec;
+        // if (!centraldecdeg || !centralradeg) {
+        if (centralradeg == null || centraldecdeg == null) {
+            return null;
+        }
+        // if (this._rotating && centraldecdeg && centralradeg) {
+        const detail = {
+            fovDeg: this.fov.minFoV,
+            fovXDeg: this.fov.xFoV,
+            fovYDeg: this.fov.yFoV,
+            position: this._camera.getCameraPosition(),
+            vMatrix: this._camera.getCameraMatrix(),
+            pMatrix: this._perspectiveMatrixManager.pMatrix,
+            mMatrix: this._healpixGrid.getModelMatrix(),
+            camera: this._camera,
+            timestamp: performance.now(),
+            centralPoint: new Point_js_1.Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType_js_1.CoordsType.ASTRO),
+            mouseHoverPoint: this.mousePointCoords,
+            colorMap: this._selectedColorMap,
+            getFoVPolygon: this.getFoVPolygon(),
+        };
+        return detail;
+        // }
+        // return null
+    }
+    changeColorMap(cm) {
+        if (!this._activeHiPS)
+            return;
+        this._selectedColorMap = cm;
+        this._activeHiPS?.changeColorMap(cm);
+    }
+    prevFov = 0;
+    prevCentralRaDeg = null;
+    prevCentralDecDeg = null;
+    get activeHiPS() {
+        return this._activeHiPS;
+    }
+    get activeXYZ() {
+        return this._activeXYZ;
+    }
+    getXYZDebugStats() {
+        return {
+            activeBaseLayer: this._activeBaseLayer,
+            layer: this._activeXYZ?.getDebugStats() ?? null,
+            requests: XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getDebugStats(),
+        };
+    }
+    draw(canvas) {
+        if (this._refreshingStatus)
+            return;
+        if (!this._webgl)
+            return;
+        if (!this._activeHiPS && !this._activeXYZ)
+            return;
+        if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
+            return;
+        if (this._healpixGrid.fovObj === undefined)
+            return;
+        // In WebGL2, OES_element_index_uint is core, no need to fetch the extension each frame.
+        // global.gl.getExtension('OES_element_index_uint')
+        // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
+        this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        let cameraRotated = false;
+        let THETA = 0;
+        let PHI = 0;
+        this._webgl.viewport(0, 0, this._webgl.drawingBufferWidth, this._webgl.drawingBufferHeight);
+        this._webgl.clear(this._webgl.COLOR_BUFFER_BIT | this._webgl.DEPTH_BUFFER_BIT);
+        // Zoom inertia
+        if (this.zoomInertia !== 0) {
+            if (Math.abs(this.zoomInertia) > 0.0001) {
+                this._camera.zoom(this.zoomInertia);
+                this.zoomInertia *= 0.95;
+                this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+                this._camera.refreshFoV(this.fov.minFoV);
+                if (this.prevFov !== this.fov.minFoV) {
+                    if (!this.centralPoinCoords) {
+                        this.centralPoinCoords = this.updateCentralPoint();
+                    }
+                    this.prevFov = this.fov.minFoV;
+                }
+            }
+            else {
+                this.zoomInertia = 0;
+            }
+            this._cameraStatusChanged = true;
+        }
+        // Rotation inertia
+        if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
+            cameraRotated = true;
+            THETA = this.inertiaY;
+            PHI = this.inertiaX;
+            this.inertiaX *= 0.95;
+            this.inertiaY *= 0.95;
+            this._camera.rotate(PHI, THETA);
+            this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        }
+        else {
+            this.inertiaY = 0;
+            this.inertiaX = 0;
+        }
+        // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
+        if (cameraRotated) {
+            // Ricalcola il punto centrale
+            const center = this.updateCentralPoint();
+            const centralRaDeg = center.astroDeg.ra;
+            const centralDecDeg = center.astroDeg.dec;
+            // Evita spam: emetti solo se è cambiato abbastanza
+            const raChanged = this.prevCentralRaDeg === null ||
+                Math.abs(centralRaDeg - this.prevCentralRaDeg) > 1e-5;
+            const decChanged = this.prevCentralDecDeg === null ||
+                Math.abs(centralDecDeg - this.prevCentralDecDeg) > 1e-5;
+            if (raChanged || decChanged) {
+                this.prevCentralRaDeg = centralRaDeg;
+                this.prevCentralDecDeg = centralDecDeg;
+            }
+        }
+        if (this._cameraStatusChanged) {
+            const detail = this.getCurrentStatus();
+            if (detail) {
+                // console.log('[AstroSphere::draw] emitting camera-changed event due to camera status change', detail)
+                // console.log('[AstroSphere::draw] inertia', this.zoomInertia, this.inertiaX, this.inertiaY)
+                this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
+                    detail,
+                    bubbles: true, composed: true,
+                }));
+            }
+            if (!this.startup) {
+                this._cameraStatusChanged = false;
+            }
+        }
+        // GL state
+        this._webgl.disable(this._webgl.DEPTH_TEST);
+        this._webgl.enable(this._webgl.BLEND);
+        this._webgl.enable(this._webgl.CULL_FACE);
+        this._webgl.cullFace(Global_js_1.default.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
+        this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
+        if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
+            const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
+            this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        }
+        // DRAW HiPS
+        const skyEntityDrawInput = {
+            fovDeg: this._healpixGrid.getMinFoV(),
+            camera: this._camera,
+            pMatrix: this._perspectiveMatrixManager.pMatrix,
+            centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
+            fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
+            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(5) : undefined,
+        };
+        if (this._activeBaseLayer === 'hips') {
+            this._activeHiPS?.draw(skyEntityDrawInput);
+        }
+        if (this._activeBaseLayer === 'xyz') {
+            this._activeXYZ?.draw(skyEntityDrawInput);
+        }
+        this._healpixGrid.draw(skyEntityDrawInput);
+        this._equatorialGrid.draw(skyEntityDrawInput);
+        this._webgl.enable(this._webgl.DEPTH_TEST);
+        this._webgl.disable(this._webgl.CULL_FACE);
+        if (this.startup) {
+            this.startup = false;
+            const phiTheta = this.getPhiThetaDeg(canvas);
+            const raDecDeg = (0, Utils_js_1.sphericalToAstroDeg)(phiTheta.phi, phiTheta.theta);
+            const raHMS = (0, Utils_js_1.raDegToHMS)(raDecDeg.ra);
+            const decDMS = (0, Utils_js_1.decDegToDMS)(raDecDeg.dec);
+            this.prevFov = this._healpixGrid.getMinFoV();
+            this._cameraStatusChanged = true;
+            console.log('(startup coords)', {
+                raDeg: raDecDeg.ra,
+                decDeg: raDecDeg.dec,
+                raHMS,
+                decDMS,
+            });
+        }
+        this.activeCatalogues.forEach(cat => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            if (activeModelMatrix) {
+                cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.emitHoveredSourceIfChanged();
+        this.activeFootprintSets.forEach(fst => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            if (activeModelMatrix) {
+                fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+    }
+    emitHoveredSourceIfChanged() {
+        let nextHoveredSource = null;
+        let nextHoveredCatalogue = null;
+        for (const cat of this.activeCatalogues) {
+            const hovered = cat.getPrimaryHoveredSource();
+            if (!hovered)
+                continue;
+            nextHoveredSource = hovered;
+            nextHoveredCatalogue = cat;
+            break;
+        }
+        const unchanged = nextHoveredSource === this.lastHoveredSource
+            && nextHoveredCatalogue === this.lastHoveredCatalogue;
+        if (unchanged)
+            return;
+        this.lastHoveredSource = nextHoveredSource;
+        this.lastHoveredCatalogue = nextHoveredCatalogue;
+        this._webgl.canvas.dispatchEvent(new CustomEvent('source-hovered', {
+            detail: { source: nextHoveredSource, catalogue: nextHoveredCatalogue },
+            bubbles: true,
+            composed: true,
+        }));
+    }
+}
+exports["default"] = AstroSphere;
+
+
+/***/ }),
+
+/***/ 4735:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.AbstractSkyEntity = void 0;
+const gl_matrix_1 = __webpack_require__(1961);
+const HiPSShaderProgram_js_1 = __webpack_require__(7786);
+class AbstractSkyEntity {
+    // Public-ish properties used elsewhere in the app
+    refreshMe = false;
+    fovX_deg = 180;
+    fovY_deg = 180;
+    xRad;
+    yRad;
+    prevFoV = this.fovX_deg;
+    _name;
+    // public insideSphere: boolean = bootSetup.insideSphere
+    // Picking/sphere
+    center;
+    radius;
+    isGalacticHips;
+    // GL resources
+    vertexTextureCoordBuffer = null;
+    vertexPositionBuffer = null;
+    vertexIndexBuffer = null;
+    shaderProgram = null;
+    // Matrices
+    T = gl_matrix_1.mat4.create();
+    R = gl_matrix_1.mat4.create();
+    modelMatrix = gl_matrix_1.mat4.create();
+    inverseModelMatrix = gl_matrix_1.mat4.create();
+    // Precomputed transform from galactic to equatorial (already inverted)
+    galacticMatrixInverted = gl_matrix_1.mat4.create();
+    _webgl;
+    _hipsShaderProgram;
+    // protected _visibleTilesManager: VisibleTilesManager
+    // protected _tileBuffer: TileBuffer
+    constructor(in_radius, in_position, in_xRad, in_yRad, in_name, webgl, isGalacticHips) {
+        this._webgl = webgl;
+        this.xRad = in_xRad;
+        this.yRad = in_yRad;
+        this._name = in_name;
+        this.center = gl_matrix_1.vec3.clone(in_position);
+        this.radius = in_radius;
+        // this.insideSphere = global.insideSphere
+        this.isGalacticHips = !!isGalacticHips;
+        // Fill the matrix via Float32Array.set (safer than mat4.set with 16 scalars)
+        gl_matrix_1.mat4.set(this.galacticMatrixInverted, -0.054875582456588745, -0.8734370470046997, -0.48383501172065735, 0, 0.49410945177078247, -0.4448296129703522, 0.7469822764396667, 0, -0.8676661849021912, -0.19807636737823486, 0.4559837877750397, 0, 0, 0, 0, 1);
+        // this._tileBuffer = new TileBuffer(1, this._webgl)
+        // this._visibleTilesManager = new VisibleTilesManager(this._tileBuffer)
+        // this._visibleTilesManager = new VisibleTilesManager()
+        this._hipsShaderProgram = new HiPSShaderProgram_js_1.HiPSShaderProgram(this._webgl);
+    }
+    get name() {
+        return this._name;
+    }
+    get hipsShaderProgram() {
+        return this._hipsShaderProgram;
+    }
+    // get tileBuffer() {
+    //   return this._tileBuffer
+    // }
+    get webgl() {
+        return this._webgl;
+    }
+    /** GL setup and initial model transform */
+    initGL(gl) {
+        // GL resources
+        this.vertexTextureCoordBuffer = gl.createBuffer();
+        this.vertexPositionBuffer = gl.createBuffer();
+        this.vertexIndexBuffer = gl.createBuffer();
+        this.shaderProgram = gl.createProgram();
+        // Reset object transforms
+        this.T = gl_matrix_1.mat4.create();
+        this.R = gl_matrix_1.mat4.create();
+        this.modelMatrix = gl_matrix_1.mat4.create();
+        this.inverseModelMatrix = gl_matrix_1.mat4.create();
+        // Initial pose
+        this.translate(this.center);
+        this.rotate(this.xRad, this.yRad);
+    }
+    translate(translation) {
+        gl_matrix_1.mat4.translate(this.T, this.T, translation);
+        this.refreshModelMatrix();
+    }
+    rotate(rad1, rad2) {
+        gl_matrix_1.mat4.rotate(this.R, this.R, rad2, [0, 0, 1]);
+        gl_matrix_1.mat4.rotate(this.R, this.R, rad1, [1, 0, 0]);
+        this.refreshModelMatrix();
+    }
+    rotateFromZero(rad1, rad2) {
+        gl_matrix_1.mat4.identity(this.R);
+        gl_matrix_1.mat4.rotate(this.R, this.R, rad1, [1, 0, 0]);
+        gl_matrix_1.mat4.rotate(this.R, this.R, rad2, [0, 0, 1]);
+        this.refreshModelMatrix();
+    }
+    refreshModelMatrix() {
+        const R_inverse = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(R_inverse, this.R);
+        gl_matrix_1.mat4.multiply(this.modelMatrix, this.T, R_inverse);
+        // Apply galactic frame transform if needed
+        if (this.isGalacticHips) {
+            gl_matrix_1.mat4.multiply(this.modelMatrix, this.modelMatrix, this.galacticMatrixInverted);
+        }
+    }
+    getModelMatrixInverse() {
+        gl_matrix_1.mat4.identity(this.inverseModelMatrix);
+        gl_matrix_1.mat4.invert(this.inverseModelMatrix, this.modelMatrix);
+        return this.inverseModelMatrix;
+    }
+    getModelMatrix() {
+        return this.modelMatrix;
+    }
+    setModelMatrix(modelMatrix) {
+        this.modelMatrix = modelMatrix;
+    }
+    /** Children with hierarchical geometry (e.g., HiPS) can override this. */
+    setGeometryNeedsToBeRefreshed() {
+        this.refreshGeometryOnFoVChanged = false;
+    }
+    // Helpers operating on raw mat4 buffers (kept from your JS)
+    rotateX(m, angle) {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const mv1 = m[1], mv5 = m[5], mv9 = m[9];
+        m[1] = m[1] * c - m[2] * s;
+        m[5] = m[5] * c - m[6] * s;
+        m[9] = m[9] * c - m[10] * s;
+        m[2] = m[2] * c + mv1 * s;
+        m[6] = m[6] * c + mv5 * s;
+        m[10] = m[10] * c + mv9 * s;
+        return m;
+    }
+    rotateY(m, angle) {
+        const c = Math.cos(angle);
+        const s = Math.sin(angle);
+        const mv0 = m[0], mv4 = m[4], mv8 = m[8];
+        m[0] = c * m[0] + s * m[2];
+        m[4] = c * m[4] + s * m[6];
+        m[8] = c * m[8] + s * m[10];
+        m[2] = c * m[2] - s * mv0;
+        m[6] = c * m[6] - s * mv4;
+        m[10] = c * m[10] - s * mv8;
+        return m;
+    }
+}
+exports.AbstractSkyEntity = AbstractSkyEntity;
+
+
+/***/ }),
+
+/***/ 5087:
+/***/ ((__unused_webpack_module, exports) => {
+
+// HiPSDescriptor.ts
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HiPSDescriptor = void 0;
+class HiPSDescriptor {
+    _minOrder = 3;
+    _imgformats = [];
+    _datarange = { min: undefined, max: undefined };
+    _maxOrder;
+    _tilewidth;
+    _hipsFrame;
+    _hipsName = 'NONAME';
+    _hipsurl;
+    _emMin;
+    _emMax;
+    _isGalctic = false;
+    _propertiesRawText;
+    _propertiesMap = new Map();
+    constructor(hipsproperties, hipsurl) {
+        this._hipsurl = hipsurl;
+        this._propertiesRawText = hipsproperties;
+        const lines = hipsproperties.split(/\r\n|\n/);
+        for (const raw of lines) {
+            const line = raw.trim();
+            if (!line || line.startsWith('#'))
+                continue;
+            const maybeKey = line.slice(0, line.indexOf('=')).trim();
+            const maybeValue = this.getValue(line);
+            if (maybeKey && maybeValue !== undefined) {
+                this._propertiesMap.set(maybeKey, maybeValue);
+            }
+            if (line.startsWith('hips_tile_format') || line.startsWith('format')) {
+                // normalize jpeg→jpg
+                const list = this.getValue(line)?.replace(/jpeg/gi, 'jpg') ?? '';
+                this._imgformats = list.split(/\s+/).filter(Boolean);
+            }
+            else if (line.startsWith('hips_data_range')) {
+                const v = this.getValue(line);
+                if (v) {
+                    const [minStr, maxStr] = v.split(/\s+/);
+                    this._datarange.min = parseFloat(minStr);
+                    this._datarange.max = parseFloat(maxStr);
+                }
+            }
+            else if (line.startsWith('hips_tile_width')) {
+                const n = Number(this.getValue(line));
+                this._tilewidth = Number.isFinite(n) ? n : undefined;
+            }
+            else if (line.startsWith('hips_order_min')) {
+                const n = Number(this.getValue(line));
+                this._minOrder = Number.isFinite(n) ? n : this._minOrder;
+            }
+            else if (line.startsWith('hips_order') || line.startsWith('maxOrder')) {
+                const n = Number(this.getValue(line));
+                this._maxOrder = Number.isFinite(n) ? n : this._maxOrder;
+            }
+            else if (line.startsWith('hips_frame') || line.startsWith('frame')) {
+                this._hipsFrame = this.getValue(line);
+            }
+            else if (line.startsWith('obs_collection') || line.startsWith('label')) {
+                this._hipsName = this.getValue(line) ?? this._hipsName;
+            }
+            else if (line.startsWith('em_min')) {
+                const n = Number(this.getValue(line));
+                this._emMin = Number.isFinite(n) ? n : undefined;
+            }
+            else if (line.startsWith('em_max')) {
+                const n = Number(this.getValue(line));
+                this._emMax = Number.isFinite(n) ? n : undefined;
+            }
+        }
+        if (!this._hipsName) {
+            console.warn(`[HiPSDescriptor] hipsName not defined in properties of ${this._hipsurl}. Defaulting to 'NONAME'.`);
+        }
+        if (!this._hipsFrame) {
+            console.warn(`[HiPSDescriptor] hips_frame not defined in properties of ${this._hipsurl}. Defaulting to 'equatorial'.`);
+            this._hipsFrame = 'equatorial';
+        }
+        this._isGalctic = this._hipsFrame.toLowerCase().includes('gal');
+        if (this._maxOrder === undefined || this._imgformats.length === 0) {
+            throw new Error(`[HiPSDescriptor] Invalid properties for ${this._hipsurl}. maxOrder=${this._maxOrder}, imgFormats.length=${this._imgformats.length}`);
+        }
+    }
+    getValue(line) {
+        const idx = line.indexOf('=');
+        if (idx < 0)
+            return undefined;
+        return line.slice(idx + 1).trim();
+    }
+    // --- Getters ---
+    get propertiesRawText() {
+        return this._propertiesRawText;
+    }
+    get properties() {
+        return new Map(this._propertiesMap);
+    }
+    getProperty(key) {
+        return this._propertiesMap.get(key);
+    }
+    get surveyName() {
+        return this._hipsName;
+    }
+    get url() {
+        return this._hipsurl;
+    }
+    get maxOrder() {
+        return this._maxOrder;
+    }
+    get minOrder() {
+        return this._minOrder;
+    }
+    get imgFormats() {
+        return this._imgformats;
+    }
+    get hipsFrame() {
+        return this._hipsFrame;
+    }
+    get isGalactic() {
+        return this._isGalctic;
+    }
+    get emMin() {
+        return this._emMin;
+    }
+    get emMax() {
+        return this._emMax;
+    }
+    get tileWidth() {
+        return this._tilewidth;
+    }
+    get dataRange() {
+        return this._datarange;
+    }
+}
+exports.HiPSDescriptor = HiPSDescriptor;
+
+
+/***/ }),
+
+/***/ 5361:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/**
+ * @author Fabrizio Giordano (Fab)
+ * @param in_radius - number
+ * @param in_gl - GL context
+ * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+class GridTextHelper {
+    _divEqContainerElement;
+    _divHPXContainerElement;
+    _divSets;
+    _divSetNdx;
+    constructor() {
+        this._divEqContainerElement = document.querySelector('#gridcoords');
+        this._divHPXContainerElement = document.querySelector('#gridhpx');
+        this._divSetNdx = 0;
+        this._divSets = [];
+    }
+    initHtml() {
+        // Kept for API parity; nothing required here with current logic.
+    }
+    resetDivSets() {
+        // Hide remaining divs and reset index
+        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
+            this._divSets[this._divSetNdx].style.display = 'none';
+        }
+        this._divSetNdx = 0;
+    }
+    /**
+     * Add / reuse a floating label for HPX coordinates
+     */
+    addHPXDivSet(msg, x, y) {
+        let divSet = this._divSets[this._divSetNdx++];
+        // Create on demand
+        if (!divSet) {
+            const div = document.createElement('div');
+            const textNode = document.createTextNode('');
+            div.className = 'floating-div-ra'; // style like RA tags
+            div.appendChild(textNode);
+            if (!this._divHPXContainerElement) {
+                this._divHPXContainerElement = document.querySelector('#gridhpx');
+            }
+            if (!this._divHPXContainerElement) {
+                // If container is still missing, abort gracefully
+                return;
+            }
+            this._divHPXContainerElement.appendChild(div);
+            divSet = { div, textNode, style: div.style };
+            this._divSets.push(divSet);
+        }
+        // Show & position
+        divSet.style.display = 'block';
+        divSet.style.left = `${Math.floor(x + 25)}px`;
+        divSet.style.top = `${Math.floor(y)}px`;
+        divSet.textNode.nodeValue = msg;
+    }
+    /**
+     * Add / reuse a floating label for Equatorial coords
+     * @param type 'ra' or 'dec'
+     */
+    addEqDivSet(msg, x, y, type) {
+        let divSet = this._divSets[this._divSetNdx++];
+        if (!divSet) {
+            const div = document.createElement('div');
+            const textNode = document.createTextNode('');
+            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
+            div.appendChild(textNode);
+            if (!this._divEqContainerElement) {
+                this._divEqContainerElement = document.querySelector('#gridcoords');
+            }
+            if (!this._divEqContainerElement) {
+                // If container is still missing, abort gracefully
+                return;
+            }
+            this._divEqContainerElement.appendChild(div);
+            divSet = { div, textNode, style: div.style };
+            this._divSets.push(divSet);
+        }
+        divSet.style.display = 'block';
+        if (type === 'ra') {
+            divSet.style.left = `${Math.floor(x + 25)}px`;
+            divSet.style.top = `${Math.floor(y)}px`;
+        }
+        else {
+            divSet.style.left = `${Math.floor(x)}px`;
+            divSet.style.top = `${Math.floor(y + 25)}px`;
+        }
+        divSet.textNode.nodeValue = msg;
+    }
+}
+// export const gridTextHelper = new GridTextHelper();
+exports["default"] = GridTextHelper;
+
+
+/***/ }),
+
+/***/ 5403:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MetadataManager = void 0;
+const MetadataColumn_js_1 = __webpack_require__(1072);
+class MetadataManager {
+    static STANDARD_SIZE = "STANDARD_SIZE";
+    static STANDARD_HUE = "STANDARD_HUE";
+    _outlineColumnList = [];
+    _raColumnList = [];
+    _decColumnList = [];
+    _shapeColumnList = [];
+    _hueColumnList = [];
+    _selectedOutlineColumn;
+    _selectedRaColumn;
+    _selectedDecColumn;
+    _selectedShapeColumn;
+    _selectedHueColumn;
+    _selectedNameColumn;
+    _columns = [];
+    constructor(metadataColumns) {
+        metadataColumns.forEach(c => {
+            if (c.columnType == MetadataColumn_js_1.ColumnType.NUMBER) {
+                this.addHueColumn(c);
+                this.addShapeColumn(c);
+            }
+            if (c.columnType == MetadataColumn_js_1.ColumnType.GEOM_RA) {
+                this.addRaColumn(c);
+            }
+            if (c.columnType == MetadataColumn_js_1.ColumnType.GEOM_DEC) {
+                this.addDecColumn(c);
+            }
+            if (c.columnType == MetadataColumn_js_1.ColumnType.GEOM_FOOTPRINT) {
+                this.addOutlineColumn(c);
+            }
+            if (c.columnType == MetadataColumn_js_1.ColumnType.MAIN_NAME) {
+                this._selectedNameColumn = c;
+            }
+            this._columns.push(c);
+        });
+        // if (!this._selectedNameColumn) {
+        //     throw new Error("No name column found")
+        // }
+    }
+    addOutlineColumn(outlineColumn) {
+        this._outlineColumnList.push(outlineColumn);
+        this._selectedOutlineColumn = outlineColumn;
+    }
+    addRaColumn(column) {
+        this._selectedRaColumn = this._selectedRaColumn || column;
+        this._raColumnList.push(column);
+    }
+    addDecColumn(column) {
+        this._selectedDecColumn = this._selectedDecColumn || column;
+        this._decColumnList.push(column);
+    }
+    addHueColumn(column) {
+        this._hueColumnList.push(column);
+    }
+    addShapeColumn(column) {
+        this._shapeColumnList.push(column);
+    }
+    get selectedRaColumn() {
+        return this._selectedRaColumn;
+    }
+    get selectedDecColumn() {
+        return this._selectedDecColumn;
+    }
+    get selectedHueColumn() {
+        return this._selectedHueColumn;
+    }
+    get selectedShapeColumn() {
+        return this._selectedShapeColumn;
+    }
+    get selectedOutlineColumn() {
+        return this._selectedOutlineColumn;
+    }
+    get selectedNameColumn() {
+        return this._selectedNameColumn;
+    }
+    get columns() {
+        return this._columns;
+    }
+    get raColumnList() {
+        return this._raColumnList;
+    }
+    get decColumnList() {
+        return this._decColumnList;
+    }
+    get outlineColumnList() {
+        return this._outlineColumnList;
+    }
+    get hueColumnList() {
+        return this._hueColumnList;
+    }
+    get shapeColumnList() {
+        return this._shapeColumnList;
+    }
+    set selectedRaColumn(columnName) {
+        this._selectedRaColumn = this._raColumnList.find(c => c.name === columnName) || this._selectedRaColumn;
+    }
+    set selectedDecColumn(columnName) {
+        this._selectedDecColumn = this._decColumnList.find(c => c.name === columnName) || this._selectedDecColumn;
+    }
+    set selectedHueColumn(columnName) {
+        this._selectedHueColumn = this._hueColumnList.find(c => c.name === columnName);
+    }
+    set selectedShapeColumn(columnName) {
+        this._selectedShapeColumn = this._shapeColumnList.find(c => c.name === columnName);
+    }
+    set selectedNameColumn(columnName) {
+        this._selectedNameColumn = this._shapeColumnList.find(c => c.name === columnName);
+    }
+    resetShapeColumn() {
+        this._selectedShapeColumn = undefined;
+    }
+    resetHueColumn() {
+        this._selectedHueColumn = undefined;
+    }
+}
+exports.MetadataManager = MetadataManager;
+
+
+/***/ }),
+
+/***/ 5409:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.xyzTileRequestScheduler = exports.XYZTileRequestScheduler = exports.XYZTileRequestError = void 0;
+class XYZTileRequestError extends Error {
+    cooldownMs;
+    retryable;
+    constructor(message, cooldownMs, retryable = true) {
+        super(message);
+        this.name = 'XYZTileRequestError';
+        this.cooldownMs = cooldownMs;
+        this.retryable = retryable;
+    }
+}
+exports.XYZTileRequestError = XYZTileRequestError;
+class XYZTileRequestScheduler {
+    _maxConcurrent;
+    _activeCount = 0;
+    _queue = [];
+    _inflight = new Map();
+    _hostBackoff = new Map();
+    _sequence = 0;
+    constructor(maxConcurrent = 4) {
+        this._maxConcurrent = maxConcurrent;
+    }
+    setMaxConcurrent(maxConcurrent) {
+        this._maxConcurrent = Math.max(1, Math.floor(maxConcurrent));
+        this.pump();
+    }
+    getMaxConcurrent() {
+        return this._maxConcurrent;
+    }
+    getDebugStats() {
+        const now = Date.now();
+        const hostsInBackoff = Array.from(this._hostBackoff.entries())
+            .map(([host, state]) => ({
+            host,
+            cooldownMs: Math.max(0, state.cooldownUntil - now),
+            consecutiveFailures: state.consecutiveFailures,
+        }))
+            .filter((entry) => entry.cooldownMs > 0 || entry.consecutiveFailures > 0)
+            .sort((a, b) => b.cooldownMs - a.cooldownMs);
+        return {
+            activeRequests: this._activeCount,
+            queuedRequests: this._queue.length,
+            inflightRequests: this._inflight.size,
+            maxConcurrentRequests: this._maxConcurrent,
+            highestQueuedPriority: this._queue[0]?.priority ?? null,
+            hostsInBackoff,
+        };
+    }
+    load(url, priority = 0) {
+        const inflight = this._inflight.get(url);
+        if (inflight) {
+            return inflight;
+        }
+        const hostCooldown = this.getHostCooldown(url);
+        const now = Date.now();
+        if (hostCooldown > now) {
+            return Promise.reject(new XYZTileRequestError(`Cooldown active for ${new URL(url).host}`, hostCooldown - now));
+        }
+        const promise = new Promise((resolve, reject) => {
+            this._queue.push({
+                url,
+                resolve,
+                reject,
+                priority,
+                sequence: this._sequence++,
+            });
+            this._queue.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
+            this.pump();
+        }).finally(() => {
+            this._inflight.delete(url);
+        });
+        this._inflight.set(url, promise);
+        return promise;
+    }
+    pump() {
+        while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
+            const item = this._queue.shift();
+            if (!item) {
+                return;
+            }
+            const hostCooldown = this.getHostCooldown(item.url);
+            const now = Date.now();
+            if (hostCooldown > now) {
+                item.reject(new XYZTileRequestError(`Cooldown active for ${new URL(item.url).host}`, hostCooldown - now));
+                continue;
+            }
+            this._activeCount += 1;
+            this.fetchBlob(item)
+                .then(item.resolve)
+                .catch(item.reject)
+                .finally(() => {
+                this._activeCount -= 1;
+                this.pump();
+            });
+        }
+    }
+    async fetchBlob(item) {
+        try {
+            const response = await fetch(item.url, {
+                mode: 'cors',
+                cache: 'force-cache',
+            });
+            if (!response.ok) {
+                const isTransient = response.status === 429 || response.status >= 500;
+                const cooldownMs = this.registerFailure(item.url, isTransient);
+                throw new XYZTileRequestError(`HTTP ${response.status} loading ${item.url}`, isTransient ? cooldownMs : 5 * 60 * 1000, isTransient);
+            }
+            this.registerSuccess(item.url);
+            return await response.blob();
+        }
+        catch (error) {
+            if (error instanceof XYZTileRequestError) {
+                throw error;
+            }
+            const cooldownMs = this.registerFailure(item.url, false);
+            throw new XYZTileRequestError(`Network/CORS failure loading ${item.url}`, cooldownMs, true);
+        }
+    }
+    getHostCooldown(url) {
+        try {
+            return this._hostBackoff.get(new URL(url).host)?.cooldownUntil ?? 0;
+        }
+        catch {
+            return 0;
+        }
+    }
+    registerSuccess(url) {
+        try {
+            const host = new URL(url).host;
+            this._hostBackoff.set(host, {
+                cooldownUntil: 0,
+                consecutiveFailures: 0,
+            });
+        }
+        catch {
+            // no-op
+        }
+    }
+    registerFailure(url, isRateLimited) {
+        if (!isRateLimited) {
+            return 0;
+        }
+        try {
+            const host = new URL(url).host;
+            const previous = this._hostBackoff.get(host) ?? {
+                cooldownUntil: 0,
+                consecutiveFailures: 0,
+            };
+            const consecutiveFailures = previous.consecutiveFailures + 1;
+            const baseDelayMs = 4000;
+            const cooldownMs = Math.min(120000, baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)));
+            this._hostBackoff.set(host, {
+                cooldownUntil: Date.now() + cooldownMs,
+                consecutiveFailures,
+            });
+            return cooldownMs;
+        }
+        catch {
+            return 30000;
+        }
+    }
+}
+exports.XYZTileRequestScheduler = XYZTileRequestScheduler;
+exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
+
+
+/***/ }),
+
+/***/ 5947:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+// ShaderManager.ts
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+class ShaderManager {
+    static catalogueVS() {
+        return `#version 300 es
+    in vec4 aCatPosition;
+    in float a_selected;
+    in float a_pointsize;
+    in float a_brightness;
+
+    out float v_selected;
+    out float v_brightness;
+    out lowp vec4 vColor;  // not used
+
+    uniform mat4 uPMatrix;
+    uniform mat4 uMVMatrix;
+
+    void main() {
+
+      gl_Position = (uPMatrix * uMVMatrix * aCatPosition);
+      gl_PointSize = a_pointsize;
+      v_selected = a_selected;
+      v_brightness = a_brightness;
+    }`;
+    }
+    static catalogueFS() {
+        return `#version 300 es
+    precision mediump float;
+    
+    #ifdef GL_OES_standard_derivatives
+    #extension GL_OES_standard_derivatives : enable
+    #endif
+
+    // https://www.desultoryquest.com/blog/drawing-anti-aliased-circular-points-using-opengl-slash-webgl/
+
+    // precision mediump float;
+
+    in float v_selected;
+    in float v_brightness;
+
+    uniform vec4 u_fragcolor;
+
+    out vec4 fragColor;
+
+    // varying float v_selected;
+    // varying float v_brightness;
+
+    const float EPSILON = 1e-10;
+    
+    vec3 RGBtoHCV(in vec3 rgb) {
+      // RGB [0..1] to Hue-Chroma-Value [0..1]
+      // Based on work by Sam Hocevar and Emil Persson
+      vec4 p = (rgb.g < rgb.b) ? vec4(rgb.bg, -1., 2. / 3.) : vec4(rgb.gb, 0., -1. / 3.);
+      vec4 q = (rgb.r < p.x) ? vec4(p.xyw, rgb.r) : vec4(rgb.r, p.yzx);
+      float c = q.x - min(q.w, q.y);
+      float h = abs((q.w - q.y) / (6. * c + EPSILON) + q.z);
+      return vec3(h, c, q.x);
+    }
+
+    vec3 RGBtoHSL(in vec3 rgb) {
+      // RGB [0..1] to Hue-Saturation-Lightness [0..1]
+      vec3 hcv = RGBtoHCV(rgb);
+      //vec3 hcv = vec3(1., 1., 1.);
+      float z = hcv.z - hcv.y * 0.5;
+      float s = hcv.y / (1. - abs(z * 2. - 1.) + EPSILON);
+      return vec3(hcv.x, s, z);
+    }
+
+    vec3 HUEtoRGB(in float hue){
+      // Hue [0..1] to RGB [0..1]
+      // See http://www.chilliant.com/rgb2hsv.html
+      vec3 rgb = abs(hue * 6. - vec3(3, 2, 4)) * vec3(1, -1, -1) + vec3(-1, 2, 2);
+      return clamp(rgb, 0., 1.);
+    }
+
+    vec3 HSLtoRGB(in vec3 hsl) {
+      // Hue-Saturation-Lightness [0..1] to RGB [0..1]
+      vec3 rgb = HUEtoRGB(hsl.x);
+      float c = (1. - abs(2. * hsl.z - 1.)) * hsl.y;
+      return (rgb - 0.5) * c + hsl.z;
+    }
+  
+    void main() {
+
+      float r = 0.0, delta = 0.0, alpha = 1.0;
+      vec2 cxy = 2.0 * gl_PointCoord - 1.0;
+      r = dot(cxy, cxy);
+      if (r > 1.0) {
+        discard;
+      }
+
+      #ifdef GL_OES_standard_derivatives
+        delta = fwidth(r);
+        alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
+      #endif
+
+      if (v_selected == 1.0){
+        // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+        fragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+      } else if (v_selected == 2.0){
+        // gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+        fragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+      }else{
+        if (r < 0.4) {
+          discard;
+        }
+        if ( v_brightness >= -1.0 && v_brightness <= 1.0) {
+          // Round-trip RGB->HSL->RGB with time-dependent lightness
+          vec3 hsl = RGBtoHSL(vec3(u_fragcolor));
+          //hsl.z = pow(hsl.z, sin(iTime) + 1.5);
+          // hsl.z = pow(hsl.z, v_brightness + 1.5);
+          hsl.z = pow(hsl.z, v_brightness + 1.5);
+          vec3 hslcolor = HSLtoRGB(hsl);
+          // gl_FragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+          fragColor = vec4(hslcolor, u_fragcolor[3]) * (alpha);
+        } else {
+          // gl_FragColor = u_fragcolor * (alpha);
+          fragColor = u_fragcolor * (alpha);
+        }
+      }
+    }`;
+    }
+    static footprintVS() {
+        return `#version 300 es
+    precision highp float;
+
+    layout(location = 0) in vec4 aCatPosition;
+
+    uniform float u_pointsize;
+    uniform mat4 uMVMatrix;
+    uniform mat4 uPMatrix;
+
+    void main() {
+      gl_Position = uPMatrix * uMVMatrix * aCatPosition;
+      gl_PointSize = u_pointsize;   // Works in WebGL2
+    }`;
+    }
+    static footprintFS() {
+        return `#version 300 es
+    precision mediump float;
+
+    uniform vec4 u_fragcolor;
+    out vec4 fragColor;
+
+    void main() {
+      fragColor = u_fragcolor;
+    }`;
+    }
+    static hipsVS() {
+        return `#version 300 es
+    in vec3 aVertexPosition;
+    in vec2 aTextureCoord;
+
+    uniform mat4 uMMatrix;
+    uniform mat4 uVMatrix;
+    uniform mat4 uPMatrix;
+
+    out vec2 vTextureCoord;
+
+    void main() {
+      gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
+      vTextureCoord = aTextureCoord;
+    }`;
+    }
+    static hipsNativeFS() {
+        return `#version 300 es
+    precision mediump float;
+
+    in vec2 vTextureCoord;
+
+    uniform sampler2D uSampler0;
+    uniform sampler2D uSampler1;
+    uniform sampler2D uSampler2;
+    uniform sampler2D uSampler3;
+    uniform sampler2D uSampler4;
+    uniform sampler2D uSampler5;
+    uniform sampler2D uSampler6;
+    uniform sampler2D uSampler7;
+
+    uniform float uFactor0;
+    uniform float uFactor1;
+    uniform float uFactor2;
+    uniform float uFactor3;
+    uniform float uFactor4;
+    uniform float uFactor5;
+    uniform float uFactor6;
+    uniform float uFactor7;
+
+    out vec4 fragColor;
+
+    void main() {
+      vec3 finalColor = vec3(0.0);
+
+      if (uFactor0 >= 0.0){
+        vec4 mycolor;
+        #if __VERSION__ > 120
+          vec4 color0 = texture(uSampler0, vTextureCoord);
+        #else
+          vec4 color0 = texture2D(uSampler0, vTextureCoord);
+        #endif
+        mycolor = color0;
+        finalColor += mycolor.rgb * uFactor0;
+      } else if (uFactor7 >= 0.0){
+        finalColor = vec3(1.0, 0.0, 0.0);
+      }
+      fragColor = vec4(finalColor, 1.0);
+    }`;
+    }
+    static hipsGrayscaleFS() {
+        return `#version 300 es
+    precision mediump float;
+
+    in vec2 vTextureCoord;
+
+    uniform sampler2D uSampler0;
+    uniform sampler2D uSampler1;
+    uniform sampler2D uSampler2;
+    uniform sampler2D uSampler3;
+    uniform sampler2D uSampler4;
+    uniform sampler2D uSampler5;
+    uniform sampler2D uSampler6;
+    uniform sampler2D uSampler7;
+
+    uniform float uFactor0;
+    uniform float uFactor1;
+    uniform float uFactor2;
+    uniform float uFactor3;
+    uniform float uFactor4;
+    uniform float uFactor5;
+    uniform float uFactor6;
+    uniform float uFactor7;
+
+    out vec4 fragColor;
+
+    void main() {
+      vec3 finalColor = vec3(0.0);
+
+      if (uFactor0 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color0 = texture(uSampler0, vTextureCoord);
+        #else
+          vec4 color0 = texture2D(uSampler0, vTextureCoord);
+        #endif
+        float gray = 0.21 * color0.r + 0.71 * color0.g + 0.07 * color0.b;
+        finalColor = color0.rgb * (1.0 - uFactor0) + vec3(gray) * uFactor0;
+      }
+      if (uFactor1 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color1 = texture(uSampler1, vTextureCoord);
+        #else
+          vec4 color1 = texture2D(uSampler1, vTextureCoord);
+        #endif
+        finalColor += color1.rgb * uFactor1;
+      }
+      if (uFactor2 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color2 = texture(uSampler2, vTextureCoord);
+        #else
+          vec4 color2 = texture2D(uSampler2, vTextureCoord);
+        #endif
+        finalColor += color2.rgb * uFactor2;
+      }
+      if (uFactor3 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color3 = texture(uSampler3, vTextureCoord);
+        #else
+          vec4 color3 = texture2D(uSampler3, vTextureCoord);
+        #endif
+        finalColor += color3.rgb * uFactor3;
+      }
+      if (uFactor4 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color4 = texture(uSampler4, vTextureCoord);
+        #else
+          vec4 color4 = texture2D(uSampler4, vTextureCoord);
+        #endif
+        finalColor += color4.rgb * uFactor4;
+      }
+      if (uFactor5 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color5 = texture(uSampler5, vTextureCoord);
+        #else
+          vec4 color5 = texture2D(uSampler5, vTextureCoord);
+        #endif
+        finalColor += color5.rgb * uFactor5;
+      }
+      if (uFactor6 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color6 = texture(uSampler6, vTextureCoord);
+        #else
+          vec4 color6 = texture2D(uSampler6, vTextureCoord);
+        #endif
+        finalColor += color6.rgb * uFactor6;
+      }
+      if (uFactor7 >= 0.0){
+        #if __VERSION__ > 120
+          vec4 color7 = texture(uSampler7, vTextureCoord);
+        #else
+          vec4 color7 = texture2D(uSampler7, vTextureCoord);
+        #endif
+        finalColor += color7.rgb * uFactor7;
+      }
+      fragColor = vec4(finalColor, 1.0);
+    }`;
+    }
+    static hipsColorMapFS() {
+        return `#version 300 es
+    precision mediump float;
+
+    in vec2 vTextureCoord;
+
+    // UBO
+    layout (std140) uniform colormap {
+      float r_palette[256];
+      float g_palette[256];
+      float b_palette[256];
+    };
+
+    uniform sampler2D uSampler0;
+    uniform float uFactor0;
+
+    out vec4 fragColor;
+
+    void main() {
+      #if __VERSION__ > 120
+        vec4 color0 = texture(uSampler0, vTextureCoord);
+      #else
+        vec4 color0 = texture2D(uSampler0, vTextureCoord);
+      #endif
+
+      int x = int(color0.r * 255.0);
+      float px = r_palette[x] / 256.0;
+
+      int y = int(color0.g * 255.0);
+      float py = g_palette[y] / 256.0;
+
+      int z = int(color0.b * 255.0);
+      float pz = b_palette[z] / 256.0;
+
+      // uFactor0 reserved for future blending if needed
+      fragColor = vec4(px, py, pz, 1.0);
+    }`;
+    }
+}
+exports["default"] = ShaderManager;
+
+
+/***/ }),
+
+/***/ 6553:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+/**
+ * @author Fabrizio Giordano (Fab77)
+ */
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Point = void 0;
+const gl_matrix_1 = __webpack_require__(1961);
+const Utils_js_1 = __webpack_require__(7930);
+const CoordsType_js_1 = __webpack_require__(8145);
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+class Point {
+    _x;
+    _y;
+    _z;
+    _xyz;
+    _raDeg;
+    _decDeg;
+    _raRad;
+    _decRad;
+    _raDecDeg;
+    constructor(in_options, in_type) {
+        this._xyz = [0, 0, 0];
+        this._raDecDeg = [0, 0];
+        // Prefer config value if present, fallback to 12
+        const MAX_DECIMALS = Global_js_1.default.MAX_DECIMALS ?? 12;
+        if (in_type === CoordsType_js_1.CoordsType.CARTESIAN) {
+            const { x, y, z } = in_options;
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+            const [ra, dec] = this.computeAstroCoords();
+            this._raDeg = Number(ra);
+            this._decDeg = Number(dec);
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            this._raDecDeg = [this._raDeg, this._decDeg];
+        }
+        else if (in_type === CoordsType_js_1.CoordsType.ASTRO) {
+            const { raDeg, decDeg } = in_options;
+            this._raDeg = Number(raDeg);
+            this._decDeg = Number(decDeg);
+            this._raDecDeg = [this._raDeg, this._decDeg];
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            const [x, y, z] = this.computeCartesianCoords();
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+        }
+        else if (in_type === CoordsType_js_1.CoordsType.SPHERICAL) {
+            // Not implemented in original; keep behavior
+            console.log(`${CoordsType_js_1.CoordsType.SPHERICAL} not implemented yet`);
+            this._x = 0;
+            this._y = 0;
+            this._z = 0;
+            this._raDeg = 0;
+            this._decDeg = 0;
+            this._raRad = 0;
+            this._decRad = 0;
+        }
+        else {
+            console.error('CoordsType ' + String(in_type) + ' not recognised.');
+            // Initialize to zeroed state to keep object consistent
+            this._x = 0;
+            this._y = 0;
+            this._z = 0;
+            this._raDeg = 0;
+            this._decDeg = 0;
+            this._raRad = 0;
+            this._decRad = 0;
+        }
+    }
+    computeAstroCoords() {
+        const phiThetaDeg = (0, Utils_js_1.cartesianToSpherical)(gl_matrix_1.vec3.fromValues(this._xyz[0], this._xyz[1], this._xyz[2]));
+        const rad = (0, Utils_js_1.sphericalToAstroDeg)(phiThetaDeg.phi, phiThetaDeg.theta);
+        return [rad.ra, rad.dec];
+    }
+    computeCartesianCoords() {
+        const phiThetaDeg = (0, Utils_js_1.astroDegToSpherical)(this._raDeg, this._decDeg);
+        const [x, y, z] = (0, Utils_js_1.sphericalToCartesian)(phiThetaDeg.phi, phiThetaDeg.theta, 1);
+        return [x, y, z];
+    }
+    /**
+     * @return {phi, theta} (degrees)
+     */
+    computeHealpixPhiTheta() {
+        return (0, Utils_js_1.astroDegToSpherical)(this._raDeg, this._decDeg);
+    }
+    /** Scale the vector by a given factor */
+    scale(n) {
+        return new Point({ x: this.x * n, y: this.y * n, z: this.z * n }, CoordsType_js_1.CoordsType.CARTESIAN);
+    }
+    dot(v) {
+        return this.x * v.x + this.y * v.y + this.z * v.z;
+    }
+    cross(v) {
+        return new Point({
+            x: this.y * v.z - v.y * this.z,
+            y: this.z * v.x - v.z * this.x,
+            z: this.x * v.y - v.x * this.y,
+        }, CoordsType_js_1.CoordsType.CARTESIAN);
+    }
+    norm() {
+        const d = 1 / this.length();
+        return new Point({ x: this.x * d, y: this.y * d, z: this.z * d }, CoordsType_js_1.CoordsType.CARTESIAN);
+    }
+    length() {
+        return Math.sqrt(this.lengthSquared());
+    }
+    lengthSquared() {
+        return this.x * this.x + this.y * this.y + this.z * this.z;
+    }
+    subtract(v) {
+        return new Point({ x: this.x - v.x, y: this.y - v.y, z: this.z - v.z }, CoordsType_js_1.CoordsType.CARTESIAN);
+    }
+    add(v) {
+        return new Point({ x: this.x + v.x, y: this.y + v.y, z: this.z + v.z }, CoordsType_js_1.CoordsType.CARTESIAN);
+    }
+    get x() { return this._x; }
+    get y() { return this._y; }
+    get z() { return this._z; }
+    get xyz() { return this._xyz; }
+    get raDeg() { return this._raDeg; }
+    get decDeg() { return this._decDeg; }
+    get raDecDeg() { return this._raDecDeg; }
+    toADQL() {
+        return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
+    }
+    toString() {
+        return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
+    }
+}
+exports.Point = Point;
+
+
+/***/ }),
+
+/***/ 6937:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZVisibleTilesManager = void 0;
+class XYZVisibleTilesManager {
+    _provider;
+    constructor(provider) {
+        this._provider = provider;
+    }
+    selectTiles(input) {
+        const currentZoom = this._provider.resolveZoom(input.fovDeg ?? 180);
+        const currentTiles = this.orderTilesByScreenRelevance(this._provider.getVisibleTilesAtZoom(currentZoom, input.centerSphericalDeg ?? null, input.fovPolygon ?? [], input.viewportSphericalSamples ?? [], 1), currentZoom, input.centerSphericalDeg ?? null);
+        const fallbackTiles = this.orderFallbackTiles(Array.from(this.buildFallbackMap(currentTiles, currentZoom).values()), currentZoom, input.centerSphericalDeg ?? null);
+        const key = `${currentZoom}:${currentTiles.map((tile) => `${tile.x}/${tile.y}`).join('|')}`;
+        return {
+            key,
+            currentTiles,
+            fallbackTiles,
+            currentZoom,
+        };
+    }
+    buildFallbackMap(currentTiles, currentZoom) {
+        const fallbackMap = new Map();
+        const minFallbackZoom = Math.max(this._provider.minZoom, currentZoom - 2);
+        for (let z = currentZoom - 1; z >= minFallbackZoom; z--) {
+            const dz = currentZoom - z;
+            for (const tile of currentTiles) {
+                const fallback = {
+                    z,
+                    x: tile.x >> dz,
+                    y: tile.y >> dz,
+                };
+                fallbackMap.set(`${fallback.z}/${fallback.x}/${fallback.y}`, fallback);
+            }
+        }
+        return fallbackMap;
+    }
+    orderTilesByScreenRelevance(tiles, zoom, centerSphericalDeg) {
+        const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);
+        if (!centerTile) {
+            return tiles;
+        }
+        return [...tiles].sort((a, b) => {
+            const distanceA = Math.abs(a.x - centerTile.x) + Math.abs(a.y - centerTile.y);
+            const distanceB = Math.abs(b.x - centerTile.x) + Math.abs(b.y - centerTile.y);
+            return distanceA - distanceB;
+        });
+    }
+    orderFallbackTiles(tiles, currentZoom, centerSphericalDeg) {
+        return [...tiles].sort((a, b) => {
+            if (b.z !== a.z) {
+                return b.z - a.z;
+            }
+            const centerTileA = this.getCenterTileCoord(a.z, centerSphericalDeg);
+            const centerTileB = this.getCenterTileCoord(b.z, centerSphericalDeg);
+            if (!centerTileA || !centerTileB) {
+                return 0;
+            }
+            const distanceA = Math.abs(a.x - centerTileA.x) + Math.abs(a.y - centerTileA.y);
+            const distanceB = Math.abs(b.x - centerTileB.x) + Math.abs(b.y - centerTileB.y);
+            return distanceA - distanceB || currentZoom - a.z - (currentZoom - b.z);
+        });
+    }
+    getCenterTileCoord(zoom, centerSphericalDeg) {
+        if (!centerSphericalDeg) {
+            return null;
+        }
+        const lonDeg = centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi;
+        const latDeg = 90 - centerSphericalDeg.theta;
+        const dim = 2 ** zoom;
+        const x = Math.floor(((lonDeg + 180) / 360) * dim);
+        const latRad = (Math.max(-85.0511287798066, Math.min(85.0511287798066, latDeg)) * Math.PI) / 180;
+        const y = Math.floor(((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * dim);
+        return {
+            z: zoom,
+            x: ((x % dim) + dim) % dim,
+            y: Math.max(0, Math.min(dim - 1, y)),
+        };
+    }
+}
+exports.XYZVisibleTilesManager = XYZVisibleTilesManager;
+
+
+/***/ }),
+
+/***/ 7559:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+class Point2D {
+    _x;
+    _y;
+    constructor(x, y) {
+        this._x = x;
+        this._y = y;
+    }
+    get x() {
+        return this._x;
+    }
+    get y() {
+        return this._y;
+    }
+}
+exports["default"] = Point2D;
+
+
+/***/ }),
+
+/***/ 7734:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+const gl_matrix_1 = __webpack_require__(1961);
+const Utils_js_1 = __webpack_require__(7930);
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+class Camera {
+    insideSphere = false;
+    cam_pos = gl_matrix_1.vec3.create(); // camera position
+    cam_speed = 1.0;
+    vMatrix = gl_matrix_1.mat4.create(); // view matrix
+    T = gl_matrix_1.mat4.create(); // translation matrix
+    R = gl_matrix_1.mat4.create(); // rotation matrix
+    // Optional state used in rotate helpers
+    FoV = 180.0;
+    previousFoV = 180.0;
+    move = gl_matrix_1.vec3.create();
+    phi = 0; // accumulated yaw (radians)
+    theta = 0; // accumulated pitch (radians)
+    rotationSensitivity = 1.0;
+    // lock rotation around world axes
+    lockRotX = false;
+    lockRotY = false;
+    lockRotZ = false;
+    constructor(in_position, in_sphere) {
+        this.init(in_position, in_sphere);
+    }
+    init(in_position, in_sphere) {
+        this.insideSphere = in_sphere;
+        this.cam_pos = gl_matrix_1.vec3.clone(in_position);
+        this.vMatrix = gl_matrix_1.mat4.create();
+        this.T = gl_matrix_1.mat4.create();
+        this.R = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.translate(this.T, this.T, [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]]);
+        // reset helpers
+        this.FoV = this.previousFoV = 180.0;
+        this.move = gl_matrix_1.vec3.clone([0, 0, 0]);
+        const raDeg = 0;
+        const decDeg = 0;
+        this.goTo(raDeg, decDeg);
+    }
+    goTo(raDeg, decDeg) {
+        this.goToPhiTheta((0, Utils_js_1.astroDegToSpherical)(raDeg, decDeg));
+    }
+    goToPhiTheta(ptDeg) {
+        const xyz = (0, Utils_js_1.sphericalToCartesian)(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
+        let cameraMatrix = gl_matrix_1.mat4.create();
+        cameraMatrix = gl_matrix_1.mat4.translate(cameraMatrix, cameraMatrix, gl_matrix_1.vec3.fromValues(xyz[0], xyz[1], xyz[2]));
+        const focusPoint = [0.0, 0.0, 0.0];
+        const cameraUp = gl_matrix_1.vec3.clone([0.0, 1.0, 0.0]);
+        const cameraPos = [cameraMatrix[12], cameraMatrix[13], cameraMatrix[14]];
+        cameraMatrix = gl_matrix_1.mat4.targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
+        this.R = gl_matrix_1.mat4.clone(cameraMatrix);
+        this.R[12] = 0;
+        this.R[13] = 0;
+        this.R[14] = 0;
+        const viewMatrix = gl_matrix_1.mat4.create();
+        if (this.cam_pos[2] !== 0) {
+            gl_matrix_1.mat4.invert(viewMatrix, cameraMatrix);
+        }
+        this.vMatrix = viewMatrix;
+    }
+    toggleInsideSphere() {
+        // if (inside !== global.insideSphere) {
+        //   global.insideSphere = inside;
+        if (Global_js_1.default.insideSphere) {
+            if (this.cam_pos[2] <= 2) {
+                this.cam_pos[2] = -2 + this.cam_pos[2];
+            }
+            else {
+                this.cam_pos[2] = -0.005;
+            }
+        }
+        else {
+            this.cam_pos[2] = 2.0 + this.cam_pos[2];
+        }
+        gl_matrix_1.mat4.translate(this.T, gl_matrix_1.mat4.create(), this.cam_pos);
+        this.refreshViewMatrix();
+        // }
+    }
+    zoom(inertia) {
+        this.move = gl_matrix_1.vec3.clone([0, 0, 0]);
+        this.move[2] += this.cam_speed * inertia;
+        if (Global_js_1.default.insideSphere) {
+            if (this.cam_pos[2] + this.move[2] >= -0.005 && inertia > 0) {
+                this.cam_pos[2] = -0.005;
+                inertia = 0;
+            }
+            else if (this.cam_pos[2] + this.move[2] <= -0.9885 && inertia < 0) {
+                this.cam_pos[2] = -0.9885;
+                inertia = 0;
+            }
+            else {
+                this.cam_pos[2] += this.move[2];
+            }
+        }
+        else {
+            // Keep zoom responsive near the sphere surface without the abrupt
+            // threshold jumps that made the 0.2 -> 0.05 deg range feel sticky.
+            const distanceFromSurface = Math.max(this.cam_pos[2] - 1, 1e-6);
+            const normalizedDistance = Math.min(1, distanceFromSurface / 0.3);
+            const zoomScale = 0.015 + 0.985 * Math.pow(normalizedDistance, 1.2);
+            this.move[2] *= zoomScale;
+            if (this.cam_pos[2] + this.move[2] <= 1.000001 && inertia < 0) {
+                this.cam_pos[2] = 1.000001;
+            }
+            else {
+                this.cam_pos[2] += this.move[2];
+            }
+        }
+        const identity = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.translate(this.T, identity, this.cam_pos);
+        this.refreshViewMatrix();
+    }
+    /**
+     * Move the camera forward/backward along its current viewing direction.
+     * Positive distance moves *forward* (toward where the camera is looking),
+     * negative distance moves *backward*.
+     *
+     * This does not enforce inside/outside-sphere bounds; if you want clamping,
+     * handle it before calling or we can extend this to mimic `zoom()` bounds.
+     */
+    moveAlongView(distance) {
+        // World-space forward vector: transform camera-space -Z by inverse rotation
+        const R_inverse = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(R_inverse, this.R);
+        const forwardCam = gl_matrix_1.vec3.fromValues(0, 0, -1); // camera looks along -Z in its local space
+        const fwdWorld = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.transformMat4(fwdWorld, forwardCam, R_inverse);
+        // Normalise to get direction only
+        const len = Math.hypot(fwdWorld[0], fwdWorld[1], fwdWorld[2]);
+        if (len > 0) {
+            fwdWorld[0] /= len;
+            fwdWorld[1] /= len;
+            fwdWorld[2] /= len;
+        }
+        // Update camera position
+        this.cam_pos[0] += fwdWorld[0] * distance;
+        this.cam_pos[1] += fwdWorld[1] * distance;
+        this.cam_pos[2] += fwdWorld[2] * distance;
+        // Rebuild translation matrix and view matrix
+        const identity = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.translate(this.T, identity, this.cam_pos);
+        this.refreshViewMatrix();
+    }
+    translate(distance) {
+        this.cam_pos[2] = distance + 1;
+        const identity = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.translate(this.T, identity, this.cam_pos);
+        this.refreshViewMatrix();
+    }
+    rotateX(sign) {
+        if (this.lockRotX)
+            return;
+        const factorRad = sign * 0.01;
+        this.theta += factorRad;
+        gl_matrix_1.mat4.rotate(this.R, this.R, factorRad, [1, 0, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateY(sign) {
+        if (this.lockRotY)
+            return;
+        const factorRad = sign * 0.01;
+        this.phi += factorRad;
+        gl_matrix_1.mat4.rotate(this.R, this.R, factorRad, [0, 1, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateZ(sign) {
+        if (this.lockRotZ)
+            return;
+        const factorRad = sign * 0.01;
+        // this.phi += factorRad;
+        gl_matrix_1.mat4.rotate(this.R, this.R, factorRad, [0, 0, 1]);
+        this.refreshViewMatrix();
+    }
+    rotateXRadian(radian) {
+        if (this.lockRotX)
+            return;
+        gl_matrix_1.mat4.rotate(this.R, this.R, radian, [1, 0, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateYRadian(radian) {
+        if (this.lockRotY)
+            return;
+        this.phi += radian;
+        gl_matrix_1.mat4.rotate(this.R, this.R, radian, [0, 1, 0]);
+        this.refreshViewMatrix();
+    }
+    rotateZRadian(radian) {
+        if (this.lockRotZ)
+            return;
+        gl_matrix_1.mat4.rotate(this.R, this.R, radian, [0, 0, 1]);
+        this.refreshViewMatrix();
+    }
+    rotate(phi, theta) {
+        // If Z is locked, completely disable orbit rotation
+        if (this.lockRotZ) {
+            return;
+        }
+        const totRot = Math.sqrt(phi * phi + theta * theta);
+        if (totRot === 0)
+            return;
+        // If both X and Y rotations are locked, nothing to do
+        if (this.lockRotX && this.lockRotY) {
+            return;
+        }
+        const pos = this.getCameraPosition();
+        const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+        const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
+        const normalizedDistance = Math.min(1, distanceFromSurface / 0.45);
+        const distanceFactor = 0.02 + 0.98 * Math.pow(normalizedDistance, 1.55);
+        // Keep tiny FoV more stable and predictable while preserving responsiveness
+        // at medium and wide fields of view.
+        const normalizedFoV = Math.min(1, this.FoV / 18);
+        const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
+        const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
+        // Build an axis from phi/theta, but zero components that are locked
+        let axisX = this.lockRotX ? 0 : theta;
+        let axisY = this.lockRotY ? 0 : phi;
+        const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
+        // If after locking we have no axis left, do nothing
+        if (axisLen === 0) {
+            return;
+        }
+        axisX /= axisLen;
+        axisY /= axisLen;
+        gl_matrix_1.mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
+        this.refreshViewMatrix();
+    }
+    setRotationSensitivity(value) {
+        this.rotationSensitivity = Math.min(3, Math.max(0.2, value));
+    }
+    getRotationSensitivity() {
+        return this.rotationSensitivity;
+    }
+    // rotate(phi: number, theta: number): void {
+    //   // totRot is the magnitude of the requested rotation
+    //   const totRot = Math.sqrt(phi * phi + theta * theta);
+    //   if (totRot === 0) return;
+    //   // If both X and Y rotations are locked, nothing to do
+    //   if (this.lockRotX && this.lockRotY) {
+    //     return;
+    //   }
+    //   const pos = this.getCameraPosition();
+    //   const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+    //   const usedRot = (totRot * (dist2Center - 1)) / 3.0;
+    //   // Build an axis from phi/theta, but zero components that are locked
+    //   let axisX = this.lockRotX ? 0 : theta;
+    //   let axisY = this.lockRotY ? 0 : phi;
+    //   const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
+    //   // If after locking we have no axis left, do nothing
+    //   if (axisLen === 0) {
+    //     return;
+    //   }
+    //   axisX /= axisLen;
+    //   axisY /= axisLen;
+    //   mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
+    //   this.refreshViewMatrix();
+    // }
+    // rotate(phi: number, theta: number): void {
+    //   const totRot = Math.sqrt(phi * phi + theta * theta);
+    //   if (totRot === 0) return;
+    //   const pos = this.getCameraPosition();
+    //   const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+    //   const usedRot = (totRot * (dist2Center - 1)) / 3.0;
+    //   mat4.rotate(this.R, this.R, -usedRot, [theta / totRot, phi / totRot, 0]);
+    //   this.refreshViewMatrix();
+    // }
+    refreshViewMatrix() {
+        const T_inverse = gl_matrix_1.mat4.create();
+        const R_inverse = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(T_inverse, this.T);
+        gl_matrix_1.mat4.invert(R_inverse, this.R);
+        gl_matrix_1.mat4.multiply(this.vMatrix, T_inverse, R_inverse);
+    }
+    refreshFoV(currentFoV) {
+        this.previousFoV = this.FoV;
+        this.FoV = currentFoV;
+    }
+    getCameraMatrix() {
+        return this.vMatrix;
+    }
+    getCameraPosition() {
+        const inv = gl_matrix_1.mat4.create();
+        if (!gl_matrix_1.mat4.invert(inv, this.vMatrix)) {
+            // fallback — we already maintain cam_pos
+            return [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]];
+        }
+        return [inv[12], inv[13], inv[14]];
+    }
+    setCameraMatrix(viewMatrix) {
+        this.vMatrix = viewMatrix;
+    }
+    setCameraPosition(position) {
+        // Update authoritative position
+        this.cam_pos = gl_matrix_1.vec3.fromValues(position[0], position[1], position[2]);
+        // Rebuild translation matrix from cam_pos
+        gl_matrix_1.mat4.translate(this.T, gl_matrix_1.mat4.create(), this.cam_pos);
+        // Do NOT touch this.R here (keep orientation)
+        // Recompute view: vMatrix = inv(T) * inv(R)
+        this.refreshViewMatrix();
+    }
+    getCameraAngle() {
+        const [x, y, z] = this.getCameraPosition();
+        const posVec = gl_matrix_1.vec3.fromValues(x, y, z);
+        const ptDeg = (0, Utils_js_1.cartesianToSpherical)(posVec);
+        // eslint-disable-next-line no-console
+        console.log("[Camera::getCameraAngle]", ptDeg);
+        return ptDeg;
+    }
+    /**
+     * Lock/unlock rotation around world axes X, Y, Z.
+     * Passing `undefined` leaves that axis as-is.
+     */
+    setRotationLock(options) {
+        if (options.x !== undefined)
+            this.lockRotX = options.x;
+        if (options.y !== undefined)
+            this.lockRotY = options.y;
+        if (options.z !== undefined)
+            this.lockRotZ = options.z;
+    }
+    /** Convenience helpers */
+    clearRotationLock() {
+        this.lockRotX = this.lockRotY = this.lockRotZ = false;
+    }
+    isRotationLockedX() { return this.lockRotX; }
+    isRotationLockedY() { return this.lockRotY; }
+    isRotationLockedZ() { return this.lockRotZ; }
+}
+exports["default"] = Camera;
+
+
+/***/ }),
+
+/***/ 7786:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.HiPSShaderProgram = void 0;
+// HiPSShaderProgram.ts
+const ShaderManager_js_1 = __importDefault(__webpack_require__(5947));
+const ColorMaps_js_1 = __webpack_require__(619);
+// export default class HiPSShaderProgram {
+class HiPSShaderProgram {
+    _colorMapBlockIndex = null;
+    _runtimeColorMap;
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    _UBO_colorMapBuffer = null;
+    _UBO_colorMapVariableInfo = {
+        r_palette: { index: 0, offset: 0 },
+        g_palette: { index: 0, offset: 0 },
+        b_palette: { index: 0, offset: 0 }
+    };
+    gl_uniforms;
+    gl_attributes;
+    locations;
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
+        this.gl_uniforms = {
+            sampler: 'uSampler0',
+            factor: 'uFactor0',
+            m_perspective: 'uPMatrix',
+            m_model: 'uMMatrix',
+            m_view: 'uVMatrix',
+            colormapIdx: 'cmapIdx',
+            colormap_red: 'r',
+            colormap_green: 'g',
+            colormap_blue: 'b'
+        };
+        this.gl_attributes = {
+            vertex_pos: 'aVertexPosition',
+            text_coords: 'aTextureCoord'
+        };
+        this.locations = {
+            pMatrix: null,
+            mMatrix: null,
+            vMatrix: null,
+            sampler: null,
+            textureAlpha: null,
+            clorMapIdx: null,
+            vertexPositionAttribute: -1,
+            textureCoordAttribute: -1
+        };
+    }
+    get shaderProgram() {
+        const gl = this._webgl;
+        if (!this._shaderProgram) {
+            // const gl = global.gl as GL
+            this._shaderProgram = gl.createProgram();
+            this.initShaders();
+        }
+        ;
+        gl.useProgram(this._shaderProgram);
+        return this._shaderProgram;
+    }
+    setRuntimeColorMap(colorMap) {
+        this._runtimeColorMap = colorMap;
+    }
+    initShaders() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        const fragmentShaderStr = ShaderManager_js_1.default.hipsNativeFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = ShaderManager_js_1.default.hipsVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vertexShaderStr);
+        gl.compileShader(this._vertexShader);
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this._shaderProgram, this._vertexShader);
+        gl.attachShader(this._shaderProgram, this._fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+    }
+    enableProgram() {
+        // (global.gl as GL).useProgram(this._shaderProgram as WebGLProgram)
+        this._webgl.useProgram(this.shaderProgram);
+    }
+    setGrayscaleShader() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
+        const fragmentShaderStr = ShaderManager_js_1.default.hipsGrayscaleFS();
+        this.changeFSShader(fragmentShaderStr);
+    }
+    setNativeShader() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
+        const fragmentShaderStr = ShaderManager_js_1.default.hipsNativeFS();
+        this.changeFSShader(fragmentShaderStr);
+    }
+    setColorMapShader() {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        // Swap fragment shader
+        gl.detachShader(this.shaderProgram, this._fragmentShader);
+        const fragmentShaderStr = ShaderManager_js_1.default.hipsColorMapFS();
+        this.changeFSShader(fragmentShaderStr);
+        // UBO discovery for the "colormap" block
+        const blockIndex = gl.getUniformBlockIndex(this.shaderProgram, 'colormap');
+        // INVALID_INDEX == 0xFFFFFFFF in WebGL2
+        if (blockIndex === gl.INVALID_INDEX) {
+            console.warn('HiPSShaderProgram: uniform block "colormap" not found in hipsColorMapFS()');
+            this._colorMapBlockIndex = null;
+            this._UBO_colorMapBuffer = null;
+            return; // do NOT proceed with UBO setup
+        }
+        this._colorMapBlockIndex = blockIndex;
+        // const blockSize = gl.getActiveUniformBlockParameter(
+        //   this.shaderProgram as WebGLProgram,
+        //   blockIndex,
+        //   gl.UNIFORM_BLOCK_DATA_SIZE
+        // ) as number
+        const uboVariableNames = ['r_palette', 'g_palette', 'b_palette'];
+        const uboVariableIndices = gl.getUniformIndices(this.shaderProgram, uboVariableNames);
+        const uboVariableOffsets = gl.getActiveUniforms(this.shaderProgram, uboVariableIndices, gl.UNIFORM_OFFSET);
+        // Create buffer only once
+        if (!this._UBO_colorMapBuffer) {
+            this._UBO_colorMapBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
+            // std140 layout: 256 floats each padded to 16 bytes => 4096 bytes per palette, total 12288
+            const BYTES = 12288; // 3 * 4096
+            gl.bufferData(gl.UNIFORM_BUFFER, BYTES, gl.STATIC_DRAW);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+            gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._UBO_colorMapBuffer);
+        }
+        // Store offsets
+        uboVariableNames.forEach((name, index) => {
+            this._UBO_colorMapVariableInfo[name] = {
+                index: uboVariableIndices[index],
+                offset: uboVariableOffsets[index]
+            };
+        });
+    }
+    changeFSShader(fragmentShaderStr) {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this.shaderProgram);
+    }
+    enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        // const gl = global.gl as GL
+        const gl = this._webgl;
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model);
+        this.locations.vMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_view);
+        this.locations.sampler = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.sampler);
+        this.locations.textureAlpha = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.factor);
+        this.locations.clorMapIdx = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.colormapIdx);
+        // NEW
+        // if (this.locations.clorMapIdx) {
+        gl.uniform1i(this.locations.clorMapIdx, colorMapIdx);
+        // }
+        // Make sampler explicit: we always use TEXTURE0 in your draw code
+        if (this.locations.sampler) {
+            gl.uniform1i(this.locations.sampler, 0);
+        }
+        // END NEW
+        this.locations.vertexPositionAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.textureCoordAttribute = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.text_coords);
+        if (colorMapIdx >= 2 && this._UBO_colorMapBuffer && this._colorMapBlockIndex !== null) {
+            gl.uniformBlockBinding(this.shaderProgram, this._colorMapBlockIndex, 0);
+            gl.bindBuffer(gl.UNIFORM_BUFFER, this._UBO_colorMapBuffer);
+            let currentColorMap;
+            if (colorMapIdx === 2) {
+                currentColorMap = {
+                    r: ColorMaps_js_1.ColorMaps.planck.r,
+                    g: ColorMaps_js_1.ColorMaps.planck.g,
+                    b: ColorMaps_js_1.ColorMaps.planck.b,
+                };
+            }
+            else if (colorMapIdx === 3) {
+                currentColorMap = {
+                    r: ColorMaps_js_1.ColorMaps.cmb.r,
+                    g: ColorMaps_js_1.ColorMaps.cmb.g,
+                    b: ColorMaps_js_1.ColorMaps.cmb.b,
+                };
+            }
+            else if (colorMapIdx === 4) {
+                currentColorMap = {
+                    r: ColorMaps_js_1.ColorMaps.rainbow.r,
+                    g: ColorMaps_js_1.ColorMaps.rainbow.g,
+                    b: ColorMaps_js_1.ColorMaps.rainbow.b,
+                };
+            }
+            else if (colorMapIdx === 5) {
+                currentColorMap = {
+                    r: ColorMaps_js_1.ColorMaps.eosb.r,
+                    g: ColorMaps_js_1.ColorMaps.eosb.g,
+                    b: ColorMaps_js_1.ColorMaps.eosb.b,
+                };
+            }
+            else if (colorMapIdx === 6) {
+                currentColorMap = {
+                    r: ColorMaps_js_1.ColorMaps.cubehelix.r,
+                    g: ColorMaps_js_1.ColorMaps.cubehelix.g,
+                    b: ColorMaps_js_1.ColorMaps.cubehelix.b,
+                };
+            }
+            else if (colorMapIdx === 7) {
+                currentColorMap = {
+                    r: ColorMaps_js_1.ColorMaps.hot.r,
+                    g: ColorMaps_js_1.ColorMaps.hot.g,
+                    b: ColorMaps_js_1.ColorMaps.hot.b,
+                };
+            }
+            else if (colorMapIdx === 8) {
+                currentColorMap = {
+                    r: ColorMaps_js_1.ColorMaps.gray.r,
+                    g: ColorMaps_js_1.ColorMaps.gray.g,
+                    b: ColorMaps_js_1.ColorMaps.gray.b,
+                };
+            }
+            if (!currentColorMap) {
+                currentColorMap = this._runtimeColorMap;
+            }
+            if (currentColorMap) {
+                const info = this._UBO_colorMapVariableInfo;
+                gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, currentColorMap.r, 0);
+                gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, currentColorMap.g, 0);
+                gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, currentColorMap.b, 0);
+            }
+            gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+        }
+        gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
+    }
+}
+exports.HiPSShaderProgram = HiPSShaderProgram;
+
+
+/***/ }),
+
+/***/ 7930:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.cartesianToSpherical = cartesianToSpherical;
+exports.colorHex2RGB = colorHex2RGB;
+exports.degToRad = degToRad;
+exports.radToDeg = radToDeg;
+exports.sphericalToAstroDeg = sphericalToAstroDeg;
+exports.sphericalToCartesian = sphericalToCartesian;
+exports.astroDegToSpherical = astroDegToSpherical;
+exports.raDegToHMS = raDegToHMS;
+exports.decDegToDMS = decDegToDMS;
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+const gl_matrix_1 = __webpack_require__(1961);
+// results in degrees
+function cartesianToSpherical(xyz) {
+    const dotXYZ = gl_matrix_1.vec3.dot(xyz, xyz);
+    const r = Math.sqrt(dotXYZ);
+    let theta = Math.acos(xyz[2] / r);
+    theta = radToDeg(theta);
+    // NB: in atan(y/x) is written with params switched atan2(x, y)
+    let phi = Math.atan2(xyz[1], xyz[0]);
+    phi = radToDeg(phi);
+    if (phi < 0) {
+        phi += 360;
+    }
+    return { phi, theta };
+}
+function colorHex2RGB(hexColor) {
+    const hex1 = hexColor.substring(1, 3);
+    const hex2 = hexColor.substring(3, 5);
+    const hex3 = hexColor.substring(5, 7);
+    const dec1 = parseInt(hex1, 16);
+    const dec2 = parseInt(hex2, 16);
+    const dec3 = parseInt(hex3, 16);
+    const rgb1 = (dec1 / 255).toFixed(2);
+    const rgb2 = (dec2 / 255).toFixed(2);
+    const rgb3 = (dec3 / 255).toFixed(2);
+    return [parseFloat(rgb1), parseFloat(rgb2), parseFloat(rgb3)];
+}
+function degToRad(degrees) {
+    return (degrees / 180) * Math.PI;
+}
+function radToDeg(radians) {
+    return (radians * 180) / Math.PI;
+}
+function sphericalToAstroDeg(phiDeg, thetaDeg) {
+    let raDeg = phiDeg;
+    if (raDeg < 0) {
+        raDeg += 360;
+    }
+    const decDeg = 90 - thetaDeg;
+    return { ra: raDeg, dec: decDeg };
+}
+function sphericalToCartesian(phiDeg, thetaDeg, r = 1) {
+    const x = r * Math.sin(degToRad(thetaDeg)) * Math.cos(degToRad(phiDeg));
+    const y = r * Math.sin(degToRad(thetaDeg)) * Math.sin(degToRad(phiDeg));
+    const z = r * Math.cos(degToRad(thetaDeg));
+    return [x, y, z];
+}
+function astroDegToSpherical(raDeg, decDeg) {
+    let phiDeg = raDeg;
+    if (phiDeg < 0) {
+        phiDeg += 360;
+    }
+    const thetaDeg = 90 - decDeg;
+    return { phi: phiDeg, theta: thetaDeg };
+}
+function raDegToHMS(raDeg) {
+    const h = Math.floor(raDeg / 15);
+    const m = Math.floor((raDeg / 15 - h) * 60);
+    const s = (raDeg / 15 - h - m / 60) * 3600;
+    return { h, m, s };
+}
+function decDegToDMS(decDeg) {
+    let sign = 1;
+    if (decDeg < 0) {
+        sign = -1;
+    }
+    const decDegAbs = Math.abs(decDeg);
+    let d = Math.trunc(decDegAbs);
+    const m = Math.trunc((decDegAbs - d) * 60);
+    const s = (decDegAbs - d - m / 60) * 3600;
+    d = d * sign;
+    return { d, m, s };
+}
+
+
+/***/ }),
+
+/***/ 8083:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FoVUtils = void 0;
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
+const Point_js_1 = __webpack_require__(6553);
+const RayPickingUtils_js_1 = __importDefault(__webpack_require__(4639));
+const CoordsType_js_1 = __webpack_require__(8145);
+const gl_matrix_1 = __webpack_require__(1961);
+class FoVUtils {
+    /**
+     * Return the minimum FoV value between `_fovY_deg` and `_fovX_deg`.
+     * (Kept here for parity; this class doesn’t maintain those fields.)
+     */
+    getMinFoV() {
+        return this._fovY_deg <= this._fovX_deg ? this._fovY_deg : this._fovX_deg;
+    }
+    /**
+     * Compute the FoV polygon as a list of Points (clockwise).
+     * Uses ray picking + frustum planes against a unit sphere.
+     */
+    static getFoVPolygon(
+    // _pMatrix: ReadonlyMat4 | null,
+    camera, canvas, model, healpixGrid, webgl, pMatrix) {
+        // const pMatrix = (computePerspectiveMatrixSingleton.pMatrix ??
+        //   _pMatrix) as ReadonlyMat4;
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4 
+        const vMatrix = camera.getCameraMatrix();
+        const mMatrix = model.getModelMatrix();
+        const canvasWidth = canvas.clientWidth;
+        const canvasHeight = canvas.clientHeight;
+        let points = [];
+        // First check: does the sphere cover the whole screen?
+        const intersectionWithModel = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
+        if (intersectionWithModel.length > 0) {
+            // Fully covered → grab corners + midpoints (CASE C)
+            const cornersPoints = FoVUtils.getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl);
+            points = cornersPoints;
+        }
+        else {
+            // Partial coverage: build frustum planes
+            let M = gl_matrix_1.mat4.create();
+            M = gl_matrix_1.mat4.multiply(M, vMatrix, mMatrix);
+            M = gl_matrix_1.mat4.multiply(M, pMatrix, M);
+            const topPlane = [M[3] - M[1], M[7] - M[5], M[11] - M[9], M[15] - M[13]]; // m41-m21, ...
+            const bottomPlane = [M[3] + M[1], M[7] + M[5], M[11] + M[9], M[15] + M[13]];
+            const rightPlane = [M[3] - M[0], M[7] - M[4], M[11] - M[8], M[15] - M[12]];
+            const leftPlane = [M[3] + M[0], M[7] + M[4], M[11] + M[8], M[15] + M[12]];
+            const intersectionTopMiddle = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(canvasWidth / 2, 0, healpixGrid, webgl, camera, pMatrix);
+            const intersectionRightMiddle = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(canvasWidth, canvasHeight / 2, healpixGrid, webgl, camera, pMatrix);
+            // CASE A: zoomed out, hemisphere fully visible
+            if (intersectionTopMiddle.length === 0 &&
+                intersectionRightMiddle.length === 0) {
+                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
+                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
+                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
+                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
+                points.push(topPoints[0], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], middleLeftTop);
+            }
+            // CASE E: no intersection on top/bottom planes
+            else if (intersectionTopMiddle.length === 0) {
+                const topPoints = FoVUtils.getNearestSpherePoint(topPlane);
+                const bottomPoints = FoVUtils.getNearestSpherePoint(bottomPlane);
+                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
+                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[1], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[0], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[1], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[0], leftPoints[0])[0];
+                points.push(topPoints[0], middleTopRight, rightPoints[0], rightPoints[1], middleRightBottom, bottomPoints[0], middleBottomLeft, leftPoints[0], leftPoints[1], middleLeftTop);
+            }
+            // CASE D: no intersection on right/left planes
+            else if (intersectionRightMiddle.length === 0) {
+                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
+                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
+                const leftPoints = FoVUtils.getNearestSpherePoint(leftPlane);
+                const rightPoints = FoVUtils.getNearestSpherePoint(rightPlane);
+                const middleLeftTop = FoVUtils.computeMiddlePoint(leftPoints[0], topPoints[0])[0];
+                const middleTopRight = FoVUtils.computeMiddlePoint(topPoints[1], rightPoints[0])[0];
+                const middleRightBottom = FoVUtils.computeMiddlePoint(rightPoints[0], bottomPoints[0])[0];
+                const middleBottomLeft = FoVUtils.computeMiddlePoint(bottomPoints[1], leftPoints[0])[0];
+                points.push(topPoints[0], topPoints[1], middleTopRight, rightPoints[0], middleRightBottom, bottomPoints[0], bottomPoints[1], middleBottomLeft, leftPoints[0], middleLeftTop);
+            }
+            // CASE B: all frustum planes intersect
+            else {
+                const topPoints = FoVUtils.getFrustumIntersectionWithSphere(M, topPlane, leftPlane, rightPlane);
+                const bottomPoints = FoVUtils.getFrustumIntersectionWithSphere(M, bottomPlane, rightPlane, leftPlane);
+                const leftPoints = FoVUtils.getFrustumIntersectionWithSphere(M, leftPlane, bottomPlane, topPlane);
+                const rightPoints = FoVUtils.getFrustumIntersectionWithSphere(M, rightPlane, topPlane, bottomPlane);
+                points.push(topPoints[0], topPoints[1], rightPoints[0], rightPoints[1], bottomPoints[0], bottomPoints[1], leftPoints[0], leftPoints[1]);
+            }
+        }
+        return points;
+    }
+    /**
+     * Ray pick against 8 key screen positions (corners + midpoints).
+     * Returns Points in clockwise order starting from top-left.
+     */
+    static getScreenCornersIntersection(pMatrix, camera, canvas, healpixGrid, webgl) {
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        const topLeft = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(0, 0, healpixGrid, webgl, camera, pMatrix);
+        const middleTop = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w / 2, 0, healpixGrid, webgl, camera, pMatrix);
+        const topRight = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w, 0, healpixGrid, webgl, camera, pMatrix);
+        const middleRight = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w, h / 2, healpixGrid, webgl, camera, pMatrix);
+        const bottomRight = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w, h, healpixGrid, webgl, camera, pMatrix);
+        const middleBottom = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w / 2, h, healpixGrid, webgl, camera, pMatrix);
+        const bottomLeft = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(0, h, healpixGrid, webgl, camera, pMatrix);
+        const middleLeft = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(0, h / 2, healpixGrid, webgl, camera, pMatrix);
+        const out = [];
+        const pushIf = (ip) => {
+            if (ip.length > 0) {
+                out.push(new Point_js_1.Point({ x: ip[0], y: ip[1], z: ip[2] }, CoordsType_js_1.CoordsType.CARTESIAN));
+            }
+        };
+        pushIf(topLeft);
+        pushIf(middleTop);
+        pushIf(topRight);
+        pushIf(middleRight);
+        pushIf(bottomRight);
+        pushIf(middleBottom);
+        pushIf(bottomLeft);
+        pushIf(middleLeft);
+        return out;
+    }
+    /** Returns the center point (in J2000) of the current view as a `Point`. */
+    static getCenterJ2000(canvas, healpixGrid, webgl, camera, pMatrix) {
+        const w = canvas.clientWidth;
+        const h = canvas.clientHeight;
+        const center = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(w / 2, h / 2, healpixGrid, webgl, camera, pMatrix);
+        if (center.length <= 0)
+            throw Error(`Central point is null`);
+        return new Point_js_1.Point({ x: center[0], y: center[1], z: center[2] }, CoordsType_js_1.CoordsType.CARTESIAN);
+    }
+    /** Middle point on the unit sphere along the arc between two 3D points. */
+    static computeMiddlePoint(p1, p2) {
+        // midpoint of segment
+        const xm = (p1.x + p2.x) / 2;
+        const ym = (p1.y + p2.y) / 2;
+        const zm = (p1.z + p2.z) / 2;
+        // project the midpoint back to unit sphere
+        const len = Math.hypot(xm, ym, zm) || 1;
+        const x = xm / len;
+        const y = ym / len;
+        const z = zm / len;
+        return [new Point_js_1.Point({ x, y, z }, CoordsType_js_1.CoordsType.CARTESIAN)];
+    }
+    /**
+     * Nearest intersection point between a frustum plane and the unit sphere,
+     * using the plane normal.
+     */
+    static getNearestSpherePoint(plane) {
+        const [A, B, C, D] = plane;
+        const R = 1;
+        const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
+        const t1 = R * invLen;
+        const t2 = -R * invLen;
+        const P1 = [A * t1, B * t1, C * t1];
+        const P2 = [A * t2, B * t2, C * t2];
+        const den = Math.sqrt(A * A + B * B + C * C) || 1;
+        const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
+        const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
+        const P = dist1 <= dist2 ? P1 : P2;
+        return [new Point_js_1.Point({ x: P[0], y: P[1], z: P[2] }, CoordsType_js_1.CoordsType.CARTESIAN)];
+    }
+    /**
+     * Intersections between a frustum plane and the unit sphere,
+     * computed via two perpendicular planes.
+     * Returns two points (first from `plane4Circle_1`, second from `plane4Circle_2`).
+     */
+    static getFrustumIntersectionWithSphere(_M, plane4Sphere, plane4Circle_1, plane4Circle_2) {
+        const [A0, B0, C0, D0] = plane4Sphere;
+        // center of the circle (projection of sphere center onto plane)
+        const denom0 = (A0 * A0 + B0 * B0 + C0 * C0) || 1;
+        const x_c = -(A0 * D0) / denom0;
+        const y_c = -(B0 * D0) / denom0;
+        const z_c = -(C0 * D0) / denom0;
+        const d = Math.abs(D0) / Math.sqrt(denom0); // distance from sphere center (0,0,0)
+        const R = 1;
+        const out = [];
+        if (R > d) {
+            const r = Math.sqrt(R * R - d * d);
+            const pick = (plane) => {
+                const [A, B, C, D] = plane;
+                const invLen = 1 / Math.sqrt(A * A + B * B + C * C);
+                const t1 = r * invLen;
+                const t2 = -r * invLen;
+                const P1 = [x_c + A * t1, y_c + B * t1, z_c + C * t1];
+                const P2 = [x_c + A * t2, y_c + B * t2, z_c + C * t2];
+                const den = Math.sqrt(A * A + B * B + C * C) || 1;
+                const dist1 = Math.abs(A * P1[0] + B * P1[1] + C * P1[2] + D) / den;
+                const dist2 = Math.abs(A * P2[0] + B * P2[1] + C * P2[2] + D) / den;
+                return dist1 <= dist2 ? P1 : P2;
+            };
+            const P_intersection_1 = pick(plane4Circle_1);
+            const P_intersection_2 = pick(plane4Circle_2);
+            out.push(new Point_js_1.Point({ x: P_intersection_1[0], y: P_intersection_1[1], z: P_intersection_1[2] }, CoordsType_js_1.CoordsType.CARTESIAN), new Point_js_1.Point({ x: P_intersection_2[0], y: P_intersection_2[1], z: P_intersection_2[2] }, CoordsType_js_1.CoordsType.CARTESIAN));
+        }
+        else if (R === d) {
+            // Tangent: both intersections collapse to the circle center on the plane
+            out.push(new Point_js_1.Point({ x: x_c, y: y_c, z: z_c }, CoordsType_js_1.CoordsType.CARTESIAN), new Point_js_1.Point({ x: x_c, y: y_c, z: z_c }, CoordsType_js_1.CoordsType.CARTESIAN));
+        }
+        else {
+            // No intersection; return empty to avoid pushing undefined values
+            // console.log('Frustum plane not intersecting the sphere');
+        }
+        return out;
+    }
+    /** Build ADQL string from an array of Points (ra,dec pairs). */
+    static getAstroFoVPolygon(points) {
+        return points.map(p => p.toADQL()).join(',');
+    }
+}
+exports.FoVUtils = FoVUtils;
+
+
+/***/ }),
+
+/***/ 8145:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.CoordsType = void 0;
+/**
+ * Enum for coordinate types.
+ * @author Fabrizio Giordano (Fab77)
+ */
+var CoordsType;
+(function (CoordsType) {
+    CoordsType["CARTESIAN"] = "cartesian";
+    CoordsType["SPHERICAL"] = "spherical";
+    CoordsType["ASTRO"] = "astro";
+})(CoordsType || (exports.CoordsType = CoordsType = {}));
+// export default CoordsType;
+
+
+/***/ }),
+
+/***/ 8256:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+// Tile.ts
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+const FoVHelper_js_1 = __webpack_require__(229);
+// ------------------------------------------------------------------------
+class Tile {
+    _hips;
+    _tileno;
+    _baseurl;
+    _order;
+    _format;
+    _maxorder;
+    _isGalacticHips;
+    _ready = false;
+    _abort = false;
+    _image;
+    _textureLoaded = false;
+    _texture;
+    _texurl = '';
+    _hipsShaderIndex = 0;
+    _cacheTime0;
+    _inView = true;
+    _amIStillInFoV_requsetID;
+    // geometry buffers
+    vertexPosition = [];
+    vertexPositionBuffer = [];
+    vertexIndices = new Uint16Array();
+    vertexIndexBuffer;
+    _tileBuffer;
+    opacity = 1.0;
+    _webgl;
+    _visibleTileManager;
+    // private _hipsShaderProgram
+    constructor(tileno, order, hips, tileBuffer, webgl, visibleTileManager) {
+        // this._hipsShaderProgram = hipsShaderProgram
+        this._visibleTileManager = visibleTileManager;
+        this._webgl = webgl;
+        this._tileBuffer = tileBuffer;
+        this._hips = hips;
+        this._tileno = tileno;
+        this._format = hips.format;
+        this._baseurl = hips.baseURL;
+        this._maxorder = hips.maxOrder;
+        this._isGalacticHips = hips.isGalacticHips;
+        this._order = order;
+        this._amIStillInFoV_requsetID = window.setInterval(() => {
+            this.amIStillInFoV();
+        }, 5000);
+        this.initImage();
+    }
+    destroyIntervals() {
+        window.clearInterval(this._amIStillInFoV_requsetID);
+    }
+    getReadyState() {
+        return this._ready;
+    }
+    get cacheTime0() {
+        return this._cacheTime0;
+    }
+    resetCacheTime0() {
+        this._cacheTime0 = undefined;
+    }
+    setCacheTime0() {
+        this._cacheTime0 = new Date().getTime();
+    }
+    initImage() {
+        if (this._order > this._maxorder) {
+            this._ready = false;
+            this._abort = true;
+            this.destroyIntervals();
+            console.warn(`[Tile] Skipping tile request above max order: requested order ${this._order}, max order ${this._maxorder}, url ${this._baseurl}`);
+            return;
+        }
+        this._image = new Image();
+        const dirnumber = Math.floor(this._tileno / 10000) * 10000;
+        this._texurl = `${this._baseurl}/Norder${this._order}/Dir${dirnumber}/Npix${this._tileno}.${this._format}`;
+        this._image.onload = () => this.imageLoaded();
+        this._image.onerror = () => {
+            // console.error('File not found?', this._texurl)
+            this._ready = false;
+            this._abort = true;
+            this.destroyIntervals();
+        };
+        this._image.crossOrigin = 'anonymous';
+        this._image.src = this._texurl;
+    }
+    imageLoaded() {
+        // this.textureLoaded()
+        // this.initModelBuffer()
+        // this._textureLoaded = true
+        this._ready = true;
+    }
+    // private textureLoaded(): void {
+    textureLoaded(hipsShaderProgram) {
+        // this._hipsShaderProgram.enableProgram()
+        hipsShaderProgram.enableProgram();
+        const gl = this._webgl;
+        this._texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        if (!gl.isTexture(this._texture)) {
+            console.log('error in texture');
+        }
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        // FIX: use the sampler location we fetched in enableShaders()
+        // gl.uniform1i((this._hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
+        // gl.uniform1i((hipsShaderProgram.locations as ShaderLocations).sampler, this._hipsShaderIndex)
+        if (!gl.isTexture(this._texture)) {
+            console.warn('Texture creation failed');
+        }
+        this.initModelBuffer();
+        this._textureLoaded = true;
+    }
+    initModelBuffer() {
+        const gl = this._webgl;
+        this.vertexPosition = [];
+        this.vertexPositionBuffer = [];
+        this.vertexIndices = new Uint16Array();
+        const reforder = FoVHelper_js_1.fovHelper.getRefOrder(this._order);
+        const orighealpix = Global_js_1.default.getHealpix(this._order);
+        const origxyf = orighealpix.nest2xyf(this._tileno);
+        const orderjump = reforder - this._order;
+        const dxmin = origxyf.ix << orderjump;
+        const dxmax = (origxyf.ix << orderjump) + (1 << orderjump);
+        const dymin = origxyf.iy << orderjump;
+        const dymax = (origxyf.iy << orderjump) + (1 << orderjump);
+        const healpix = Global_js_1.default.getHealpix(reforder);
+        this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin, dymin + (dymax - dymin) / 2, 0, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin, dymin + (dymax - dymin) / 2, 1, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant2(dxmin, dxmin + (dxmax - dxmin) / 2, dymin + (dymax - dymin) / 2, dymax, 2, healpix, orderjump, origxyf);
+        this.setupPositionAndTexture4Quadrant2(dxmin + (dxmax - dxmin) / 2, dxmax, dymin + (dymax - dymin) / 2, dymax, 3, healpix, orderjump, origxyf);
+        const pixelsXQuadrant = this.vertexPosition[0].length / 20;
+        const idx = this.computeVertexIndices(pixelsXQuadrant);
+        // If large, upgrade to Uint32 indices
+        if (idx.length > 65535) {
+            // Optional: require OES_element_index_uint if you’re still on WebGL1
+            this.vertexIndices = new Uint32Array(idx);
+        }
+        else {
+            this.vertexIndices = new Uint16Array(idx);
+        }
+        this.vertexIndexBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndices, gl.STATIC_DRAW);
+    }
+    computeVertexIndices(pixelsXQuadrant) {
+        const vertexIndices = new Uint32Array(6 * pixelsXQuadrant);
+        let baseFaceIndex = 0;
+        for (let j = 0; j < pixelsXQuadrant; j++) {
+            const b = baseFaceIndex;
+            vertexIndices[6 * j] = b;
+            vertexIndices[6 * j + 1] = b + 1;
+            vertexIndices[6 * j + 2] = b + 2;
+            vertexIndices[6 * j + 3] = b + 2;
+            vertexIndices[6 * j + 4] = b + 3;
+            vertexIndices[6 * j + 5] = b;
+            baseFaceIndex += 4;
+        }
+        return vertexIndices;
+    }
+    setupPositionAndTexture4Quadrant2(dxmin, dxmax, dymin, dymax, qidx, healpix, orderjump, origxyf) {
+        const gl = this._webgl;
+        this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin));
+        const step = 1 / (1 << orderjump);
+        let p = 0;
+        const s_pixel_size = 0;
+        const t_pixel_size = 0;
+        for (let dx = dxmin; dx < dxmax; dx++) {
+            for (let dy = dymin; dy < dymax; dy++) {
+                const facesVec3Array = healpix.getPointsForXyfNoStep(dx, dy, origxyf.face);
+                const uindex = dy - (origxyf.iy << orderjump);
+                const vindex = dx - (origxyf.ix << orderjump);
+                // v0
+                this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x;
+                this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y;
+                this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z;
+                this.vertexPosition[qidx][20 * p + 3] = step + step * uindex + s_pixel_size;
+                this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex) - t_pixel_size;
+                // v1
+                this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x;
+                this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y;
+                this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z;
+                this.vertexPosition[qidx][20 * p + 8] = step + step * uindex + s_pixel_size;
+                this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex + t_pixel_size;
+                // v2
+                this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x;
+                this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y;
+                this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z;
+                this.vertexPosition[qidx][20 * p + 13] = step * uindex - s_pixel_size;
+                this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex + t_pixel_size;
+                // v3
+                this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x;
+                this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y;
+                this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z;
+                this.vertexPosition[qidx][20 * p + 18] = step * uindex - s_pixel_size;
+                this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex) - t_pixel_size;
+                p++;
+            }
+        }
+        this.vertexPositionBuffer[qidx] = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+        gl.bufferData(gl.ARRAY_BUFFER, this.vertexPosition[qidx], gl.STATIC_DRAW);
+    }
+    get inView() {
+        return this._inView;
+    }
+    moveToCache() {
+        // newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips)
+        this._tileBuffer.moveTileToCache(this._tileno, this._order, this._hips);
+        this._inView = false;
+        this.destroyIntervals();
+    }
+    amIStillInFoV() {
+        if (this._textureLoaded)
+            this._ready = true;
+        if (this._isGalacticHips) {
+            if (this._visibleTileManager.galAncestorsMap.has(this._order)) {
+                if (!this._visibleTileManager.galAncestorsMap.get(this._order).includes(this._tileno)) {
+                    this.moveToCache();
+                }
+                else {
+                    this._inView = true;
+                }
+            }
+            // if (visibleTilesManager.galAncestorsMap.has(this._order)) {
+            //   if (!visibleTilesManager.galAncestorsMap.get(this._order)!.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+            if (this._order == this._visibleTileManager.visibleOrder) {
+                if (!this._visibleTileManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+                    this.moveToCache();
+                }
+                else {
+                    this._inView = true;
+                }
+            }
+            // if (this._order == visibleTilesManager.visibleOrder) {
+            //   if (!visibleTilesManager.galVisibleTilesByOrder.pixels.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+        }
+        else {
+            if (this._visibleTileManager.ancestorsMap.has(this._order)) {
+                if (!this._visibleTileManager.ancestorsMap.get(this._order).includes(this._tileno)) {
+                    this.moveToCache();
+                }
+                else {
+                    this._inView = true;
+                }
+            }
+            // if (visibleTilesManager.ancestorsMap.has(this._order)) {
+            //   if (!visibleTilesManager.ancestorsMap.get(this._order)!.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+            if (this._order == this._visibleTileManager.visibleOrder) {
+                if (!this._visibleTileManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+                    this.moveToCache();
+                }
+                else {
+                    this._inView = true;
+                }
+            }
+            // if (this._order == visibleTilesManager.visibleOrder) {
+            //   if (!visibleTilesManager.visibleTilesByOrder.pixels.includes(this._tileno)) {
+            //     this.moveToCache()
+            //   } else {
+            //     this._inView = true
+            //   }
+            // }
+        }
+    }
+    draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram) {
+        if (!this._ready || this._abort)
+            return;
+        if (!this._textureLoaded) {
+            this.textureLoaded(hipsShaderProgram);
+        }
+        let quadrantsToDraw = new Set([0, 1, 2, 3]);
+        if (visibleOrder > this._order && this._order < this._maxorder) {
+            // const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+            const kids = this.drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram);
+            if (kids)
+                quadrantsToDraw = kids;
+        }
+        const gl = this._webgl;
+        hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        // this._hipsShaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx)
+        // Enable attributes (these locations are retrieved in enableShaders)
+        // gl.enableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+        // gl.enableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
+        gl.enableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.enableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+        gl.activeTexture(gl.TEXTURE0 + this._hipsShaderIndex);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        // gl.uniform1f(this._hipsShaderProgram.locations.textureAlpha, this.opacity)
+        gl.uniform1f(hipsShaderProgram.locations.textureAlpha, this.opacity);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
+        const elemno = this.vertexIndices.length;
+        const indexType = this.vertexIndices instanceof Uint32Array ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
+        quadrantsToDraw.forEach((qidx) => {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx]);
+            gl.vertexAttribPointer(
+            // this._hipsShaderProgram.locations.vertexPositionAttribute,
+            hipsShaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 5 * 4, 0);
+            gl.vertexAttribPointer(
+            // this._hipsShaderProgram.locations.textureCoordAttribute,
+            hipsShaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 5 * 4, 3 * 4);
+            gl.drawElements(gl.TRIANGLES, elemno, indexType, 0);
+        });
+        // gl.disableVertexAttribArray(this._hipsShaderProgram.locations.vertexPositionAttribute)
+        // gl.disableVertexAttribArray(this._hipsShaderProgram.locations.textureCoordAttribute)
+        gl.disableVertexAttribArray(hipsShaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(hipsShaderProgram.locations.textureCoordAttribute);
+    }
+    drawChildren(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram) {
+        const quadrantsToDraw = new Set([0, 1, 2, 3]);
+        const childrenOrder = this._order + 1;
+        if (!visibleTilesMap.has(childrenOrder))
+            return;
+        for (let c = 0; c < 4; c++) {
+            const childTileNo = (this._tileno << 2) + c;
+            const list = visibleTilesMap.get(childrenOrder);
+            if (list.includes(childTileNo)) {
+                const childTile = this._isGalacticHips
+                    ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                    : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+                // const childTile = this._isGalacticHips
+                //   ? newTileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
+                //   : newTileBuffer.getTile(childTileNo, childrenOrder, this._hips)
+                // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+                childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, hipsShaderProgram);
+                if (childTile._ready) {
+                    quadrantsToDraw.delete(childTileNo - (this._tileno << 2));
+                }
+            }
+        }
+        return quadrantsToDraw;
+    }
+}
+exports["default"] = Tile;
+
+
+/***/ }),
+
+/***/ 8819:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMeshBuilder = void 0;
+const Utils_js_1 = __webpack_require__(7930);
+const MAX_MERCATOR_LAT = 85.0511287798066;
+function mercatorYToLatDeg(yNormalized) {
+    const mercator = Math.PI * (1 - 2 * yNormalized);
+    return (Math.atan(Math.sinh(mercator)) * 180) / Math.PI;
+}
+function wrapLonToPhi(lonDeg) {
+    return lonDeg < 0 ? lonDeg + 360 : lonDeg;
+}
+class XYZMeshBuilder {
+    buildTileMesh(tile, segmentsPerSide = 16) {
+        const segments = Math.max(1, Math.floor(segmentsPerSide));
+        const gridSize = segments + 1;
+        const vertexCount = gridSize * gridSize;
+        const positions = new Float32Array(vertexCount * 3);
+        const uvs = new Float32Array(vertexCount * 2);
+        const tileCount = 2 ** tile.z;
+        let p = 0;
+        let uv = 0;
+        for (let row = 0; row <= segments; row++) {
+            const v = row / segments;
+            const yNormalized = (tile.y + v) / tileCount;
+            const latDeg = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, mercatorYToLatDeg(yNormalized)));
+            const thetaDeg = 90 - latDeg;
+            for (let col = 0; col <= segments; col++) {
+                const u = col / segments;
+                const xNormalized = (tile.x + u) / tileCount;
+                const lonDeg = xNormalized * 360 - 180;
+                const phiDeg = wrapLonToPhi(lonDeg);
+                const [x, y, z] = (0, Utils_js_1.sphericalToCartesian)(phiDeg, thetaDeg, 1);
+                positions[p++] = x;
+                positions[p++] = y;
+                positions[p++] = z;
+                uvs[uv++] = u;
+                uvs[uv++] = 1 - v;
+            }
+        }
+        const triangleCount = segments * segments * 2;
+        const rawIndices = new Uint32Array(triangleCount * 3);
+        let i = 0;
+        for (let row = 0; row < segments; row++) {
+            for (let col = 0; col < segments; col++) {
+                const topLeft = row * gridSize + col;
+                const topRight = topLeft + 1;
+                const bottomLeft = topLeft + gridSize;
+                const bottomRight = bottomLeft + 1;
+                rawIndices[i++] = topLeft;
+                rawIndices[i++] = bottomLeft;
+                rawIndices[i++] = topRight;
+                rawIndices[i++] = topRight;
+                rawIndices[i++] = bottomLeft;
+                rawIndices[i++] = bottomRight;
+            }
+        }
+        const indices = rawIndices.length > 65535 ? rawIndices : new Uint16Array(rawIndices);
+        return { positions, uvs, indices };
+    }
+}
+exports.XYZMeshBuilder = XYZMeshBuilder;
+
+
+/***/ }),
+
+/***/ 8909:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.FootprintShaderProgram = void 0;
+// HiPSShaderProgram.ts
+const gl_matrix_1 = __webpack_require__(1961);
+const ShaderManager_js_1 = __importDefault(__webpack_require__(5947));
+class FootprintShaderProgram {
+    // export default class FootprintShaderProgram {
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    gl_uniforms;
+    gl_attributes;
+    locations;
+    _webgl;
+    constructor(webgl) {
+        this._webgl = webgl;
+        this.gl_uniforms = {
+            vertex_color: 'u_fragcolor',
+            m_perspective: 'uPMatrix',
+            m_model_view: 'uMVMatrix',
+            point_size: 'u_pointsize'
+        };
+        this.gl_attributes = {
+            vertex_pos: 'aCatPosition'
+        };
+        this.locations = {
+            pMatrix: null,
+            mvMatrix: null,
+            color: null,
+            position: -1,
+            pointSize: -1
+        };
+    }
+    get shaderProgram() {
+        if (!this._shaderProgram) {
+            const gl = this._webgl;
+            // const gl = global.gl as GL
+            this._shaderProgram = gl.createProgram();
+            this.initShaders();
+        }
+        return this._shaderProgram;
+    }
+    initShaders() {
+        const gl = this._webgl;
+        // const gl = global.gl as GL
+        const fragmentShaderStr = ShaderManager_js_1.default.footprintFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fragmentShaderStr);
+        gl.compileShader(this._fragmentShader);
+        console.log('FS log:', gl.getShaderInfoLog(this._fragmentShader) || 'ok');
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._fragmentShader) || 'Fragment shader compile error');
+            return;
+        }
+        const vertexShaderStr = ShaderManager_js_1.default.footprintVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vertexShaderStr);
+        gl.compileShader(this._vertexShader);
+        console.log('VS log:', gl.getShaderInfoLog(this._vertexShader) || 'ok');
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(this._vertexShader) || 'Vertex shader compile error');
+            return;
+        }
+        gl.attachShader(this.shaderProgram, this._vertexShader);
+        gl.attachShader(this.shaderProgram, this._fragmentShader);
+        gl.linkProgram(this.shaderProgram);
+        if (!gl.getProgramParameter(this.shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this.shaderProgram);
+        this.locations.position = gl.getAttribLocation(this.shaderProgram, this.gl_attributes.vertex_pos);
+        this.locations.pointSize = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.point_size);
+        this.locations.color = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.vertex_color);
+    }
+    enableShaders(pMatrix, modelMatrix, viewMatrix) {
+        const gl = this._webgl;
+        // const gl = global.gl as GL
+        gl.useProgram(this.shaderProgram);
+        this.locations.pMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_perspective);
+        this.locations.mvMatrix = gl.getUniformLocation(this.shaderProgram, this.gl_uniforms.m_model_view);
+        let mvMatrix = gl_matrix_1.mat4.create();
+        mvMatrix = gl_matrix_1.mat4.multiply(mvMatrix, viewMatrix, modelMatrix);
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.mvMatrix, false, mvMatrix);
+    }
+}
+exports.FootprintShaderProgram = FootprintShaderProgram;
+// export const footprintShaderProgram = new FootprintShaderProgram()
+
+
+/***/ }),
+
+/***/ 9665:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+/**
+ * @author Fabrizio Giordano (Fab77)
+ */
+const Point_js_1 = __webpack_require__(6553);
+const CoordsType_js_1 = __webpack_require__(8145);
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+class STCSParser {
+    static parseSTCS(stcs) {
+        const stcsParsed = STCSParser.cleanStcs(stcs);
+        let totPoints = 0;
+        const polygons = [];
+        if (stcsParsed.includes("POLYGON")) {
+            return STCSParser.parsePolygon(stcsParsed);
+        }
+        else if (stcsParsed.includes("CIRCLE")) {
+            return STCSParser.parseCircle(stcsParsed);
+        }
+        else {
+            console.warn("STCS not recognised");
+        }
+        return { totpoints: totPoints, polygons };
+    }
+    static cleanStcs(stcs) {
+        // Uppercase once
+        let s = stcs.toUpperCase();
+        // Remove tokens
+        s = s
+            .replace(/'ICRS'/g, '')
+            .replace(/\bICRS\b/g, '')
+            .replace(/\bJ2000\b/g, '')
+            .replace(/\bUNION\b/g, '')
+            .replace(/\bTOPOCENTER\b/g, '');
+        // Remove parentheses
+        s = s.replace(/[()]/g, '');
+        // Collapse extra spaces and trim
+        s = s.replace(/ {2,}/g, ' ').trim();
+        return s;
+    }
+    static parsePolygon(stcs) {
+        let totPoints = 0;
+        const polygons = [];
+        const MAX_DECIMALS = Global_js_1.default.MAX_DECIMALS ?? 12;
+        const polys = stcs.split("POLYGON ");
+        for (let i = 1; i < polys.length; i++) {
+            const currPoly = [];
+            const points = polys[i].trim().split(" ");
+            // If first point is repeated as last, remove the duplicate
+            const p0 = Number(parseFloat(points[0]).toFixed(MAX_DECIMALS));
+            const p1 = Number(parseFloat(points[1]).toFixed(MAX_DECIMALS));
+            const plast0 = Number(parseFloat(points[points.length - 2]).toFixed(MAX_DECIMALS));
+            const plast1 = Number(parseFloat(points[points.length - 1]).toFixed(MAX_DECIMALS));
+            if (p0 === plast0 && p1 === plast1) {
+                points.splice(points.length - 2, 2);
+            }
+            if (points.length > 2) {
+                for (let p = 0; p < points.length - 1; p += 2) {
+                    const raDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
+                    const decDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
+                    const point = new Point_js_1.Point({ raDeg, decDeg }, CoordsType_js_1.CoordsType.ASTRO);
+                    currPoly.push(point);
+                    totPoints += 1;
+                }
+                polygons.push(currPoly);
+            }
+        }
+        return { totpoints: totPoints, polygons };
+    }
+    // Example format: "CIRCLE ICRS 8.739685 4.38147 0.027833"
+    static parseCircle(stcs) {
+        let totPoints = 0;
+        const polygons = [];
+        const polys = stcs.split("CIRCLE ");
+        for (let i = 1; i < polys.length; i++) {
+            const currPoly = [];
+            const tokens = polys[i].trim().split(" ");
+            const ra = Number(tokens[0]);
+            const dec = Number(tokens[1]);
+            const radius = Number(tokens[2]);
+            const POINTS_PER_QUADRANT = 6;
+            const npoints = POINTS_PER_QUADRANT * 4;
+            const alpha = (2 * Math.PI) / npoints;
+            // Generate points around the circle
+            for (let p = npoints; p > 0; p--) {
+                const curra = radius * Math.cos(p * alpha) + ra;
+                const curdec = radius * Math.sin(p * alpha) + dec;
+                const point = new Point_js_1.Point({ raDeg: curra, decDeg: curdec }, CoordsType_js_1.CoordsType.ASTRO);
+                currPoly.push(point);
+                totPoints += 1;
+            }
+            polygons.push(currPoly);
+        }
+        return { totpoints: totPoints, polygons };
+    }
+}
+exports["default"] = STCSParser;
+
+
+/***/ }),
+
+/***/ 9685:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.PerspectiveMatrixManager = void 0;
+const gl_matrix_1 = __webpack_require__(1961);
+class PerspectiveMatrixManager {
+    _pMatrix;
+    _aspectRatio = 1;
+    constructor(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
+        this._pMatrix = this.computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane, insideSphere);
+    }
+    get pMatrix() {
+        return this._pMatrix;
+    }
+    set pMatrix(pMatrix) {
+        this._pMatrix = pMatrix;
+    }
+    computePerspectiveMatrix(canvas, camera, fovDeg, nearPlane = 0.1, insideSphere) {
+        this._aspectRatio = canvas.width / canvas.height;
+        const p = gl_matrix_1.mat4.create();
+        let farPlane;
+        if (insideSphere) {
+            // Inside the sphere: cap slightly beyond radius
+            farPlane = 1.1;
+        }
+        else {
+            const camMat = camera.getCameraMatrix();
+            const distCamera = -Number(camMat[14]); // camera z translation
+            const r = 1; // HiPS sphere radius (inject real value if available)
+            // Guard against negative due to rounding/logic
+            const c2 = Math.sqrt(Math.max(distCamera ** 2 - r ** 2, 0));
+            const beta = Math.atan2(c2, r);
+            const cf = c2 * Math.sin(beta);
+            farPlane = cf > 0 ? cf : r;
+        }
+        gl_matrix_1.mat4.perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
+        this._pMatrix = p;
+        return p;
+    }
+}
+exports.PerspectiveMatrixManager = PerspectiveMatrixManager;
+
+
+/***/ }),
+
+/***/ 9839:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.EquatorialGrid = void 0;
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+const gl_matrix_1 = __webpack_require__(1961);
+const FoVHelper_js_1 = __webpack_require__(229);
+const Utils_js_1 = __webpack_require__(7930);
+const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
+const Point_js_1 = __webpack_require__(6553);
+const CoordsType_js_1 = __webpack_require__(8145);
+const FoVUtils_js_1 = __webpack_require__(8083);
+const GridTextHelper_js_1 = __importDefault(__webpack_require__(5361));
+const HealpixGrid_js_1 = __webpack_require__(4595);
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+/** Equatorial grid rendered as RA/Dec great-circle line loops */
+class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    showGrid = false;
+    // private _gl: GL;
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    defaultColor = '#41d421';
+    gridText = new GridTextHelper_js_1.default();
+    _attribLocations = {
+        position: 0,
+        selected: 1,
+        pointSize: 2,
+        color: 3,
+    };
+    _phiVertexPositionBuffer;
+    _thetaVertexPositionBuffer;
+    _fov;
+    // Step sizes (degrees + radians) and label caches
+    _phiStep = 0;
+    _phiStepRad = 0;
+    _thetaStep = 0;
+    _thetaStepRad = 0;
+    _phiArray = [];
+    _thetaArray = [];
+    // For placing text labels near current view center:
+    //  - _dec4Labels: key = RA(deg), value = points along that RA ring (for Dec labels)
+    //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
+    _dec4Labels = new Map();
+    _ra4Labels = new Map();
+    _healpixGrid;
+    /**
+     * @param radius Not used by current implementation (sphere is unit-radius)
+     * @param fov    Field of view in degrees
+     */
+    constructor(webgl, healpixGrid) {
+        super(HealpixGrid_js_1.HealpixGrid.RADIUS, HealpixGrid_js_1.HealpixGrid.INITIAL_POSITION, HealpixGrid_js_1.HealpixGrid.INITIAL_PhiRad, HealpixGrid_js_1.HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
+        this._healpixGrid = healpixGrid;
+    }
+    init(fov) {
+        this._fov = fov;
+        this.initGL(super.webgl);
+        // Program & buffers
+        this._shaderProgram = super.webgl.createProgram();
+        this.initShaders();
+        this._phiVertexPositionBuffer = super.webgl.createBuffer();
+        this._thetaVertexPositionBuffer = super.webgl.createBuffer();
+        // Build initial RA/Dec line buffers
+        this.initBuffers(this._fov);
+    }
+    /** Compile/link shaders and fetch uniform/attribute locations */
+    initShaders() {
+        // Fragment
+        const fsSource = GridShaderManager_js_1.default.healpixGridFS();
+        this._fragmentShader = super.webgl.createShader(super.webgl.FRAGMENT_SHADER);
+        super.webgl.shaderSource(this._fragmentShader, fsSource);
+        super.webgl.compileShader(this._fragmentShader);
+        if (!super.webgl.getShaderParameter(this._fragmentShader, super.webgl.COMPILE_STATUS)) {
+            // Keep identical behavior (alert) but surface errors in console too
+            const log = super.webgl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
+            console.error(log);
+            alert(log);
+            return;
+        }
+        // Vertex
+        const vsSource = GridShaderManager_js_1.default.healpixGridVS();
+        this._vertexShader = super.webgl.createShader(super.webgl.VERTEX_SHADER);
+        super.webgl.shaderSource(this._vertexShader, vsSource);
+        super.webgl.compileShader(this._vertexShader);
+        if (!super.webgl.getShaderParameter(this._vertexShader, super.webgl.COMPILE_STATUS)) {
+            const log = super.webgl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
+            console.error(log);
+            alert(log);
+            return;
+        }
+        // Link
+        super.webgl.attachShader(this._shaderProgram, this._vertexShader);
+        super.webgl.attachShader(this._shaderProgram, this._fragmentShader);
+        super.webgl.linkProgram(this._shaderProgram);
+        if (!super.webgl.getProgramParameter(this._shaderProgram, super.webgl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        super.webgl.useProgram(this._shaderProgram);
+    }
+    /** Build RA/Dec line vertex arrays based on FoV step helper */
+    initBuffers(fovDeg) {
+        const R = 1.0;
+        const steps = FoVHelper_js_1.fovHelper.getRADegSteps(fovDeg);
+        const phiStep = steps.raStep; // RA step (deg)
+        const thetaStep = steps.decStep; // Dec step (deg)
+        this._phiStep = phiStep;
+        this._phiStepRad = (0, Utils_js_1.degToRad)(phiStep);
+        this._thetaStep = thetaStep;
+        this._thetaStepRad = (0, Utils_js_1.degToRad)(thetaStep);
+        this._ra4Labels = new Map();
+        this._dec4Labels = new Map();
+        this._phiArray = [];
+        this._thetaArray = [];
+        // Lines of constant Dec (varying RA): for each Dec, a ring with vertices every phiStep°
+        for (let theta = thetaStep; theta < 180; theta += thetaStep) {
+            const phiVertexPosition = new Float32Array((360 / phiStep) * 3);
+            const thetaRad = (0, Utils_js_1.degToRad)(theta);
+            for (let phi = 0; phi < 360; phi += phiStep) {
+                const phiRad = (0, Utils_js_1.degToRad)(phi);
+                const x = R * Math.sin(thetaRad) * Math.cos(phiRad);
+                const y = R * Math.sin(thetaRad) * Math.sin(phiRad);
+                const z = R * Math.cos(thetaRad);
+                const idx = Math.floor(phi / phiStep);
+                phiVertexPosition[3 * idx + 0] = x;
+                phiVertexPosition[3 * idx + 1] = y;
+                phiVertexPosition[3 * idx + 2] = z;
+                if (!this._dec4Labels.has(phi))
+                    this._dec4Labels.set(phi, []);
+                this._dec4Labels.get(phi).push([x, y, z]);
+            }
+            this._phiArray.push(phiVertexPosition);
+        }
+        // Lines of constant RA (varying Dec): for each RA, a ring with vertices every thetaStep°
+        for (let phi = 0; phi < 360; phi += phiStep) {
+            const thetaVertexPosition = new Float32Array((360 / thetaStep) * 3);
+            const phiRad = (0, Utils_js_1.degToRad)(phi);
+            for (let theta = 0; theta < 360; theta += thetaStep) {
+                const thetaRad = (0, Utils_js_1.degToRad)(theta);
+                const x = R * Math.sin(thetaRad) * Math.cos(phiRad);
+                const y = R * Math.sin(thetaRad) * Math.sin(phiRad);
+                const z = R * Math.cos(thetaRad);
+                const idx = Math.floor(theta / thetaStep);
+                thetaVertexPosition[3 * idx + 0] = x;
+                thetaVertexPosition[3 * idx + 1] = y;
+                thetaVertexPosition[3 * idx + 2] = z;
+                const decKey = 90 - theta; // original code’s keying for RA labels
+                if (!this._ra4Labels.has(decKey))
+                    this._ra4Labels.set(decKey, []);
+                this._ra4Labels.get(decKey).push([x, y, z]);
+            }
+            this._thetaArray.push(thetaVertexPosition);
+        }
+    }
+    /** Update buffers when FoV (in degrees) changes */
+    refresh(fovDeg) {
+        // const fovDeg = healpixGridSingleton.getMinFoV()
+        if (this._fov !== fovDeg) {
+            this._fov = fovDeg;
+            this.initBuffers(this._fov);
+        }
+    }
+    vectorDistance(p1, p2) {
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        const dz = p1.z - p2.z;
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+    enableShader(mMatrix, pMatrix, vMatrix) {
+        const gl = super.webgl;
+        gl.useProgram(this._shaderProgram);
+        // uMVMatrix = camera * model
+        const mvMatrix = gl_matrix_1.mat4.create();
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as mat4, mMatrix);
+        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        // TODO move locations retrieval elsewhere
+        // Uniform locations
+        const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uPMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        // Attribute locations
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        if (uMVMatrixLoc)
+            gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
+        if (uPMatrixLoc)
+            gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
+        if (uColor) {
+            const rgb = (0, Utils_js_1.colorHex2RGB)(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    isVisible() {
+        return this.showGrid;
+    }
+    toggleShowGrid() {
+        this.showGrid = !this.showGrid;
+    }
+    /**
+     * @param mMatrix model matrix associated with current HiPS (or scene) transform
+     * @param fovObj  current field-of-view (degrees). If your FoV type differs,
+     *                pass the numeric value here; this signature matches original usage.
+     */
+    draw(input) {
+        const fovDeg = input.fovDeg;
+        if (!fovDeg)
+            return;
+        const gl = super.webgl;
+        const mMatrix = this.getModelMatrix();
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const vMatrix = camera.getCameraMatrix();
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        if (!vMatrix)
+            return;
+        if (this._thetaArray.length === 0)
+            return;
+        this.refresh(fovDeg);
+        if (!this.showGrid) {
+            // gridTextHelper.resetDivSets();
+            this.gridText.resetDivSets();
+            return;
+        }
+        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as ReadonlyMat4;
+        this.enableShader(mMatrix, pMatrix, vMatrix);
+        // Draw Dec rings
+        for (let i = 0; i < this._phiArray.length; i++) {
+            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._phiVertexPositionBuffer);
+            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._phiArray[i], super.webgl.STATIC_DRAW);
+            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
+            super.webgl.enableVertexAttribArray(this._attribLocations.position);
+            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._phiStep);
+        }
+        // Draw RA rings
+        for (let j = 0; j < this._thetaArray.length; j++) {
+            super.webgl.bindBuffer(super.webgl.ARRAY_BUFFER, this._thetaVertexPositionBuffer);
+            super.webgl.bufferData(super.webgl.ARRAY_BUFFER, this._thetaArray[j], super.webgl.STATIC_DRAW);
+            super.webgl.vertexAttribPointer(this._attribLocations.position, 3, super.webgl.FLOAT, false, 0, 0);
+            super.webgl.enableVertexAttribArray(this._attribLocations.position);
+            super.webgl.drawArrays(super.webgl.LINE_LOOP, 0, 360 / this._thetaStep);
+        }
+        // Label layout (HTML overlay)
+        const center = FoVUtils_js_1.FoVUtils.getCenterJ2000(gl.canvas, this._healpixGrid, this._webgl, camera, pMatrix);
+        // MVP = P * V * M
+        const mvMatrix = gl_matrix_1.mat4.create();
+        // mat4.multiply(mvMatrix, (global.camera as any).getCameraMatrix() as unknown as mat4, mMatrix);
+        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        const mvpMatrix = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
+        // Dec labels (loop over RA keys)
+        for (const [raDegKey, points] of this._dec4Labels.entries()) {
+            if (Math.abs(raDegKey - center.raDeg) <= this._phiStep) {
+                for (let p = 0; p < points.length; p++) {
+                    const [x, y, z] = points[p];
+                    const phiPoint = [x, y, z, 1];
+                    const point = new Point_js_1.Point({ x, y, z }, CoordsType_js_1.CoordsType.CARTESIAN);
+                    const decDeg = point.decDeg;
+                    if (Math.abs(decDeg - center.decDeg) < 60) {
+                        const clipspace = gl_matrix_1.vec4.create();
+                        gl_matrix_1.vec4.transformMat4(clipspace, phiPoint, mvpMatrix);
+                        // perspective divide
+                        clipspace[0] /= clipspace[3];
+                        clipspace[1] /= clipspace[3];
+                        // clip->pixel
+                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
+                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
+                        // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
+                    }
+                }
+            }
+        }
+        // RA labels (loop over Dec keys)
+        for (const [decDegKey, points] of this._ra4Labels.entries()) {
+            if (Math.abs(decDegKey - center.decDeg) <= this._thetaStep) {
+                for (let p = 0; p < points.length; p++) {
+                    const [x, y, z] = points[p];
+                    const phiPoint = [x, y, z, 1];
+                    const point = new Point_js_1.Point({ x, y, z }, CoordsType_js_1.CoordsType.CARTESIAN);
+                    const d = this.vectorDistance(point, center);
+                    const raDeg = point.raDeg;
+                    if (d < (0, Utils_js_1.degToRad)(50)) {
+                        const clipspace = gl_matrix_1.vec4.create();
+                        gl_matrix_1.vec4.transformMat4(clipspace, phiPoint, mvpMatrix);
+                        clipspace[0] /= clipspace[3];
+                        clipspace[1] /= clipspace[3];
+                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
+                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
+                        this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
+                    }
+                }
+            }
+        }
+        this.gridText.resetDivSets();
+        // gridTextHelper.resetDivSets();
+        // Cleanup
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+}
+exports.EquatorialGrid = EquatorialGrid;
+// const equatorialGridSingleton = new EquatorialGrid();
+// export default equatorialGridSingleton;
+
+
 /***/ })
 
 /******/ 	});
@@ -19597,45 +19815,47 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.XYZLayer = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZLayer = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
-var HiPSDescriptor_js_1 = __webpack_require__(87);
+var HiPSDescriptor_js_1 = __webpack_require__(5087);
 Object.defineProperty(exports, "HiPSDescriptor", ({ enumerable: true, get: function () { return HiPSDescriptor_js_1.HiPSDescriptor; } }));
-var FoV_js_1 = __webpack_require__(576);
+var FoV_js_1 = __webpack_require__(3576);
 Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return FoV_js_1.FoV; } }));
 var FootprintSetGL_js_1 = __webpack_require__(592);
 Object.defineProperty(exports, "HoveredFootprintDetail", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.HoveredFootprintDetail; } }));
 Object.defineProperty(exports, "FootprintSetGL", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.FootprintSetGL; } }));
-var CatalogueGL_js_1 = __webpack_require__(232);
+var CatalogueGL_js_1 = __webpack_require__(1232);
 Object.defineProperty(exports, "CatalogueGL", ({ enumerable: true, get: function () { return CatalogueGL_js_1.CatalogueGL; } }));
-var MetadataManager_js_1 = __webpack_require__(403);
+var MetadataManager_js_1 = __webpack_require__(5403);
 Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
-var MetadataColumn_js_1 = __webpack_require__(72);
+var MetadataColumn_js_1 = __webpack_require__(1072);
 Object.defineProperty(exports, "MetadataColumn", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataColumn; } }));
 Object.defineProperty(exports, "MetadataInit", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataInit; } }));
 Object.defineProperty(exports, "ColumnType", ({ enumerable: true, get: function () { return MetadataColumn_js_1.ColumnType; } }));
-var Point_js_1 = __webpack_require__(553);
+var Point_js_1 = __webpack_require__(6553);
 Object.defineProperty(exports, "Point", ({ enumerable: true, get: function () { return Point_js_1.Point; } }));
 Object.defineProperty(exports, "SphericalOpts", ({ enumerable: true, get: function () { return Point_js_1.SphericalOpts; } }));
 Object.defineProperty(exports, "AstroOpts", ({ enumerable: true, get: function () { return Point_js_1.AstroOpts; } }));
 Object.defineProperty(exports, "PointInitOpts", ({ enumerable: true, get: function () { return Point_js_1.PointInitOpts; } }));
 Object.defineProperty(exports, "CartesianOpts", ({ enumerable: true, get: function () { return Point_js_1.CartesianOpts; } }));
-var FoVUtils_js_1 = __webpack_require__(83);
+var FoVUtils_js_1 = __webpack_require__(8083);
 Object.defineProperty(exports, "FoVUtils", ({ enumerable: true, get: function () { return FoVUtils_js_1.FoVUtils; } }));
-var CoordsType_js_1 = __webpack_require__(145);
+var CoordsType_js_1 = __webpack_require__(8145);
 Object.defineProperty(exports, "CoordsType", ({ enumerable: true, get: function () { return CoordsType_js_1.CoordsType; } }));
 var ColorMaps_js_1 = __webpack_require__(619);
 Object.defineProperty(exports, "ColorMaps", ({ enumerable: true, get: function () { return ColorMaps_js_1.ColorMaps; } }));
 Object.defineProperty(exports, "COLOR_MAP_SAMPLE_COUNT", ({ enumerable: true, get: function () { return ColorMaps_js_1.COLOR_MAP_SAMPLE_COUNT; } }));
 Object.defineProperty(exports, "createColorMapFromSamples", ({ enumerable: true, get: function () { return ColorMaps_js_1.createColorMapFromSamples; } }));
-var HiPS_js_1 = __webpack_require__(726);
+var HiPS_js_1 = __webpack_require__(3726);
 Object.defineProperty(exports, "HiPS", ({ enumerable: true, get: function () { return HiPS_js_1.HiPS; } }));
-var XYZLayer_js_1 = __webpack_require__(502);
+var XYZLayer_js_1 = __webpack_require__(2502);
 Object.defineProperty(exports, "XYZLayer", ({ enumerable: true, get: function () { return XYZLayer_js_1.XYZLayer; } }));
+var WMTSAdapter_js_1 = __webpack_require__(3768);
+Object.defineProperty(exports, "WMTSAdapter", ({ enumerable: true, get: function () { return WMTSAdapter_js_1.WMTSAdapter; } }));
 var Source_js_1 = __webpack_require__(146);
 Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));
-var Footprint_js_1 = __webpack_require__(475);
+var Footprint_js_1 = __webpack_require__(2475);
 Object.defineProperty(exports, "Footprint", ({ enumerable: true, get: function () { return Footprint_js_1.Footprint; } }));
 console.log('astroviewer UMD loaded');
 

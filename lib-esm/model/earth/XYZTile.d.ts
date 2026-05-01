@@ -27,10 +27,11 @@ export declare class XYZTile {
     get lastUsedAt(): number;
     get createdAt(): number;
     touch(): void;
+    primeLoad(priority?: number): void;
     private loadTexture;
     private loadImageFromBlob;
     private onImageLoaded;
-    draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array): void;
+    draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, priority?: number): void;
     dispose(): void;
     private revokeObjectUrl;
 }

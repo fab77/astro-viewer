@@ -14,6 +14,7 @@ import { CoordsType } from './utils/CoordsType.js';
 import ColorMaps from './model/ColorMaps.js';
 import { XYZLayer } from './model/earth/XYZLayer.js';
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
+import { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -419,6 +420,11 @@ class AstroSphere {
     }
     activateXYZ(config) {
         this._activeXYZ = new XYZLayer(config, this._webgl);
+        this._activeBaseLayer = 'xyz';
+    }
+    activateWMTS(config) {
+        const adapter = new WMTSAdapter(config);
+        this._activeXYZ = new XYZLayer(adapter.toXYZLayerConfig(), this._webgl);
         this._activeBaseLayer = 'xyz';
     }
     // Catalogue section

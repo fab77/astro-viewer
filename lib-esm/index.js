@@ -11,6 +11,7 @@ export { CoordsType } from './utils/CoordsType.js';
 export { ColorMaps, COLOR_MAP_SAMPLE_COUNT, createColorMapFromSamples } from './model/ColorMaps.js';
 export { HiPS } from './model/hips/HiPS.js';
 export { XYZLayer } from './model/earth/XYZLayer.js';
+export { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js';
 export { Source } from './model/Source.js';
 export { Footprint } from './model/footprints/Footprint.js';
 console.log('astroviewer UMD loaded');

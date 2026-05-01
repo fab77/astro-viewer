@@ -2,6 +2,8 @@ type QueueItem = {
   url: string
   resolve: (blob: Blob) => void
   reject: (error: Error) => void
+  priority: number
+  sequence: number
 }
 
 type HostBackoffState = {
@@ -13,11 +15,13 @@ import type { XYZRequestSchedulerDebugStats } from './types.js'
 
 export class XYZTileRequestError extends Error {
   cooldownMs: number
+  retryable: boolean
 
-  constructor(message: string, cooldownMs: number) {
+  constructor(message: string, cooldownMs: number, retryable = true) {
     super(message)
     this.name = 'XYZTileRequestError'
     this.cooldownMs = cooldownMs
+    this.retryable = retryable
   }
 }
 
@@ -27,6 +31,7 @@ export class XYZTileRequestScheduler {
   private _queue: QueueItem[] = []
   private _inflight: Map<string, Promise<Blob>> = new Map()
   private _hostBackoff: Map<string, HostBackoffState> = new Map()
+  private _sequence = 0
 
   constructor(maxConcurrent = 4) {
     this._maxConcurrent = maxConcurrent
@@ -57,11 +62,12 @@ export class XYZTileRequestScheduler {
       queuedRequests: this._queue.length,
       inflightRequests: this._inflight.size,
       maxConcurrentRequests: this._maxConcurrent,
+      highestQueuedPriority: this._queue[0]?.priority ?? null,
       hostsInBackoff,
     }
   }
 
-  load(url: string): Promise<Blob> {
+  load(url: string, priority = 0): Promise<Blob> {
     const inflight = this._inflight.get(url)
     if (inflight) {
       return inflight
@@ -79,7 +85,14 @@ export class XYZTileRequestScheduler {
     }
 
     const promise = new Promise<Blob>((resolve, reject) => {
-      this._queue.push({ url, resolve, reject })
+      this._queue.push({
+        url,
+        resolve,
+        reject,
+        priority,
+        sequence: this._sequence++,
+      })
+      this._queue.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence)
       this.pump()
     }).finally(() => {
       this._inflight.delete(url)
@@ -127,10 +140,12 @@ export class XYZTileRequestScheduler {
       })
 
       if (!response.ok) {
-        const cooldownMs = this.registerFailure(item.url, response.status === 429)
+        const isTransient = response.status === 429 || response.status >= 500
+        const cooldownMs = this.registerFailure(item.url, isTransient)
         throw new XYZTileRequestError(
           `HTTP ${response.status} loading ${item.url}`,
-          cooldownMs,
+          isTransient ? cooldownMs : 5 * 60 * 1000,
+          isTransient,
         )
       }
 
@@ -145,6 +160,7 @@ export class XYZTileRequestScheduler {
       throw new XYZTileRequestError(
         `Network/CORS failure loading ${item.url}`,
         cooldownMs,
+        true,
       )
     }
   }
@@ -170,6 +186,10 @@ export class XYZTileRequestScheduler {
   }
 
   private registerFailure(url: string, isRateLimited: boolean): number {
+    if (!isRateLimited) {
+      return 0
+    }
+
     try {
       const host = new URL(url).host
       const previous = this._hostBackoff.get(host) ?? {
@@ -177,9 +197,9 @@ export class XYZTileRequestScheduler {
         consecutiveFailures: 0,
       }
       const consecutiveFailures = previous.consecutiveFailures + 1
-      const baseDelayMs = isRateLimited ? 4000 : 1500
+      const baseDelayMs = 4000
       const cooldownMs = Math.min(
-        isRateLimited ? 120000 : 30000,
+        120000,
         baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)),
       )
 
@@ -190,7 +210,7 @@ export class XYZTileRequestScheduler {
 
       return cooldownMs
     } catch {
-      return isRateLimited ? 30000 : 10000
+      return 30000
     }
   }
 }

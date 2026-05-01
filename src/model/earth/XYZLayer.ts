@@ -16,7 +16,10 @@ export class XYZLayer extends AbstractSkyEntity {
   private _xyzShaderProgram: XYZShaderProgram
   private _tileCache: Map<string, XYZTile> = new Map()
   private _visibleTileKeys: string[] = []
+  private _tilePriorities: Map<string, number> = new Map()
   private _tileSelectionKey: string | null = null
+  private _currentTileCount = 0
+  private _fallbackTileCount = 0
 
   constructor(config: XYZLayerConfig, webgl: WebGL2RenderingContext) {
     super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false)
@@ -62,11 +65,17 @@ export class XYZLayer extends AbstractSkyEntity {
     return {
       cacheSize: this._tileCache.size,
       visibleTileCount: this._visibleTileKeys.length,
+      currentTileCount: this._currentTileCount,
+      fallbackTileCount: this._fallbackTileCount,
       readyTileCount,
       loadingTileCount,
       coolingDownTileCount,
       currentZoom,
       tileSelectionKey: this._tileSelectionKey,
+      isSettling: false,
+      coarseTileCount: 0,
+      hasPendingSelection: false,
+      pendingSelectionKey: null,
     }
   }
 
@@ -90,6 +99,7 @@ export class XYZLayer extends AbstractSkyEntity {
           key: 'initial',
           currentTiles: this._provider.getInitialTiles(),
           fallbackTiles: [],
+          currentZoom: 1,
         }
 
     if (selection.key === this._tileSelectionKey) {
@@ -97,23 +107,40 @@ export class XYZLayer extends AbstractSkyEntity {
     }
 
     this._tileSelectionKey = selection.key
+    this._currentTileCount = selection.currentTiles.length
+    this._fallbackTileCount = selection.fallbackTiles.length
     const segments = this._config.segmentsPerSide ?? 16
-    const requestedTiles = [...selection.currentTiles, ...selection.fallbackTiles]
+    const prioritizedCurrentTiles = selection.currentTiles.map((tileCoord, index) => ({
+      tileCoord,
+      priority: 10000 + (selection.currentTiles.length - index),
+    }))
+    const prioritizedFallbackTiles = selection.fallbackTiles.map((tileCoord, index) => ({
+      tileCoord,
+      priority: 1000 + (selection.fallbackTiles.length - index),
+    }))
+    const requestedTiles = [...prioritizedCurrentTiles, ...prioritizedFallbackTiles]
+    this._tilePriorities.clear()
     this._visibleTileKeys = requestedTiles
-      .sort((a, b) => a.z - b.z)
-      .map((tileCoord) => this.getTileKey(tileCoord))
+      .sort((a, b) => a.tileCoord.z - b.tileCoord.z)
+      .map(({ tileCoord, priority }) => {
+        const tileKey = this.getTileKey(tileCoord)
+        this._tilePriorities.set(tileKey, priority)
+        return tileKey
+      })
 
-    for (const tileCoord of requestedTiles) {
+    for (const { tileCoord, priority } of requestedTiles) {
       const tileKey = this.getTileKey(tileCoord)
       const existingTile = this._tileCache.get(tileKey)
       if (existingTile) {
         existingTile.touch()
+        existingTile.primeLoad(priority)
         continue
       }
       const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments)
       const url = this._provider.getTileUrl(tileCoord)
       const tile = new XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram)
       tile.touch()
+      tile.primeLoad(priority)
       this._tileCache.set(tileKey, tile)
     }
 
@@ -138,7 +165,7 @@ export class XYZLayer extends AbstractSkyEntity {
     for (const tileKey of this._visibleTileKeys) {
       const tile = this._tileCache.get(tileKey)
       if (!tile) continue
-      tile.draw(pMatrix, vMatrix, mMatrix)
+      tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0)
     }
   }
 

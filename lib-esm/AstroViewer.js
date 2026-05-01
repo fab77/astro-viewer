@@ -89,6 +89,9 @@ export class AstroViewer {
     activateXYZ(config) {
         this.astroSphere.activateXYZ(config);
     }
+    activateWMTS(config) {
+        this.astroSphere.activateWMTS(config);
+    }
     setXYZMaxConcurrentRequests(value) {
         xyzTileRequestScheduler.setMaxConcurrent(value);
     }

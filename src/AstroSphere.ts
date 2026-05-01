@@ -32,8 +32,9 @@ import { SkyEntityDrawInput } from './model/AbstractSkyEntity.js'
 import { CoordsType } from './utils/CoordsType.js'
 import ColorMaps, { ColorMapName, ColorMap } from './model/ColorMaps.js'
 import { XYZLayer } from './model/earth/XYZLayer.js'
-import type { XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
+import { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -633,6 +634,12 @@ class AstroSphere {
 
   activateXYZ(config: XYZLayerConfig) {
     this._activeXYZ = new XYZLayer(config, this._webgl)
+    this._activeBaseLayer = 'xyz'
+  }
+
+  activateWMTS(config: WMTSLayerConfig) {
+    const adapter = new WMTSAdapter(config)
+    this._activeXYZ = new XYZLayer(adapter.toXYZLayerConfig(), this._webgl)
     this._activeBaseLayer = 'xyz'
   }
 
