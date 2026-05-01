@@ -22,6 +22,7 @@ export declare class XYZVisibleTilesManager {
     private normalizeTile;
     private normalizePhi;
     private buildFallbackMap;
+    private buildFallbackSeedTiles;
     private orderTilesByScreenRelevance;
     private orderFallbackTiles;
     private getCenterTileCoord;

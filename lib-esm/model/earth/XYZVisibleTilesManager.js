@@ -8,7 +8,8 @@ export class XYZVisibleTilesManager {
         const coreTiles = this.orderTilesByScreenRelevance(this.buildCoreVisibleTiles(currentZoom, input), currentZoom, input.centerSphericalDeg ?? null);
         const coverageTiles = this.orderTilesByScreenRelevance(this.buildCoverageTiles(currentZoom, input, coreTiles), currentZoom, input.centerSphericalDeg ?? null);
         const currentTiles = [...coreTiles, ...coverageTiles];
-        const fallbackTiles = this.orderFallbackTiles(Array.from(this.buildFallbackMap(coreTiles, currentZoom).values()), currentZoom, input.centerSphericalDeg ?? null);
+        const fallbackSeedTiles = this.buildFallbackSeedTiles(coreTiles, currentZoom, input.centerSphericalDeg ?? null);
+        const fallbackTiles = this.orderFallbackTiles(Array.from(this.buildFallbackMap(fallbackSeedTiles, currentZoom).values()), currentZoom, input.centerSphericalDeg ?? null);
         const key = `${currentZoom}:${currentTiles.map((tile) => `${tile.x}/${tile.y}`).join('|')}`;
         return {
             key,
@@ -150,6 +151,22 @@ export class XYZVisibleTilesManager {
             }
         }
         return fallbackMap;
+    }
+    buildFallbackSeedTiles(coreTiles, zoom, centerSphericalDeg) {
+        if (coreTiles.length === 0) {
+            return [];
+        }
+        const coreSet = new Set(coreTiles.map((tile) => this.key(tile)));
+        const boundaryTiles = coreTiles.filter((tile) => this.isBoundaryTile(tile, coreSet));
+        const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);
+        const seeds = [...boundaryTiles];
+        if (centerTile) {
+            const centerKey = this.key(centerTile);
+            if (!seeds.some((tile) => this.key(tile) === centerKey)) {
+                seeds.push(centerTile);
+            }
+        }
+        return seeds.length > 0 ? seeds : coreTiles;
     }
     orderTilesByScreenRelevance(tiles, zoom, centerSphericalDeg) {
         const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);

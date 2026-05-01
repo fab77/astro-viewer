@@ -32,8 +32,13 @@ export class XYZVisibleTilesManager {
       input.centerSphericalDeg ?? null,
     )
     const currentTiles = [...coreTiles, ...coverageTiles]
+    const fallbackSeedTiles = this.buildFallbackSeedTiles(
+      coreTiles,
+      currentZoom,
+      input.centerSphericalDeg ?? null,
+    )
     const fallbackTiles = this.orderFallbackTiles(
-      Array.from(this.buildFallbackMap(coreTiles, currentZoom).values()),
+      Array.from(this.buildFallbackMap(fallbackSeedTiles, currentZoom).values()),
       currentZoom,
       input.centerSphericalDeg ?? null,
     )
@@ -213,6 +218,30 @@ export class XYZVisibleTilesManager {
     }
 
     return fallbackMap
+  }
+
+  private buildFallbackSeedTiles(
+    coreTiles: XYZTileCoord[],
+    zoom: number,
+    centerSphericalDeg: SkyEntityDrawInput['centerSphericalDeg'] | null,
+  ): XYZTileCoord[] {
+    if (coreTiles.length === 0) {
+      return []
+    }
+
+    const coreSet = new Set(coreTiles.map((tile) => this.key(tile)))
+    const boundaryTiles = coreTiles.filter((tile) => this.isBoundaryTile(tile, coreSet))
+    const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg)
+    const seeds = [...boundaryTiles]
+
+    if (centerTile) {
+      const centerKey = this.key(centerTile)
+      if (!seeds.some((tile) => this.key(tile) === centerKey)) {
+        seeds.push(centerTile)
+      }
+    }
+
+    return seeds.length > 0 ? seeds : coreTiles
   }
 
   private orderTilesByScreenRelevance(
