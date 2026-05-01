@@ -72,10 +72,11 @@
                 <button id="btnLoadXYZ">Load XYZ</button>
             </div>
             <div class="row3">
-                <input id="xyzFixedZoom" type="number" min="0" max="6" step="1" value="1" placeholder="Zoom" />
+                <input id="xyzMinZoom" type="number" min="0" max="8" step="1" value="0" placeholder="Min zoom" />
+                <input id="xyzMaxZoom" type="number" min="0" max="8" step="1" value="6" placeholder="Max zoom" />
                 <input id="xyzSegments" type="number" min="2" max="64" step="1" value="16" placeholder="Segments" />
-                <span class="hint">Load XYZ switches rendering from HiPS to Earth tiles.</span>
             </div>
+            <div class="hint">XYZ zoom is computed automatically from distance/FoV and clamped between min/max.</div>
         </div>
 
         <!-- Inside/Outside sphere toggle -->

@@ -9,6 +9,10 @@ export interface SkyEntityDrawInput {
     fovDeg?: number;
     camera: Camera;
     pMatrix: ReadonlyMat4;
+    centerSphericalDeg?: {
+        phi: number;
+        theta: number;
+    };
 }
 export declare abstract class AbstractSkyEntity {
     refreshMe: boolean;

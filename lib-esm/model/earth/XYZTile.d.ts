@@ -20,4 +20,5 @@ export declare class XYZTile {
     private loadTexture;
     private onImageLoaded;
     draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array): void;
+    dispose(): void;
 }

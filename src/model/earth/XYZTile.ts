@@ -128,4 +128,26 @@ export class XYZTile {
     gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute)
     gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute)
   }
+
+  dispose(): void {
+    const gl = this._webgl
+    if (this._texture) {
+      gl.deleteTexture(this._texture)
+      this._texture = null
+    }
+    if (this._positionBuffer) {
+      gl.deleteBuffer(this._positionBuffer)
+      this._positionBuffer = null
+    }
+    if (this._uvBuffer) {
+      gl.deleteBuffer(this._uvBuffer)
+      this._uvBuffer = null
+    }
+    if (this._indexBuffer) {
+      gl.deleteBuffer(this._indexBuffer)
+      this._indexBuffer = null
+    }
+    this._image = undefined
+    this._ready = false
+  }
 }

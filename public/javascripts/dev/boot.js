@@ -89,15 +89,18 @@ function wireUI() {
 
   el('btnLoadXYZ')?.addEventListener('click', () => {
     const urlTemplate = el('xyzUrlTemplate').value.trim();
-    const fixedZoom = Number(el('xyzFixedZoom').value);
+    const minZoom = Number(el('xyzMinZoom').value);
+    const maxZoom = Number(el('xyzMaxZoom').value);
     const segmentsPerSide = Number(el('xyzSegments').value);
 
     if (!urlTemplate) return setStatus("Insert an XYZ URL template.");
-    if (!Number.isFinite(fixedZoom) || fixedZoom < 0) return setStatus("Insert a valid XYZ zoom.");
+    if (!Number.isFinite(minZoom) || minZoom < 0) return setStatus("Insert a valid XYZ min zoom.");
+    if (!Number.isFinite(maxZoom) || maxZoom < 0) return setStatus("Insert a valid XYZ max zoom.");
+    if (maxZoom < minZoom) return setStatus("XYZ max zoom must be greater than or equal to min zoom.");
     if (!Number.isFinite(segmentsPerSide) || segmentsPerSide < 2) return setStatus("Insert a valid segment count.");
 
     try {
-      loadXYZ(urlTemplate, { fixedZoom, segmentsPerSide });
+      loadXYZ(urlTemplate, { minZoom, maxZoom, segmentsPerSide });
     } catch (e) {
       setStatus("XYZ load error: " + (e.message || e));
     }

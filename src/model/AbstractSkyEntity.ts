@@ -17,6 +17,10 @@ export interface SkyEntityDrawInput {
   // cameraMatrix?: Float32Array
   camera: Camera
   pMatrix: ReadonlyMat4
+  centerSphericalDeg?: {
+    phi: number
+    theta: number
+  }
 }
 
 export abstract class AbstractSkyEntity {

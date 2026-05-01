@@ -905,7 +905,8 @@ class AstroSphere {
     const skyEntityDrawInput: SkyEntityDrawInput = {
       fovDeg: this._healpixGrid.getMinFoV(),
       camera: this._camera,
-      pMatrix: this._perspectiveMatrixManager.pMatrix
+      pMatrix: this._perspectiveMatrixManager.pMatrix,
+      centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
     }
     if (this._activeBaseLayer === 'hips') {
       this._activeHiPS?.draw(skyEntityDrawInput)

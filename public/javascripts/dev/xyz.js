@@ -8,9 +8,10 @@ export function loadXYZ(urlTemplate, options = {}) {
 
   state.AstroAPI.activateXYZ({
     urlTemplate,
-    fixedZoom: options.fixedZoom,
+    minZoom: options.minZoom,
+    maxZoom: options.maxZoom,
     segmentsPerSide: options.segmentsPerSide,
   })
 
-  setStatus(`🌍 XYZ loaded (z=${options.fixedZoom ?? 1}).`)
+  setStatus(`🌍 XYZ loaded (auto zoom ${options.minZoom ?? 0}-${options.maxZoom ?? 6}).`)
 }

@@ -3433,11 +3433,16 @@ exports["default"] = Tile;
 /***/ }),
 
 /***/ 330:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZTileProvider = void 0;
+const Global_js_1 = __importDefault(__webpack_require__(382));
+const MAX_MERCATOR_LAT = 85.0511287798066;
 class XYZTileProvider {
     _config;
     constructor(config) {
@@ -3447,21 +3452,87 @@ class XYZTileProvider {
         return this._config;
     }
     getInitialTiles() {
-        const z = Math.max(0, Math.floor(this._config.fixedZoom ?? 1));
+        return this.getTilesForCamera(180, null, null).tiles;
+    }
+    getTilesForCamera(fovDeg, camera, centerSphericalDeg) {
+        const z = this.resolveZoom(fovDeg);
         const dim = 2 ** z;
+        const { lonDeg, latDeg } = this.resolveViewCenter(camera, centerSphericalDeg);
+        const centerX = this.wrapTileX(Math.floor(((lonDeg + 180) / 360) * dim), dim);
+        const centerY = this.clampTileY(Math.floor(this.latToTileY(latDeg, z)), dim);
+        const tileAngularWidth = 360 / dim;
+        const halfSpan = Math.max(0, Math.min(dim, Math.ceil(fovDeg / tileAngularWidth / 2) + 1));
         const tiles = [];
-        for (let x = 0; x < dim; x++) {
-            for (let y = 0; y < dim; y++) {
+        for (let dx = -halfSpan; dx <= halfSpan; dx++) {
+            for (let dy = -halfSpan; dy <= halfSpan; dy++) {
+                const x = this.wrapTileX(centerX + dx, dim);
+                const y = this.clampTileY(centerY + dy, dim);
                 tiles.push({ z, x, y });
             }
         }
-        return tiles;
+        return {
+            key: `${z}:${centerX}:${centerY}:${halfSpan}`,
+            tiles: this.deduplicateTiles(tiles),
+        };
     }
     getTileUrl(tile) {
         return this._config.urlTemplate
             .replace(/\{z\}/g, String(tile.z))
             .replace(/\{x\}/g, String(tile.x))
             .replace(/\{y\}/g, String(tile.y));
+    }
+    resolveZoom(fovDeg) {
+        const safeFov = Math.max(0.01, Math.min(180, fovDeg));
+        const targetTileWidthDeg = Math.max(0.01, safeFov / 2);
+        const rawZoom = Math.ceil(Math.log2(360 / targetTileWidthDeg));
+        return this.clampZoom(rawZoom);
+    }
+    clampZoom(zoom) {
+        const minZoom = Math.max(0, Math.floor(this._config.minZoom ?? 0));
+        const maxZoom = Math.max(minZoom, Math.floor(this._config.maxZoom ?? 6));
+        return Math.max(minZoom, Math.min(maxZoom, zoom));
+    }
+    resolveViewCenter(camera, centerSphericalDeg) {
+        if (centerSphericalDeg) {
+            return {
+                lonDeg: centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi,
+                latDeg: 90 - centerSphericalDeg.theta,
+            };
+        }
+        if (!camera) {
+            return { lonDeg: 0, latDeg: 0 };
+        }
+        const [x, y, z] = camera.getCameraPosition();
+        const len = Math.hypot(x, y, z);
+        if (!Number.isFinite(len) || len === 0) {
+            return { lonDeg: 0, latDeg: 0 };
+        }
+        const scale = Global_js_1.default.insideSphere ? 1 / len : -1 / len;
+        const vx = x * scale;
+        const vy = y * scale;
+        const vz = z * scale;
+        const lonDeg = (Math.atan2(vy, vx) * 180) / Math.PI;
+        const latDeg = (Math.asin(Math.max(-1, Math.min(1, vz))) * 180) / Math.PI;
+        return { lonDeg, latDeg };
+    }
+    latToTileY(latDeg, z) {
+        const lat = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, latDeg));
+        const latRad = (lat * Math.PI) / 180;
+        const n = 2 ** z;
+        return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * n;
+    }
+    wrapTileX(x, dim) {
+        return ((x % dim) + dim) % dim;
+    }
+    clampTileY(y, dim) {
+        return Math.max(0, Math.min(dim - 1, y));
+    }
+    deduplicateTiles(tiles) {
+        const unique = new Map();
+        for (const tile of tiles) {
+            unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
+        }
+        return Array.from(unique.values());
     }
 }
 exports.XYZTileProvider = XYZTileProvider;
@@ -3907,6 +3978,27 @@ class XYZTile {
         gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
         gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
     }
+    dispose() {
+        const gl = this._webgl;
+        if (this._texture) {
+            gl.deleteTexture(this._texture);
+            this._texture = null;
+        }
+        if (this._positionBuffer) {
+            gl.deleteBuffer(this._positionBuffer);
+            this._positionBuffer = null;
+        }
+        if (this._uvBuffer) {
+            gl.deleteBuffer(this._uvBuffer);
+            this._uvBuffer = null;
+        }
+        if (this._indexBuffer) {
+            gl.deleteBuffer(this._indexBuffer);
+            this._indexBuffer = null;
+        }
+        this._image = undefined;
+        this._ready = false;
+    }
 }
 exports.XYZTile = XYZTile;
 
@@ -4337,6 +4429,7 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _meshBuilder;
     _xyzShaderProgram;
     _tiles = [];
+    _tileSelectionKey = null;
     constructor(config, webgl) {
         super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false);
         this._config = config;
@@ -4344,15 +4437,22 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
         this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
         this.initGL(webgl);
-        this.bootstrapTiles();
+        this.bootstrapTiles(180, null, null);
     }
     get config() {
         return this._config;
     }
-    bootstrapTiles() {
-        const tiles = this._provider.getInitialTiles();
+    bootstrapTiles(fovDeg, camera, centerSphericalDeg) {
+        const selection = camera
+            ? this._provider.getTilesForCamera(fovDeg, camera, centerSphericalDeg ?? null)
+            : { key: 'initial', tiles: this._provider.getInitialTiles() };
+        if (selection.key === this._tileSelectionKey) {
+            return;
+        }
+        this.disposeTiles();
+        this._tileSelectionKey = selection.key;
         const segments = this._config.segmentsPerSide ?? 16;
-        this._tiles = tiles.map((tileCoord) => {
+        this._tiles = selection.tiles.map((tileCoord) => {
             const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments);
             const url = this._provider.getTileUrl(tileCoord);
             return new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram);
@@ -4362,11 +4462,18 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const vMatrix = input.camera.getCameraMatrix();
         if (!vMatrix)
             return;
+        this.bootstrapTiles(input.fovDeg ?? 180, input.camera, input.centerSphericalDeg ?? null);
         const pMatrix = input.pMatrix;
         const mMatrix = this.getModelMatrix();
         for (const tile of this._tiles) {
             tile.draw(pMatrix, vMatrix, mMatrix);
         }
+    }
+    disposeTiles() {
+        for (const tile of this._tiles) {
+            tile.dispose();
+        }
+        this._tiles = [];
     }
 }
 exports.XYZLayer = XYZLayer;
@@ -7801,8 +7908,7 @@ class AstroSphere {
     pointerDownAt = 0;
     _activeHiPS = null;
     _activeXYZ = null;
-    _hipsVisible = true;
-    _xyzVisible = true;
+    _activeBaseLayer = null;
     startup = true;
     fov;
     activeCatalogues = [];
@@ -8161,35 +8267,11 @@ class AstroSphere {
     }
     activateHiPS(hipsDescriptor) {
         this._activeHiPS = new HiPS_js_1.HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
-        this._hipsVisible = true;
-        this._xyzVisible = false;
+        this._activeBaseLayer = 'hips';
     }
     activateXYZ(config) {
         this._activeXYZ = new XYZLayer_js_1.XYZLayer(config, this._webgl);
-        this._xyzVisible = true;
-        this._hipsVisible = false;
-    }
-    deactivateXYZ() {
-        this._activeXYZ = null;
-        this._xyzVisible = false;
-    }
-    setHiPSVisible(visible) {
-        this._hipsVisible = visible;
-        if (visible) {
-            this._xyzVisible = false;
-        }
-    }
-    isHiPSVisible() {
-        return this._hipsVisible;
-    }
-    setXYZVisible(visible) {
-        this._xyzVisible = visible;
-        if (visible) {
-            this._hipsVisible = false;
-        }
-    }
-    isXYZVisible() {
-        return this._xyzVisible;
+        this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
     async showCatalogue(cat) {
@@ -8412,7 +8494,7 @@ class AstroSphere {
         this._webgl.enable(this._webgl.CULL_FACE);
         this._webgl.cullFace(Global_js_1.default.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
         this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        if (this._activeHiPS && this._hipsVisible) {
+        if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
             const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
@@ -8420,12 +8502,13 @@ class AstroSphere {
         const skyEntityDrawInput = {
             fovDeg: this._healpixGrid.getMinFoV(),
             camera: this._camera,
-            pMatrix: this._perspectiveMatrixManager.pMatrix
+            pMatrix: this._perspectiveMatrixManager.pMatrix,
+            centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
         };
-        if (this._hipsVisible) {
+        if (this._activeBaseLayer === 'hips') {
             this._activeHiPS?.draw(skyEntityDrawInput);
         }
-        if (this._xyzVisible) {
+        if (this._activeBaseLayer === 'xyz') {
             this._activeXYZ?.draw(skyEntityDrawInput);
         }
         this._healpixGrid.draw(skyEntityDrawInput);
@@ -9320,21 +9403,6 @@ class AstroViewer {
     }
     activateXYZ(config) {
         this.astroSphere.activateXYZ(config);
-    }
-    deactivateXYZ() {
-        this.astroSphere.deactivateXYZ();
-    }
-    setHiPSVisible(visible) {
-        this.astroSphere.setHiPSVisible(visible);
-    }
-    isHiPSVisible() {
-        return this.astroSphere.isHiPSVisible();
-    }
-    setXYZVisible(visible) {
-        this.astroSphere.setXYZVisible(visible);
-    }
-    isXYZVisible() {
-        return this.astroSphere.isXYZVisible();
     }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';

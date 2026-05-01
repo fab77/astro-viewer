@@ -1,6 +1,7 @@
 export type XYZLayerConfig = {
   urlTemplate: string
-  fixedZoom?: number
+  minZoom?: number
+  maxZoom?: number
   segmentsPerSide?: number
   tileSize?: number
 }

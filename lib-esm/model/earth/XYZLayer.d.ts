@@ -6,8 +6,10 @@ export declare class XYZLayer extends AbstractSkyEntity {
     private _meshBuilder;
     private _xyzShaderProgram;
     private _tiles;
+    private _tileSelectionKey;
     constructor(config: XYZLayerConfig, webgl: WebGL2RenderingContext);
     get config(): XYZLayerConfig;
     private bootstrapTiles;
     draw(input: SkyEntityDrawInput): void;
+    private disposeTiles;
 }
