@@ -395,6 +395,23 @@ class AstroSphere {
         const pickerPoint = RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         return cartesianToSpherical(pickerPoint);
     }
+    collectViewportSphericalSamples(sampleCount = 5) {
+        const rect = this.canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const samples = [];
+        for (let ix = 0; ix < sampleCount; ix++) {
+            const x = sampleCount === 1 ? width / 2 : (ix / (sampleCount - 1)) * width;
+            for (let iy = 0; iy < sampleCount; iy++) {
+                const y = sampleCount === 1 ? height / 2 : (iy / (sampleCount - 1)) * height;
+                const hit = RayPickingUtils.getIntersectionPointWithSingleModel(x, y, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (hit && hit.length > 0) {
+                    samples.push(cartesianToSpherical(hit));
+                }
+            }
+        }
+        return samples;
+    }
     activateHiPS(hipsDescriptor) {
         this._activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
         this._activeBaseLayer = 'hips';
@@ -634,6 +651,8 @@ class AstroSphere {
             camera: this._camera,
             pMatrix: this._perspectiveMatrixManager.pMatrix,
             centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
+            fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
+            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(5) : undefined,
         };
         if (this._activeBaseLayer === 'hips') {
             this._activeHiPS?.draw(skyEntityDrawInput);

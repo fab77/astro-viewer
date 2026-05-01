@@ -1,5 +1,6 @@
 import { XYZShaderProgram } from '../../shader/XYZShaderProgram.js'
 import type { XYZTileCoord, XYZTileMesh } from './types.js'
+import { xyzTileRequestScheduler, XYZTileRequestError } from './XYZTileRequestScheduler.js'
 
 export class XYZTile {
   private _coord: XYZTileCoord
@@ -14,7 +15,10 @@ export class XYZTile {
   private _indexType: number
   private _ready = false
   private _aborted = false
+  private _loading = false
+  private _failedUntil = 0
   private _image?: HTMLImageElement
+  private _objectUrl: string | null = null
 
   constructor(
     coord: XYZTileCoord,
@@ -53,17 +57,44 @@ export class XYZTile {
     return this._coord
   }
 
+  get failedUntil(): number {
+    return this._failedUntil
+  }
+
   private loadTexture(): void {
+    if (this._loading || this._ready || this._aborted) {
+      return
+    }
+
+    const now = Date.now()
+    if (this._failedUntil > now) {
+      return
+    }
+
+    this._loading = true
+    xyzTileRequestScheduler.load(this._url)
+      .then((blob) => this.loadImageFromBlob(blob))
+      .catch((error) => {
+        this._loading = false
+        this._ready = false
+        const cooldownMs =
+          error instanceof XYZTileRequestError ? error.cooldownMs : 10000
+        this._failedUntil = Date.now() + cooldownMs
+      })
+  }
+
+  private loadImageFromBlob(blob: Blob): void {
     const image = new Image()
     this._image = image
-    image.crossOrigin = 'anonymous'
+    this._objectUrl = URL.createObjectURL(blob)
     image.onload = () => this.onImageLoaded()
     image.onerror = () => {
-      this._aborted = true
+      this._loading = false
       this._ready = false
-      console.warn(`[XYZTile] Failed loading ${this._url}`)
+      this._failedUntil = Date.now() + 10000
+      this.revokeObjectUrl()
     }
-    image.src = this._url
+    image.src = this._objectUrl
   }
 
   private onImageLoaded(): void {
@@ -87,10 +118,16 @@ export class XYZTile {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 
+    this._loading = false
+    this._failedUntil = 0
     this._ready = true
+    this.revokeObjectUrl()
   }
 
   draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array): void {
+    if (!this._ready) {
+      this.loadTexture()
+    }
     if (!this._ready || !this._texture) {
       return
     }
@@ -148,6 +185,15 @@ export class XYZTile {
       this._indexBuffer = null
     }
     this._image = undefined
+    this.revokeObjectUrl()
+    this._loading = false
     this._ready = false
+  }
+
+  private revokeObjectUrl(): void {
+    if (this._objectUrl) {
+      URL.revokeObjectURL(this._objectUrl)
+      this._objectUrl = null
+    }
   }
 }

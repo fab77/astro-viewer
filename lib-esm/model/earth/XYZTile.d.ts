@@ -13,12 +13,18 @@ export declare class XYZTile {
     private _indexType;
     private _ready;
     private _aborted;
+    private _loading;
+    private _failedUntil;
     private _image?;
+    private _objectUrl;
     constructor(coord: XYZTileCoord, url: string, mesh: XYZTileMesh, webgl: WebGL2RenderingContext, shaderProgram: XYZShaderProgram);
     get ready(): boolean;
     get coord(): XYZTileCoord;
+    get failedUntil(): number;
     private loadTexture;
+    private loadImageFromBlob;
     private onImageLoaded;
     draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array): void;
     dispose(): void;
+    private revokeObjectUrl;
 }

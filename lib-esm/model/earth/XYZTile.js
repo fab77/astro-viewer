@@ -1,3 +1,4 @@
+import { xyzTileRequestScheduler, XYZTileRequestError } from './XYZTileRequestScheduler.js';
 export class XYZTile {
     _coord;
     _url;
@@ -11,7 +12,10 @@ export class XYZTile {
     _indexType;
     _ready = false;
     _aborted = false;
+    _loading = false;
+    _failedUntil = 0;
     _image;
+    _objectUrl = null;
     constructor(coord, url, mesh, webgl, shaderProgram) {
         this._coord = coord;
         this._url = url;
@@ -36,17 +40,39 @@ export class XYZTile {
     get coord() {
         return this._coord;
     }
+    get failedUntil() {
+        return this._failedUntil;
+    }
     loadTexture() {
+        if (this._loading || this._ready || this._aborted) {
+            return;
+        }
+        const now = Date.now();
+        if (this._failedUntil > now) {
+            return;
+        }
+        this._loading = true;
+        xyzTileRequestScheduler.load(this._url)
+            .then((blob) => this.loadImageFromBlob(blob))
+            .catch((error) => {
+            this._loading = false;
+            this._ready = false;
+            const cooldownMs = error instanceof XYZTileRequestError ? error.cooldownMs : 10000;
+            this._failedUntil = Date.now() + cooldownMs;
+        });
+    }
+    loadImageFromBlob(blob) {
         const image = new Image();
         this._image = image;
-        image.crossOrigin = 'anonymous';
+        this._objectUrl = URL.createObjectURL(blob);
         image.onload = () => this.onImageLoaded();
         image.onerror = () => {
-            this._aborted = true;
+            this._loading = false;
             this._ready = false;
-            console.warn(`[XYZTile] Failed loading ${this._url}`);
+            this._failedUntil = Date.now() + 10000;
+            this.revokeObjectUrl();
         };
-        image.src = this._url;
+        image.src = this._objectUrl;
     }
     onImageLoaded() {
         if (!this._image || this._aborted) {
@@ -66,9 +92,15 @@ export class XYZTile {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        this._loading = false;
+        this._failedUntil = 0;
         this._ready = true;
+        this.revokeObjectUrl();
     }
     draw(pMatrix, vMatrix, mMatrix) {
+        if (!this._ready) {
+            this.loadTexture();
+        }
         if (!this._ready || !this._texture) {
             return;
         }
@@ -106,6 +138,14 @@ export class XYZTile {
             this._indexBuffer = null;
         }
         this._image = undefined;
+        this.revokeObjectUrl();
+        this._loading = false;
         this._ready = false;
+    }
+    revokeObjectUrl() {
+        if (this._objectUrl) {
+            URL.revokeObjectURL(this._objectUrl);
+            this._objectUrl = null;
+        }
     }
 }

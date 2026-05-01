@@ -1,9 +1,5 @@
-import Camera from '../../Camera.js';
+import { Point } from '../Point.js';
 import type { XYZLayerConfig, XYZTileCoord } from './types.js';
-type XYZTileSelection = {
-    key: string;
-    tiles: XYZTileCoord[];
-};
 type ViewCenterSpherical = {
     phi: number;
     theta: number;
@@ -12,14 +8,17 @@ export declare class XYZTileProvider {
     private _config;
     constructor(config: XYZLayerConfig);
     get config(): XYZLayerConfig;
+    get minZoom(): number;
+    get maxZoom(): number;
     getInitialTiles(): XYZTileCoord[];
-    getTilesForCamera(fovDeg: number, camera: Camera | null, centerSphericalDeg: ViewCenterSpherical | null): XYZTileSelection;
     getTileUrl(tile: XYZTileCoord): string;
-    private resolveZoom;
+    resolveZoom(fovDeg: number): number;
     private clampZoom;
+    getVisibleTilesAtZoom(z: number, centerSphericalDeg: ViewCenterSpherical | null, fovPolygon: Point[], viewportSphericalSamples: ViewCenterSpherical[], padding?: number): XYZTileCoord[];
     private resolveViewCenter;
     private latToTileY;
     private wrapTileX;
+    private normalizeLonAround;
     private clampTileY;
     private deduplicateTiles;
 }

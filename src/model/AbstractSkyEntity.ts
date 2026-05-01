@@ -9,6 +9,7 @@ import { HiPSShaderProgram } from '../shader/HiPSShaderProgram.js'
 // import { VisibleTilesManager } from "./hips/VisibleTilesManager.js";
 // import { TileBuffer } from "./hips/TileBuffer.js";
 import Camera from "../Camera.js";
+import { Point } from "./Point.js";
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -21,6 +22,11 @@ export interface SkyEntityDrawInput {
     phi: number
     theta: number
   }
+  fovPolygon?: Point[]
+  viewportSphericalSamples?: Array<{
+    phi: number
+    theta: number
+  }>
 }
 
 export abstract class AbstractSkyEntity {

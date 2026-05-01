@@ -3451,29 +3451,14 @@ class XYZTileProvider {
     get config() {
         return this._config;
     }
-    getInitialTiles() {
-        return this.getTilesForCamera(180, null, null).tiles;
+    get minZoom() {
+        return Math.max(0, Math.floor(this._config.minZoom ?? 0));
     }
-    getTilesForCamera(fovDeg, camera, centerSphericalDeg) {
-        const z = this.resolveZoom(fovDeg);
-        const dim = 2 ** z;
-        const { lonDeg, latDeg } = this.resolveViewCenter(camera, centerSphericalDeg);
-        const centerX = this.wrapTileX(Math.floor(((lonDeg + 180) / 360) * dim), dim);
-        const centerY = this.clampTileY(Math.floor(this.latToTileY(latDeg, z)), dim);
-        const tileAngularWidth = 360 / dim;
-        const halfSpan = Math.max(0, Math.min(dim, Math.ceil(fovDeg / tileAngularWidth / 2) + 1));
-        const tiles = [];
-        for (let dx = -halfSpan; dx <= halfSpan; dx++) {
-            for (let dy = -halfSpan; dy <= halfSpan; dy++) {
-                const x = this.wrapTileX(centerX + dx, dim);
-                const y = this.clampTileY(centerY + dy, dim);
-                tiles.push({ z, x, y });
-            }
-        }
-        return {
-            key: `${z}:${centerX}:${centerY}:${halfSpan}`,
-            tiles: this.deduplicateTiles(tiles),
-        };
+    get maxZoom() {
+        return Math.max(this.minZoom, Math.floor(this._config.maxZoom ?? 6));
+    }
+    getInitialTiles() {
+        return this.getVisibleTilesAtZoom(1, null, [], [], 1);
     }
     getTileUrl(tile) {
         return this._config.urlTemplate
@@ -3488,9 +3473,62 @@ class XYZTileProvider {
         return this.clampZoom(rawZoom);
     }
     clampZoom(zoom) {
-        const minZoom = Math.max(0, Math.floor(this._config.minZoom ?? 0));
-        const maxZoom = Math.max(minZoom, Math.floor(this._config.maxZoom ?? 6));
-        return Math.max(minZoom, Math.min(maxZoom, zoom));
+        return Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
+    }
+    getVisibleTilesAtZoom(z, centerSphericalDeg, fovPolygon, viewportSphericalSamples, padding = 1) {
+        const dim = 2 ** z;
+        const center = this.resolveViewCenter(null, centerSphericalDeg);
+        const normalizedCenterLon = this.normalizeLonAround(center.lonDeg, center.lonDeg);
+        const polygonPoints = fovPolygon.length > 0
+            ? fovPolygon.map((point) => ({
+                lonDeg: this.normalizeLonAround(point.raDeg > 180 ? point.raDeg - 360 : point.raDeg, normalizedCenterLon),
+                latDeg: point.decDeg,
+            }))
+            : [center];
+        const samplePoints = viewportSphericalSamples.map((sample) => ({
+            lonDeg: this.normalizeLonAround(sample.phi > 180 ? sample.phi - 360 : sample.phi, normalizedCenterLon),
+            latDeg: 90 - sample.theta,
+        }));
+        const coveragePoints = [center, ...polygonPoints, ...samplePoints];
+        let minLon = normalizedCenterLon;
+        let maxLon = normalizedCenterLon;
+        let minLat = center.latDeg;
+        let maxLat = center.latDeg;
+        for (const point of coveragePoints) {
+            minLon = Math.min(minLon, point.lonDeg);
+            maxLon = Math.max(maxLon, point.lonDeg);
+            minLat = Math.min(minLat, point.latDeg);
+            maxLat = Math.max(maxLat, point.latDeg);
+        }
+        const adaptivePadding = Math.max(padding, Math.min(3, Math.max(1, Math.ceil(z / 3))));
+        const minX = Math.floor(((minLon + 180) / 360) * dim) - adaptivePadding;
+        const maxX = Math.floor(((maxLon + 180) / 360) * dim) + adaptivePadding;
+        const minY = Math.floor(this.latToTileY(maxLat, z)) - adaptivePadding;
+        const maxY = Math.floor(this.latToTileY(minLat, z)) + adaptivePadding;
+        const tiles = [];
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                tiles.push({
+                    z,
+                    x: this.wrapTileX(x, dim),
+                    y: this.clampTileY(y, dim),
+                });
+            }
+        }
+        for (const point of coveragePoints) {
+            const centerTileX = Math.floor(((point.lonDeg + 180) / 360) * dim);
+            const centerTileY = Math.floor(this.latToTileY(point.latDeg, z));
+            for (let dx = -adaptivePadding; dx <= adaptivePadding; dx++) {
+                for (let dy = -adaptivePadding; dy <= adaptivePadding; dy++) {
+                    tiles.push({
+                        z,
+                        x: this.wrapTileX(centerTileX + dx, dim),
+                        y: this.clampTileY(centerTileY + dy, dim),
+                    });
+                }
+            }
+        }
+        return this.deduplicateTiles(tiles);
     }
     resolveViewCenter(camera, centerSphericalDeg) {
         if (centerSphericalDeg) {
@@ -3523,6 +3561,14 @@ class XYZTileProvider {
     }
     wrapTileX(x, dim) {
         return ((x % dim) + dim) % dim;
+    }
+    normalizeLonAround(lonDeg, referenceLonDeg) {
+        let lon = lonDeg;
+        while (lon - referenceLonDeg > 180)
+            lon -= 360;
+        while (lon - referenceLonDeg < -180)
+            lon += 360;
+        return lon;
     }
     clampTileY(y, dim) {
         return Math.max(0, Math.min(dim - 1, y));
@@ -3884,11 +3930,12 @@ exports["default"] = AllSky;
 /***/ }),
 
 /***/ 375:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZTile = void 0;
+const XYZTileRequestScheduler_js_1 = __webpack_require__(409);
 class XYZTile {
     _coord;
     _url;
@@ -3902,7 +3949,10 @@ class XYZTile {
     _indexType;
     _ready = false;
     _aborted = false;
+    _loading = false;
+    _failedUntil = 0;
     _image;
+    _objectUrl = null;
     constructor(coord, url, mesh, webgl, shaderProgram) {
         this._coord = coord;
         this._url = url;
@@ -3927,17 +3977,39 @@ class XYZTile {
     get coord() {
         return this._coord;
     }
+    get failedUntil() {
+        return this._failedUntil;
+    }
     loadTexture() {
+        if (this._loading || this._ready || this._aborted) {
+            return;
+        }
+        const now = Date.now();
+        if (this._failedUntil > now) {
+            return;
+        }
+        this._loading = true;
+        XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.load(this._url)
+            .then((blob) => this.loadImageFromBlob(blob))
+            .catch((error) => {
+            this._loading = false;
+            this._ready = false;
+            const cooldownMs = error instanceof XYZTileRequestScheduler_js_1.XYZTileRequestError ? error.cooldownMs : 10000;
+            this._failedUntil = Date.now() + cooldownMs;
+        });
+    }
+    loadImageFromBlob(blob) {
         const image = new Image();
         this._image = image;
-        image.crossOrigin = 'anonymous';
+        this._objectUrl = URL.createObjectURL(blob);
         image.onload = () => this.onImageLoaded();
         image.onerror = () => {
-            this._aborted = true;
+            this._loading = false;
             this._ready = false;
-            console.warn(`[XYZTile] Failed loading ${this._url}`);
+            this._failedUntil = Date.now() + 10000;
+            this.revokeObjectUrl();
         };
-        image.src = this._url;
+        image.src = this._objectUrl;
     }
     onImageLoaded() {
         if (!this._image || this._aborted) {
@@ -3957,9 +4029,15 @@ class XYZTile {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        this._loading = false;
+        this._failedUntil = 0;
         this._ready = true;
+        this.revokeObjectUrl();
     }
     draw(pMatrix, vMatrix, mMatrix) {
+        if (!this._ready) {
+            this.loadTexture();
+        }
         if (!this._ready || !this._texture) {
             return;
         }
@@ -3997,7 +4075,15 @@ class XYZTile {
             this._indexBuffer = null;
         }
         this._image = undefined;
+        this.revokeObjectUrl();
+        this._loading = false;
         this._ready = false;
+    }
+    revokeObjectUrl() {
+        if (this._objectUrl) {
+            URL.revokeObjectURL(this._objectUrl);
+            this._objectUrl = null;
+        }
     }
 }
 exports.XYZTile = XYZTile;
@@ -4296,6 +4382,116 @@ exports.MetadataManager = MetadataManager;
 
 /***/ }),
 
+/***/ 409:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.xyzTileRequestScheduler = exports.XYZTileRequestScheduler = exports.XYZTileRequestError = void 0;
+class XYZTileRequestError extends Error {
+    cooldownMs;
+    constructor(message, cooldownMs) {
+        super(message);
+        this.name = 'XYZTileRequestError';
+        this.cooldownMs = cooldownMs;
+    }
+}
+exports.XYZTileRequestError = XYZTileRequestError;
+class XYZTileRequestScheduler {
+    _maxConcurrent;
+    _activeCount = 0;
+    _queue = [];
+    _inflight = new Map();
+    _hostCooldownUntil = new Map();
+    constructor(maxConcurrent = 4) {
+        this._maxConcurrent = maxConcurrent;
+    }
+    load(url) {
+        const inflight = this._inflight.get(url);
+        if (inflight) {
+            return inflight;
+        }
+        const hostCooldown = this.getHostCooldown(url);
+        const now = Date.now();
+        if (hostCooldown > now) {
+            return Promise.reject(new XYZTileRequestError(`Cooldown active for ${new URL(url).host}`, hostCooldown - now));
+        }
+        const promise = new Promise((resolve, reject) => {
+            this._queue.push({ url, resolve, reject });
+            this.pump();
+        }).finally(() => {
+            this._inflight.delete(url);
+        });
+        this._inflight.set(url, promise);
+        return promise;
+    }
+    pump() {
+        while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
+            const item = this._queue.shift();
+            if (!item) {
+                return;
+            }
+            const hostCooldown = this.getHostCooldown(item.url);
+            const now = Date.now();
+            if (hostCooldown > now) {
+                item.reject(new XYZTileRequestError(`Cooldown active for ${new URL(item.url).host}`, hostCooldown - now));
+                continue;
+            }
+            this._activeCount += 1;
+            this.fetchBlob(item)
+                .then(item.resolve)
+                .catch(item.reject)
+                .finally(() => {
+                this._activeCount -= 1;
+                this.pump();
+            });
+        }
+    }
+    async fetchBlob(item) {
+        try {
+            const response = await fetch(item.url, {
+                mode: 'cors',
+                cache: 'force-cache',
+            });
+            if (!response.ok) {
+                const cooldownMs = response.status === 429 ? 30000 : 10000;
+                this.setHostCooldown(item.url, cooldownMs);
+                throw new XYZTileRequestError(`HTTP ${response.status} loading ${item.url}`, cooldownMs);
+            }
+            return await response.blob();
+        }
+        catch (error) {
+            if (error instanceof XYZTileRequestError) {
+                throw error;
+            }
+            const cooldownMs = 10000;
+            this.setHostCooldown(item.url, cooldownMs);
+            throw new XYZTileRequestError(`Network/CORS failure loading ${item.url}`, cooldownMs);
+        }
+    }
+    getHostCooldown(url) {
+        try {
+            return this._hostCooldownUntil.get(new URL(url).host) ?? 0;
+        }
+        catch {
+            return 0;
+        }
+    }
+    setHostCooldown(url, cooldownMs) {
+        try {
+            this._hostCooldownUntil.set(new URL(url).host, Date.now() + cooldownMs);
+        }
+        catch {
+            // no-op
+        }
+    }
+}
+exports.XYZTileRequestScheduler = XYZTileRequestScheduler;
+exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
+
+
+/***/ }),
+
 /***/ 475:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -4423,17 +4619,21 @@ const XYZShaderProgram_js_1 = __webpack_require__(149);
 const XYZMeshBuilder_js_1 = __webpack_require__(819);
 const XYZTile_js_1 = __webpack_require__(375);
 const XYZTileProvider_js_1 = __webpack_require__(330);
+const XYZVisibleTilesManager_js_1 = __webpack_require__(937);
 class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _config;
     _provider;
+    _visibleTilesManager;
     _meshBuilder;
     _xyzShaderProgram;
-    _tiles = [];
+    _tileCache = new Map();
+    _visibleTileKeys = [];
     _tileSelectionKey = null;
     constructor(config, webgl) {
         super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false);
         this._config = config;
         this._provider = new XYZTileProvider_js_1.XYZTileProvider(config);
+        this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager(this._provider);
         this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
         this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
         this.initGL(webgl);
@@ -4442,38 +4642,63 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     get config() {
         return this._config;
     }
-    bootstrapTiles(fovDeg, camera, centerSphericalDeg) {
+    bootstrapTiles(fovDeg, camera, centerSphericalDeg, fovPolygon = null, viewportSphericalSamples = null) {
         const selection = camera
-            ? this._provider.getTilesForCamera(fovDeg, camera, centerSphericalDeg ?? null)
-            : { key: 'initial', tiles: this._provider.getInitialTiles() };
+            ? this._visibleTilesManager.selectTiles({
+                fovDeg,
+                camera,
+                pMatrix: new Float32Array(),
+                centerSphericalDeg: centerSphericalDeg ?? undefined,
+                fovPolygon: fovPolygon ?? undefined,
+                viewportSphericalSamples: viewportSphericalSamples ?? undefined,
+            })
+            : {
+                key: 'initial',
+                currentTiles: this._provider.getInitialTiles(),
+                fallbackTiles: [],
+            };
         if (selection.key === this._tileSelectionKey) {
             return;
         }
-        this.disposeTiles();
         this._tileSelectionKey = selection.key;
         const segments = this._config.segmentsPerSide ?? 16;
-        this._tiles = selection.tiles.map((tileCoord) => {
+        const requestedTiles = [...selection.currentTiles, ...selection.fallbackTiles];
+        this._visibleTileKeys = requestedTiles
+            .sort((a, b) => a.z - b.z)
+            .map((tileCoord) => this.getTileKey(tileCoord));
+        for (const tileCoord of requestedTiles) {
+            const tileKey = this.getTileKey(tileCoord);
+            if (this._tileCache.has(tileKey)) {
+                continue;
+            }
             const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments);
             const url = this._provider.getTileUrl(tileCoord);
-            return new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram);
-        });
+            this._tileCache.set(tileKey, new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram));
+        }
     }
     draw(input) {
         const vMatrix = input.camera.getCameraMatrix();
         if (!vMatrix)
             return;
-        this.bootstrapTiles(input.fovDeg ?? 180, input.camera, input.centerSphericalDeg ?? null);
+        this.bootstrapTiles(input.fovDeg ?? 180, input.camera, input.centerSphericalDeg ?? null, input.fovPolygon ?? null, input.viewportSphericalSamples ?? null);
         const pMatrix = input.pMatrix;
         const mMatrix = this.getModelMatrix();
-        for (const tile of this._tiles) {
+        for (const tileKey of this._visibleTileKeys) {
+            const tile = this._tileCache.get(tileKey);
+            if (!tile)
+                continue;
             tile.draw(pMatrix, vMatrix, mMatrix);
         }
     }
     disposeTiles() {
-        for (const tile of this._tiles) {
+        for (const tile of this._tileCache.values()) {
             tile.dispose();
         }
-        this._tiles = [];
+        this._tileCache.clear();
+        this._visibleTileKeys = [];
+    }
+    getTileKey(tileCoord) {
+        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
     }
 }
 exports.XYZLayer = XYZLayer;
@@ -8265,6 +8490,23 @@ class AstroSphere {
         const pickerPoint = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         return (0, Utils_js_1.cartesianToSpherical)(pickerPoint);
     }
+    collectViewportSphericalSamples(sampleCount = 5) {
+        const rect = this.canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const samples = [];
+        for (let ix = 0; ix < sampleCount; ix++) {
+            const x = sampleCount === 1 ? width / 2 : (ix / (sampleCount - 1)) * width;
+            for (let iy = 0; iy < sampleCount; iy++) {
+                const y = sampleCount === 1 ? height / 2 : (iy / (sampleCount - 1)) * height;
+                const hit = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(x, y, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (hit && hit.length > 0) {
+                    samples.push((0, Utils_js_1.cartesianToSpherical)(hit));
+                }
+            }
+        }
+        return samples;
+    }
     activateHiPS(hipsDescriptor) {
         this._activeHiPS = new HiPS_js_1.HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
         this._activeBaseLayer = 'hips';
@@ -8504,6 +8746,8 @@ class AstroSphere {
             camera: this._camera,
             pMatrix: this._perspectiveMatrixManager.pMatrix,
             centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
+            fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
+            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(5) : undefined,
         };
         if (this._activeBaseLayer === 'hips') {
             this._activeHiPS?.draw(skyEntityDrawInput);
@@ -10814,6 +11058,45 @@ function decDegToDMS(decDeg) {
     d = d * sign;
     return { d, m, s };
 }
+
+
+/***/ }),
+
+/***/ 937:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZVisibleTilesManager = void 0;
+class XYZVisibleTilesManager {
+    _provider;
+    constructor(provider) {
+        this._provider = provider;
+    }
+    selectTiles(input) {
+        const currentZoom = this._provider.resolveZoom(input.fovDeg ?? 180);
+        const currentTiles = this._provider.getVisibleTilesAtZoom(currentZoom, input.centerSphericalDeg ?? null, input.fovPolygon ?? [], input.viewportSphericalSamples ?? [], 1);
+        const fallbackMap = new Map();
+        for (let z = currentZoom - 1; z >= this._provider.minZoom; z--) {
+            const dz = currentZoom - z;
+            for (const tile of currentTiles) {
+                const fallback = {
+                    z,
+                    x: tile.x >> dz,
+                    y: tile.y >> dz,
+                };
+                fallbackMap.set(`${fallback.z}/${fallback.x}/${fallback.y}`, fallback);
+            }
+        }
+        const key = `${currentZoom}:${currentTiles.map((tile) => `${tile.x}/${tile.y}`).join('|')}`;
+        return {
+            key,
+            currentTiles,
+            fallbackTiles: Array.from(fallbackMap.values()),
+        };
+    }
+}
+exports.XYZVisibleTilesManager = XYZVisibleTilesManager;
 
 
 /***/ }),

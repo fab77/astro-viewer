@@ -87,6 +87,7 @@ declare class AstroSphere {
     private emitCameraChanged;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
+    private collectViewportSphericalSamples;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     activateXYZ(config: XYZLayerConfig): void;
     showCatalogue(cat: CatalogueGL): Promise<CatalogueGL>;

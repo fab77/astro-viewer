@@ -8,29 +8,14 @@ export class XYZTileProvider {
     get config() {
         return this._config;
     }
-    getInitialTiles() {
-        return this.getTilesForCamera(180, null, null).tiles;
+    get minZoom() {
+        return Math.max(0, Math.floor(this._config.minZoom ?? 0));
     }
-    getTilesForCamera(fovDeg, camera, centerSphericalDeg) {
-        const z = this.resolveZoom(fovDeg);
-        const dim = 2 ** z;
-        const { lonDeg, latDeg } = this.resolveViewCenter(camera, centerSphericalDeg);
-        const centerX = this.wrapTileX(Math.floor(((lonDeg + 180) / 360) * dim), dim);
-        const centerY = this.clampTileY(Math.floor(this.latToTileY(latDeg, z)), dim);
-        const tileAngularWidth = 360 / dim;
-        const halfSpan = Math.max(0, Math.min(dim, Math.ceil(fovDeg / tileAngularWidth / 2) + 1));
-        const tiles = [];
-        for (let dx = -halfSpan; dx <= halfSpan; dx++) {
-            for (let dy = -halfSpan; dy <= halfSpan; dy++) {
-                const x = this.wrapTileX(centerX + dx, dim);
-                const y = this.clampTileY(centerY + dy, dim);
-                tiles.push({ z, x, y });
-            }
-        }
-        return {
-            key: `${z}:${centerX}:${centerY}:${halfSpan}`,
-            tiles: this.deduplicateTiles(tiles),
-        };
+    get maxZoom() {
+        return Math.max(this.minZoom, Math.floor(this._config.maxZoom ?? 6));
+    }
+    getInitialTiles() {
+        return this.getVisibleTilesAtZoom(1, null, [], [], 1);
     }
     getTileUrl(tile) {
         return this._config.urlTemplate
@@ -45,9 +30,62 @@ export class XYZTileProvider {
         return this.clampZoom(rawZoom);
     }
     clampZoom(zoom) {
-        const minZoom = Math.max(0, Math.floor(this._config.minZoom ?? 0));
-        const maxZoom = Math.max(minZoom, Math.floor(this._config.maxZoom ?? 6));
-        return Math.max(minZoom, Math.min(maxZoom, zoom));
+        return Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
+    }
+    getVisibleTilesAtZoom(z, centerSphericalDeg, fovPolygon, viewportSphericalSamples, padding = 1) {
+        const dim = 2 ** z;
+        const center = this.resolveViewCenter(null, centerSphericalDeg);
+        const normalizedCenterLon = this.normalizeLonAround(center.lonDeg, center.lonDeg);
+        const polygonPoints = fovPolygon.length > 0
+            ? fovPolygon.map((point) => ({
+                lonDeg: this.normalizeLonAround(point.raDeg > 180 ? point.raDeg - 360 : point.raDeg, normalizedCenterLon),
+                latDeg: point.decDeg,
+            }))
+            : [center];
+        const samplePoints = viewportSphericalSamples.map((sample) => ({
+            lonDeg: this.normalizeLonAround(sample.phi > 180 ? sample.phi - 360 : sample.phi, normalizedCenterLon),
+            latDeg: 90 - sample.theta,
+        }));
+        const coveragePoints = [center, ...polygonPoints, ...samplePoints];
+        let minLon = normalizedCenterLon;
+        let maxLon = normalizedCenterLon;
+        let minLat = center.latDeg;
+        let maxLat = center.latDeg;
+        for (const point of coveragePoints) {
+            minLon = Math.min(minLon, point.lonDeg);
+            maxLon = Math.max(maxLon, point.lonDeg);
+            minLat = Math.min(minLat, point.latDeg);
+            maxLat = Math.max(maxLat, point.latDeg);
+        }
+        const adaptivePadding = Math.max(padding, Math.min(3, Math.max(1, Math.ceil(z / 3))));
+        const minX = Math.floor(((minLon + 180) / 360) * dim) - adaptivePadding;
+        const maxX = Math.floor(((maxLon + 180) / 360) * dim) + adaptivePadding;
+        const minY = Math.floor(this.latToTileY(maxLat, z)) - adaptivePadding;
+        const maxY = Math.floor(this.latToTileY(minLat, z)) + adaptivePadding;
+        const tiles = [];
+        for (let x = minX; x <= maxX; x++) {
+            for (let y = minY; y <= maxY; y++) {
+                tiles.push({
+                    z,
+                    x: this.wrapTileX(x, dim),
+                    y: this.clampTileY(y, dim),
+                });
+            }
+        }
+        for (const point of coveragePoints) {
+            const centerTileX = Math.floor(((point.lonDeg + 180) / 360) * dim);
+            const centerTileY = Math.floor(this.latToTileY(point.latDeg, z));
+            for (let dx = -adaptivePadding; dx <= adaptivePadding; dx++) {
+                for (let dy = -adaptivePadding; dy <= adaptivePadding; dy++) {
+                    tiles.push({
+                        z,
+                        x: this.wrapTileX(centerTileX + dx, dim),
+                        y: this.clampTileY(centerTileY + dy, dim),
+                    });
+                }
+            }
+        }
+        return this.deduplicateTiles(tiles);
     }
     resolveViewCenter(camera, centerSphericalDeg) {
         if (centerSphericalDeg) {
@@ -80,6 +118,14 @@ export class XYZTileProvider {
     }
     wrapTileX(x, dim) {
         return ((x % dim) + dim) % dim;
+    }
+    normalizeLonAround(lonDeg, referenceLonDeg) {
+        let lon = lonDeg;
+        while (lon - referenceLonDeg > 180)
+            lon -= 360;
+        while (lon - referenceLonDeg < -180)
+            lon += 360;
+        return lon;
     }
     clampTileY(y, dim) {
         return Math.max(0, Math.min(dim - 1, y));
