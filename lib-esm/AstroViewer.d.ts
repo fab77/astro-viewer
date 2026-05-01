@@ -9,6 +9,8 @@ import Camera from './Camera.js';
 import { ReadonlyMat4 } from 'gl-matrix';
 import { ColorMap, ColorMapName } from './model/ColorMaps.js';
 import { HiPS } from './model/hips/HiPS.js';
+import { XYZLayer } from './model/earth/XYZLayer.js';
+import type { XYZLayerConfig } from './model/earth/types.js';
 export declare class AstroViewer {
     private astroSphere;
     private canvas;
@@ -36,10 +38,12 @@ export declare class AstroViewer {
     getHoveredFootprints(): HoveredFootprintDetail[];
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
+    activateXYZ(config: XYZLayerConfig): void;
     loadHiPS(baseUrl: string): Promise<string>;
     changeColorMap(colorMapName: ColorMapName): void;
     changeCustomColorMap(colorMap: ColorMap): void;
     getActiveHiPS(): HiPS | null;
+    getActiveXYZ(): XYZLayer | null;
     setCamera(camera: Camera): void;
     setCameraPosition(pos: [number, number, number]): void;
     setCameraMatrix(viewMatrix: Float32Array): void;

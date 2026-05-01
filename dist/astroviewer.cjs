@@ -2342,6 +2342,105 @@ exports.Source = Source;
 
 /***/ }),
 
+/***/ 149:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZShaderProgram = void 0;
+class XYZShaderProgram {
+    locations;
+    _webgl;
+    _shaderProgram;
+    constructor(webgl) {
+        this._webgl = webgl;
+        this.locations = {
+            pMatrix: null,
+            mMatrix: null,
+            vMatrix: null,
+            sampler: null,
+            vertexPositionAttribute: -1,
+            textureCoordAttribute: -1,
+        };
+    }
+    get shaderProgram() {
+        const gl = this._webgl;
+        if (!this._shaderProgram) {
+            const program = gl.createProgram();
+            if (!program) {
+                throw new Error('Could not create XYZ shader program');
+            }
+            this._shaderProgram = program;
+            this.initShaders();
+        }
+        gl.useProgram(this._shaderProgram);
+        return this._shaderProgram;
+    }
+    enableProgram() {
+        this._webgl.useProgram(this.shaderProgram);
+    }
+    enableShaders(pMatrix, vMatrix, mMatrix) {
+        const gl = this._webgl;
+        const program = this.shaderProgram;
+        gl.useProgram(program);
+        this.locations.pMatrix = gl.getUniformLocation(program, 'uPMatrix');
+        this.locations.mMatrix = gl.getUniformLocation(program, 'uMMatrix');
+        this.locations.vMatrix = gl.getUniformLocation(program, 'uVMatrix');
+        this.locations.sampler = gl.getUniformLocation(program, 'uSampler');
+        this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
+        this.locations.textureCoordAttribute = gl.getAttribLocation(program, 'aTextureCoord');
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
+        gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
+        gl.uniform1i(this.locations.sampler, 0);
+    }
+    initShaders() {
+        const gl = this._webgl;
+        const vertexShader = this.compileShader(gl.VERTEX_SHADER, `#version 300 es
+      in vec3 aVertexPosition;
+      in vec2 aTextureCoord;
+      uniform mat4 uPMatrix;
+      uniform mat4 uVMatrix;
+      uniform mat4 uMMatrix;
+      out vec2 vTextureCoord;
+      void main(void) {
+        vTextureCoord = aTextureCoord;
+        gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
+      }`);
+        const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, `#version 300 es
+      precision mediump float;
+      in vec2 vTextureCoord;
+      uniform sampler2D uSampler;
+      out vec4 outColor;
+      void main(void) {
+        outColor = texture(uSampler, vTextureCoord);
+      }`);
+        gl.attachShader(this._shaderProgram, vertexShader);
+        gl.attachShader(this._shaderProgram, fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            throw new Error(gl.getProgramInfoLog(this._shaderProgram) || 'Could not initialise XYZ shaders');
+        }
+    }
+    compileShader(type, source) {
+        const gl = this._webgl;
+        const shader = gl.createShader(type);
+        if (!shader) {
+            throw new Error('Could not create XYZ shader');
+        }
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(shader) || 'XYZ shader compile error');
+        }
+        return shader;
+    }
+}
+exports.XYZShaderProgram = XYZShaderProgram;
+
+
+/***/ }),
+
 /***/ 232:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -3333,6 +3432,43 @@ exports["default"] = Tile;
 
 /***/ }),
 
+/***/ 330:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZTileProvider = void 0;
+class XYZTileProvider {
+    _config;
+    constructor(config) {
+        this._config = config;
+    }
+    get config() {
+        return this._config;
+    }
+    getInitialTiles() {
+        const z = Math.max(0, Math.floor(this._config.fixedZoom ?? 1));
+        const dim = 2 ** z;
+        const tiles = [];
+        for (let x = 0; x < dim; x++) {
+            for (let y = 0; y < dim; y++) {
+                tiles.push({ z, x, y });
+            }
+        }
+        return tiles;
+    }
+    getTileUrl(tile) {
+        return this._config.urlTemplate
+            .replace(/\{z\}/g, String(tile.z))
+            .replace(/\{x\}/g, String(tile.x))
+            .replace(/\{y\}/g, String(tile.y));
+    }
+}
+exports.XYZTileProvider = XYZTileProvider;
+
+
+/***/ }),
+
 /***/ 361:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -3672,6 +3808,107 @@ class AllSky {
     }
 }
 exports["default"] = AllSky;
+
+
+/***/ }),
+
+/***/ 375:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZTile = void 0;
+class XYZTile {
+    _coord;
+    _url;
+    _webgl;
+    _shaderProgram;
+    _positionBuffer;
+    _uvBuffer;
+    _indexBuffer;
+    _texture = null;
+    _indices;
+    _indexType;
+    _ready = false;
+    _aborted = false;
+    _image;
+    constructor(coord, url, mesh, webgl, shaderProgram) {
+        this._coord = coord;
+        this._url = url;
+        this._webgl = webgl;
+        this._shaderProgram = shaderProgram;
+        this._positionBuffer = webgl.createBuffer();
+        this._uvBuffer = webgl.createBuffer();
+        this._indexBuffer = webgl.createBuffer();
+        this._indices = mesh.indices;
+        this._indexType = mesh.indices instanceof Uint32Array ? webgl.UNSIGNED_INT : webgl.UNSIGNED_SHORT;
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, this._positionBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.positions, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, this._uvBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
+        webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
+        this.loadTexture();
+    }
+    get ready() {
+        return this._ready;
+    }
+    get coord() {
+        return this._coord;
+    }
+    loadTexture() {
+        const image = new Image();
+        this._image = image;
+        image.crossOrigin = 'anonymous';
+        image.onload = () => this.onImageLoaded();
+        image.onerror = () => {
+            this._aborted = true;
+            this._ready = false;
+            console.warn(`[XYZTile] Failed loading ${this._url}`);
+        };
+        image.src = this._url;
+    }
+    onImageLoaded() {
+        if (!this._image || this._aborted) {
+            return;
+        }
+        const gl = this._webgl;
+        const texture = gl.createTexture();
+        if (!texture) {
+            throw new Error('Could not create XYZ texture');
+        }
+        this._texture = texture;
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        this._ready = true;
+    }
+    draw(pMatrix, vMatrix, mMatrix) {
+        if (!this._ready || !this._texture) {
+            return;
+        }
+        const gl = this._webgl;
+        this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._positionBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._uvBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
+        gl.drawElements(gl.TRIANGLES, this._indices.length, this._indexType, 0);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
+    }
+}
+exports.XYZTile = XYZTile;
 
 
 /***/ }),
@@ -4079,6 +4316,60 @@ class Footprint {
     }
 }
 exports.Footprint = Footprint;
+
+
+/***/ }),
+
+/***/ 502:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZLayer = void 0;
+const AbstractSkyEntity_js_1 = __webpack_require__(735);
+const XYZShaderProgram_js_1 = __webpack_require__(149);
+const XYZMeshBuilder_js_1 = __webpack_require__(819);
+const XYZTile_js_1 = __webpack_require__(375);
+const XYZTileProvider_js_1 = __webpack_require__(330);
+class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    _config;
+    _provider;
+    _meshBuilder;
+    _xyzShaderProgram;
+    _tiles = [];
+    constructor(config, webgl) {
+        super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false);
+        this._config = config;
+        this._provider = new XYZTileProvider_js_1.XYZTileProvider(config);
+        this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
+        this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
+        this.initGL(webgl);
+        this.bootstrapTiles();
+    }
+    get config() {
+        return this._config;
+    }
+    bootstrapTiles() {
+        const tiles = this._provider.getInitialTiles();
+        const segments = this._config.segmentsPerSide ?? 16;
+        this._tiles = tiles.map((tileCoord) => {
+            const mesh = this._meshBuilder.buildTileMesh(tileCoord, segments);
+            const url = this._provider.getTileUrl(tileCoord);
+            return new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._xyzShaderProgram);
+        });
+    }
+    draw(input) {
+        const vMatrix = input.camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
+        const pMatrix = input.pMatrix;
+        const mMatrix = this.getModelMatrix();
+        for (const tile of this._tiles) {
+            tile.draw(pMatrix, vMatrix, mMatrix);
+        }
+    }
+}
+exports.XYZLayer = XYZLayer;
 
 
 /***/ }),
@@ -7484,6 +7775,7 @@ const EquatorialGrid_js_1 = __webpack_require__(839);
 const HealpixGrid_js_1 = __webpack_require__(595);
 const CoordsType_js_1 = __webpack_require__(145);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
+const XYZLayer_js_1 = __webpack_require__(502);
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -7508,6 +7800,8 @@ class AstroSphere {
     pointerDownY = null;
     pointerDownAt = 0;
     _activeHiPS = null;
+    _activeXYZ = null;
+    _activeBaseLayer = null;
     startup = true;
     fov;
     activeCatalogues = [];
@@ -7866,6 +8160,11 @@ class AstroSphere {
     }
     activateHiPS(hipsDescriptor) {
         this._activeHiPS = new HiPS_js_1.HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
+        this._activeBaseLayer = 'hips';
+    }
+    activateXYZ(config) {
+        this._activeXYZ = new XYZLayer_js_1.XYZLayer(config, this._webgl);
+        this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
     async showCatalogue(cat) {
@@ -7996,12 +8295,15 @@ class AstroSphere {
     get activeHiPS() {
         return this._activeHiPS;
     }
+    get activeXYZ() {
+        return this._activeXYZ;
+    }
     draw(canvas) {
         if (this._refreshingStatus)
             return;
         if (!this._webgl)
             return;
-        if (!this._activeHiPS)
+        if (!this._activeHiPS && !this._activeXYZ)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -8085,15 +8387,22 @@ class AstroSphere {
         this._webgl.enable(this._webgl.CULL_FACE);
         this._webgl.cullFace(Global_js_1.default.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
         this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
-        this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
+            const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
+            this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        }
         // DRAW HiPS
         const skyEntityDrawInput = {
             fovDeg: this._healpixGrid.getMinFoV(),
             camera: this._camera,
             pMatrix: this._perspectiveMatrixManager.pMatrix
         };
-        this._activeHiPS.draw(skyEntityDrawInput);
+        if (this._activeBaseLayer === 'hips') {
+            this._activeHiPS?.draw(skyEntityDrawInput);
+        }
+        if (this._activeBaseLayer === 'xyz') {
+            this._activeXYZ?.draw(skyEntityDrawInput);
+        }
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
         this._webgl.enable(this._webgl.DEPTH_TEST);
@@ -8114,14 +8423,16 @@ class AstroSphere {
             });
         }
         this.activeCatalogues.forEach(cat => {
-            if (this._activeHiPS) {
-                cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            if (activeModelMatrix) {
+                cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach(fst => {
-            if (this._activeHiPS) {
-                fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            if (activeModelMatrix) {
+                fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
     }
@@ -8982,6 +9293,9 @@ class AstroViewer {
     activateHiPS(hipsDescriptor) {
         this.astroSphere.activateHiPS(hipsDescriptor);
     }
+    activateXYZ(config) {
+        this.astroSphere.activateXYZ(config);
+    }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
         const resp = await fetch(hipsUrl + 'properties');
@@ -9004,6 +9318,9 @@ class AstroViewer {
     }
     getActiveHiPS() {
         return this.astroSphere.activeHiPS;
+    }
+    getActiveXYZ() {
+        return this.astroSphere.activeXYZ;
     }
     // Camera: GOTOs and COORDS
     setCamera(camera) {
@@ -9513,6 +9830,75 @@ class HiPSShaderProgram {
     }
 }
 exports.HiPSShaderProgram = HiPSShaderProgram;
+
+
+/***/ }),
+
+/***/ 819:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMeshBuilder = void 0;
+const Utils_js_1 = __webpack_require__(930);
+const MAX_MERCATOR_LAT = 85.0511287798066;
+function mercatorYToLatDeg(yNormalized) {
+    const mercator = Math.PI * (1 - 2 * yNormalized);
+    return (Math.atan(Math.sinh(mercator)) * 180) / Math.PI;
+}
+function wrapLonToPhi(lonDeg) {
+    return lonDeg < 0 ? lonDeg + 360 : lonDeg;
+}
+class XYZMeshBuilder {
+    buildTileMesh(tile, segmentsPerSide = 16) {
+        const segments = Math.max(1, Math.floor(segmentsPerSide));
+        const gridSize = segments + 1;
+        const vertexCount = gridSize * gridSize;
+        const positions = new Float32Array(vertexCount * 3);
+        const uvs = new Float32Array(vertexCount * 2);
+        const tileCount = 2 ** tile.z;
+        let p = 0;
+        let uv = 0;
+        for (let row = 0; row <= segments; row++) {
+            const v = row / segments;
+            const yNormalized = (tile.y + v) / tileCount;
+            const latDeg = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, mercatorYToLatDeg(yNormalized)));
+            const thetaDeg = 90 - latDeg;
+            for (let col = 0; col <= segments; col++) {
+                const u = col / segments;
+                const xNormalized = (tile.x + u) / tileCount;
+                const lonDeg = xNormalized * 360 - 180;
+                const phiDeg = wrapLonToPhi(lonDeg);
+                const [x, y, z] = (0, Utils_js_1.sphericalToCartesian)(phiDeg, thetaDeg, 1);
+                positions[p++] = x;
+                positions[p++] = y;
+                positions[p++] = z;
+                uvs[uv++] = u;
+                uvs[uv++] = 1 - v;
+            }
+        }
+        const triangleCount = segments * segments * 2;
+        const rawIndices = new Uint32Array(triangleCount * 3);
+        let i = 0;
+        for (let row = 0; row < segments; row++) {
+            for (let col = 0; col < segments; col++) {
+                const topLeft = row * gridSize + col;
+                const topRight = topLeft + 1;
+                const bottomLeft = topLeft + gridSize;
+                const bottomRight = bottomLeft + 1;
+                rawIndices[i++] = topLeft;
+                rawIndices[i++] = bottomLeft;
+                rawIndices[i++] = topRight;
+                rawIndices[i++] = topRight;
+                rawIndices[i++] = bottomLeft;
+                rawIndices[i++] = bottomRight;
+            }
+        }
+        const indices = rawIndices.length > 65535 ? rawIndices : new Uint16Array(rawIndices);
+        return { positions, uvs, indices };
+    }
+}
+exports.XYZMeshBuilder = XYZMeshBuilder;
 
 
 /***/ }),
@@ -18676,7 +19062,7 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.XYZLayer = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(87);
@@ -18710,6 +19096,8 @@ Object.defineProperty(exports, "COLOR_MAP_SAMPLE_COUNT", ({ enumerable: true, ge
 Object.defineProperty(exports, "createColorMapFromSamples", ({ enumerable: true, get: function () { return ColorMaps_js_1.createColorMapFromSamples; } }));
 var HiPS_js_1 = __webpack_require__(726);
 Object.defineProperty(exports, "HiPS", ({ enumerable: true, get: function () { return HiPS_js_1.HiPS; } }));
+var XYZLayer_js_1 = __webpack_require__(502);
+Object.defineProperty(exports, "XYZLayer", ({ enumerable: true, get: function () { return XYZLayer_js_1.XYZLayer; } }));
 var Source_js_1 = __webpack_require__(146);
 Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));
 var Footprint_js_1 = __webpack_require__(475);

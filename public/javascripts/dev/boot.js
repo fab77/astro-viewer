@@ -2,6 +2,7 @@ import { wireHoveredFootprints } from './hoveredFootprints.js';
 import { el, setStatus, minimisePanel, restorePanel } from './ui.js';
 import { state, loadPersisted, persistBasic } from './state.js';
 import { loadHiPS } from './hips.js';
+import { loadXYZ } from './xyz.js';
 import { loadTapRepo, showFootprint, hideFootprints } from './tap.js';
 import { renderCatalogueManager, wireCatalogueManagerControls } from './catalogueManager.js';
 import { wireGoto } from './goto.js';
@@ -84,6 +85,22 @@ function wireUI() {
     if (!url) return setStatus("Insert a HiPS URL.");
     try { await loadHiPS(url); persistBasic(); }
     catch (e) { setStatus("HiPS load error: " + (e.message || e)); }
+  });
+
+  el('btnLoadXYZ')?.addEventListener('click', () => {
+    const urlTemplate = el('xyzUrlTemplate').value.trim();
+    const fixedZoom = Number(el('xyzFixedZoom').value);
+    const segmentsPerSide = Number(el('xyzSegments').value);
+
+    if (!urlTemplate) return setStatus("Insert an XYZ URL template.");
+    if (!Number.isFinite(fixedZoom) || fixedZoom < 0) return setStatus("Insert a valid XYZ zoom.");
+    if (!Number.isFinite(segmentsPerSide) || segmentsPerSide < 2) return setStatus("Insert a valid segment count.");
+
+    try {
+      loadXYZ(urlTemplate, { fixedZoom, segmentsPerSide });
+    } catch (e) {
+      setStatus("XYZ load error: " + (e.message || e));
+    }
   });
 
   el('btnLoadTap')?.addEventListener('click', async () => {

@@ -31,6 +31,8 @@ import { HealpixGrid } from './model/grid/HealpixGrid.js'
 import { SkyEntityDrawInput } from './model/AbstractSkyEntity.js'
 import { CoordsType } from './utils/CoordsType.js'
 import ColorMaps, { ColorMapName, ColorMap } from './model/ColorMaps.js'
+import { XYZLayer } from './model/earth/XYZLayer.js'
+import type { XYZLayerConfig } from './model/earth/types.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -87,6 +89,8 @@ class AstroSphere {
   private pointerDownAt = 0
 
   private _activeHiPS: HiPS | null = null
+  private _activeXYZ: XYZLayer | null = null
+  private _activeBaseLayer: 'hips' | 'xyz' | null = null
 
   private startup = true
 
@@ -586,7 +590,6 @@ class AstroSphere {
   }
 
   activateHiPS(hipsDescriptor: HiPSDescriptor) {
-
     this._activeHiPS = new HiPS(
       1,
       [0.0, 0.0, 0.0],
@@ -596,6 +599,12 @@ class AstroSphere {
       this._webgl,
       this._healpixGrid
     )
+    this._activeBaseLayer = 'hips'
+  }
+
+  activateXYZ(config: XYZLayerConfig) {
+    this._activeXYZ = new XYZLayer(config, this._webgl)
+    this._activeBaseLayer = 'xyz'
   }
 
   // Catalogue section
@@ -768,11 +777,15 @@ class AstroSphere {
     return this._activeHiPS
   }
 
+  get activeXYZ(): XYZLayer | null {
+    return this._activeXYZ
+  }
+
   draw(canvas: HTMLCanvasElement) {
 
     if (this._refreshingStatus) return
     if (!this._webgl) return
-    if (!this._activeHiPS) return
+    if (!this._activeHiPS && !this._activeXYZ) return
 
     if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0) return
     if ((this._healpixGrid as any).fovObj === undefined) return
@@ -875,16 +888,18 @@ class AstroSphere {
     this._webgl.cullFace(global.insideSphere ? this._webgl.FRONT : this._webgl.BACK)
     this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA)
 
-    const visibleOrder = Math.min(
-      this._healpixGrid.visibleorder,
-      this._activeHiPS.maxOrder,
-    )
-    this._healpixGrid.visibleTilesManager.computeVisiblePixels(
-      visibleOrder,
-      this._webgl,
-      this._camera,
-      this._perspectiveMatrixManager.pMatrix,
-    )
+    if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
+      const visibleOrder = Math.min(
+        this._healpixGrid.visibleorder,
+        this._activeHiPS.maxOrder,
+      )
+      this._healpixGrid.visibleTilesManager.computeVisiblePixels(
+        visibleOrder,
+        this._webgl,
+        this._camera,
+        this._perspectiveMatrixManager.pMatrix,
+      )
+    }
 
     // DRAW HiPS
     const skyEntityDrawInput: SkyEntityDrawInput = {
@@ -892,7 +907,12 @@ class AstroSphere {
       camera: this._camera,
       pMatrix: this._perspectiveMatrixManager.pMatrix
     }
-    this._activeHiPS.draw(skyEntityDrawInput)
+    if (this._activeBaseLayer === 'hips') {
+      this._activeHiPS?.draw(skyEntityDrawInput)
+    }
+    if (this._activeBaseLayer === 'xyz') {
+      this._activeXYZ?.draw(skyEntityDrawInput)
+    }
 
     this._healpixGrid.draw(skyEntityDrawInput)
     this._equatorialGrid.draw(skyEntityDrawInput)
@@ -918,16 +938,20 @@ class AstroSphere {
 
 
     this.activeCatalogues.forEach(cat => {
-      if (this._activeHiPS) {
-        cat.draw(this._activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
+      const activeModelMatrix =
+        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix()
+      if (activeModelMatrix) {
+        cat.draw(activeModelMatrix as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }
     })
     
     this.emitHoveredSourceIfChanged();
 
     this.activeFootprintSets.forEach(fst => {
-      if (this._activeHiPS) {
-        fst.draw(this._activeHiPS.getModelMatrix() as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
+      const activeModelMatrix =
+        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix()
+      if (activeModelMatrix) {
+        fst.draw(activeModelMatrix as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }
     })
 

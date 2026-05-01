@@ -12,6 +12,7 @@ import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { CoordsType } from './utils/CoordsType.js';
 import ColorMaps from './model/ColorMaps.js';
+import { XYZLayer } from './model/earth/XYZLayer.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -36,6 +37,8 @@ class AstroSphere {
     pointerDownY = null;
     pointerDownAt = 0;
     _activeHiPS = null;
+    _activeXYZ = null;
+    _activeBaseLayer = null;
     startup = true;
     fov;
     activeCatalogues = [];
@@ -394,6 +397,11 @@ class AstroSphere {
     }
     activateHiPS(hipsDescriptor) {
         this._activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
+        this._activeBaseLayer = 'hips';
+    }
+    activateXYZ(config) {
+        this._activeXYZ = new XYZLayer(config, this._webgl);
+        this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
     async showCatalogue(cat) {
@@ -524,12 +532,15 @@ class AstroSphere {
     get activeHiPS() {
         return this._activeHiPS;
     }
+    get activeXYZ() {
+        return this._activeXYZ;
+    }
     draw(canvas) {
         if (this._refreshingStatus)
             return;
         if (!this._webgl)
             return;
-        if (!this._activeHiPS)
+        if (!this._activeHiPS && !this._activeXYZ)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -613,15 +624,22 @@ class AstroSphere {
         this._webgl.enable(this._webgl.CULL_FACE);
         this._webgl.cullFace(global.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
         this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
-        this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
+            const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
+            this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        }
         // DRAW HiPS
         const skyEntityDrawInput = {
             fovDeg: this._healpixGrid.getMinFoV(),
             camera: this._camera,
             pMatrix: this._perspectiveMatrixManager.pMatrix
         };
-        this._activeHiPS.draw(skyEntityDrawInput);
+        if (this._activeBaseLayer === 'hips') {
+            this._activeHiPS?.draw(skyEntityDrawInput);
+        }
+        if (this._activeBaseLayer === 'xyz') {
+            this._activeXYZ?.draw(skyEntityDrawInput);
+        }
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
         this._webgl.enable(this._webgl.DEPTH_TEST);
@@ -642,14 +660,16 @@ class AstroSphere {
             });
         }
         this.activeCatalogues.forEach(cat => {
-            if (this._activeHiPS) {
-                cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            if (activeModelMatrix) {
+                cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach(fst => {
-            if (this._activeHiPS) {
-                fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            if (activeModelMatrix) {
+                fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
     }

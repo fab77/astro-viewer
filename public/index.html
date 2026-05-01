@@ -64,6 +64,20 @@
             </div>
         </div>
 
+        <div class="stack" style="margin-top:8px;">
+            <label for="xyzUrlTemplate">XYZ URL Template</label>
+            <div class="row">
+                <input id="xyzUrlTemplate" type="url" value="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    placeholder="https://…/{z}/{x}/{y}.png" />
+                <button id="btnLoadXYZ">Load XYZ</button>
+            </div>
+            <div class="row3">
+                <input id="xyzFixedZoom" type="number" min="0" max="6" step="1" value="1" placeholder="Zoom" />
+                <input id="xyzSegments" type="number" min="2" max="64" step="1" value="16" placeholder="Segments" />
+                <span class="hint">Load XYZ switches rendering from HiPS to Earth tiles.</span>
+            </div>
+        </div>
+
         <!-- Inside/Outside sphere toggle -->
         <div class="stack" style="margin-top:8px;">
             <label style="display:flex; align-items:center; gap:8px; user-select:none;">

@@ -12,6 +12,8 @@ import Camera from './Camera.js'
 import { ReadonlyMat4 } from 'gl-matrix'
 import ColorMaps, { ColorMap, ColorMapName } from './model/ColorMaps.js'
 import {HiPS} from './model/hips/HiPS.js'
+import { XYZLayer } from './model/earth/XYZLayer.js'
+import type { XYZLayerConfig } from './model/earth/types.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext 
@@ -127,6 +129,10 @@ createFootprintSet(footprintSetName: string,
     this.astroSphere.activateHiPS(hipsDescriptor)
   }
 
+  activateXYZ(config: XYZLayerConfig): void {
+    this.astroSphere.activateXYZ(config)
+  }
+
   async loadHiPS(baseUrl: string): Promise<string> {
     const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
     const resp = await fetch(hipsUrl + 'properties');
@@ -151,6 +157,10 @@ createFootprintSet(footprintSetName: string,
 
   getActiveHiPS(): HiPS | null {
     return this.astroSphere.activeHiPS
+  }
+
+  getActiveXYZ(): XYZLayer | null {
+    return this.astroSphere.activeXYZ
   }
 
   // Camera: GOTOs and COORDS

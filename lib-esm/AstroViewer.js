@@ -85,6 +85,9 @@ export class AstroViewer {
     activateHiPS(hipsDescriptor) {
         this.astroSphere.activateHiPS(hipsDescriptor);
     }
+    activateXYZ(config) {
+        this.astroSphere.activateXYZ(config);
+    }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
         const resp = await fetch(hipsUrl + 'properties');
@@ -107,6 +110,9 @@ export class AstroViewer {
     }
     getActiveHiPS() {
         return this.astroSphere.activeHiPS;
+    }
+    getActiveXYZ() {
+        return this.astroSphere.activeXYZ;
     }
     // Camera: GOTOs and COORDS
     setCamera(camera) {
