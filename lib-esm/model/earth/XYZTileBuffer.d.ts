@@ -6,12 +6,12 @@ export type XYZTileRequest = {
     tileCoord: XYZTileCoord;
     url: string;
     priority: number;
-    role: 'current' | 'coverage' | 'fallback';
+    role: 'current' | 'coverage' | 'fallback' | 'base';
 };
 type XYZTileBufferEntry = {
     tile: XYZTile;
     cacheTime0?: number;
-    role: 'current' | 'coverage' | 'fallback';
+    role: 'current' | 'coverage' | 'fallback' | 'base';
 };
 export declare class XYZTileBuffer {
     private _tiles;
@@ -25,10 +25,11 @@ export declare class XYZTileBuffer {
     get activeTiles(): Map<string, XYZTileBufferEntry>;
     get cachedTiles(): Map<string, XYZTileBufferEntry>;
     get size(): number;
-    getTile(tileCoord: XYZTileCoord, url: string, segmentsPerSide: number, role: 'current' | 'coverage' | 'fallback'): XYZTile;
+    getTile(tileCoord: XYZTileCoord, url: string, segmentsPerSide: number, role: 'current' | 'coverage' | 'fallback' | 'base'): XYZTile;
     private getExistingTile;
     ensureTiles(requests: XYZTileRequest[], segmentsPerSide: number): string[];
     getActiveTile(tileKey: string): XYZTile | null;
+    getAnyTile(tileKey: string): XYZTile | null;
     syncVisibleTiles(visibleTileKeys: string[]): void;
     evictCached(maxCachedTiles: number): void;
     dispose(): void;

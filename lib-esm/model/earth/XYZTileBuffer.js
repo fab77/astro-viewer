@@ -87,6 +87,9 @@ export class XYZTileBuffer {
     getActiveTile(tileKey) {
         return this._tiles.get(tileKey)?.tile ?? null;
     }
+    getAnyTile(tileKey) {
+        return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null;
+    }
     syncVisibleTiles(visibleTileKeys) {
         const visibleKeySet = new Set(visibleTileKeys);
         for (const [tileKey, entry] of this._tiles) {

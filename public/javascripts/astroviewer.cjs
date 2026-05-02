@@ -291,6 +291,48 @@ exports["default"] = FoVHelper;
 
 /***/ }),
 
+/***/ 497:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZAncestorMeshCache = void 0;
+class XYZAncestorMeshCache {
+    _webgl;
+    _meshBuilder;
+    _meshes = new Map();
+    constructor(webgl, meshBuilder) {
+        this._webgl = webgl;
+        this._meshBuilder = meshBuilder;
+    }
+    getMesh(targetTile, ancestorTile, segmentsPerSide) {
+        const key = `${targetTile.z}/${targetTile.x}/${targetTile.y}->${ancestorTile.z}/${ancestorTile.x}/${ancestorTile.y}@${segmentsPerSide}`;
+        const existing = this._meshes.get(key);
+        if (existing) {
+            return existing;
+        }
+        const mesh = this._meshBuilder.buildAncestorMesh(targetTile, ancestorTile, segmentsPerSide);
+        const uploaded = this._meshBuilder.uploadMesh(mesh, this._webgl);
+        this._meshes.set(key, uploaded);
+        return uploaded;
+    }
+    dispose() {
+        for (const mesh of this._meshes.values()) {
+            if (mesh.positionBuffer)
+                this._webgl.deleteBuffer(mesh.positionBuffer);
+            if (mesh.uvBuffer)
+                this._webgl.deleteBuffer(mesh.uvBuffer);
+            if (mesh.indexBuffer)
+                this._webgl.deleteBuffer(mesh.indexBuffer);
+        }
+        this._meshes.clear();
+    }
+}
+exports.XYZAncestorMeshCache = XYZAncestorMeshCache;
+
+
+/***/ }),
+
 /***/ 592:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -4867,18 +4909,37 @@ class XYZTile {
         if (!this._ready || !this._texture) {
             return;
         }
+        this.drawWithGpuMesh({
+            positionBuffer: this._positionBuffer,
+            uvBuffer: this._uvBuffer,
+            indexBuffer: this._indexBuffer,
+            indexCount: this._indices.length,
+            indexType: this._indexType,
+        }, pMatrix, vMatrix, mMatrix);
+    }
+    drawRemapped(mesh, pMatrix, vMatrix, mMatrix) {
+        this.touch();
+        if (!this._ready || !this._texture) {
+            return;
+        }
+        this.drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix);
+    }
+    drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix) {
+        if (!this._texture) {
+            return;
+        }
         const gl = this._webgl;
         this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._positionBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
         gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._uvBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer);
         gl.vertexAttribPointer(this._shaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-        gl.drawElements(gl.TRIANGLES, this._indices.length, this._indexType, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount, mesh.indexType, 0);
         gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
         gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
     }
@@ -13488,6 +13549,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZLayer = void 0;
 const AbstractSkyEntity_js_1 = __webpack_require__(4735);
 const XYZShaderProgram_js_1 = __webpack_require__(149);
+const XYZAncestorMeshCache_js_1 = __webpack_require__(497);
 const XYZMeshBuilder_js_1 = __webpack_require__(8819);
 const XYZTileBuffer_js_1 = __webpack_require__(2737);
 const XYZTileProvider_js_1 = __webpack_require__(2330);
@@ -13500,8 +13562,10 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _meshBuilder;
     _xyzShaderProgram;
     _tileBuffer;
+    _ancestorMeshCache;
     _visibleTileKeys = [];
     _fallbackVisibleTileKeys = [];
+    _baseVisibleTileKeys = [];
     _tilePriorities = new Map();
     _tileSelectionKey = null;
     _currentTileCount = 0;
@@ -13516,6 +13580,7 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
         this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
         this._tileBuffer = new XYZTileBuffer_js_1.XYZTileBuffer(1, webgl, this._meshBuilder, this._xyzShaderProgram);
+        this._ancestorMeshCache = new XYZAncestorMeshCache_js_1.XYZAncestorMeshCache(webgl, this._meshBuilder);
         this.initGL(webgl);
         this.bootstrapTiles(180, null, null);
     }
@@ -13594,9 +13659,16 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this._coreTileCount = selection.coreTileCount;
         this._coverageTileCount = selection.coverageTileCount;
         const segments = this._config.segmentsPerSide ?? 16;
+        const baseTiles = this._provider.getInitialTiles();
         const coreTileKeys = new Set(selection.currentTiles
             .slice(0, selection.coreTileCount)
             .map((tileCoord) => this.getTileKey(tileCoord)));
+        const baseTileKeys = new Set(baseTiles.map((tileCoord) => this.getTileKey(tileCoord)));
+        const prioritizedBaseTiles = baseTiles.map((tileCoord, index) => ({
+            tileCoord,
+            priority: 5000 + (baseTiles.length - index),
+            role: 'base',
+        }));
         const prioritizedCurrentTiles = selection.currentTiles.map((tileCoord, index) => ({
             tileCoord,
             priority: 10000 + (selection.currentTiles.length - index),
@@ -13607,9 +13679,10 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             priority: 1000 + (selection.fallbackTiles.length - index),
             role: 'fallback',
         }));
-        const requestedTiles = [...prioritizedCurrentTiles, ...prioritizedFallbackTiles];
+        const requestedTiles = [...prioritizedBaseTiles, ...prioritizedCurrentTiles, ...prioritizedFallbackTiles];
         this._tilePriorities.clear();
         this._fallbackVisibleTileKeys = [];
+        this._baseVisibleTileKeys = [];
         const orderedRequests = requestedTiles
             .sort((a, b) => a.tileCoord.z - b.tileCoord.z)
             .map(({ tileCoord, priority, role }) => {
@@ -13624,8 +13697,9 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         });
         const ensuredKeys = this._tileBuffer.ensureTiles(orderedRequests, segments);
         const fallbackKeySet = new Set(selection.fallbackTiles.map((tileCoord) => this.getTileKey(tileCoord)));
-        this._fallbackVisibleTileKeys = ensuredKeys.filter((tileKey) => fallbackKeySet.has(tileKey));
-        this._visibleTileKeys = ensuredKeys.filter((tileKey) => !fallbackKeySet.has(tileKey));
+        this._baseVisibleTileKeys = ensuredKeys.filter((tileKey) => baseTileKeys.has(tileKey));
+        this._fallbackVisibleTileKeys = ensuredKeys.filter((tileKey) => fallbackKeySet.has(tileKey) && !baseTileKeys.has(tileKey));
+        this._visibleTileKeys = ensuredKeys.filter((tileKey) => !fallbackKeySet.has(tileKey) && !baseTileKeys.has(tileKey));
         this.evictCache();
     }
     draw(input) {
@@ -13635,7 +13709,7 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this.bootstrapTiles(input.fovDeg ?? 180, input.camera, input.centerSphericalDeg ?? null, input.fovPolygon ?? null, input.viewportSphericalSamples ?? null);
         const pMatrix = input.pMatrix;
         const mMatrix = this.getModelMatrix();
-        for (const tileKey of this._visibleTileKeys) {
+        for (const tileKey of this._baseVisibleTileKeys) {
             const tile = this._tileBuffer.getActiveTile(tileKey);
             if (!tile)
                 continue;
@@ -13647,6 +13721,22 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
                 continue;
             tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0, false);
         }
+        for (const tileKey of this._visibleTileKeys) {
+            const tile = this._tileBuffer.getActiveTile(tileKey);
+            if (tile?.ready) {
+                tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0);
+                continue;
+            }
+            const targetCoord = this.parseTileKey(tileKey);
+            if (targetCoord) {
+                const ancestorTile = this.findBestAvailableAncestor(targetCoord);
+                if (ancestorTile) {
+                    const ancestorMesh = this._ancestorMeshCache.getMesh(targetCoord, ancestorTile.coord, this._config.segmentsPerSide ?? 16);
+                    ancestorTile.drawRemapped(ancestorMesh, pMatrix, vMatrix, mMatrix);
+                }
+            }
+            tile?.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0);
+        }
     }
     evictCache() {
         const maxCachedTiles = this._config.maxCachedTiles ?? XYZLayer.DEFAULT_MAX_CACHED_TILES;
@@ -13654,11 +13744,38 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     }
     disposeTiles() {
         this._tileBuffer.dispose();
+        this._ancestorMeshCache.dispose();
         this._visibleTileKeys = [];
         this._fallbackVisibleTileKeys = [];
+        this._baseVisibleTileKeys = [];
     }
     getTileKey(tileCoord) {
         return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
+    }
+    parseTileKey(tileKey) {
+        const [zRaw, xRaw, yRaw] = tileKey.split('/');
+        const z = Number.parseInt(zRaw ?? '', 10);
+        const x = Number.parseInt(xRaw ?? '', 10);
+        const y = Number.parseInt(yRaw ?? '', 10);
+        if (!Number.isFinite(z) || !Number.isFinite(x) || !Number.isFinite(y)) {
+            return null;
+        }
+        return { z, x, y };
+    }
+    findBestAvailableAncestor(targetCoord) {
+        for (let z = targetCoord.z - 1; z >= this._provider.minZoom; z--) {
+            const dz = targetCoord.z - z;
+            const ancestorCoord = {
+                z,
+                x: targetCoord.x >> dz,
+                y: targetCoord.y >> dz,
+            };
+            const ancestor = this._tileBuffer.getAnyTile(this.getTileKey(ancestorCoord));
+            if (ancestor?.ready) {
+                return ancestor;
+            }
+        }
+        return null;
     }
 }
 exports.XYZLayer = XYZLayer;
@@ -13760,6 +13877,9 @@ class XYZTileBuffer {
     }
     getActiveTile(tileKey) {
         return this._tiles.get(tileKey)?.tile ?? null;
+    }
+    getAnyTile(tileKey) {
+        return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null;
     }
     syncVisibleTiles(visibleTileKeys) {
         const visibleKeySet = new Set(visibleTileKeys);
@@ -16598,7 +16718,7 @@ class AstroSphere {
             pMatrix: this._perspectiveMatrixManager.pMatrix,
             centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
             fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
-            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(5) : undefined,
+            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(7) : undefined,
         };
         if (this._activeBaseLayer === 'hips') {
             this._activeHiPS?.draw(skyEntityDrawInput);
@@ -17949,7 +18069,7 @@ class XYZVisibleTilesManager {
             theta: 90 - point.decDeg,
         }));
         const samples = [...polygonSpherical];
-        const segmentInterpolationCount = polygonSpherical.length >= 4 ? 2 : 1;
+        const segmentInterpolationCount = polygonSpherical.length >= 4 ? 3 : 1;
         for (let i = 0; i < polygonSpherical.length; i++) {
             const start = polygonSpherical[i];
             const end = polygonSpherical[(i + 1) % polygonSpherical.length];
@@ -17970,14 +18090,8 @@ class XYZVisibleTilesManager {
         return samples;
     }
     getNeighborRing(currentZoom, fovDeg) {
-        if (currentZoom >= 12) {
+        if (currentZoom >= 14 && fovDeg < 10) {
             return 0;
-        }
-        if (currentZoom >= 8 && fovDeg < 20) {
-            return 0;
-        }
-        if (currentZoom >= 6) {
-            return 1;
         }
         return 1;
     }
@@ -18026,17 +18140,15 @@ class XYZVisibleTilesManager {
         if (coreTiles.length === 0) {
             return [];
         }
-        const coreSet = new Set(coreTiles.map((tile) => this.key(tile)));
-        const boundaryTiles = coreTiles.filter((tile) => this.isBoundaryTile(tile, coreSet));
         const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);
-        const seeds = [...boundaryTiles];
-        if (centerTile) {
-            const centerKey = this.key(centerTile);
-            if (!seeds.some((tile) => this.key(tile) === centerKey)) {
-                seeds.push(centerTile);
-            }
+        if (!centerTile) {
+            return coreTiles;
         }
-        return seeds.length > 0 ? seeds : coreTiles;
+        const centerKey = this.key(centerTile);
+        if (coreTiles.some((tile) => this.key(tile) === centerKey)) {
+            return coreTiles;
+        }
+        return [...coreTiles, centerTile];
     }
     orderTilesByScreenRelevance(tiles, zoom, centerSphericalDeg) {
         const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);
@@ -19499,6 +19611,45 @@ class XYZMeshBuilder {
         }
         const indices = rawIndices.length > 65535 ? rawIndices : new Uint16Array(rawIndices);
         return { positions, uvs, indices };
+    }
+    buildAncestorMesh(targetTile, ancestorTile, segmentsPerSide = 16) {
+        const baseMesh = this.buildTileMesh(targetTile, segmentsPerSide);
+        const dz = targetTile.z - ancestorTile.z;
+        const scale = 2 ** dz;
+        const subTileX = targetTile.x - (ancestorTile.x << dz);
+        const subTileY = targetTile.y - (ancestorTile.y << dz);
+        const uvs = new Float32Array(baseMesh.uvs.length);
+        for (let i = 0; i < baseMesh.uvs.length; i += 2) {
+            const u = baseMesh.uvs[i] ?? 0;
+            const baseV = baseMesh.uvs[i + 1] ?? 0;
+            const v = 1 - baseV;
+            uvs[i] = (subTileX + u) / scale;
+            uvs[i + 1] = 1 - (subTileY + v) / scale;
+        }
+        return {
+            positions: baseMesh.positions,
+            uvs,
+            indices: baseMesh.indices,
+        };
+    }
+    uploadMesh(mesh, webgl) {
+        const positionBuffer = webgl.createBuffer();
+        const uvBuffer = webgl.createBuffer();
+        const indexBuffer = webgl.createBuffer();
+        const indexType = mesh.indices instanceof Uint32Array ? webgl.UNSIGNED_INT : webgl.UNSIGNED_SHORT;
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, positionBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.positions, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, uvBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
+        return {
+            positionBuffer,
+            uvBuffer,
+            indexBuffer,
+            indexCount: mesh.indices.length,
+            indexType,
+        };
     }
 }
 exports.XYZMeshBuilder = XYZMeshBuilder;

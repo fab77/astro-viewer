@@ -55,4 +55,43 @@ export class XYZMeshBuilder {
         const indices = rawIndices.length > 65535 ? rawIndices : new Uint16Array(rawIndices);
         return { positions, uvs, indices };
     }
+    buildAncestorMesh(targetTile, ancestorTile, segmentsPerSide = 16) {
+        const baseMesh = this.buildTileMesh(targetTile, segmentsPerSide);
+        const dz = targetTile.z - ancestorTile.z;
+        const scale = 2 ** dz;
+        const subTileX = targetTile.x - (ancestorTile.x << dz);
+        const subTileY = targetTile.y - (ancestorTile.y << dz);
+        const uvs = new Float32Array(baseMesh.uvs.length);
+        for (let i = 0; i < baseMesh.uvs.length; i += 2) {
+            const u = baseMesh.uvs[i] ?? 0;
+            const baseV = baseMesh.uvs[i + 1] ?? 0;
+            const v = 1 - baseV;
+            uvs[i] = (subTileX + u) / scale;
+            uvs[i + 1] = 1 - (subTileY + v) / scale;
+        }
+        return {
+            positions: baseMesh.positions,
+            uvs,
+            indices: baseMesh.indices,
+        };
+    }
+    uploadMesh(mesh, webgl) {
+        const positionBuffer = webgl.createBuffer();
+        const uvBuffer = webgl.createBuffer();
+        const indexBuffer = webgl.createBuffer();
+        const indexType = mesh.indices instanceof Uint32Array ? webgl.UNSIGNED_INT : webgl.UNSIGNED_SHORT;
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, positionBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.positions, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, uvBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
+        return {
+            positionBuffer,
+            uvBuffer,
+            indexBuffer,
+            indexCount: mesh.indices.length,
+            indexType,
+        };
+    }
 }

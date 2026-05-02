@@ -79,7 +79,7 @@ export class XYZVisibleTilesManager {
             theta: 90 - point.decDeg,
         }));
         const samples = [...polygonSpherical];
-        const segmentInterpolationCount = polygonSpherical.length >= 4 ? 2 : 1;
+        const segmentInterpolationCount = polygonSpherical.length >= 4 ? 3 : 1;
         for (let i = 0; i < polygonSpherical.length; i++) {
             const start = polygonSpherical[i];
             const end = polygonSpherical[(i + 1) % polygonSpherical.length];
@@ -100,14 +100,8 @@ export class XYZVisibleTilesManager {
         return samples;
     }
     getNeighborRing(currentZoom, fovDeg) {
-        if (currentZoom >= 12) {
+        if (currentZoom >= 14 && fovDeg < 10) {
             return 0;
-        }
-        if (currentZoom >= 8 && fovDeg < 20) {
-            return 0;
-        }
-        if (currentZoom >= 6) {
-            return 1;
         }
         return 1;
     }
@@ -156,17 +150,15 @@ export class XYZVisibleTilesManager {
         if (coreTiles.length === 0) {
             return [];
         }
-        const coreSet = new Set(coreTiles.map((tile) => this.key(tile)));
-        const boundaryTiles = coreTiles.filter((tile) => this.isBoundaryTile(tile, coreSet));
         const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);
-        const seeds = [...boundaryTiles];
-        if (centerTile) {
-            const centerKey = this.key(centerTile);
-            if (!seeds.some((tile) => this.key(tile) === centerKey)) {
-                seeds.push(centerTile);
-            }
+        if (!centerTile) {
+            return coreTiles;
         }
-        return seeds.length > 0 ? seeds : coreTiles;
+        const centerKey = this.key(centerTile);
+        if (coreTiles.some((tile) => this.key(tile) === centerKey)) {
+            return coreTiles;
+        }
+        return [...coreTiles, centerTile];
     }
     orderTilesByScreenRelevance(tiles, zoom, centerSphericalDeg) {
         const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);

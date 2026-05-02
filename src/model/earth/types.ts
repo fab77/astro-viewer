@@ -63,6 +63,14 @@ export type XYZTileMesh = {
   indices: Uint16Array | Uint32Array
 }
 
+export type XYZTileGpuMesh = {
+  positionBuffer: WebGLBuffer | null
+  uvBuffer: WebGLBuffer | null
+  indexBuffer: WebGLBuffer | null
+  indexCount: number
+  indexType: number
+}
+
 export type WMTSRequestEncoding = 'kvp' | 'rest'
 
 export type WMTSLayerConfig = {

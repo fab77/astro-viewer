@@ -952,7 +952,7 @@ class AstroSphere {
       pMatrix: this._perspectiveMatrixManager.pMatrix,
       centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
       fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
-      viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(5) : undefined,
+      viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(7) : undefined,
     }
     if (this._activeBaseLayer === 'hips') {
       this._activeHiPS?.draw(skyEntityDrawInput)

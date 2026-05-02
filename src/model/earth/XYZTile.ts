@@ -1,5 +1,5 @@
 import { XYZShaderProgram } from '../../shader/XYZShaderProgram.js'
-import type { XYZTileCoord, XYZTileMesh } from './types.js'
+import type { XYZTileCoord, XYZTileGpuMesh, XYZTileMesh } from './types.js'
 import { xyzTileRequestScheduler, XYZTileRequestError } from './XYZTileRequestScheduler.js'
 
 export class XYZTile {
@@ -159,10 +159,48 @@ export class XYZTile {
       return
     }
 
+    this.drawWithGpuMesh(
+      {
+        positionBuffer: this._positionBuffer,
+        uvBuffer: this._uvBuffer,
+        indexBuffer: this._indexBuffer,
+        indexCount: this._indices.length,
+        indexType: this._indexType,
+      },
+      pMatrix,
+      vMatrix,
+      mMatrix,
+    )
+  }
+
+  drawRemapped(
+    mesh: XYZTileGpuMesh,
+    pMatrix: Float32Array,
+    vMatrix: Float32Array,
+    mMatrix: Float32Array,
+  ): void {
+    this.touch()
+    if (!this._ready || !this._texture) {
+      return
+    }
+
+    this.drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix)
+  }
+
+  private drawWithGpuMesh(
+    mesh: XYZTileGpuMesh,
+    pMatrix: Float32Array,
+    vMatrix: Float32Array,
+    mMatrix: Float32Array,
+  ): void {
+    if (!this._texture) {
+      return
+    }
+
     const gl = this._webgl
     this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix)
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this._positionBuffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer)
     gl.vertexAttribPointer(
       this._shaderProgram.locations.vertexPositionAttribute,
       3,
@@ -173,7 +211,7 @@ export class XYZTile {
     )
     gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute)
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, this._uvBuffer)
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer)
     gl.vertexAttribPointer(
       this._shaderProgram.locations.textureCoordAttribute,
       2,
@@ -186,8 +224,8 @@ export class XYZTile {
 
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, this._texture)
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer)
-    gl.drawElements(gl.TRIANGLES, this._indices.length, this._indexType, 0)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer)
+    gl.drawElements(gl.TRIANGLES, mesh.indexCount, mesh.indexType, 0)
 
     gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute)
     gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute)

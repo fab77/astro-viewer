@@ -121,18 +121,37 @@ export class XYZTile {
         if (!this._ready || !this._texture) {
             return;
         }
+        this.drawWithGpuMesh({
+            positionBuffer: this._positionBuffer,
+            uvBuffer: this._uvBuffer,
+            indexBuffer: this._indexBuffer,
+            indexCount: this._indices.length,
+            indexType: this._indexType,
+        }, pMatrix, vMatrix, mMatrix);
+    }
+    drawRemapped(mesh, pMatrix, vMatrix, mMatrix) {
+        this.touch();
+        if (!this._ready || !this._texture) {
+            return;
+        }
+        this.drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix);
+    }
+    drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix) {
+        if (!this._texture) {
+            return;
+        }
         const gl = this._webgl;
         this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._positionBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
         gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this._uvBuffer);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer);
         gl.vertexAttribPointer(this._shaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-        gl.drawElements(gl.TRIANGLES, this._indices.length, this._indexType, 0);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount, mesh.indexType, 0);
         gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
         gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
     }

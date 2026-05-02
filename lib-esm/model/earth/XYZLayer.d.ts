@@ -8,8 +8,10 @@ export declare class XYZLayer extends AbstractSkyEntity {
     private _meshBuilder;
     private _xyzShaderProgram;
     private _tileBuffer;
+    private _ancestorMeshCache;
     private _visibleTileKeys;
     private _fallbackVisibleTileKeys;
+    private _baseVisibleTileKeys;
     private _tilePriorities;
     private _tileSelectionKey;
     private _currentTileCount;
@@ -24,4 +26,6 @@ export declare class XYZLayer extends AbstractSkyEntity {
     private evictCache;
     private disposeTiles;
     private getTileKey;
+    private parseTileKey;
+    private findBestAvailableAncestor;
 }

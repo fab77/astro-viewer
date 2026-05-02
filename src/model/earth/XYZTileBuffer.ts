@@ -7,13 +7,13 @@ export type XYZTileRequest = {
   tileCoord: XYZTileCoord
   url: string
   priority: number
-  role: 'current' | 'coverage' | 'fallback'
+  role: 'current' | 'coverage' | 'fallback' | 'base'
 }
 
 type XYZTileBufferEntry = {
   tile: XYZTile
   cacheTime0?: number
-  role: 'current' | 'coverage' | 'fallback'
+  role: 'current' | 'coverage' | 'fallback' | 'base'
 }
 
 export class XYZTileBuffer {
@@ -56,7 +56,7 @@ export class XYZTileBuffer {
     tileCoord: XYZTileCoord,
     url: string,
     segmentsPerSide: number,
-    role: 'current' | 'coverage' | 'fallback',
+    role: 'current' | 'coverage' | 'fallback' | 'base',
   ): XYZTile {
     const tileKey = this.key(tileCoord)
 
@@ -129,6 +129,10 @@ export class XYZTileBuffer {
 
   getActiveTile(tileKey: string): XYZTile | null {
     return this._tiles.get(tileKey)?.tile ?? null
+  }
+
+  getAnyTile(tileKey: string): XYZTile | null {
+    return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null
   }
 
   syncVisibleTiles(visibleTileKeys: string[]): void {

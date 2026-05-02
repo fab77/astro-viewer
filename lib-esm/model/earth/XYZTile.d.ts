@@ -1,5 +1,5 @@
 import { XYZShaderProgram } from '../../shader/XYZShaderProgram.js';
-import type { XYZTileCoord, XYZTileMesh } from './types.js';
+import type { XYZTileCoord, XYZTileGpuMesh, XYZTileMesh } from './types.js';
 export declare class XYZTile {
     private _coord;
     private _url;
@@ -32,6 +32,8 @@ export declare class XYZTile {
     private loadImageFromBlob;
     private onImageLoaded;
     draw(pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array, priority?: number, allowLoad?: boolean): void;
+    drawRemapped(mesh: XYZTileGpuMesh, pMatrix: Float32Array, vMatrix: Float32Array, mMatrix: Float32Array): void;
+    private drawWithGpuMesh;
     dispose(): void;
     private revokeObjectUrl;
 }
