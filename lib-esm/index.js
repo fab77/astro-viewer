@@ -3,6 +3,8 @@ export { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 export { FoV } from './model/FoV.js';
 export { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 export { CatalogueGL } from './model/catalogues/CatalogueGL.js';
+export { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
+export { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 export { MetadataManager } from './model/MetadataManager.js';
 export { MetadataColumn, ColumnType } from './model/MetadataColumn.js';
 export { Point } from './model/Point.js';

@@ -470,7 +470,7 @@ class FootprintSetGL {
             throw new Error("geomColumn or its index is undefined in footprintsetProps");
         }
         for (let j = 0; j < in_data.length; j++) {
-            if (in_data[j][0] !== null) {
+            if (in_data[j][geomDataIndex] !== null) {
                 const footprint = new Footprint_js_1.Footprint(in_data[j][geomDataIndex], in_data[j]);
                 if (footprint._valid) {
                     this.addFootprint(footprint);
@@ -2253,6 +2253,8 @@ const FootprintSetGL_js_1 = __webpack_require__(592);
 const Config_js_1 = __webpack_require__(2919);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
 const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
+const TerraPointSetGL_js_1 = __webpack_require__(5781);
+const TerraFootprintSetGL_js_1 = __webpack_require__(9022);
 // & {
 //   viewportWidth: number
 //   viewportHeight: number
@@ -2317,6 +2319,31 @@ class AstroViewer {
         footprintSet.setIsVisible(isVisible);
     }
     deleteFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    // TERRA OVERLAYS
+    createTerraPointSet(pointSetName, pointSetDescription, providerUrl, metadataManager) {
+        return new TerraPointSetGL_js_1.TerraPointSetGL(pointSetName, pointSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraPointSet(pointSet) {
+        this.astroSphere.showCatalogue(pointSet);
+    }
+    hideTerraPointSet(pointSet, isVisible) {
+        pointSet.setIsVisible(isVisible);
+    }
+    deleteTerraPointSet(pointSet) {
+        this.astroSphere.deleteCatalogue(pointSet);
+    }
+    createTerraFootprintSet(footprintSetName, footprintSetDescription, providerUrl, metadataManager) {
+        return new TerraFootprintSetGL_js_1.TerraFootprintSetGL(footprintSetName, footprintSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideTerraFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteTerraFootprintSet(footprintSet) {
         this.astroSphere.deleteFootprintSet(footprintSet);
     }
     changeFootprintSetColor(footprintSet, hexColor) {
@@ -17484,6 +17511,21 @@ exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
 
 /***/ }),
 
+/***/ 5781:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TerraPointSetGL = void 0;
+const CatalogueGL_js_1 = __webpack_require__(1232);
+class TerraPointSetGL extends CatalogueGL_js_1.CatalogueGL {
+    _kind = 'TerraPointSetGL';
+}
+exports.TerraPointSetGL = TerraPointSetGL;
+
+
+/***/ }),
+
 /***/ 5947:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -19756,6 +19798,21 @@ exports.FootprintShaderProgram = FootprintShaderProgram;
 
 /***/ }),
 
+/***/ 9022:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TerraFootprintSetGL = void 0;
+const FootprintSetGL_js_1 = __webpack_require__(592);
+class TerraFootprintSetGL extends FootprintSetGL_js_1.FootprintSetGL {
+    _kind = 'TerraFootprintSetGL';
+}
+exports.TerraFootprintSetGL = TerraFootprintSetGL;
+
+
+/***/ }),
+
 /***/ 9665:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -20287,7 +20344,7 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZLayer = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZLayer = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(5087);
@@ -20299,6 +20356,10 @@ Object.defineProperty(exports, "HoveredFootprintDetail", ({ enumerable: true, ge
 Object.defineProperty(exports, "FootprintSetGL", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.FootprintSetGL; } }));
 var CatalogueGL_js_1 = __webpack_require__(1232);
 Object.defineProperty(exports, "CatalogueGL", ({ enumerable: true, get: function () { return CatalogueGL_js_1.CatalogueGL; } }));
+var TerraPointSetGL_js_1 = __webpack_require__(5781);
+Object.defineProperty(exports, "TerraPointSetGL", ({ enumerable: true, get: function () { return TerraPointSetGL_js_1.TerraPointSetGL; } }));
+var TerraFootprintSetGL_js_1 = __webpack_require__(9022);
+Object.defineProperty(exports, "TerraFootprintSetGL", ({ enumerable: true, get: function () { return TerraFootprintSetGL_js_1.TerraFootprintSetGL; } }));
 var MetadataManager_js_1 = __webpack_require__(5403);
 Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
 var MetadataColumn_js_1 = __webpack_require__(1072);

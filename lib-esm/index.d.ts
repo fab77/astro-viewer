@@ -4,6 +4,8 @@ export { FoV } from './model/FoV.js';
 export type { PointCoordinates, CameraChangedDetail } from './AstroSphere.js';
 export { HoveredFootprintDetail, FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 export { CatalogueGL } from './model/catalogues/CatalogueGL.js';
+export { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
+export { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 export { MetadataManager } from './model/MetadataManager.js';
 export { MetadataColumn, MetadataInit, ColumnType } from './model/MetadataColumn.js';
 export { Point, SphericalOpts, AstroOpts, PointInitOpts, CartesianOpts } from './model/Point.js';

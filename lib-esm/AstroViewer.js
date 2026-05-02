@@ -6,6 +6,8 @@ import { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 import { bootSetup } from './Config.js';
 import ColorMaps from './model/ColorMaps.js';
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
+import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
+import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 // & {
 //   viewportWidth: number
 //   viewportHeight: number
@@ -70,6 +72,31 @@ export class AstroViewer {
         footprintSet.setIsVisible(isVisible);
     }
     deleteFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    // TERRA OVERLAYS
+    createTerraPointSet(pointSetName, pointSetDescription, providerUrl, metadataManager) {
+        return new TerraPointSetGL(pointSetName, pointSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraPointSet(pointSet) {
+        this.astroSphere.showCatalogue(pointSet);
+    }
+    hideTerraPointSet(pointSet, isVisible) {
+        pointSet.setIsVisible(isVisible);
+    }
+    deleteTerraPointSet(pointSet) {
+        this.astroSphere.deleteCatalogue(pointSet);
+    }
+    createTerraFootprintSet(footprintSetName, footprintSetDescription, providerUrl, metadataManager) {
+        return new TerraFootprintSetGL(footprintSetName, footprintSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideTerraFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteTerraFootprintSet(footprintSet) {
         this.astroSphere.deleteFootprintSet(footprintSet);
     }
     changeFootprintSetColor(footprintSet, hexColor) {

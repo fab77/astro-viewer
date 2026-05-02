@@ -15,6 +15,8 @@ import {HiPS} from './model/hips/HiPS.js'
 import { XYZLayer } from './model/earth/XYZLayer.js'
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
+import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
+import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext 
@@ -109,6 +111,63 @@ createFootprintSet(footprintSetName: string,
   }
 
   deleteFootprintSet(footprintSet: FootprintSetGL) {
+    this.astroSphere.deleteFootprintSet(footprintSet)
+  }
+
+  // TERRA OVERLAYS
+  createTerraPointSet(
+    pointSetName: string,
+    pointSetDescription: string,
+    providerUrl: string,
+    metadataManager: MetadataManager,
+  ): TerraPointSetGL {
+    return new TerraPointSetGL(
+      pointSetName,
+      pointSetDescription,
+      providerUrl,
+      metadataManager,
+      this.webgl,
+      this.astroSphere.healpixGrid.visibleTilesManager,
+    )
+  }
+
+  showTerraPointSet(pointSet: TerraPointSetGL) {
+    this.astroSphere.showCatalogue(pointSet)
+  }
+
+  hideTerraPointSet(pointSet: TerraPointSetGL, isVisible: boolean) {
+    pointSet.setIsVisible(isVisible)
+  }
+
+  deleteTerraPointSet(pointSet: TerraPointSetGL) {
+    this.astroSphere.deleteCatalogue(pointSet)
+  }
+
+  createTerraFootprintSet(
+    footprintSetName: string,
+    footprintSetDescription: string,
+    providerUrl: string,
+    metadataManager: MetadataManager,
+  ): TerraFootprintSetGL {
+    return new TerraFootprintSetGL(
+      footprintSetName,
+      footprintSetDescription,
+      providerUrl,
+      metadataManager,
+      this.webgl,
+      this.astroSphere.healpixGrid.visibleTilesManager,
+    )
+  }
+
+  showTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
+    this.astroSphere.showFootprintSet(footprintSet)
+  }
+
+  hideTerraFootprintSet(footprintSet: TerraFootprintSetGL, isVisible: boolean) {
+    footprintSet.setIsVisible(isVisible)
+  }
+
+  deleteTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
     this.astroSphere.deleteFootprintSet(footprintSet)
   }
 
