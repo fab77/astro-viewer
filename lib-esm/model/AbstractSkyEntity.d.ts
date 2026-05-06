@@ -4,11 +4,21 @@
 import { vec3, mat4, ReadonlyVec3, ReadonlyMat4 } from "gl-matrix";
 import { HiPSShaderProgram } from '../shader/HiPSShaderProgram.js';
 import Camera from "../Camera.js";
+import { Point } from "./Point.js";
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 export interface SkyEntityDrawInput {
     fovDeg?: number;
     camera: Camera;
     pMatrix: ReadonlyMat4;
+    centerSphericalDeg?: {
+        phi: number;
+        theta: number;
+    };
+    fovPolygon?: Point[];
+    viewportSphericalSamples?: Array<{
+        phi: number;
+        theta: number;
+    }>;
 }
 export declare abstract class AbstractSkyEntity {
     refreshMe: boolean;

@@ -126,7 +126,7 @@ export class FootprintSetGL {
             throw new Error("geomColumn or its index is undefined in footprintsetProps");
         }
         for (let j = 0; j < in_data.length; j++) {
-            if (in_data[j][0] !== null) {
+            if (in_data[j][geomDataIndex] !== null) {
                 const footprint = new Footprint(in_data[j][geomDataIndex], in_data[j]);
                 if (footprint._valid) {
                     this.addFootprint(footprint);

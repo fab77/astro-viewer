@@ -12,6 +12,9 @@ import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { CoordsType } from './utils/CoordsType.js';
 import ColorMaps from './model/ColorMaps.js';
+import { XYZLayer } from './model/earth/XYZLayer.js';
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
+import { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -36,6 +39,8 @@ class AstroSphere {
     pointerDownY = null;
     pointerDownAt = 0;
     _activeHiPS = null;
+    _activeXYZ = null;
+    _activeBaseLayer = null;
     startup = true;
     fov;
     activeCatalogues = [];
@@ -392,8 +397,35 @@ class AstroSphere {
         const pickerPoint = RayPickingUtils.getIntersectionPointWithSingleModel(maxX / 2, maxY / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         return cartesianToSpherical(pickerPoint);
     }
+    collectViewportSphericalSamples(sampleCount = 5) {
+        const rect = this.canvas.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const samples = [];
+        for (let ix = 0; ix < sampleCount; ix++) {
+            const x = sampleCount === 1 ? width / 2 : (ix / (sampleCount - 1)) * width;
+            for (let iy = 0; iy < sampleCount; iy++) {
+                const y = sampleCount === 1 ? height / 2 : (iy / (sampleCount - 1)) * height;
+                const hit = RayPickingUtils.getIntersectionPointWithSingleModel(x, y, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+                if (hit && hit.length > 0) {
+                    samples.push(cartesianToSpherical(hit));
+                }
+            }
+        }
+        return samples;
+    }
     activateHiPS(hipsDescriptor) {
         this._activeHiPS = new HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
+        this._activeBaseLayer = 'hips';
+    }
+    activateXYZ(config) {
+        this._activeXYZ = new XYZLayer(config, this._webgl);
+        this._activeBaseLayer = 'xyz';
+    }
+    activateWMTS(config) {
+        const adapter = new WMTSAdapter(config);
+        this._activeXYZ = new XYZLayer(adapter.toXYZLayerConfig(), this._webgl);
+        this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
     async showCatalogue(cat) {
@@ -524,12 +556,22 @@ class AstroSphere {
     get activeHiPS() {
         return this._activeHiPS;
     }
+    get activeXYZ() {
+        return this._activeXYZ;
+    }
+    getXYZDebugStats() {
+        return {
+            activeBaseLayer: this._activeBaseLayer,
+            layer: this._activeXYZ?.getDebugStats() ?? null,
+            requests: xyzTileRequestScheduler.getDebugStats(),
+        };
+    }
     draw(canvas) {
         if (this._refreshingStatus)
             return;
         if (!this._webgl)
             return;
-        if (!this._activeHiPS)
+        if (!this._activeHiPS && !this._activeXYZ)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -613,15 +655,25 @@ class AstroSphere {
         this._webgl.enable(this._webgl.CULL_FACE);
         this._webgl.cullFace(global.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
         this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
-        this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
+            const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
+            this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        }
         // DRAW HiPS
         const skyEntityDrawInput = {
             fovDeg: this._healpixGrid.getMinFoV(),
             camera: this._camera,
-            pMatrix: this._perspectiveMatrixManager.pMatrix
+            pMatrix: this._perspectiveMatrixManager.pMatrix,
+            centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
+            fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
+            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(7) : undefined,
         };
-        this._activeHiPS.draw(skyEntityDrawInput);
+        if (this._activeBaseLayer === 'hips') {
+            this._activeHiPS?.draw(skyEntityDrawInput);
+        }
+        if (this._activeBaseLayer === 'xyz') {
+            this._activeXYZ?.draw(skyEntityDrawInput);
+        }
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
         this._webgl.enable(this._webgl.DEPTH_TEST);
@@ -642,14 +694,16 @@ class AstroSphere {
             });
         }
         this.activeCatalogues.forEach(cat => {
-            if (this._activeHiPS) {
-                cat.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            if (activeModelMatrix) {
+                cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach(fst => {
-            if (this._activeHiPS) {
-                fst.draw(this._activeHiPS.getModelMatrix(), this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            if (activeModelMatrix) {
+                fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
     }
