@@ -12,6 +12,11 @@ import Camera from './Camera.js'
 import { ReadonlyMat4 } from 'gl-matrix'
 import ColorMaps, { ColorMap, ColorMapName } from './model/ColorMaps.js'
 import {HiPS} from './model/hips/HiPS.js'
+import { XYZLayer } from './model/earth/XYZLayer.js'
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
+import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
+import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext 
@@ -109,6 +114,63 @@ createFootprintSet(footprintSetName: string,
     this.astroSphere.deleteFootprintSet(footprintSet)
   }
 
+  // TERRA OVERLAYS
+  createTerraPointSet(
+    pointSetName: string,
+    pointSetDescription: string,
+    providerUrl: string,
+    metadataManager: MetadataManager,
+  ): TerraPointSetGL {
+    return new TerraPointSetGL(
+      pointSetName,
+      pointSetDescription,
+      providerUrl,
+      metadataManager,
+      this.webgl,
+      this.astroSphere.healpixGrid.visibleTilesManager,
+    )
+  }
+
+  showTerraPointSet(pointSet: TerraPointSetGL) {
+    this.astroSphere.showCatalogue(pointSet)
+  }
+
+  hideTerraPointSet(pointSet: TerraPointSetGL, isVisible: boolean) {
+    pointSet.setIsVisible(isVisible)
+  }
+
+  deleteTerraPointSet(pointSet: TerraPointSetGL) {
+    this.astroSphere.deleteCatalogue(pointSet)
+  }
+
+  createTerraFootprintSet(
+    footprintSetName: string,
+    footprintSetDescription: string,
+    providerUrl: string,
+    metadataManager: MetadataManager,
+  ): TerraFootprintSetGL {
+    return new TerraFootprintSetGL(
+      footprintSetName,
+      footprintSetDescription,
+      providerUrl,
+      metadataManager,
+      this.webgl,
+      this.astroSphere.healpixGrid.visibleTilesManager,
+    )
+  }
+
+  showTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
+    this.astroSphere.showFootprintSet(footprintSet)
+  }
+
+  hideTerraFootprintSet(footprintSet: TerraFootprintSetGL, isVisible: boolean) {
+    footprintSet.setIsVisible(isVisible)
+  }
+
+  deleteTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
+    this.astroSphere.deleteFootprintSet(footprintSet)
+  }
+
   changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {
     // footprintSet.footprintsetProps.changeColor(hexColor)
     footprintSet.changeColor(hexColor)
@@ -125,6 +187,26 @@ createFootprintSet(footprintSetName: string,
 
   activateHiPS(hipsDescriptor: HiPSDescriptor): void {
     this.astroSphere.activateHiPS(hipsDescriptor)
+  }
+
+  activateXYZ(config: XYZLayerConfig): void {
+    this.astroSphere.activateXYZ(config)
+  }
+
+  activateWMTS(config: WMTSLayerConfig): void {
+    this.astroSphere.activateWMTS(config)
+  }
+
+  setXYZMaxConcurrentRequests(value: number): void {
+    xyzTileRequestScheduler.setMaxConcurrent(value)
+  }
+
+  getXYZMaxConcurrentRequests(): number {
+    return xyzTileRequestScheduler.getMaxConcurrent()
+  }
+
+  getXYZDebugStats(): XYZDebugStats {
+    return this.astroSphere.getXYZDebugStats()
   }
 
   async loadHiPS(baseUrl: string): Promise<string> {
@@ -151,6 +233,10 @@ createFootprintSet(footprintSetName: string,
 
   getActiveHiPS(): HiPS | null {
     return this.astroSphere.activeHiPS
+  }
+
+  getActiveXYZ(): XYZLayer | null {
+    return this.astroSphere.activeXYZ
   }
 
   // Camera: GOTOs and COORDS

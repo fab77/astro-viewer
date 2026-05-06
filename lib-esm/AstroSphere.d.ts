@@ -9,6 +9,8 @@ import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/Footp
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { ColorMap } from './model/ColorMaps.js';
+import { XYZLayer } from './model/earth/XYZLayer.js';
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -54,6 +56,8 @@ declare class AstroSphere {
     private pointerDownY;
     private pointerDownAt;
     private _activeHiPS;
+    private _activeXYZ;
+    private _activeBaseLayer;
     private startup;
     private fov;
     private activeCatalogues;
@@ -83,7 +87,10 @@ declare class AstroSphere {
     private emitCameraChanged;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
+    private collectViewportSphericalSamples;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
+    activateXYZ(config: XYZLayerConfig): void;
+    activateWMTS(config: WMTSLayerConfig): void;
     showCatalogue(cat: CatalogueGL): Promise<CatalogueGL>;
     deleteCatalogue(catalogue: CatalogueGL): void;
     showFootprintSet(fset: FootprintSetGL): Promise<FootprintSetGL>;
@@ -107,6 +114,8 @@ declare class AstroSphere {
     private prevCentralRaDeg;
     private prevCentralDecDeg;
     get activeHiPS(): HiPS | null;
+    get activeXYZ(): XYZLayer | null;
+    getXYZDebugStats(): XYZDebugStats;
     draw(canvas: HTMLCanvasElement): void;
     private emitHoveredSourceIfChanged;
 }

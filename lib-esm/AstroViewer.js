@@ -5,6 +5,9 @@ import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 import { bootSetup } from './Config.js';
 import ColorMaps from './model/ColorMaps.js';
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
+import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
+import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 // & {
 //   viewportWidth: number
 //   viewportHeight: number
@@ -71,6 +74,31 @@ export class AstroViewer {
     deleteFootprintSet(footprintSet) {
         this.astroSphere.deleteFootprintSet(footprintSet);
     }
+    // TERRA OVERLAYS
+    createTerraPointSet(pointSetName, pointSetDescription, providerUrl, metadataManager) {
+        return new TerraPointSetGL(pointSetName, pointSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraPointSet(pointSet) {
+        this.astroSphere.showCatalogue(pointSet);
+    }
+    hideTerraPointSet(pointSet, isVisible) {
+        pointSet.setIsVisible(isVisible);
+    }
+    deleteTerraPointSet(pointSet) {
+        this.astroSphere.deleteCatalogue(pointSet);
+    }
+    createTerraFootprintSet(footprintSetName, footprintSetDescription, providerUrl, metadataManager) {
+        return new TerraFootprintSetGL(footprintSetName, footprintSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraFootprintSet(footprintSet) {
+        this.astroSphere.showFootprintSet(footprintSet);
+    }
+    hideTerraFootprintSet(footprintSet, isVisible) {
+        footprintSet.setIsVisible(isVisible);
+    }
+    deleteTerraFootprintSet(footprintSet) {
+        this.astroSphere.deleteFootprintSet(footprintSet);
+    }
     changeFootprintSetColor(footprintSet, hexColor) {
         // footprintSet.footprintsetProps.changeColor(hexColor)
         footprintSet.changeColor(hexColor);
@@ -84,6 +112,21 @@ export class AstroViewer {
     }
     activateHiPS(hipsDescriptor) {
         this.astroSphere.activateHiPS(hipsDescriptor);
+    }
+    activateXYZ(config) {
+        this.astroSphere.activateXYZ(config);
+    }
+    activateWMTS(config) {
+        this.astroSphere.activateWMTS(config);
+    }
+    setXYZMaxConcurrentRequests(value) {
+        xyzTileRequestScheduler.setMaxConcurrent(value);
+    }
+    getXYZMaxConcurrentRequests() {
+        return xyzTileRequestScheduler.getMaxConcurrent();
+    }
+    getXYZDebugStats() {
+        return this.astroSphere.getXYZDebugStats();
     }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
@@ -107,6 +150,9 @@ export class AstroViewer {
     }
     getActiveHiPS() {
         return this.astroSphere.activeHiPS;
+    }
+    getActiveXYZ() {
+        return this.astroSphere.activeXYZ;
     }
     // Camera: GOTOs and COORDS
     setCamera(camera) {

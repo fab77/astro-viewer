@@ -2,10 +2,13 @@ import { wireHoveredFootprints } from './hoveredFootprints.js';
 import { el, setStatus, minimisePanel, restorePanel } from './ui.js';
 import { state, loadPersisted, persistBasic } from './state.js';
 import { loadHiPS } from './hips.js';
+import { loadWMTS, loadXYZ } from './xyz.js';
 import { loadTapRepo, showFootprint, hideFootprints } from './tap.js';
 import { renderCatalogueManager, wireCatalogueManagerControls } from './catalogueManager.js';
 import { wireGoto } from './goto.js';
 import { wireCoords } from './coords.js';
+import { wireXYZDiagnostics } from './xyzDiagnostics.js';
+import { applyWMTSPreset, loadWMTSCapabilities, WMTS_PRESETS } from './wmtsCapabilities.js';
 
 (function applyFixedProxy() {
   const FIXED_PROXY_BASE = ""; // set if needed
@@ -33,11 +36,15 @@ async function bootstrap() {
     try {
       const healpixChk = el('healpixGridChk');
       const equatChk = el('equatorialGridChk');
+      const xyzConcurrentInput = el('xyzMaxConcurrentRequests');
       if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
         healpixChk.checked = !!AC.isHealpixGridVisible();
       }
       if (equatChk && typeof AC.isEquatorialGridVisible === "function") {
         equatChk.checked = !!AC.isEquatorialGridVisible();
+      }
+      if (xyzConcurrentInput && typeof AC.getXYZMaxConcurrentRequests === "function") {
+        xyzConcurrentInput.value = String(AC.getXYZMaxConcurrentRequests());
       }
     } catch { }
 
@@ -59,6 +66,50 @@ async function bootstrap() {
     if (hipsInput) {
       hipsInput.value = defaultHiPS;
     }
+    const wmtsBaseUrl = el('wmtsBaseUrl');
+    const wmtsLayer = el('wmtsLayer');
+    const wmtsTileMatrixSet = el('wmtsTileMatrixSet');
+    const wmtsStyle = el('wmtsStyle');
+    const wmtsTime = el('wmtsTime');
+    const wmtsFormat = el('wmtsFormat');
+    const wmtsDimensions = el('wmtsDimensions');
+    const wmtsEncoding = el('wmtsEncoding');
+    const wmtsUrlTemplate = el('wmtsUrlTemplate');
+    if (wmtsBaseUrl) {
+      wmtsBaseUrl.value = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/";
+    }
+    const wmtsCapabilitiesUrl = el('wmtsCapabilitiesUrl');
+    if (wmtsCapabilitiesUrl) {
+      wmtsCapabilitiesUrl.value = WMTS_PRESETS.gibsBlueMarble.capabilitiesUrl;
+    }
+    if (wmtsLayer) {
+      wmtsLayer.value = "BlueMarble_ShadedRelief_Bathymetry";
+    }
+    if (wmtsTileMatrixSet) {
+      wmtsTileMatrixSet.value = "GoogleMapsCompatible_Level8";
+    }
+    if (wmtsStyle) {
+      wmtsStyle.value = "default";
+    }
+    if (wmtsTime) {
+      wmtsTime.value = "";
+    }
+    if (wmtsFormat) {
+      wmtsFormat.value = "image/jpeg";
+    }
+    if (wmtsDimensions) {
+      wmtsDimensions.value = "{}";
+    }
+    if (wmtsEncoding) {
+      wmtsEncoding.value = "rest";
+    }
+    if (wmtsUrlTemplate) {
+      wmtsUrlTemplate.value = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}";
+    }
+    const xyzMaxZoomInput = el('xyzMaxZoom');
+    if (xyzMaxZoomInput) {
+      xyzMaxZoomInput.value = "8";
+    }
     // Load HiPS using resolved URL
     await loadHiPS(defaultHiPS.trim());
 
@@ -70,6 +121,7 @@ async function bootstrap() {
     wireGoto();
     wireCoords();
     wireHoveredFootprints();
+    wireXYZDiagnostics();
 
     setStatus("Ready ✅ Load a TAP to begin.");
   } catch (e) {
@@ -84,6 +136,104 @@ function wireUI() {
     if (!url) return setStatus("Insert a HiPS URL.");
     try { await loadHiPS(url); persistBasic(); }
     catch (e) { setStatus("HiPS load error: " + (e.message || e)); }
+  });
+
+  el('btnLoadXYZ')?.addEventListener('click', () => {
+    const urlTemplate = el('xyzUrlTemplate').value.trim();
+    const minZoom = Number(el('xyzMinZoom').value);
+    const maxZoom = Number(el('xyzMaxZoom').value);
+    const segmentsPerSide = Number(el('xyzSegments').value);
+    const maxCachedTiles = Number(el('xyzMaxCachedTiles').value);
+    const maxConcurrentRequests = Number(el('xyzMaxConcurrentRequests').value);
+
+    if (!urlTemplate) return setStatus("Insert an XYZ URL template.");
+    if (!Number.isFinite(minZoom) || minZoom < 0) return setStatus("Insert a valid XYZ min zoom.");
+    if (!Number.isFinite(maxZoom) || maxZoom < 0) return setStatus("Insert a valid XYZ max zoom.");
+    if (maxZoom < minZoom) return setStatus("XYZ max zoom must be greater than or equal to min zoom.");
+    if (!Number.isFinite(segmentsPerSide) || segmentsPerSide < 2) return setStatus("Insert a valid segment count.");
+    if (!Number.isFinite(maxCachedTiles) || maxCachedTiles < 32) return setStatus("Insert a valid XYZ max cached tiles value.");
+    if (!Number.isFinite(maxConcurrentRequests) || maxConcurrentRequests < 1) return setStatus("Insert a valid XYZ max concurrent requests value.");
+
+    try {
+      loadXYZ(urlTemplate, {
+        minZoom,
+        maxZoom,
+        segmentsPerSide,
+        maxCachedTiles,
+        maxConcurrentRequests,
+      });
+    } catch (e) {
+      setStatus("XYZ load error: " + (e.message || e));
+    }
+  });
+
+  el('btnLoadWMTS')?.addEventListener('click', () => {
+    const baseUrl = el('wmtsBaseUrl').value.trim();
+    const urlTemplate = el('wmtsUrlTemplate').value.trim();
+    const layer = el('wmtsLayer').value.trim();
+    const tileMatrixSet = el('wmtsTileMatrixSet').value.trim();
+    const style = el('wmtsStyle').value.trim();
+    const time = el('wmtsTime').value.trim();
+    const format = el('wmtsFormat').value.trim();
+    const requestEncoding = el('wmtsEncoding').value;
+    const dimensionsRaw = el('wmtsDimensions').value.trim();
+    const minZoom = Number(el('xyzMinZoom').value);
+    const maxZoom = Number(el('xyzMaxZoom').value);
+    const segmentsPerSide = Number(el('xyzSegments').value);
+    const maxCachedTiles = Number(el('xyzMaxCachedTiles').value);
+    const maxConcurrentRequests = Number(el('xyzMaxConcurrentRequests').value);
+
+    if (!baseUrl) return setStatus("Insert a WMTS base URL.");
+    if (!layer) return setStatus("Insert a WMTS layer.");
+    if (!tileMatrixSet) return setStatus("Insert a WMTS tile matrix set.");
+    if (requestEncoding === 'rest' && !urlTemplate) return setStatus("Insert a WMTS REST URL template.");
+
+    let dimensions = {};
+    if (dimensionsRaw) {
+      try {
+        dimensions = JSON.parse(dimensionsRaw);
+      } catch {
+        return setStatus("WMTS dimensions must be valid JSON.");
+      }
+    }
+
+    try {
+      loadWMTS({
+        baseUrl,
+        urlTemplate: urlTemplate || undefined,
+        layer,
+        tileMatrixSet,
+        style: style || undefined,
+        time,
+        format: format || undefined,
+        requestEncoding,
+        dimensions,
+        matrixLabels: state.WMTS_CAPABILITIES?.matrixLabels,
+        minZoom,
+        maxZoom,
+        segmentsPerSide,
+        maxCachedTiles,
+        maxConcurrentRequests,
+      });
+    } catch (e) {
+      setStatus("WMTS load error: " + (e.message || e));
+    }
+  });
+
+  el('wmtsPreset')?.addEventListener('change', () => {
+    applyWMTSPreset(el('wmtsPreset').value);
+  });
+
+  el('btnLoadWMTSCapabilities')?.addEventListener('click', async () => {
+    const capabilitiesUrl = el('wmtsCapabilitiesUrl').value.trim();
+    const preferredLayer = el('wmtsLayer').value.trim();
+    if (!capabilitiesUrl) return setStatus("Insert a WMTS capabilities URL.");
+
+    try {
+      await loadWMTSCapabilities(capabilitiesUrl, preferredLayer);
+    } catch (e) {
+      setStatus("WMTS capabilities error: " + (e.message || e));
+    }
   });
 
   el('btnLoadTap')?.addEventListener('click', async () => {

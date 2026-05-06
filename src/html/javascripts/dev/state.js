@@ -15,6 +15,7 @@ export const state = {
   AstroAPI: undefined,
   AstroAPI2: undefined,
   TAP: undefined,
+  WMTS_CAPABILITIES: undefined,
   CAT_LIST: [],
   FP_LIST: [],
   CAT_VIS: new Map(),     // catalogueKey -> boolean

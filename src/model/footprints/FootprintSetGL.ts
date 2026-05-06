@@ -205,7 +205,7 @@ export class FootprintSetGL {
     }
 
     for (let j = 0; j < in_data.length; j++) {
-      if (in_data[j][0] !== null) {
+      if (in_data[j][geomDataIndex] !== null) {
         const footprint = new Footprint(in_data[j][geomDataIndex], in_data[j]);
         if ((footprint as any)._valid) {
           this.addFootprint(footprint);

@@ -16,7 +16,7 @@
     <button id="restoreBtn" title="Show Dev Panel">Dev Panel ▲</button>
 
     <!-- Dev panel -->
-    <div id="devpanel">
+    <div id="devpanel" autocomplete="off">
         <!-- Go To (RA, Dec) -->
         <div class="stack" style="margin-top:8px;">
             <label for="goRa">Go to (RA°, Dec°)</label>
@@ -63,6 +63,85 @@
                 <button id="btnLoadHiPS">Load HiPS</button>
             </div>
         </div>
+
+        <div class="stack" style="margin-top:8px;">
+            <label for="xyzUrlTemplate">XYZ URL Template</label>
+            <div class="row">
+                <input id="xyzUrlTemplate" type="url" value="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    placeholder="https://…/{z}/{x}/{y}.png" />
+                <button id="btnLoadXYZ">Load XYZ</button>
+            </div>
+            <div class="row3">
+                <input id="xyzMinZoom" type="number" min="0" max="22" step="1" value="0" placeholder="Min zoom" />
+                <input id="xyzMaxZoom" type="number" min="0" max="22" step="1" value="8" placeholder="Max zoom" />
+                <input id="xyzSegments" type="number" min="2" max="64" step="1" value="16" placeholder="Segments" />
+            </div>
+            <div class="row3">
+                <input id="xyzMaxCachedTiles" type="number" min="32" max="4096" step="32" value="384" placeholder="Max cached tiles" />
+                <input id="xyzMaxConcurrentRequests" type="number" min="1" max="16" step="1" value="4" placeholder="Max concurrent requests" />
+                <span class="hint">Tune cache size and request parallelism for XYZ.</span>
+            </div>
+            <div class="hint">XYZ zoom is computed automatically from distance/FoV and clamped between min/max.</div>
+        </div>
+
+        <details id="xyzDiagnosticsPanel" open style="margin-top:8px;">
+            <summary>XYZ diagnostics</summary>
+            <div class="stack">
+                <input id="xyzDiagSummary" class="mono" type="text" readonly value="Mode: —" />
+                <input id="xyzDiagCache" class="mono" type="text" readonly value="Cache: —" />
+                <input id="xyzDiagRequests" class="mono" type="text" readonly value="Requests: —" />
+                <div id="xyzDiagBackoff" class="hint">Backoff: none</div>
+            </div>
+        </details>
+
+        <details id="wmtsPanel" style="margin-top:8px;">
+            <summary>WMTS</summary>
+            <div class="stack">
+                <label for="wmtsPreset">WMTS preset</label>
+                <div class="row">
+                    <select id="wmtsPreset">
+                        <option value="gibsBlueMarble">NASA GIBS Blue Marble</option>
+                        <option value="esriWorldImagery">Esri World Imagery</option>
+                    </select>
+                    <button id="btnLoadWMTSCapabilities" class="secondary">Read Capabilities</button>
+                </div>
+                <label for="wmtsCapabilitiesUrl">WMTS capabilities URL</label>
+                <div class="row">
+                    <input id="wmtsCapabilitiesUrl" type="url" autocomplete="off"
+                        value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml"
+                        placeholder="https://…/WMTSCapabilities.xml" />
+                    <span class="hint">Auto-fills layer, matrix set, template and zoom range.</span>
+                </div>
+                <label for="wmtsBaseUrl">WMTS base URL</label>
+                <div class="row">
+                    <input id="wmtsBaseUrl" type="url" autocomplete="off" value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+                        placeholder="https://…/wmts" />
+                    <button id="btnLoadWMTS">Load WMTS</button>
+                </div>
+                <div class="row3">
+                    <input id="wmtsLayer" type="text" autocomplete="off" value="BlueMarble_ShadedRelief_Bathymetry" placeholder="Layer" />
+                    <input id="wmtsTileMatrixSet" type="text" autocomplete="off" value="GoogleMapsCompatible_Level8" placeholder="TileMatrixSet" />
+                    <select id="wmtsEncoding">
+                        <option value="rest" selected>REST</option>
+                        <option value="kvp">KVP</option>
+                    </select>
+                </div>
+                <div class="row3">
+                    <input id="wmtsStyle" type="text" autocomplete="off" value="default" placeholder="Style" />
+                    <input id="wmtsTime" type="text" autocomplete="off" value="" placeholder="Time (blank for static best layers)" />
+                    <input id="wmtsFormat" type="text" autocomplete="off" value="image/jpeg" placeholder="Format" />
+                </div>
+                <div class="row">
+                    <input id="wmtsDimensions" type="text" autocomplete="off" value="{}" placeholder='{"SomeDimension":"value"}' />
+                </div>
+                <div class="row">
+                    <input id="wmtsUrlTemplate" type="text" autocomplete="off"
+                        value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}"
+                        placeholder="REST template with {TileMatrix}/{TileRow}/{TileCol}" />
+                </div>
+                <div class="hint">WMTS currently reuses the XYZ renderer and assumes a Web Mercator-compatible tile matrix set.</div>
+            </div>
+        </details>
 
         <!-- Inside/Outside sphere toggle -->
         <div class="stack" style="margin-top:8px;">
