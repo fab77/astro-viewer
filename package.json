@@ -1,7 +1,7 @@
 {
   "name": "astro-viewer",
   "description": "Astrobrowser 3d engine.",
-  "version": "2.1.0-snapshot",
+  "version": "3.0.0",
   "keywords": [
     "HiPS",
     "HiPS cutout",
