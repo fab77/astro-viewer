@@ -32,6 +32,14 @@ body {
     background: #000;
 }
 
+#gridcoords,
+#gridhpx {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+}
+
 /* Dev panel */
 #devpanel {
     position: fixed;
@@ -216,9 +224,13 @@ summary {
 .floating-div-ra {
     position: absolute;
     color: blue;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .floating-div-dec {
     position: absolute;
     color: green;
+    z-index: 2;
+    pointer-events: none;
 }

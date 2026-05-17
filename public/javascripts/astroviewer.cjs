@@ -16337,9 +16337,10 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
                 // NDC divide
                 clipspace[0] /= clipspace[3];
                 clipspace[1] /= clipspace[3];
-                // clip → pixels
-                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
-                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
+                // clip -> CSS pixels
+                const canvasRect = gl.canvas.getBoundingClientRect();
+                const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                 this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
                 // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
             }
@@ -17872,6 +17873,7 @@ class GridTextHelper {
             this._divSets.push(divSet);
         }
         // Show & position
+        divSet.div.className = 'floating-div-ra';
         divSet.style.display = 'block';
         divSet.style.left = `${Math.floor(x + 25)}px`;
         divSet.style.top = `${Math.floor(y)}px`;
@@ -17899,6 +17901,7 @@ class GridTextHelper {
             divSet = { div, textNode, style: div.style };
             this._divSets.push(divSet);
         }
+        divSet.div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
         divSet.style.display = 'block';
         if (type === 'ra') {
             divSet.style.left = `${Math.floor(x + 25)}px`;
@@ -21760,9 +21763,10 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
                         // perspective divide
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
-                        // clip->pixel
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        // clip -> CSS pixels
+                        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+                        const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                        const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                         this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                         // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                     }
@@ -21783,8 +21787,9 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
                         gl_matrix_1.vec4.transformMat4(clipspace, phiPoint, mvpMatrix);
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+                        const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                        const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                         // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                         this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                     }

@@ -48,6 +48,7 @@ class GridTextHelper {
             this._divSets.push(divSet);
         }
         // Show & position
+        divSet.div.className = 'floating-div-ra';
         divSet.style.display = 'block';
         divSet.style.left = `${Math.floor(x + 25)}px`;
         divSet.style.top = `${Math.floor(y)}px`;
@@ -75,6 +76,7 @@ class GridTextHelper {
             divSet = { div, textNode, style: div.style };
             this._divSets.push(divSet);
         }
+        divSet.div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
         divSet.style.display = 'block';
         if (type === 'ra') {
             divSet.style.left = `${Math.floor(x + 25)}px`;

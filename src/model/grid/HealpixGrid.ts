@@ -412,9 +412,10 @@ export class HealpixGrid extends AbstractSkyEntity {
         clipspace[0] /= clipspace[3];
         clipspace[1] /= clipspace[3];
 
-        // clip → pixels
-        const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
-        const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
+        // clip -> CSS pixels
+        const canvasRect = (gl.canvas as HTMLCanvasElement).getBoundingClientRect();
+        const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+        const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
 
         this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
         // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
