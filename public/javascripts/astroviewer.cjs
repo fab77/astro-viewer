@@ -16071,7 +16071,7 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     fragmentShader;
     vertexShader;
     defaultColor = '#ec0acaff';
-    gridText = new GridTextHelper_js_1.default();
+    gridText = new GridTextHelper_js_1.default('healpix');
     // private _hipsShaderProgram: HiPSShaderProgram
     _attribLocations = {
         position: 0,
@@ -17822,99 +17822,88 @@ exports.HiPSDescriptor = HiPSDescriptor;
 /***/ ((__unused_webpack_module, exports) => {
 
 
-/**
- * @author Fabrizio Giordano (Fab)
- * @param in_radius - number
- * @param in_gl - GL context
- * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
- */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 class GridTextHelper {
-    _divEqContainerElement;
-    _divHPXContainerElement;
-    _divSets;
-    _divSetNdx;
-    constructor() {
-        this._divEqContainerElement = document.querySelector('#gridcoords');
-        this._divHPXContainerElement = document.querySelector('#gridhpx');
-        this._divSetNdx = 0;
-        this._divSets = [];
+    static layers = new Map();
+    layer;
+    constructor(layer = 'equatorial') {
+        this.layer = layer;
+        GridTextHelper.getLayerState(layer);
     }
     initHtml() {
-        // Kept for API parity; nothing required here with current logic.
+        GridTextHelper.getLayerState(this.layer);
     }
-    resetDivSets() {
-        // Hide remaining divs and reset index
-        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
-            this._divSets[this._divSetNdx].style.display = 'none';
+    resetDivSets(layer = this.layer) {
+        const state = GridTextHelper.getLayerState(layer);
+        for (; state.divSetNdx < state.divSets.length; ++state.divSetNdx) {
+            state.divSets[state.divSetNdx].style.display = 'none';
         }
-        this._divSetNdx = 0;
+        state.divSetNdx = 0;
     }
-    /**
-     * Add / reuse a floating label for HPX coordinates
-     */
     addHPXDivSet(msg, x, y) {
-        let divSet = this._divSets[this._divSetNdx++];
-        // Create on demand
+        this.addLabel('healpix', msg, x + 25, y, 'hpx');
+    }
+    addEqDivSet(msg, x, y, type) {
+        this.addLabel('equatorial', msg, type === 'ra' ? x + 25 : x, type === 'ra' ? y : y + 25, type);
+    }
+    addLonLatDivSet(msg, x, y, type) {
+        this.addLabel('lonlat', msg, type === 'lon' ? x + 25 : x, type === 'lon' ? y : y + 25, type);
+    }
+    addLabel(layer, msg, x, y, kind) {
+        const state = GridTextHelper.getLayerState(layer);
+        if (!state.container)
+            return;
+        let divSet = state.divSets[state.divSetNdx++];
         if (!divSet) {
             const div = document.createElement('div');
             const textNode = document.createTextNode('');
-            div.className = 'floating-div-ra'; // style like RA tags
             div.appendChild(textNode);
-            if (!this._divHPXContainerElement) {
-                this._divHPXContainerElement = document.querySelector('#gridhpx');
-            }
-            if (!this._divHPXContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divHPXContainerElement.appendChild(div);
+            state.container.appendChild(div);
             divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
+            state.divSets.push(divSet);
         }
-        // Show & position
-        divSet.div.className = 'floating-div-ra';
+        divSet.div.className = this.classNameForKind(kind);
         divSet.style.display = 'block';
-        divSet.style.left = `${Math.floor(x + 25)}px`;
+        divSet.style.left = `${Math.floor(x)}px`;
         divSet.style.top = `${Math.floor(y)}px`;
         divSet.textNode.nodeValue = msg;
     }
-    /**
-     * Add / reuse a floating label for Equatorial coords
-     * @param type 'ra' or 'dec'
-     */
-    addEqDivSet(msg, x, y, type) {
-        let divSet = this._divSets[this._divSetNdx++];
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
-            div.appendChild(textNode);
-            if (!this._divEqContainerElement) {
-                this._divEqContainerElement = document.querySelector('#gridcoords');
-            }
-            if (!this._divEqContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divEqContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
+    classNameForKind(kind) {
+        switch (kind) {
+            case 'dec':
+                return 'floating-div-dec';
+            case 'lat':
+                return 'floating-div-lat';
+            case 'lon':
+                return 'floating-div-lon';
+            case 'hpx':
+            case 'ra':
+            default:
+                return 'floating-div-ra';
         }
-        divSet.div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
-        divSet.style.display = 'block';
-        if (type === 'ra') {
-            divSet.style.left = `${Math.floor(x + 25)}px`;
-            divSet.style.top = `${Math.floor(y)}px`;
+    }
+    static getLayerState(layer) {
+        const current = GridTextHelper.layers.get(layer);
+        if (current) {
+            if (!current.container)
+                current.container = GridTextHelper.resolveContainer(layer);
+            return current;
         }
-        else {
-            divSet.style.left = `${Math.floor(x)}px`;
-            divSet.style.top = `${Math.floor(y + 25)}px`;
+        const state = {
+            container: GridTextHelper.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
+        GridTextHelper.layers.set(layer, state);
+        return state;
+    }
+    static resolveContainer(layer) {
+        if (layer === 'healpix') {
+            return document.querySelector('#gridhpx');
         }
-        divSet.textNode.nodeValue = msg;
+        return document.querySelector('#gridcoords');
     }
 }
-// export const gridTextHelper = new GridTextHelper();
 exports["default"] = GridTextHelper;
 
 
@@ -20448,6 +20437,7 @@ const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
 const Utils_js_1 = __webpack_require__(7930);
 const SphereFoV_js_1 = __webpack_require__(5803);
 const Global_js_1 = __importDefault(__webpack_require__(4382));
+const GridTextHelper_js_1 = __importDefault(__webpack_require__(5361));
 class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -20468,6 +20458,7 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _lonArray = [];
     _latArray = [];
     defaultColor = '#41d4d4';
+    gridText = new GridTextHelper_js_1.default('lonlat');
     constructor(radius, position, xrad, yrad, name, webgl) {
         super(radius, position, xrad, yrad, name, webgl);
         this._fovObj = new SphereFoV_js_1.SphereFoV(webgl);
@@ -20592,8 +20583,10 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         }
     }
     draw(input) {
-        if (!this._showGrid)
+        if (!this._showGrid) {
+            this.gridText.resetDivSets();
             return;
+        }
         const gl = super.webgl;
         const camera = input.camera;
         if (!camera)
@@ -20621,8 +20614,65 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             gl.enableVertexAttribArray(this._attribLocations.position);
             gl.drawArrays(gl.LINE_LOOP, 0, latLine.length / LatLonGrid.ELEM_SIZE);
         }
+        this.drawLabels(input, mMatrix, pMatrix, vMatrix);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    drawLabels(input, mMatrix, pMatrix, vMatrix) {
+        const center = input.centerSphericalDeg;
+        if (!center) {
+            this.gridText.resetDivSets();
+            return;
+        }
+        const centerLon = this.normalizeLon(center.phi > 180 ? center.phi - 360 : center.phi);
+        const centerLat = 90 - center.theta;
+        const lonLine = this.normalizeLon(this.roundToStep(centerLon, this._lonStep));
+        const latLine = Math.max(-90 + this._latStep, Math.min(90 - this._latStep, this.roundToStep(centerLat, this._latStep)));
+        const lonLabelPoint = this.lonLatToCartesian(lonLine, Math.max(-80, Math.min(80, centerLat)));
+        const latLabelPoint = this.lonLatToCartesian(centerLon, latLine);
+        const lonScreen = this.projectPointToScreen(lonLabelPoint, mMatrix, pMatrix, vMatrix);
+        if (lonScreen) {
+            this.gridText.addLonLatDivSet(`${lonLine.toFixed(0)}° lon`, lonScreen.x, lonScreen.y, 'lon');
+        }
+        const latScreen = this.projectPointToScreen(latLabelPoint, mMatrix, pMatrix, vMatrix);
+        if (latScreen) {
+            this.gridText.addLonLatDivSet(`${latLine.toFixed(0)}° lat`, latScreen.x, latScreen.y, 'lat');
+        }
+        this.gridText.resetDivSets();
+    }
+    projectPointToScreen(point, mMatrix, pMatrix, vMatrix) {
+        const mvMatrix = gl_matrix_1.mat4.create();
+        const mvpMatrix = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        gl_matrix_1.mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
+        const clipspace = gl_matrix_1.vec4.fromValues(point[0], point[1], point[2], 1);
+        gl_matrix_1.vec4.transformMat4(clipspace, clipspace, mvpMatrix);
+        if (Math.abs(clipspace[3]) < 1e-6) {
+            return null;
+        }
+        clipspace[0] /= clipspace[3];
+        clipspace[1] /= clipspace[3];
+        if (clipspace[0] < -1 || clipspace[0] > 1 || clipspace[1] < -1 || clipspace[1] > 1) {
+            return null;
+        }
+        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+        return {
+            x: canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width,
+            y: canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height,
+        };
+    }
+    roundToStep(value, step) {
+        if (step <= 0)
+            return value;
+        return Math.round(value / step) * step;
+    }
+    normalizeLon(lonDeg) {
+        let lon = lonDeg;
+        while (lon < -180)
+            lon += 360;
+        while (lon > 180)
+            lon -= 360;
+        return lon;
     }
 }
 exports.LatLonGrid = LatLonGrid;
@@ -21522,7 +21572,7 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _vertexShader;
     _fragmentShader;
     defaultColor = '#41d421';
-    gridText = new GridTextHelper_js_1.default();
+    gridText = new GridTextHelper_js_1.default('equatorial');
     _attribLocations = {
         position: 0,
         selected: 1,

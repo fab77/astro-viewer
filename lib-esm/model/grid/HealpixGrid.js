@@ -22,7 +22,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     fragmentShader;
     vertexShader;
     defaultColor = '#ec0acaff';
-    gridText = new GridTextHelper();
+    gridText = new GridTextHelper('healpix');
     // private _hipsShaderProgram: HiPSShaderProgram
     _attribLocations = {
         position: 0,

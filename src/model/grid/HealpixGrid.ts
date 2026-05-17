@@ -42,7 +42,7 @@ export class HealpixGrid extends AbstractSkyEntity {
   private vertexShader!: WebGLShader;
 
   private defaultColor = '#ec0acaff'
-  private gridText: GridTextHelper = new GridTextHelper()
+  private gridText: GridTextHelper = new GridTextHelper('healpix')
   // private _hipsShaderProgram: HiPSShaderProgram
 
   private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {

@@ -234,3 +234,17 @@ summary {
     z-index: 2;
     pointer-events: none;
 }
+
+.floating-div-lon {
+    position: absolute;
+    color: #40c8ff;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.floating-div-lat {
+    position: absolute;
+    color: #f6d35b;
+    z-index: 2;
+    pointer-events: none;
+}

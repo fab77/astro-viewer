@@ -19,7 +19,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
     _vertexShader;
     _fragmentShader;
     defaultColor = '#41d421';
-    gridText = new GridTextHelper();
+    gridText = new GridTextHelper('equatorial');
     _attribLocations = {
         position: 0,
         selected: 1,

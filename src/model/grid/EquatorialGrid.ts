@@ -30,7 +30,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
 	private _fragmentShader!: WebGLShader;
 
 	private defaultColor = '#41d421'
-	private gridText: GridTextHelper = new GridTextHelper()
+	private gridText: GridTextHelper = new GridTextHelper('equatorial')
 
 	private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
 		position: 0,

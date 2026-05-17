@@ -18,6 +18,7 @@ export declare class LatLonGrid extends AbstractSkyEntity {
     private _lonArray;
     private _latArray;
     private defaultColor;
+    private gridText;
     constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, name: string, webgl: WebGL2RenderingContext);
     init(): void;
     private initShaders;
@@ -32,4 +33,8 @@ export declare class LatLonGrid extends AbstractSkyEntity {
     setShowGrid(showGrid: boolean): void;
     private enableShader;
     draw(input: SkyEntityDrawInput): void;
+    private drawLabels;
+    private projectPointToScreen;
+    private roundToStep;
+    private normalizeLon;
 }

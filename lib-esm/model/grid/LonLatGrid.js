@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { mat4 } from 'gl-matrix';
+import { mat4, vec4 } from 'gl-matrix';
 import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
 import { xyzFovHelper } from '../earth2/XYZFoVHelper.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
 import { SphereFoV } from '../SphereFoV.js';
 import global from '../../Global.js';
+import GridTextHelper from './GridTextHelper.js';
 export class LatLonGrid extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
     static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
@@ -26,6 +27,7 @@ export class LatLonGrid extends AbstractSkyEntity {
     _lonArray = [];
     _latArray = [];
     defaultColor = '#41d4d4';
+    gridText = new GridTextHelper('lonlat');
     constructor(radius, position, xrad, yrad, name, webgl) {
         super(radius, position, xrad, yrad, name, webgl);
         this._fovObj = new SphereFoV(webgl);
@@ -150,8 +152,10 @@ export class LatLonGrid extends AbstractSkyEntity {
         }
     }
     draw(input) {
-        if (!this._showGrid)
+        if (!this._showGrid) {
+            this.gridText.resetDivSets();
             return;
+        }
         const gl = super.webgl;
         const camera = input.camera;
         if (!camera)
@@ -179,7 +183,64 @@ export class LatLonGrid extends AbstractSkyEntity {
             gl.enableVertexAttribArray(this._attribLocations.position);
             gl.drawArrays(gl.LINE_LOOP, 0, latLine.length / LatLonGrid.ELEM_SIZE);
         }
+        this.drawLabels(input, mMatrix, pMatrix, vMatrix);
         gl.bindBuffer(gl.ARRAY_BUFFER, null);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    drawLabels(input, mMatrix, pMatrix, vMatrix) {
+        const center = input.centerSphericalDeg;
+        if (!center) {
+            this.gridText.resetDivSets();
+            return;
+        }
+        const centerLon = this.normalizeLon(center.phi > 180 ? center.phi - 360 : center.phi);
+        const centerLat = 90 - center.theta;
+        const lonLine = this.normalizeLon(this.roundToStep(centerLon, this._lonStep));
+        const latLine = Math.max(-90 + this._latStep, Math.min(90 - this._latStep, this.roundToStep(centerLat, this._latStep)));
+        const lonLabelPoint = this.lonLatToCartesian(lonLine, Math.max(-80, Math.min(80, centerLat)));
+        const latLabelPoint = this.lonLatToCartesian(centerLon, latLine);
+        const lonScreen = this.projectPointToScreen(lonLabelPoint, mMatrix, pMatrix, vMatrix);
+        if (lonScreen) {
+            this.gridText.addLonLatDivSet(`${lonLine.toFixed(0)}° lon`, lonScreen.x, lonScreen.y, 'lon');
+        }
+        const latScreen = this.projectPointToScreen(latLabelPoint, mMatrix, pMatrix, vMatrix);
+        if (latScreen) {
+            this.gridText.addLonLatDivSet(`${latLine.toFixed(0)}° lat`, latScreen.x, latScreen.y, 'lat');
+        }
+        this.gridText.resetDivSets();
+    }
+    projectPointToScreen(point, mMatrix, pMatrix, vMatrix) {
+        const mvMatrix = mat4.create();
+        const mvpMatrix = mat4.create();
+        mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
+        const clipspace = vec4.fromValues(point[0], point[1], point[2], 1);
+        vec4.transformMat4(clipspace, clipspace, mvpMatrix);
+        if (Math.abs(clipspace[3]) < 1e-6) {
+            return null;
+        }
+        clipspace[0] /= clipspace[3];
+        clipspace[1] /= clipspace[3];
+        if (clipspace[0] < -1 || clipspace[0] > 1 || clipspace[1] < -1 || clipspace[1] > 1) {
+            return null;
+        }
+        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+        return {
+            x: canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width,
+            y: canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height,
+        };
+    }
+    roundToStep(value, step) {
+        if (step <= 0)
+            return value;
+        return Math.round(value / step) * step;
+    }
+    normalizeLon(lonDeg) {
+        let lon = lonDeg;
+        while (lon < -180)
+            lon += 360;
+        while (lon > 180)
+            lon -= 360;
+        return lon;
     }
 }

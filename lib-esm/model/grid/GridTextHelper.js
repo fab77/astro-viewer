@@ -1,93 +1,82 @@
-/**
- * @author Fabrizio Giordano (Fab)
- * @param in_radius - number
- * @param in_gl - GL context
- * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
- */
 class GridTextHelper {
-    _divEqContainerElement;
-    _divHPXContainerElement;
-    _divSets;
-    _divSetNdx;
-    constructor() {
-        this._divEqContainerElement = document.querySelector('#gridcoords');
-        this._divHPXContainerElement = document.querySelector('#gridhpx');
-        this._divSetNdx = 0;
-        this._divSets = [];
+    static layers = new Map();
+    layer;
+    constructor(layer = 'equatorial') {
+        this.layer = layer;
+        GridTextHelper.getLayerState(layer);
     }
     initHtml() {
-        // Kept for API parity; nothing required here with current logic.
+        GridTextHelper.getLayerState(this.layer);
     }
-    resetDivSets() {
-        // Hide remaining divs and reset index
-        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
-            this._divSets[this._divSetNdx].style.display = 'none';
+    resetDivSets(layer = this.layer) {
+        const state = GridTextHelper.getLayerState(layer);
+        for (; state.divSetNdx < state.divSets.length; ++state.divSetNdx) {
+            state.divSets[state.divSetNdx].style.display = 'none';
         }
-        this._divSetNdx = 0;
+        state.divSetNdx = 0;
     }
-    /**
-     * Add / reuse a floating label for HPX coordinates
-     */
     addHPXDivSet(msg, x, y) {
-        let divSet = this._divSets[this._divSetNdx++];
-        // Create on demand
+        this.addLabel('healpix', msg, x + 25, y, 'hpx');
+    }
+    addEqDivSet(msg, x, y, type) {
+        this.addLabel('equatorial', msg, type === 'ra' ? x + 25 : x, type === 'ra' ? y : y + 25, type);
+    }
+    addLonLatDivSet(msg, x, y, type) {
+        this.addLabel('lonlat', msg, type === 'lon' ? x + 25 : x, type === 'lon' ? y : y + 25, type);
+    }
+    addLabel(layer, msg, x, y, kind) {
+        const state = GridTextHelper.getLayerState(layer);
+        if (!state.container)
+            return;
+        let divSet = state.divSets[state.divSetNdx++];
         if (!divSet) {
             const div = document.createElement('div');
             const textNode = document.createTextNode('');
-            div.className = 'floating-div-ra'; // style like RA tags
             div.appendChild(textNode);
-            if (!this._divHPXContainerElement) {
-                this._divHPXContainerElement = document.querySelector('#gridhpx');
-            }
-            if (!this._divHPXContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divHPXContainerElement.appendChild(div);
+            state.container.appendChild(div);
             divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
+            state.divSets.push(divSet);
         }
-        // Show & position
-        divSet.div.className = 'floating-div-ra';
+        divSet.div.className = this.classNameForKind(kind);
         divSet.style.display = 'block';
-        divSet.style.left = `${Math.floor(x + 25)}px`;
+        divSet.style.left = `${Math.floor(x)}px`;
         divSet.style.top = `${Math.floor(y)}px`;
         divSet.textNode.nodeValue = msg;
     }
-    /**
-     * Add / reuse a floating label for Equatorial coords
-     * @param type 'ra' or 'dec'
-     */
-    addEqDivSet(msg, x, y, type) {
-        let divSet = this._divSets[this._divSetNdx++];
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
-            div.appendChild(textNode);
-            if (!this._divEqContainerElement) {
-                this._divEqContainerElement = document.querySelector('#gridcoords');
-            }
-            if (!this._divEqContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divEqContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
+    classNameForKind(kind) {
+        switch (kind) {
+            case 'dec':
+                return 'floating-div-dec';
+            case 'lat':
+                return 'floating-div-lat';
+            case 'lon':
+                return 'floating-div-lon';
+            case 'hpx':
+            case 'ra':
+            default:
+                return 'floating-div-ra';
         }
-        divSet.div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
-        divSet.style.display = 'block';
-        if (type === 'ra') {
-            divSet.style.left = `${Math.floor(x + 25)}px`;
-            divSet.style.top = `${Math.floor(y)}px`;
+    }
+    static getLayerState(layer) {
+        const current = GridTextHelper.layers.get(layer);
+        if (current) {
+            if (!current.container)
+                current.container = GridTextHelper.resolveContainer(layer);
+            return current;
         }
-        else {
-            divSet.style.left = `${Math.floor(x)}px`;
-            divSet.style.top = `${Math.floor(y + 25)}px`;
+        const state = {
+            container: GridTextHelper.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
+        GridTextHelper.layers.set(layer, state);
+        return state;
+    }
+    static resolveContainer(layer) {
+        if (layer === 'healpix') {
+            return document.querySelector('#gridhpx');
         }
-        divSet.textNode.nodeValue = msg;
+        return document.querySelector('#gridcoords');
     }
 }
-// export const gridTextHelper = new GridTextHelper();
 export default GridTextHelper;
