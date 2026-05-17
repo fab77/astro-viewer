@@ -837,6 +837,24 @@ class AstroSphere {
     this._camera.goTo(raDeg, decDeg)
   }
 
+  resetAxesOrientation(): void {
+    const center = this.updateCentralPoint()
+    if (!center) return
+
+    this.inertiaX = 0
+    this.inertiaY = 0
+    this._camera.goTo(center.astroDeg.ra, center.astroDeg.dec)
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    )
+    this.updateCentralPoint()
+    this._cameraStatusChanged = true
+  }
+
   getFoV(): SphereFoV {
     if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
       return this._activeXYZ2.getFoV()

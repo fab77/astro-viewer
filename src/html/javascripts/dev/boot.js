@@ -358,6 +358,10 @@ function wireUI() {
     }
   });
 
+  el('btnResetAxesOrientation')?.addEventListener('click', () => {
+    state.AstroAPI?.resetAxesOrientation?.();
+  });
+
   // grid toggles
   el('healpixGridChk')?.addEventListener('change', (ev) => {
     try {

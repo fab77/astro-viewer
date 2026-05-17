@@ -106,6 +106,7 @@ declare class AstroSphere {
     deleteFootprintSet(footprintSet: FootprintSetGL): void;
     getHoveredFootprints(): HoveredFootprintDetail[];
     goTo(raDeg: number, decDeg: number): void;
+    resetAxesOrientation(): void;
     getFoV(): SphereFoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;

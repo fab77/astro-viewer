@@ -80,6 +80,7 @@ export declare class AstroViewer {
     isEastWestRotationLocked(): boolean;
     setNorthSouthRotationLocked(locked: boolean): void;
     isNorthSouthRotationLocked(): boolean;
+    resetAxesOrientation(): void;
     getFoV(): SphereFoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;

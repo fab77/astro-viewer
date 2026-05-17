@@ -333,6 +333,10 @@ createFootprintSet(footprintSetName: string,
     return this.astroSphere.isNorthSouthRotationLocked()
   }
 
+  resetAxesOrientation(): void {
+    this.astroSphere.resetAxesOrientation()
+  }
+
   // FOV
   getFoV(): SphereFoV {
     return this.astroSphere.getFoV()

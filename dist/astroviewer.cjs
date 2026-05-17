@@ -2900,6 +2900,9 @@ class AstroViewer {
     isNorthSouthRotationLocked() {
         return this.astroSphere.isNorthSouthRotationLocked();
     }
+    resetAxesOrientation() {
+        this.astroSphere.resetAxesOrientation();
+    }
     // FOV
     getFoV() {
         return this.astroSphere.getFoV();
@@ -17168,6 +17171,17 @@ class AstroSphere {
     // End Footprint section
     goTo(raDeg, decDeg) {
         this._camera.goTo(raDeg, decDeg);
+    }
+    resetAxesOrientation() {
+        const center = this.updateCentralPoint();
+        if (!center)
+            return;
+        this.inertiaX = 0;
+        this.inertiaY = 0;
+        this._camera.goTo(center.astroDeg.ra, center.astroDeg.dec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        this.updateCentralPoint();
+        this._cameraStatusChanged = true;
     }
     getFoV() {
         if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {

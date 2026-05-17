@@ -223,6 +223,9 @@ export class AstroViewer {
     isNorthSouthRotationLocked() {
         return this.astroSphere.isNorthSouthRotationLocked();
     }
+    resetAxesOrientation() {
+        this.astroSphere.resetAxesOrientation();
+    }
     // FOV
     getFoV() {
         return this.astroSphere.getFoV();
