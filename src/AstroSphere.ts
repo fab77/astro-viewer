@@ -795,8 +795,25 @@ class AstroSphere {
 
   activateWMTS(config: WMTSLayerConfig) {
     const adapter = new WMTSAdapter(config)
-    this._activeXYZ = new XYZLayer(adapter.toXYZLayerConfig(), this._webgl)
-    this._activeXYZ2 = null
+    const xyzConfig = adapter.toXYZLayerConfig()
+    this._activeXYZ2 = new XYZMap(
+      1,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      new XYZMapDescriptor(
+        config.layer ? `WMTS ${config.layer}` : 'WMTS Earth2 Layer',
+        xyzConfig.urlTemplate,
+        xyzConfig.minZoom ?? 0,
+        xyzConfig.maxZoom ?? 8,
+        xyzConfig.segmentsPerSide ?? 48,
+        xyzConfig.maxCachedTiles ?? 384,
+        8,
+        xyzConfig.urlResolver,
+      ),
+      this._webgl,
+    )
+    this._activeXYZ = null
     this._activeBaseLayer = 'xyz'
   }
 
@@ -1028,7 +1045,7 @@ class AstroSphere {
   getXYZDebugStats(): XYZDebugStats {
     return {
       activeBaseLayer: this._activeBaseLayer,
-      layer: this._activeXYZ?.getDebugStats() ?? null,
+      layer: this._activeXYZ2?.getDebugStats() ?? this._activeXYZ?.getDebugStats() ?? null,
       requests: xyzTileRequestScheduler.getDebugStats(),
     }
   }

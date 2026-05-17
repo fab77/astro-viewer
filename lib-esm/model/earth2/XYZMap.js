@@ -107,6 +107,7 @@ export class XYZMap extends AbstractSkyEntity {
         const visibleTiles = tileSelection.visibleTiles;
         const ancestorsMap = tileSelection.ancestorsMap;
         const tileKeys = this._tileBuffer.ensureTiles(this.getTilesToEnsure(visibleTiles, ancestorsMap), (coord) => this.createTile(coord));
+        this._tileBuffer.evictCached(this._descriptor.maxCachedTiles);
         for (const tileKey of tileKeys) {
             const tile = this._tileBuffer.getActiveTile(tileKey);
             if (!tile || tile.coord.z !== tileSelection.currentZoom) {
@@ -150,6 +151,10 @@ export class XYZMap extends AbstractSkyEntity {
         return null;
     }
     resolveTileUrl(tile) {
+        const urlResolver = this._descriptor.urlResolver;
+        if (urlResolver) {
+            return urlResolver(tile);
+        }
         const dim = 2 ** tile.z;
         const y = this._descriptor.flipY ? dim - 1 - tile.y : tile.y;
         const subdomains = this._descriptor.subdomains;
@@ -161,6 +166,29 @@ export class XYZMap extends AbstractSkyEntity {
             .replace(/\{x\}/g, String(tile.x))
             .replace(/\{y\}/g, String(y))
             .replace(/\{s\}/g, subdomain ?? '');
+    }
+    getDebugStats() {
+        const activeTiles = Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile);
+        const cachedTiles = Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile);
+        const allTiles = [...activeTiles, ...cachedTiles];
+        const selection = this._visibleTilesManager.selection;
+        return {
+            cacheSize: this._tileBuffer.size,
+            visibleTileCount: selection.visibleTiles.length,
+            currentTileCount: activeTiles.filter((tile) => tile.coord.z === selection.currentZoom).length,
+            fallbackTileCount: selection.ancestorsMap.size,
+            coreTileCount: selection.visibleTiles.length,
+            coverageTileCount: selection.visibleTiles.length,
+            readyTileCount: allTiles.filter((tile) => tile.ready).length,
+            loadingTileCount: allTiles.filter((tile) => tile.loading).length,
+            coolingDownTileCount: 0,
+            currentZoom: selection.currentZoom,
+            tileSelectionKey: selection.key,
+            isSettling: false,
+            coarseTileCount: selection.ancestorsMap.size,
+            hasPendingSelection: false,
+            pendingSelectionKey: null,
+        };
     }
     tileKey(tile) {
         return `${tile.z}/${tile.x}/${tile.y}`;

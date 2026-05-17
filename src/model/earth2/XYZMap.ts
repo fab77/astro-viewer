@@ -9,6 +9,7 @@ import { XYZTileBuffer } from "./XYZTileBuffer.js";
 import { XYZAnchestorTile } from "./XYZAnchestorTile.js";
 import { XYZMeshBuilder } from "./XYZMeshBuilder.js";
 import { SphereFoV } from "../SphereFoV.js";
+import type { XYZLayerDebugStats } from "../earth/types.js";
 import type { XYZTileCoord } from "./XYZTypes.js";
 
 export class XYZMap extends AbstractSkyEntity {
@@ -147,6 +148,7 @@ export class XYZMap extends AbstractSkyEntity {
       this.getTilesToEnsure(visibleTiles, ancestorsMap),
       (coord) => this.createTile(coord),
     )
+    this._tileBuffer.evictCached(this._descriptor.maxCachedTiles)
 
     for (const tileKey of tileKeys) {
       const tile = this._tileBuffer.getActiveTile(tileKey)
@@ -220,6 +222,11 @@ export class XYZMap extends AbstractSkyEntity {
   }
 
   private resolveTileUrl(tile: XYZTileCoord): string {
+    const urlResolver = this._descriptor.urlResolver
+    if (urlResolver) {
+      return urlResolver(tile)
+    }
+
     const dim = 2 ** tile.z
     const y = this._descriptor.flipY ? dim - 1 - tile.y : tile.y
     const subdomains = this._descriptor.subdomains
@@ -232,6 +239,31 @@ export class XYZMap extends AbstractSkyEntity {
       .replace(/\{x\}/g, String(tile.x))
       .replace(/\{y\}/g, String(y))
       .replace(/\{s\}/g, subdomain ?? '')
+  }
+
+  getDebugStats(): XYZLayerDebugStats {
+    const activeTiles = Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile)
+    const cachedTiles = Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile)
+    const allTiles = [...activeTiles, ...cachedTiles]
+    const selection = this._visibleTilesManager.selection
+
+    return {
+      cacheSize: this._tileBuffer.size,
+      visibleTileCount: selection.visibleTiles.length,
+      currentTileCount: activeTiles.filter((tile) => tile.coord.z === selection.currentZoom).length,
+      fallbackTileCount: selection.ancestorsMap.size,
+      coreTileCount: selection.visibleTiles.length,
+      coverageTileCount: selection.visibleTiles.length,
+      readyTileCount: allTiles.filter((tile) => tile.ready).length,
+      loadingTileCount: allTiles.filter((tile) => tile.loading).length,
+      coolingDownTileCount: 0,
+      currentZoom: selection.currentZoom,
+      tileSelectionKey: selection.key,
+      isSettling: false,
+      coarseTileCount: selection.ancestorsMap.size,
+      hasPendingSelection: false,
+      pendingSelectionKey: null,
+    }
   }
 
   private tileKey(tile: XYZTileCoord): string {

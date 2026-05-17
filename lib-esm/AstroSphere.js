@@ -15,6 +15,7 @@ import ColorMaps from './model/ColorMaps.js';
 import { XYZLayer } from './model/earth/XYZLayer.js';
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
 import { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js';
+import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js';
 import { XYZMap } from './model/earth2/XYZMap.js';
 import { mat4, vec3, vec4 } from 'gl-matrix';
 /**
@@ -535,8 +536,9 @@ class AstroSphere {
     }
     activateWMTS(config) {
         const adapter = new WMTSAdapter(config);
-        this._activeXYZ = new XYZLayer(adapter.toXYZLayerConfig(), this._webgl);
-        this._activeXYZ2 = null;
+        const xyzConfig = adapter.toXYZLayerConfig();
+        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : 'WMTS Earth2 Layer', xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
+        this._activeXYZ = null;
         this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
@@ -713,7 +715,7 @@ class AstroSphere {
     getXYZDebugStats() {
         return {
             activeBaseLayer: this._activeBaseLayer,
-            layer: this._activeXYZ?.getDebugStats() ?? null,
+            layer: this._activeXYZ2?.getDebugStats() ?? this._activeXYZ?.getDebugStats() ?? null,
             requests: xyzTileRequestScheduler.getDebugStats(),
         };
     }

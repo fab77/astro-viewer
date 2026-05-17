@@ -1,6 +1,7 @@
 export class XYZMapDescriptor {
     _name;
     _url;
+    _urlResolver;
     _minZoom;
     _maxZoom;
     _segmentsPerSide;
@@ -11,9 +12,10 @@ export class XYZMapDescriptor {
     _attribution;
     _flipY;
     _maxConcurrentLoads;
-    constructor(name, url, minZoom = 0, maxZoom = 8, segmentsPerSide = 16, maxCachedTiles = 384, maxConcurrentLoads = 8) {
+    constructor(name, url, minZoom = 0, maxZoom = 8, segmentsPerSide = 16, maxCachedTiles = 384, maxConcurrentLoads = 8, urlResolver) {
         this._name = name;
         this._url = url;
+        this._urlResolver = urlResolver;
         this._minZoom = minZoom;
         this._maxZoom = maxZoom;
         this._segmentsPerSide = segmentsPerSide;
@@ -26,6 +28,9 @@ export class XYZMapDescriptor {
     }
     get url() {
         return this._url;
+    }
+    get urlResolver() {
+        return this._urlResolver;
     }
     get name() {
         return this._name;

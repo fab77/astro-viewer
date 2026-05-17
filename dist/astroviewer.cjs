@@ -699,6 +699,7 @@ class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const visibleTiles = tileSelection.visibleTiles;
         const ancestorsMap = tileSelection.ancestorsMap;
         const tileKeys = this._tileBuffer.ensureTiles(this.getTilesToEnsure(visibleTiles, ancestorsMap), (coord) => this.createTile(coord));
+        this._tileBuffer.evictCached(this._descriptor.maxCachedTiles);
         for (const tileKey of tileKeys) {
             const tile = this._tileBuffer.getActiveTile(tileKey);
             if (!tile || tile.coord.z !== tileSelection.currentZoom) {
@@ -742,6 +743,10 @@ class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         return null;
     }
     resolveTileUrl(tile) {
+        const urlResolver = this._descriptor.urlResolver;
+        if (urlResolver) {
+            return urlResolver(tile);
+        }
         const dim = 2 ** tile.z;
         const y = this._descriptor.flipY ? dim - 1 - tile.y : tile.y;
         const subdomains = this._descriptor.subdomains;
@@ -753,6 +758,29 @@ class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             .replace(/\{x\}/g, String(tile.x))
             .replace(/\{y\}/g, String(y))
             .replace(/\{s\}/g, subdomain ?? '');
+    }
+    getDebugStats() {
+        const activeTiles = Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile);
+        const cachedTiles = Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile);
+        const allTiles = [...activeTiles, ...cachedTiles];
+        const selection = this._visibleTilesManager.selection;
+        return {
+            cacheSize: this._tileBuffer.size,
+            visibleTileCount: selection.visibleTiles.length,
+            currentTileCount: activeTiles.filter((tile) => tile.coord.z === selection.currentZoom).length,
+            fallbackTileCount: selection.ancestorsMap.size,
+            coreTileCount: selection.visibleTiles.length,
+            coverageTileCount: selection.visibleTiles.length,
+            readyTileCount: allTiles.filter((tile) => tile.ready).length,
+            loadingTileCount: allTiles.filter((tile) => tile.loading).length,
+            coolingDownTileCount: 0,
+            currentZoom: selection.currentZoom,
+            tileSelectionKey: selection.key,
+            isSettling: false,
+            coarseTileCount: selection.ancestorsMap.size,
+            hasPendingSelection: false,
+            pendingSelectionKey: null,
+        };
     }
     tileKey(tile) {
         return `${tile.z}/${tile.x}/${tile.y}`;
@@ -2795,7 +2823,7 @@ class AstroViewer {
         this.astroSphere.activateXYZ(config);
     }
     activateXYZ2(config) {
-        const descriptor = new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384);
+        const descriptor = new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384, 8, config.urlResolver);
         this.astroSphere.activateXYZ2(descriptor);
     }
     activateWMTS(config) {
@@ -16616,6 +16644,7 @@ const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
 const XYZLayer_js_1 = __webpack_require__(2502);
 const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
 const WMTSAdapter_js_1 = __webpack_require__(3768);
+const XYZMapDescriptor_js_1 = __webpack_require__(7274);
 const XYZMap_js_1 = __webpack_require__(583);
 const gl_matrix_1 = __webpack_require__(1961);
 /**
@@ -17136,8 +17165,9 @@ class AstroSphere {
     }
     activateWMTS(config) {
         const adapter = new WMTSAdapter_js_1.WMTSAdapter(config);
-        this._activeXYZ = new XYZLayer_js_1.XYZLayer(adapter.toXYZLayerConfig(), this._webgl);
-        this._activeXYZ2 = null;
+        const xyzConfig = adapter.toXYZLayerConfig();
+        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor_js_1.XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : 'WMTS Earth2 Layer', xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
+        this._activeXYZ = null;
         this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
@@ -17314,7 +17344,7 @@ class AstroSphere {
     getXYZDebugStats() {
         return {
             activeBaseLayer: this._activeBaseLayer,
-            layer: this._activeXYZ?.getDebugStats() ?? null,
+            layer: this._activeXYZ2?.getDebugStats() ?? this._activeXYZ?.getDebugStats() ?? null,
             requests: XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getDebugStats(),
         };
     }
@@ -19122,6 +19152,7 @@ exports.XYZMapDescriptor = void 0;
 class XYZMapDescriptor {
     _name;
     _url;
+    _urlResolver;
     _minZoom;
     _maxZoom;
     _segmentsPerSide;
@@ -19132,9 +19163,10 @@ class XYZMapDescriptor {
     _attribution;
     _flipY;
     _maxConcurrentLoads;
-    constructor(name, url, minZoom = 0, maxZoom = 8, segmentsPerSide = 16, maxCachedTiles = 384, maxConcurrentLoads = 8) {
+    constructor(name, url, minZoom = 0, maxZoom = 8, segmentsPerSide = 16, maxCachedTiles = 384, maxConcurrentLoads = 8, urlResolver) {
         this._name = name;
         this._url = url;
+        this._urlResolver = urlResolver;
         this._minZoom = minZoom;
         this._maxZoom = maxZoom;
         this._segmentsPerSide = segmentsPerSide;
@@ -19147,6 +19179,9 @@ class XYZMapDescriptor {
     }
     get url() {
         return this._url;
+    }
+    get urlResolver() {
+        return this._urlResolver;
     }
     get name() {
         return this._name;

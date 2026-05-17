@@ -202,6 +202,8 @@ createFootprintSet(footprintSetName: string,
       config.maxZoom ?? 8,
       config.segmentsPerSide ?? 48,
       config.maxCachedTiles ?? 384,
+      8,
+      config.urlResolver,
     )
     this.astroSphere.activateXYZ2(descriptor)
   }

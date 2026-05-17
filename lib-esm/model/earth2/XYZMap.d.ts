@@ -2,6 +2,7 @@ import { AbstractSkyEntity, SkyEntityDrawInput } from "../AbstractSkyEntity.js";
 import { XYZMapDescriptor } from "./XYZMapDescriptor.js";
 import { ColorMap } from "../ColorMaps.js";
 import { SphereFoV } from "../SphereFoV.js";
+import type { XYZLayerDebugStats } from "../earth/types.js";
 export declare class XYZMap extends AbstractSkyEntity {
     private _xyzShaderProgram;
     private _descriptor;
@@ -25,5 +26,6 @@ export declare class XYZMap extends AbstractSkyEntity {
     private getTilesToEnsure;
     private findBestAvailableAncestor;
     private resolveTileUrl;
+    getDebugStats(): XYZLayerDebugStats;
     private tileKey;
 }

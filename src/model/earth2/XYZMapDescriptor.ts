@@ -1,7 +1,10 @@
+import type { XYZTileCoord } from './XYZTypes.js'
+
 export class XYZMapDescriptor {
 
     _name: string
     _url: string
+    _urlResolver?: (tile: XYZTileCoord) => string
     _minZoom?: number
     _maxZoom?: number
     _segmentsPerSide?: number
@@ -22,9 +25,11 @@ export class XYZMapDescriptor {
         segmentsPerSide: number = 16,
         maxCachedTiles: number = 384,
         maxConcurrentLoads: number = 8,
+        urlResolver?: (tile: XYZTileCoord) => string,
     ) {
         this._name = name
         this._url = url
+        this._urlResolver = urlResolver
         this._minZoom = minZoom
         this._maxZoom = maxZoom
         this._segmentsPerSide = segmentsPerSide
@@ -38,6 +43,10 @@ export class XYZMapDescriptor {
 
     get url(): string {
         return this._url
+    }
+
+    get urlResolver(): ((tile: XYZTileCoord) => string) | undefined {
+        return this._urlResolver
     }
 
     get name(): string {
