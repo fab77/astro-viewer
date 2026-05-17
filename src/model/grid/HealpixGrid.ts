@@ -8,7 +8,7 @@ import { Healpix } from 'healpixjs';
 
 import { fovHelper } from '../hips/FoVHelper.js';
 import {FoVUtils} from '../../utils/FoVUtils.js';
-import { FoV } from '../FoV.js';
+import { SphereFoV } from '../SphereFoV.js';
 
 import {CoordsType} from '../../utils/CoordsType.js';
 import {Point} from '../Point.js';
@@ -42,7 +42,7 @@ export class HealpixGrid extends AbstractSkyEntity {
   private vertexShader!: WebGLShader;
 
   private defaultColor = '#ec0acaff'
-  private gridText: GridTextHelper = new GridTextHelper()
+  private gridText: GridTextHelper = new GridTextHelper('healpix')
   // private _hipsShaderProgram: HiPSShaderProgram
 
   private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
@@ -60,7 +60,7 @@ export class HealpixGrid extends AbstractSkyEntity {
   private _vertexCataloguePosition: Float32Array = new Float32Array(0);
   private _indexes: Uint32Array = new Uint32Array(0);
 
-  private _fovObj!: FoV;
+  private _fovObj!: SphereFoV;
 
   static INITIAL_FOV = 180;
   static RADIUS = 1;
@@ -94,10 +94,10 @@ export class HealpixGrid extends AbstractSkyEntity {
 
     this._vertexCataloguePosition = new Float32Array(0);
 
-    this._fovObj = new FoV(super.webgl);
+    this._fovObj = new SphereFoV(super.webgl);
   }
 
-  get fovObj(): FoV {
+  get fovObj(): SphereFoV {
     return this._fovObj
   }
 
@@ -121,7 +121,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     return this._fovObj.getFoV(global.insideSphere, this, camera, pMatrix) ;
   }
 
-  getFoV(): FoV {
+  getFoV(): SphereFoV {
     return this._fovObj
   }
 
@@ -412,9 +412,10 @@ export class HealpixGrid extends AbstractSkyEntity {
         clipspace[0] /= clipspace[3];
         clipspace[1] /= clipspace[3];
 
-        // clip → pixels
-        const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
-        const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
+        // clip -> CSS pixels
+        const canvasRect = (gl.canvas as HTMLCanvasElement).getBoundingClientRect();
+        const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+        const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
 
         this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
         // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);

@@ -6,6 +6,7 @@ import { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 import { bootSetup } from './Config.js';
 import ColorMaps from './model/ColorMaps.js';
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
+import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 // & {
@@ -116,6 +117,10 @@ export class AstroViewer {
     activateXYZ(config) {
         this.astroSphere.activateXYZ(config);
     }
+    activateXYZ2(config) {
+        const descriptor = new XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384, 8, config.urlResolver);
+        this.astroSphere.activateXYZ2(descriptor);
+    }
     activateWMTS(config) {
         this.astroSphere.activateWMTS(config);
     }
@@ -174,6 +179,9 @@ export class AstroViewer {
         // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
         this.astroSphere.goTo(raDeg, decDeg);
     }
+    getActiveCoordinateMode() {
+        return this.astroSphere.getActiveCoordinateMode();
+    }
     getCenterCoordinates() {
         return this.astroSphere.getCentralPointCoordinates();
     }
@@ -199,6 +207,33 @@ export class AstroViewer {
     isEquatorialGridVisible() {
         // return equatorialGridSingleton.isVisible()
         return this.astroSphere.equatorialGrid.isVisible();
+    }
+    toggleLonLatGrid() {
+        return this.astroSphere.toggleLonLatGrid();
+    }
+    isLonLatGridVisible() {
+        return this.astroSphere.isLonLatGridVisible();
+    }
+    setEastWestRotationLocked(locked) {
+        this.astroSphere.setEastWestRotationLocked(locked);
+    }
+    isEastWestRotationLocked() {
+        return this.astroSphere.isEastWestRotationLocked();
+    }
+    setNorthSouthRotationLocked(locked) {
+        this.astroSphere.setNorthSouthRotationLocked(locked);
+    }
+    isNorthSouthRotationLocked() {
+        return this.astroSphere.isNorthSouthRotationLocked();
+    }
+    resetAxesOrientation() {
+        this.astroSphere.resetAxesOrientation();
+    }
+    setKeepCameraNorthUp(enabled) {
+        this.astroSphere.setKeepCameraNorthUp(enabled);
+    }
+    isKeepCameraNorthUp() {
+        return this.astroSphere.isKeepCameraNorthUp();
     }
     // FOV
     getFoV() {

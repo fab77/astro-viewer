@@ -19,7 +19,7 @@ import {
 import { HiPS } from './model/hips/HiPS.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { PerspectiveMatrixManager } from './utils/PerspectiveMatrixManager.js'
-import { FoV } from './model/FoV.js'
+import { SphereFoV } from './model/SphereFoV.js'
 import { Point } from './model/Point.js'
 import { FoVUtils } from './utils/FoVUtils.js'
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
@@ -31,10 +31,12 @@ import { HealpixGrid } from './model/grid/HealpixGrid.js'
 import { SkyEntityDrawInput } from './model/AbstractSkyEntity.js'
 import { CoordsType } from './utils/CoordsType.js'
 import ColorMaps, { ColorMapName, ColorMap } from './model/ColorMaps.js'
-import { XYZLayer } from './model/earth/XYZLayer.js'
-import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/XYZConfig.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
-import { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js'
+import { WMTSAdapter } from './model/earth/WMTSAdapter.js'
+import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js'
+import { XYZMap } from './model/earth/XYZMap.js'
+import { mat4, vec3, vec4 } from 'gl-matrix'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -91,12 +93,12 @@ class AstroSphere {
   private pointerDownAt = 0
 
   private _activeHiPS: HiPS | null = null
-  private _activeXYZ: XYZLayer | null = null
+  private _activeXYZ2: XYZMap | null = null
   private _activeBaseLayer: 'hips' | 'xyz' | null = null
 
   private startup = true
 
-  private fov: FoV
+  private fov: SphereFoV
 
   private activeCatalogues: CatalogueGL[] = []
   private activeFootprintSets: FootprintSetGL[] = []
@@ -106,6 +108,9 @@ class AstroSphere {
   private lastHoveredSource: Source | null = null
   private lastHoveredCatalogue: CatalogueGL | null = null
   private zoomSensitivity = 1.0
+  private lockedEastWestRaDeg: number | null = null
+  private lockedNorthSouthDecDeg: number | null = null
+  private keepCameraNorthUp = false
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     console.log('[AstroSphere] new instance for canvas', canvas.id);
@@ -240,6 +245,163 @@ class AstroSphere {
 
   getZoomSensitivity(): number {
     return this.zoomSensitivity
+  }
+
+  private filterRotationDeltaByAstroLocks(deltaX: number, deltaY: number): { deltaX: number; deltaY: number } {
+    const lockEastWest = this._camera.isRotationLockedY()
+    const lockNorthSouth = this._camera.isRotationLockedX()
+    if (!lockEastWest && !lockNorthSouth) {
+      return { deltaX, deltaY }
+    }
+
+    const center = RayPickingUtils.getIntersectionPointWithSingleModel(
+      this.canvas.clientWidth / 2,
+      this.canvas.clientHeight / 2,
+      this._healpixGrid,
+      this._webgl,
+      this._camera,
+      this._perspectiveMatrixManager.pMatrix,
+    )
+    if (!center || center.length < 3) {
+      return { deltaX, deltaY }
+    }
+
+    const centerVec = vec3.normalize(vec3.create(), vec3.fromValues(center[0], center[1], center[2]))
+    const northAxis = vec3.fromValues(0, 0, 1)
+    const eastVec = vec3.cross(vec3.create(), northAxis, centerVec)
+    if (vec3.length(eastVec) < 1e-6) {
+      vec3.set(eastVec, 1, 0, 0)
+    } else {
+      vec3.normalize(eastVec, eastVec)
+    }
+
+    const northProjection = vec3.scale(vec3.create(), centerVec, vec3.dot(northAxis, centerVec))
+    const northVec = vec3.subtract(vec3.create(), northAxis, northProjection)
+    if (vec3.length(northVec) < 1e-6) {
+      vec3.cross(northVec, centerVec, eastVec)
+    }
+    vec3.normalize(northVec, northVec)
+
+    const eastScreen = this.projectModelDirectionToScreen(centerVec, eastVec)
+    const northScreen = this.projectModelDirectionToScreen(centerVec, northVec)
+    if (!eastScreen || !northScreen) {
+      return { deltaX, deltaY }
+    }
+
+    let nextDeltaX = deltaX
+    let nextDeltaY = deltaY
+
+    if (lockEastWest) {
+      const amount = nextDeltaX * eastScreen.x + nextDeltaY * eastScreen.y
+      nextDeltaX -= amount * eastScreen.x
+      nextDeltaY -= amount * eastScreen.y
+    }
+
+    if (lockNorthSouth) {
+      const amount = nextDeltaX * northScreen.x + nextDeltaY * northScreen.y
+      nextDeltaX -= amount * northScreen.x
+      nextDeltaY -= amount * northScreen.y
+    }
+
+    return {
+      deltaX: nextDeltaX,
+      deltaY: nextDeltaY,
+    }
+  }
+
+  private projectModelDirectionToScreen(
+    centerModel: vec3,
+    directionModel: vec3,
+  ): { x: number; y: number } | null {
+    const offsetModel = vec3.scaleAndAdd(vec3.create(), centerModel, directionModel, 0.01)
+    const centerScreen = this.projectModelPointToScreen(centerModel)
+    const offsetScreen = this.projectModelPointToScreen(offsetModel)
+    if (!centerScreen || !offsetScreen) {
+      return null
+    }
+
+    const x = offsetScreen.x - centerScreen.x
+    const y = offsetScreen.y - centerScreen.y
+    const len = Math.hypot(x, y)
+    if (len < 1e-6) {
+      return null
+    }
+
+    return { x: x / len, y: y / len }
+  }
+
+  private projectModelPointToScreen(pointModel: vec3): { x: number; y: number } | null {
+    const vMatrix = this._camera.getCameraMatrix()
+    const mMatrix = this._healpixGrid.getModelMatrix()
+    const mvMatrix = mat4.create()
+    const mvpMatrix = mat4.create()
+    mat4.multiply(mvMatrix, vMatrix, mMatrix)
+    mat4.multiply(mvpMatrix, this._perspectiveMatrixManager.pMatrix, mvMatrix)
+
+    const clip = vec4.fromValues(pointModel[0], pointModel[1], pointModel[2], 1)
+    vec4.transformMat4(clip, clip, mvpMatrix)
+    if (Math.abs(clip[3]) < 1e-6) {
+      return null
+    }
+
+    return {
+      x: clip[0] / clip[3],
+      y: -(clip[1] / clip[3]),
+    }
+  }
+
+  private enforceAstronomicalRotationLocks(): boolean {
+    if (this.lockedEastWestRaDeg == null && this.lockedNorthSouthDecDeg == null) {
+      return false
+    }
+
+    const center = this.updateCentralPoint()
+    if (!center) {
+      return false
+    }
+
+    const nextRa = this.lockedEastWestRaDeg ?? center.astroDeg.ra
+    const nextDec = this.lockedNorthSouthDecDeg ?? center.astroDeg.dec
+    const needsCorrection =
+      Math.abs(nextRa - center.astroDeg.ra) > 1e-6 ||
+      Math.abs(nextDec - center.astroDeg.dec) > 1e-6
+
+    if (!needsCorrection) {
+      return false
+    }
+
+    this._camera.goTo(nextRa, nextDec)
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    )
+    this.updateCentralPoint()
+    return true
+  }
+
+  private enforceCameraNorthUp(): boolean {
+    if (!this.keepCameraNorthUp) {
+      return false
+    }
+
+    const center = this.updateCentralPoint()
+    if (!center) {
+      return false
+    }
+
+    this._camera.goTo(center.astroDeg.ra, center.astroDeg.dec)
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    )
+    this.updateCentralPoint()
+    return true
   }
 
 
@@ -402,9 +564,10 @@ class AstroSphere {
         // Rotation deltas – either use client-space or local-space, but be consistent
         const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
         const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
+        const filteredDelta = this.filterRotationDeltaByAstroLocks(deltaX, deltaY)
 
-        this.inertiaX += 0.1 * deltaX;
-        this.inertiaY += 0.1 * deltaY;
+        this.inertiaX += 0.1 * filteredDelta.deltaX;
+        this.inertiaY += 0.1 * filteredDelta.deltaY;
 
         this.updateCentralPoint();
 
@@ -623,8 +786,11 @@ class AstroSphere {
     this._activeHiPS = new HiPS(
       1,
       [0.0, 0.0, 0.0],
+      
       0,
       0,
+      
+      
       hipsDescriptor,
       this._webgl,
       this._healpixGrid
@@ -633,13 +799,50 @@ class AstroSphere {
   }
 
   activateXYZ(config: XYZLayerConfig) {
-    this._activeXYZ = new XYZLayer(config, this._webgl)
+    this.activateXYZ2(
+      new XYZMapDescriptor(
+        config.name ?? 'XYZ Earth2 Layer',
+        config.urlTemplate,
+        config.minZoom ?? 0,
+        config.maxZoom ?? 8,
+        config.segmentsPerSide ?? 48,
+        config.maxCachedTiles ?? 384,
+        8,
+        config.urlResolver,
+      )
+    )
+    this._activeBaseLayer = 'xyz'
+  }
+  activateXYZ2(config: XYZMapDescriptor) {
+    this._activeXYZ2 = new XYZMap(
+      1,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      config, this._webgl)
     this._activeBaseLayer = 'xyz'
   }
 
   activateWMTS(config: WMTSLayerConfig) {
     const adapter = new WMTSAdapter(config)
-    this._activeXYZ = new XYZLayer(adapter.toXYZLayerConfig(), this._webgl)
+    const xyzConfig = adapter.toXYZLayerConfig()
+    this._activeXYZ2 = new XYZMap(
+      1,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      new XYZMapDescriptor(
+        config.layer ? `WMTS ${config.layer}` : 'WMTS Earth2 Layer',
+        xyzConfig.urlTemplate,
+        xyzConfig.minZoom ?? 0,
+        xyzConfig.maxZoom ?? 8,
+        xyzConfig.segmentsPerSide ?? 48,
+        xyzConfig.maxCachedTiles ?? 384,
+        8,
+        xyzConfig.urlResolver,
+      ),
+      this._webgl,
+    )
     this._activeBaseLayer = 'xyz'
   }
 
@@ -680,7 +883,52 @@ class AstroSphere {
     this._camera.goTo(raDeg, decDeg)
   }
 
-  getFoV(): FoV {
+  getActiveCoordinateMode(): 'equatorial' | 'galactic' | 'lonlat' {
+    if (this._activeBaseLayer === 'xyz') {
+      return 'lonlat'
+    }
+
+    if (this._activeBaseLayer === 'hips' && this._activeHiPS?.isGalacticHips) {
+      return 'galactic'
+    }
+
+    return 'equatorial'
+  }
+
+  resetAxesOrientation(): void {
+    const center = this.updateCentralPoint()
+    if (!center) return
+
+    this.inertiaX = 0
+    this.inertiaY = 0
+    this._camera.goTo(center.astroDeg.ra, center.astroDeg.dec)
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    )
+    this.updateCentralPoint()
+    this._cameraStatusChanged = true
+  }
+
+  setKeepCameraNorthUp(enabled: boolean): void {
+    this.keepCameraNorthUp = enabled
+    if (enabled) {
+      this.resetAxesOrientation()
+    }
+  }
+
+  isKeepCameraNorthUp(): boolean {
+    return this.keepCameraNorthUp
+  }
+
+  getFoV(): SphereFoV {
+    if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
+      return this._activeXYZ2.getFoV()
+    }
+
     return this.fov
   }
 
@@ -800,9 +1048,10 @@ class AstroSphere {
   }
 
   changeColorMap(cm: ColorMap) {
-    if (!this._activeHiPS) return
+    if (!this._activeHiPS && !this._activeXYZ2) return
     this._selectedColorMap = cm
     this._activeHiPS?.changeColorMap(cm)
+    this._activeXYZ2?.changeColorMap(cm)
   }
 
   private prevFov: number = 0
@@ -813,14 +1062,42 @@ class AstroSphere {
     return this._activeHiPS
   }
 
-  get activeXYZ(): XYZLayer | null {
-    return this._activeXYZ
+  get activeXYZ(): XYZMap | null {
+    return this._activeXYZ2
+  }
+
+  isLonLatGridVisible(): boolean {
+    return this._activeXYZ2?.isLonLatGridVisible() ?? false
+  }
+
+  toggleLonLatGrid(): boolean {
+    return this._activeXYZ2?.toggleLonLatGrid() ?? false
+  }
+
+  setEastWestRotationLocked(locked: boolean): void {
+    this._camera.setRotationLock({ y: locked })
+    if (locked) this.inertiaX = 0
+    this.lockedEastWestRaDeg = locked ? this.updateCentralPoint()?.astroDeg.ra ?? null : null
+  }
+
+  isEastWestRotationLocked(): boolean {
+    return this._camera.isRotationLockedY()
+  }
+
+  setNorthSouthRotationLocked(locked: boolean): void {
+    this._camera.setRotationLock({ x: locked })
+    if (locked) this.inertiaY = 0
+    this.lockedNorthSouthDecDeg = locked ? this.updateCentralPoint()?.astroDeg.dec ?? null : null
+  }
+
+  isNorthSouthRotationLocked(): boolean {
+    return this._camera.isRotationLockedX()
   }
 
   getXYZDebugStats(): XYZDebugStats {
     return {
       activeBaseLayer: this._activeBaseLayer,
-      layer: this._activeXYZ?.getDebugStats() ?? null,
+      layer: this._activeXYZ2?.getDebugStats() ?? null,
       requests: xyzTileRequestScheduler.getDebugStats(),
     }
   }
@@ -829,7 +1106,7 @@ class AstroSphere {
 
     if (this._refreshingStatus) return
     if (!this._webgl) return
-    if (!this._activeHiPS && !this._activeXYZ) return
+    if (!this._activeHiPS && !this._activeXYZ2) return
 
     if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0) return
     if ((this._healpixGrid as any).fovObj === undefined) return
@@ -873,12 +1150,17 @@ class AstroSphere {
     // Rotation inertia
     if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
       cameraRotated = true
-      THETA = this.inertiaY
-      PHI = this.inertiaX
-      this.inertiaX *= 0.95
-      this.inertiaY *= 0.95
+      const filteredInertia = this.filterRotationDeltaByAstroLocks(this.inertiaX, this.inertiaY)
+      PHI = filteredInertia.deltaX
+      THETA = filteredInertia.deltaY
+      this.inertiaX = filteredInertia.deltaX * 0.95
+      this.inertiaY = filteredInertia.deltaY * 0.95
       this._camera.rotate(PHI, THETA)
       this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere)
+      const lockCorrected = this.enforceAstronomicalRotationLocks()
+      if (!lockCorrected) {
+        this.enforceCameraNorthUp()
+      }
     } else {
       this.inertiaY = 0
       this.inertiaX = 0
@@ -958,7 +1240,7 @@ class AstroSphere {
       this._activeHiPS?.draw(skyEntityDrawInput)
     }
     if (this._activeBaseLayer === 'xyz') {
-      this._activeXYZ?.draw(skyEntityDrawInput)
+      this._activeXYZ2?.draw(skyEntityDrawInput)
     }
 
     this._healpixGrid.draw(skyEntityDrawInput)
@@ -986,7 +1268,7 @@ class AstroSphere {
 
     this.activeCatalogues.forEach(cat => {
       const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix()
+        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix()
       if (activeModelMatrix) {
         cat.draw(activeModelMatrix as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }
@@ -996,7 +1278,7 @@ class AstroSphere {
 
     this.activeFootprintSets.forEach(fst => {
       const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix()
+        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix()
       if (activeModelMatrix) {
         fst.draw(activeModelMatrix as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }

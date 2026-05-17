@@ -19,7 +19,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
     _vertexShader;
     _fragmentShader;
     defaultColor = '#41d421';
-    gridText = new GridTextHelper();
+    gridText = new GridTextHelper('equatorial');
     _attribLocations = {
         position: 0,
         selected: 1,
@@ -260,9 +260,10 @@ export class EquatorialGrid extends AbstractSkyEntity {
                         // perspective divide
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
-                        // clip->pixel
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        // clip -> CSS pixels
+                        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+                        const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                        const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                         this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                         // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                     }
@@ -283,8 +284,9 @@ export class EquatorialGrid extends AbstractSkyEntity {
                         vec4.transformMat4(clipspace, phiPoint, mvpMatrix);
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+                        const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                        const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                         // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                         this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                     }

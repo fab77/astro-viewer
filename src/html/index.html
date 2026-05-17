@@ -19,7 +19,7 @@
     <div id="devpanel" autocomplete="off">
         <!-- Go To (RA, Dec) -->
         <div class="stack" style="margin-top:8px;">
-            <label for="goRa">Go to (RA°, Dec°)</label>
+            <label id="goToLabel" for="goRa">Go to (RA°, Dec°)</label>
             <div class="row3">
                 <input id="goRa" type="number" step="0.0001" placeholder="RA 0–360">
                 <input id="goDec" type="number" step="0.0001" placeholder="Dec −90–+90">
@@ -74,7 +74,7 @@
             <div class="row3">
                 <input id="xyzMinZoom" type="number" min="0" max="22" step="1" value="0" placeholder="Min zoom" />
                 <input id="xyzMaxZoom" type="number" min="0" max="22" step="1" value="8" placeholder="Max zoom" />
-                <input id="xyzSegments" type="number" min="2" max="64" step="1" value="16" placeholder="Segments" />
+                <input id="xyzSegments" type="number" min="2" max="64" step="1" value="48" placeholder="Segments" />
             </div>
             <div class="row3">
                 <input id="xyzMaxCachedTiles" type="number" min="32" max="4096" step="32" value="384" placeholder="Max cached tiles" />
@@ -87,6 +87,7 @@
         <details id="xyzDiagnosticsPanel" open style="margin-top:8px;">
             <summary>XYZ diagnostics</summary>
             <div class="stack">
+                <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />
                 <input id="xyzDiagSummary" class="mono" type="text" readonly value="Mode: —" />
                 <input id="xyzDiagCache" class="mono" type="text" readonly value="Cache: —" />
                 <input id="xyzDiagRequests" class="mono" type="text" readonly value="Requests: —" />
@@ -151,6 +152,23 @@
             </label>
         </div>
 
+        <!-- Navigation locks -->
+        <div class="stack" style="margin-top:8px;">
+            <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                <input id="lockEastWestRotationChk" type="checkbox" />
+                Lock east-west rotation (RA)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                <input id="lockNorthSouthRotationChk" type="checkbox" />
+                Lock north-south rotation (Dec)
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                <input id="keepCameraNorthUpChk" type="checkbox" />
+                Keep north up while dragging
+            </label>
+            <button id="btnResetAxesOrientation" class="secondary" type="button">Reset axes</button>
+        </div>
+
         <!-- Grid toggles -->
         <div class="stack" style="margin-top:8px;">
             <label style="display:flex; align-items:center; gap:8px; user-select:none;">
@@ -160,6 +178,10 @@
             <label style="display:flex; align-items:center; gap:8px; user-select:none;">
                 <input id="equatorialGridChk" type="checkbox" />
                 Equatorial grid
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                <input id="lonLatGridChk" type="checkbox" />
+                Lon/Lat grid
             </label>
         </div>
 

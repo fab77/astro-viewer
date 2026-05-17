@@ -1,20 +1,15 @@
-import { XYZTile } from './XYZTile.js';
 export class XYZTileBuffer {
     _tiles = new Map();
     _cachedTiles = new Map();
     _cacheAliveMilliSeconds;
     _cleanerId;
-    _webgl;
-    _meshBuilder;
-    _shaderProgram;
-    constructor(minutesToLiveInCache = 1, webgl, meshBuilder, shaderProgram) {
+    constructor(minutesToLiveInCache = 1) {
         this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
-        this._webgl = webgl;
-        this._meshBuilder = meshBuilder;
-        this._shaderProgram = shaderProgram;
-        this._cleanerId = window.setInterval(() => {
-            this.cacheCleaner();
-        }, 10_000);
+        if (typeof window !== 'undefined') {
+            this._cleanerId = window.setInterval(() => {
+                this.cacheCleaner();
+            }, 10_000);
+        }
     }
     get activeTiles() {
         return this._tiles;
@@ -25,64 +20,31 @@ export class XYZTileBuffer {
     get size() {
         return this._tiles.size + this._cachedTiles.size;
     }
-    getTile(tileCoord, url, segmentsPerSide, role) {
-        const tileKey = this.key(tileCoord);
-        if (!this._tiles.has(tileKey)) {
-            if (this._cachedTiles.has(tileKey)) {
-                const entry = this._cachedTiles.get(tileKey);
-                entry.cacheTime0 = undefined;
-                entry.role = role;
-                this._tiles.set(tileKey, entry);
-                this._cachedTiles.delete(tileKey);
-            }
-            else {
-                const mesh = this._meshBuilder.buildTileMesh(tileCoord, segmentsPerSide);
-                this._tiles.set(tileKey, {
-                    tile: new XYZTile(tileCoord, url, mesh, this._webgl, this._shaderProgram),
-                    role,
-                });
-            }
+    ensureTiles(visibleTiles, tileFactory) {
+        const visibleTileKeys = [];
+        for (const tileCoord of visibleTiles) {
+            const tile = this.getTile(tileCoord, tileFactory);
+            this.touchTile(tile);
+            visibleTileKeys.push(this.key(tileCoord));
         }
-        else {
-            const entry = this._tiles.get(tileKey);
-            entry.role = role;
-        }
-        return this._tiles.get(tileKey).tile;
+        this.syncVisibleTiles(visibleTileKeys);
+        return visibleTileKeys;
     }
-    getExistingTile(tileCoord, role) {
+    getTile(tileCoord, tileFactory) {
         const tileKey = this.key(tileCoord);
         if (this._tiles.has(tileKey)) {
-            const entry = this._tiles.get(tileKey);
-            entry.role = role;
-            return entry.tile;
+            return this._tiles.get(tileKey).tile;
         }
         if (this._cachedTiles.has(tileKey)) {
             const entry = this._cachedTiles.get(tileKey);
             entry.cacheTime0 = undefined;
-            entry.role = role;
             this._tiles.set(tileKey, entry);
             this._cachedTiles.delete(tileKey);
             return entry.tile;
         }
-        return null;
-    }
-    ensureTiles(requests, segmentsPerSide) {
-        const visibleTileKeys = [];
-        for (const request of requests) {
-            const tile = request.role === 'fallback'
-                ? this.getExistingTile(request.tileCoord, 'fallback')
-                : this.getTile(request.tileCoord, request.url, segmentsPerSide, request.role);
-            if (!tile) {
-                continue;
-            }
-            tile.touch();
-            if (request.role !== 'fallback') {
-                tile.primeLoad(request.priority);
-            }
-            visibleTileKeys.push(this.key(request.tileCoord));
-        }
-        this.syncVisibleTiles(visibleTileKeys);
-        return visibleTileKeys;
+        const tile = tileFactory(tileCoord);
+        this._tiles.set(tileKey, { tile });
+        return tile;
     }
     getActiveTile(tileKey) {
         return this._tiles.get(tileKey)?.tile ?? null;
@@ -90,11 +52,14 @@ export class XYZTileBuffer {
     getAnyTile(tileKey) {
         return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null;
     }
+    getActiveTiles() {
+        return Array.from(this._tiles.values(), (entry) => entry.tile);
+    }
     syncVisibleTiles(visibleTileKeys) {
         const visibleKeySet = new Set(visibleTileKeys);
         for (const [tileKey, entry] of this._tiles) {
             if (visibleKeySet.has(tileKey)) {
-                entry.tile.touch();
+                this.touchTile(entry.tile);
                 continue;
             }
             entry.cacheTime0 = Date.now();
@@ -107,9 +72,7 @@ export class XYZTileBuffer {
             return;
         }
         const candidates = Array.from(this._cachedTiles.entries()).sort((a, b) => {
-            const scoreA = Math.min(a[1].tile.lastUsedAt || a[1].tile.createdAt, a[1].tile.createdAt);
-            const scoreB = Math.min(b[1].tile.lastUsedAt || b[1].tile.createdAt, b[1].tile.createdAt);
-            return scoreA - scoreB;
+            return this.getTileAgeScore(a[1].tile) - this.getTileAgeScore(b[1].tile);
         });
         for (const [tileKey, entry] of candidates) {
             if (this.size <= maxCachedTiles) {
@@ -118,32 +81,47 @@ export class XYZTileBuffer {
             if (entry.tile.loading) {
                 continue;
             }
-            entry.tile.dispose();
+            entry.tile.dispose?.();
             this._cachedTiles.delete(tileKey);
         }
     }
     dispose() {
-        window.clearInterval(this._cleanerId);
+        if (this._cleanerId !== undefined && typeof window !== 'undefined') {
+            window.clearInterval(this._cleanerId);
+            this._cleanerId = undefined;
+        }
         for (const entry of this._tiles.values()) {
-            entry.tile.dispose();
+            entry.tile.dispose?.();
         }
         for (const entry of this._cachedTiles.values()) {
-            entry.tile.dispose();
+            entry.tile.dispose?.();
         }
         this._tiles.clear();
         this._cachedTiles.clear();
+    }
+    key(tileCoord) {
+        return XYZTileBuffer.key(tileCoord);
+    }
+    static key(tileCoord) {
+        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
     }
     cacheCleaner() {
         const now = Date.now();
         for (const [tileKey, entry] of this._cachedTiles) {
             const t0 = entry.cacheTime0;
-            if (t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds && !entry.tile.loading) {
-                entry.tile.dispose();
-                this._cachedTiles.delete(tileKey);
+            if (t0 === undefined || now - t0 <= this._cacheAliveMilliSeconds || entry.tile.loading) {
+                continue;
             }
+            entry.tile.dispose?.();
+            this._cachedTiles.delete(tileKey);
         }
     }
-    key(tileCoord) {
-        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
+    touchTile(tile) {
+        tile.touch?.();
+    }
+    getTileAgeScore(tile) {
+        const lastUsedAt = tile.lastUsedAt ?? 0;
+        const createdAt = tile.createdAt ?? lastUsedAt;
+        return Math.min(lastUsedAt || createdAt, createdAt);
     }
 }

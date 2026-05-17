@@ -1,4 +1,5 @@
-import type { WMTSLayerConfig, XYZLayerConfig, XYZTileCoord } from '../types.js'
+import type { WMTSLayerConfig, XYZLayerConfig } from './XYZConfig.js'
+import type { XYZTileCoord } from './XYZTypes.js'
 
 function replaceTokens(template: string, values: Record<string, string>): string {
   return Object.entries(values).reduce(

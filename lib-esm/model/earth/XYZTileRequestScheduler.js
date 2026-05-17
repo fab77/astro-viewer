@@ -73,9 +73,8 @@ export class XYZTileRequestScheduler {
     pump() {
         while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
             const item = this._queue.shift();
-            if (!item) {
+            if (!item)
                 return;
-            }
             const hostCooldown = this.getHostCooldown(item.url);
             const now = Date.now();
             if (hostCooldown > now) {

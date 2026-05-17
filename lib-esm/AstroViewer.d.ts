@@ -1,5 +1,5 @@
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
-import { FoV } from './model/FoV.js';
+import { SphereFoV } from './model/SphereFoV.js';
 import { Point } from './model/Point.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import type { CameraChangedDetail, PointCoordinates } from './AstroSphere.js';
@@ -9,8 +9,8 @@ import Camera from './Camera.js';
 import { ReadonlyMat4 } from 'gl-matrix';
 import { ColorMap, ColorMapName } from './model/ColorMaps.js';
 import { HiPS } from './model/hips/HiPS.js';
-import { XYZLayer } from './model/earth/XYZLayer.js';
-import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/XYZConfig.js';
+import { XYZMap } from './model/earth/XYZMap.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 export declare class AstroViewer {
@@ -49,6 +49,9 @@ export declare class AstroViewer {
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     activateXYZ(config: XYZLayerConfig): void;
+    activateXYZ2(config: XYZLayerConfig & {
+        name?: string;
+    }): void;
     activateWMTS(config: WMTSLayerConfig): void;
     setXYZMaxConcurrentRequests(value: number): void;
     getXYZMaxConcurrentRequests(): number;
@@ -57,13 +60,14 @@ export declare class AstroViewer {
     changeColorMap(colorMapName: ColorMapName): void;
     changeCustomColorMap(colorMap: ColorMap): void;
     getActiveHiPS(): HiPS | null;
-    getActiveXYZ(): XYZLayer | null;
+    getActiveXYZ(): XYZMap | null;
     setCamera(camera: Camera): void;
     setCameraPosition(pos: [number, number, number]): void;
     setCameraMatrix(viewMatrix: Float32Array): void;
     restoreAstroViewerState(detail: CameraChangedDetail, applyColorMap: boolean): void;
     getCurrentAstroViewerStatus(): CameraChangedDetail | null;
     goTo(raDeg: number, decDeg: number): void;
+    getActiveCoordinateMode(): 'equatorial' | 'galactic' | 'lonlat';
     getCenterCoordinates(): PointCoordinates | undefined;
     getCoordinatesFromMouse(): PointCoordinates | undefined;
     setModelMatrix(modelMatrix: ReadonlyMat4): void;
@@ -71,7 +75,16 @@ export declare class AstroViewer {
     isHealpixGridVisible(): boolean;
     toggleEquatorialGrid(): void;
     isEquatorialGridVisible(): boolean;
-    getFoV(): FoV;
+    toggleLonLatGrid(): boolean;
+    isLonLatGridVisible(): boolean;
+    setEastWestRotationLocked(locked: boolean): void;
+    isEastWestRotationLocked(): boolean;
+    setNorthSouthRotationLocked(locked: boolean): void;
+    isNorthSouthRotationLocked(): boolean;
+    resetAxesOrientation(): void;
+    setKeepCameraNorthUp(enabled: boolean): void;
+    isKeepCameraNorthUp(): boolean;
+    getFoV(): SphereFoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;
     changeFoV2(deg: number): void;

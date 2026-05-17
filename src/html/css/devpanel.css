@@ -13,7 +13,7 @@ body {
 
 #divcanvas {
     /* position: relative; */
-    top: 50px;
+    top: 0px;
     left: 0px;
     float: left;
 }
@@ -30,6 +30,14 @@ body {
     height: 50vh;
     display: block;
     background: #000;
+}
+
+#gridcoords,
+#gridhpx {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
 }
 
 /* Dev panel */
@@ -216,9 +224,27 @@ summary {
 .floating-div-ra {
     position: absolute;
     color: blue;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .floating-div-dec {
     position: absolute;
     color: green;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.floating-div-lon {
+    position: absolute;
+    color: #40c8ff;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.floating-div-lat {
+    position: absolute;
+    color: #f6d35b;
+    z-index: 2;
+    pointer-events: none;
 }

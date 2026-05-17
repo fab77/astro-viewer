@@ -35,8 +35,7 @@ export class XYZMeshBuilder {
                 uvs[uv++] = 1 - v;
             }
         }
-        const triangleCount = segments * segments * 2;
-        const rawIndices = new Uint32Array(triangleCount * 3);
+        const rawIndices = new Uint32Array(segments * segments * 2 * 3);
         let i = 0;
         for (let row = 0; row < segments; row++) {
             for (let col = 0; col < segments; col++) {
