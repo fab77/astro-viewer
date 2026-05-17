@@ -1,3 +1,15 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 import { sphericalToCartesian } from '../../utils/Utils.js';
 const MAX_MERCATOR_LAT = 85.0511287798066;
 function mercatorYToLatDeg(yNormalized) {
@@ -35,8 +47,7 @@ export class XYZMeshBuilder {
                 uvs[uv++] = 1 - v;
             }
         }
-        const triangleCount = segments * segments * 2;
-        const rawIndices = new Uint32Array(triangleCount * 3);
+        const rawIndices = new Uint32Array(segments * segments * 2 * 3);
         let i = 0;
         for (let row = 0; row < segments; row++) {
             for (let col = 0; col < segments; col++) {

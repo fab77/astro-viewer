@@ -1,3 +1,18 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+
+import type { XYZRequestSchedulerDebugStats } from './XYZConfig.js'
+
 type QueueItem = {
   url: string
   resolve: (blob: Blob) => void
@@ -10,8 +25,6 @@ type HostBackoffState = {
   cooldownUntil: number
   consecutiveFailures: number
 }
-
-import type { XYZRequestSchedulerDebugStats } from './types.js'
 
 export class XYZTileRequestError extends Error {
   cooldownMs: number
@@ -105,9 +118,7 @@ export class XYZTileRequestScheduler {
   private pump(): void {
     while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
       const item = this._queue.shift()
-      if (!item) {
-        return
-      }
+      if (!item) return
 
       const hostCooldown = this.getHostCooldown(item.url)
       const now = Date.now()

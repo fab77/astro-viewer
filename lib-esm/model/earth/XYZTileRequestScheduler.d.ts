@@ -1,4 +1,4 @@
-import type { XYZRequestSchedulerDebugStats } from './types.js';
+import type { XYZRequestSchedulerDebugStats } from './XYZConfig.js';
 export declare class XYZTileRequestError extends Error {
     cooldownMs: number;
     retryable: boolean;

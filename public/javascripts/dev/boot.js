@@ -1,3 +1,16 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+
 import { wireHoveredFootprints } from './hoveredFootprints.js';
 import { el, setStatus, minimisePanel, restorePanel } from './ui.js';
 import { state, loadPersisted, persistBasic } from './state.js';
@@ -36,12 +49,28 @@ async function bootstrap() {
     try {
       const healpixChk = el('healpixGridChk');
       const equatChk = el('equatorialGridChk');
+      const lonLatChk = el('lonLatGridChk');
+      const lockEastWestChk = el('lockEastWestRotationChk');
+      const lockNorthSouthChk = el('lockNorthSouthRotationChk');
+      const keepNorthUpChk = el('keepCameraNorthUpChk');
       const xyzConcurrentInput = el('xyzMaxConcurrentRequests');
       if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
         healpixChk.checked = !!AC.isHealpixGridVisible();
       }
       if (equatChk && typeof AC.isEquatorialGridVisible === "function") {
         equatChk.checked = !!AC.isEquatorialGridVisible();
+      }
+      if (lonLatChk && typeof AC.isLonLatGridVisible === "function") {
+        lonLatChk.checked = !!AC.isLonLatGridVisible();
+      }
+      if (lockEastWestChk && typeof AC.isEastWestRotationLocked === "function") {
+        lockEastWestChk.checked = !!AC.isEastWestRotationLocked();
+      }
+      if (lockNorthSouthChk && typeof AC.isNorthSouthRotationLocked === "function") {
+        lockNorthSouthChk.checked = !!AC.isNorthSouthRotationLocked();
+      }
+      if (keepNorthUpChk && typeof AC.isKeepCameraNorthUp === "function") {
+        keepNorthUpChk.checked = !!AC.isKeepCameraNorthUp();
       }
       if (xyzConcurrentInput && typeof AC.getXYZMaxConcurrentRequests === "function") {
         xyzConcurrentInput.value = String(AC.getXYZMaxConcurrentRequests());
@@ -328,6 +357,37 @@ function wireUI() {
     }
   });
 
+  el('lockEastWestRotationChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.setEastWestRotationLocked?.(!!ev.target.checked);
+      ev.target.checked = !!state.AstroAPI?.isEastWestRotationLocked?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
+    }
+  });
+
+  el('lockNorthSouthRotationChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.setNorthSouthRotationLocked?.(!!ev.target.checked);
+      ev.target.checked = !!state.AstroAPI?.isNorthSouthRotationLocked?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
+    }
+  });
+
+  el('btnResetAxesOrientation')?.addEventListener('click', () => {
+    state.AstroAPI?.resetAxesOrientation?.();
+  });
+
+  el('keepCameraNorthUpChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.setKeepCameraNorthUp?.(!!ev.target.checked);
+      ev.target.checked = !!state.AstroAPI?.isKeepCameraNorthUp?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
+    }
+  });
+
   // grid toggles
   el('healpixGridChk')?.addEventListener('change', (ev) => {
     try {
@@ -346,6 +406,15 @@ function wireUI() {
       state.AstroAPI?.toggleEquatorialGrid?.();
       // (optional) re-sync from getter if needed:
       // ev.target.checked = !!state.AstroAPI?.isEquatorialGridVisible?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
+    }
+  });
+
+  el('lonLatGridChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.toggleLonLatGrid?.();
+      ev.target.checked = !!state.AstroAPI?.isLonLatGridVisible?.();
     } catch (e) {
       ev.target.checked = !ev.target.checked;
     }

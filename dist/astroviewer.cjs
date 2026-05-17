@@ -5,6 +5,18 @@
 /***/ 146:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -78,15 +90,36 @@ exports.Source = Source;
 /***/ }),
 
 /***/ 149:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZShaderProgram = void 0;
+const ColorMaps_js_1 = __webpack_require__(619);
 class XYZShaderProgram {
     locations;
     _webgl;
     _shaderProgram;
+    _colorMapBlockIndex = null;
+    _colorMapBuffer = null;
+    _runtimeColorMap;
+    _colorMapVariableInfo = {
+        r_palette: { index: 0, offset: 0 },
+        g_palette: { index: 0, offset: 0 },
+        b_palette: { index: 0, offset: 0 },
+    };
     constructor(webgl) {
         this._webgl = webgl;
         this.locations = {
@@ -94,6 +127,7 @@ class XYZShaderProgram {
             mMatrix: null,
             vMatrix: null,
             sampler: null,
+            colorMapIdx: null,
             vertexPositionAttribute: -1,
             textureCoordAttribute: -1,
         };
@@ -114,7 +148,10 @@ class XYZShaderProgram {
     enableProgram() {
         this._webgl.useProgram(this.shaderProgram);
     }
-    enableShaders(pMatrix, vMatrix, mMatrix) {
+    setRuntimeColorMap(colorMap) {
+        this._runtimeColorMap = colorMap;
+    }
+    enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx = 0) {
         const gl = this._webgl;
         const program = this.shaderProgram;
         gl.useProgram(program);
@@ -122,12 +159,17 @@ class XYZShaderProgram {
         this.locations.mMatrix = gl.getUniformLocation(program, 'uMMatrix');
         this.locations.vMatrix = gl.getUniformLocation(program, 'uVMatrix');
         this.locations.sampler = gl.getUniformLocation(program, 'uSampler');
+        this.locations.colorMapIdx = gl.getUniformLocation(program, 'cmapIdx');
         this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
         this.locations.textureCoordAttribute = gl.getAttribLocation(program, 'aTextureCoord');
         gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
         gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
         gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
         gl.uniform1i(this.locations.sampler, 0);
+        gl.uniform1i(this.locations.colorMapIdx, colorMapIdx);
+        if (colorMapIdx >= 2) {
+            this.uploadColorMap(colorMapIdx);
+        }
     }
     initShaders() {
         const gl = this._webgl;
@@ -146,9 +188,40 @@ class XYZShaderProgram {
       precision mediump float;
       in vec2 vTextureCoord;
       uniform sampler2D uSampler;
+      uniform int cmapIdx;
+
+      layout (std140) uniform colormap {
+        float r_palette[256];
+        float g_palette[256];
+        float b_palette[256];
+      };
+
       out vec4 outColor;
+
       void main(void) {
-        outColor = texture(uSampler, vTextureCoord);
+        vec4 color = texture(uSampler, vTextureCoord);
+
+        if (cmapIdx == 1) {
+          float gray = 0.21 * color.r + 0.71 * color.g + 0.07 * color.b;
+          outColor = vec4(vec3(gray), color.a);
+          return;
+        }
+
+        if (cmapIdx >= 2) {
+          int rIndex = int(clamp(color.r * 255.0, 0.0, 255.0));
+          int gIndex = int(clamp(color.g * 255.0, 0.0, 255.0));
+          int bIndex = int(clamp(color.b * 255.0, 0.0, 255.0));
+
+          outColor = vec4(
+            r_palette[rIndex] / 256.0,
+            g_palette[gIndex] / 256.0,
+            b_palette[bIndex] / 256.0,
+            color.a
+          );
+          return;
+        }
+
+        outColor = color;
       }`);
         gl.attachShader(this._shaderProgram, vertexShader);
         gl.attachShader(this._shaderProgram, fragmentShader);
@@ -156,6 +229,7 @@ class XYZShaderProgram {
         if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
             throw new Error(gl.getProgramInfoLog(this._shaderProgram) || 'Could not initialise XYZ shaders');
         }
+        this.initColorMapBuffer();
     }
     compileShader(type, source) {
         const gl = this._webgl;
@@ -170,6 +244,69 @@ class XYZShaderProgram {
         }
         return shader;
     }
+    initColorMapBuffer() {
+        const gl = this._webgl;
+        const program = this._shaderProgram;
+        const blockIndex = gl.getUniformBlockIndex(program, 'colormap');
+        if (blockIndex === gl.INVALID_INDEX) {
+            this._colorMapBlockIndex = null;
+            return;
+        }
+        this._colorMapBlockIndex = blockIndex;
+        const variableNames = ['r_palette', 'g_palette', 'b_palette'];
+        const variableIndices = gl.getUniformIndices(program, variableNames);
+        const variableOffsets = gl.getActiveUniforms(program, variableIndices, gl.UNIFORM_OFFSET);
+        variableNames.forEach((name, index) => {
+            this._colorMapVariableInfo[name] = {
+                index: variableIndices[index],
+                offset: variableOffsets[index],
+            };
+        });
+        this._colorMapBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.UNIFORM_BUFFER, this._colorMapBuffer);
+        gl.bufferData(gl.UNIFORM_BUFFER, 3 * 4096, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+        gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._colorMapBuffer);
+        gl.uniformBlockBinding(program, blockIndex, 0);
+    }
+    uploadColorMap(colorMapIdx) {
+        if (!this._colorMapBuffer || this._colorMapBlockIndex === null) {
+            return;
+        }
+        const colorMap = this.getColorMap(colorMapIdx);
+        if (!colorMap) {
+            return;
+        }
+        const gl = this._webgl;
+        const program = this.shaderProgram;
+        gl.uniformBlockBinding(program, this._colorMapBlockIndex, 0);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, this._colorMapBuffer);
+        const info = this._colorMapVariableInfo;
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, colorMap.r, 0);
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, colorMap.g, 0);
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, colorMap.b, 0);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+    }
+    getColorMap(colorMapIdx) {
+        switch (colorMapIdx) {
+            case 2:
+                return ColorMaps_js_1.ColorMaps.planck;
+            case 3:
+                return ColorMaps_js_1.ColorMaps.cmb;
+            case 4:
+                return ColorMaps_js_1.ColorMaps.rainbow;
+            case 5:
+                return ColorMaps_js_1.ColorMaps.eosb;
+            case 6:
+                return ColorMaps_js_1.ColorMaps.cubehelix;
+            case 7:
+                return ColorMaps_js_1.ColorMaps.hot;
+            case 8:
+                return ColorMaps_js_1.ColorMaps.gray;
+            default:
+                return this._runtimeColorMap;
+        }
+    }
 }
 exports.XYZShaderProgram = XYZShaderProgram;
 
@@ -179,6 +316,18 @@ exports.XYZShaderProgram = XYZShaderProgram;
 /***/ 229:
 /***/ ((__unused_webpack_module, exports) => {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 // FoVHelper.ts
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -291,52 +440,22 @@ exports["default"] = FoVHelper;
 
 /***/ }),
 
-/***/ 497:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZAncestorMeshCache = void 0;
-class XYZAncestorMeshCache {
-    _webgl;
-    _meshBuilder;
-    _meshes = new Map();
-    constructor(webgl, meshBuilder) {
-        this._webgl = webgl;
-        this._meshBuilder = meshBuilder;
-    }
-    getMesh(targetTile, ancestorTile, segmentsPerSide) {
-        const key = `${targetTile.z}/${targetTile.x}/${targetTile.y}->${ancestorTile.z}/${ancestorTile.x}/${ancestorTile.y}@${segmentsPerSide}`;
-        const existing = this._meshes.get(key);
-        if (existing) {
-            return existing;
-        }
-        const mesh = this._meshBuilder.buildAncestorMesh(targetTile, ancestorTile, segmentsPerSide);
-        const uploaded = this._meshBuilder.uploadMesh(mesh, this._webgl);
-        this._meshes.set(key, uploaded);
-        return uploaded;
-    }
-    dispose() {
-        for (const mesh of this._meshes.values()) {
-            if (mesh.positionBuffer)
-                this._webgl.deleteBuffer(mesh.positionBuffer);
-            if (mesh.uvBuffer)
-                this._webgl.deleteBuffer(mesh.uvBuffer);
-            if (mesh.indexBuffer)
-                this._webgl.deleteBuffer(mesh.indexBuffer);
-        }
-        this._meshes.clear();
-    }
-}
-exports.XYZAncestorMeshCache = XYZAncestorMeshCache;
-
-
-/***/ }),
-
 /***/ 592:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -942,6 +1061,18 @@ exports.FootprintSetGL = FootprintSetGL;
 /***/ ((__unused_webpack_module, exports) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ColorMaps = exports.COLOR_MAP_SAMPLE_COUNT = void 0;
 exports.createColorMapFromSamples = createColorMapFromSamples;
@@ -2240,6 +2371,18 @@ exports["default"] = exports.ColorMaps;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -2253,6 +2396,7 @@ const FootprintSetGL_js_1 = __webpack_require__(592);
 const Config_js_1 = __webpack_require__(2919);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
 const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
+const XYZMapDescriptor_js_1 = __webpack_require__(8868);
 const TerraPointSetGL_js_1 = __webpack_require__(5781);
 const TerraFootprintSetGL_js_1 = __webpack_require__(9022);
 // & {
@@ -2363,6 +2507,10 @@ class AstroViewer {
     activateXYZ(config) {
         this.astroSphere.activateXYZ(config);
     }
+    activateXYZ2(config) {
+        const descriptor = new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384, 8, config.urlResolver);
+        this.astroSphere.activateXYZ2(descriptor);
+    }
     activateWMTS(config) {
         this.astroSphere.activateWMTS(config);
     }
@@ -2421,6 +2569,9 @@ class AstroViewer {
         // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
         this.astroSphere.goTo(raDeg, decDeg);
     }
+    getActiveCoordinateMode() {
+        return this.astroSphere.getActiveCoordinateMode();
+    }
     getCenterCoordinates() {
         return this.astroSphere.getCentralPointCoordinates();
     }
@@ -2446,6 +2597,33 @@ class AstroViewer {
     isEquatorialGridVisible() {
         // return equatorialGridSingleton.isVisible()
         return this.astroSphere.equatorialGrid.isVisible();
+    }
+    toggleLonLatGrid() {
+        return this.astroSphere.toggleLonLatGrid();
+    }
+    isLonLatGridVisible() {
+        return this.astroSphere.isLonLatGridVisible();
+    }
+    setEastWestRotationLocked(locked) {
+        this.astroSphere.setEastWestRotationLocked(locked);
+    }
+    isEastWestRotationLocked() {
+        return this.astroSphere.isEastWestRotationLocked();
+    }
+    setNorthSouthRotationLocked(locked) {
+        this.astroSphere.setNorthSouthRotationLocked(locked);
+    }
+    isNorthSouthRotationLocked() {
+        return this.astroSphere.isNorthSouthRotationLocked();
+    }
+    resetAxesOrientation() {
+        this.astroSphere.resetAxesOrientation();
+    }
+    setKeepCameraNorthUp(enabled) {
+        this.astroSphere.setKeepCameraNorthUp(enabled);
+    }
+    isKeepCameraNorthUp() {
+        return this.astroSphere.isKeepCameraNorthUp();
     }
     // FOV
     getFoV() {
@@ -2646,6 +2824,18 @@ exports.AstroViewer = AstroViewer;
 /***/ 1072:
 /***/ ((__unused_webpack_module, exports) => {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MetadataColumn = exports.ColumnType = void 0;
@@ -4187,6 +4377,18 @@ class Healpix {
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CatalogueGL = void 0;
 const Source_js_1 = __webpack_require__(146);
@@ -4811,56 +5013,57 @@ exports.CatalogueGL = CatalogueGL;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZTile = void 0;
-const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
+const XYZMeshBuilder_js_1 = __webpack_require__(8819);
 class XYZTile {
     _coord;
     _url;
     _webgl;
     _shaderProgram;
-    _positionBuffer;
-    _uvBuffer;
-    _indexBuffer;
+    _meshBuilder;
+    _gpuMesh;
     _texture = null;
-    _indices;
-    _indexType;
+    _image;
     _ready = false;
-    _aborted = false;
     _loading = false;
+    _aborted = false;
     _failedUntil = 0;
     _lastUsedAt = 0;
     _createdAt = Date.now();
-    _image;
-    _objectUrl = null;
-    constructor(coord, url, mesh, webgl, shaderProgram) {
+    constructor(coord, url, webgl, shaderProgram, meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder(), segmentsPerSide = 16) {
         this._coord = coord;
         this._url = url;
         this._webgl = webgl;
         this._shaderProgram = shaderProgram;
-        this._positionBuffer = webgl.createBuffer();
-        this._uvBuffer = webgl.createBuffer();
-        this._indexBuffer = webgl.createBuffer();
-        this._indices = mesh.indices;
-        this._indexType = mesh.indices instanceof Uint32Array ? webgl.UNSIGNED_INT : webgl.UNSIGNED_SHORT;
-        webgl.bindBuffer(webgl.ARRAY_BUFFER, this._positionBuffer);
-        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.positions, webgl.STATIC_DRAW);
-        webgl.bindBuffer(webgl.ARRAY_BUFFER, this._uvBuffer);
-        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
-        webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, this._indexBuffer);
-        webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
-    }
-    get ready() {
-        return this._ready;
+        this._meshBuilder = meshBuilder;
+        const mesh = this._meshBuilder.buildTileMesh(coord, segmentsPerSide);
+        this._gpuMesh = this._meshBuilder.uploadMesh(mesh, this._webgl);
+        this.initImage();
     }
     get coord() {
         return this._coord;
     }
-    get failedUntil() {
-        return this._failedUntil;
+    get ready() {
+        return this._ready;
     }
     get loading() {
         return this._loading;
+    }
+    get failedUntil() {
+        return this._failedUntil;
     }
     get lastUsedAt() {
         return this._lastUsedAt;
@@ -4871,10 +5074,7 @@ class XYZTile {
     touch() {
         this._lastUsedAt = Date.now();
     }
-    primeLoad(priority = 0) {
-        this.loadTexture(priority);
-    }
-    loadTexture(priority = 0) {
+    initImage() {
         if (this._loading || this._ready || this._aborted) {
             return;
         }
@@ -4883,80 +5083,88 @@ class XYZTile {
             return;
         }
         this._loading = true;
-        XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.load(this._url, priority)
-            .then((blob) => this.loadImageFromBlob(blob))
-            .catch((error) => {
-            this._loading = false;
-            this._ready = false;
-            const cooldownMs = error instanceof XYZTileRequestScheduler_js_1.XYZTileRequestError ? error.cooldownMs : 10000;
-            this._failedUntil = Date.now() + cooldownMs;
-        });
-    }
-    loadImageFromBlob(blob) {
         const image = new Image();
         this._image = image;
-        this._objectUrl = URL.createObjectURL(blob);
-        image.onload = () => this.onImageLoaded();
+        image.crossOrigin = 'anonymous';
+        image.onload = () => this.imageLoaded();
         image.onerror = () => {
-            this._loading = false;
             this._ready = false;
-            this._failedUntil = Date.now() + 30000;
-            this.revokeObjectUrl();
+            this._loading = false;
+            this._failedUntil = Date.now() + 30_000;
         };
-        image.src = this._objectUrl;
+        image.src = this._url;
     }
-    onImageLoaded() {
+    imageLoaded() {
         if (!this._image || this._aborted) {
             return;
         }
+        this.textureLoaded(this._image);
+        this._loading = false;
+        this._failedUntil = 0;
+        this._ready = true;
+    }
+    textureLoaded(image) {
         const gl = this._webgl;
+        this._shaderProgram.enableProgram();
         const texture = gl.createTexture();
         if (!texture) {
-            throw new Error('Could not create XYZ texture');
+            throw new Error(`Could not create XYZ texture for ${this.key}`);
         }
         this._texture = texture;
         gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, this._image);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    }
+    draw(pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        this.touch();
+        if (!this._ready || !this._texture || this._aborted) {
+            return false;
+        }
+        this.drawWithGpuMesh(this._gpuMesh, pMatrix, vMatrix, mMatrix, colorMapIdx);
+        return true;
+    }
+    drawRemapped(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        this.touch();
+        if (!this._ready || !this._texture || this._aborted) {
+            return false;
+        }
+        this.drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx);
+        return true;
+    }
+    dispose() {
+        const gl = this._webgl;
+        if (this._texture) {
+            gl.deleteTexture(this._texture);
+            this._texture = null;
+        }
+        if (this._gpuMesh.positionBuffer) {
+            gl.deleteBuffer(this._gpuMesh.positionBuffer);
+            this._gpuMesh.positionBuffer = null;
+        }
+        if (this._gpuMesh.uvBuffer) {
+            gl.deleteBuffer(this._gpuMesh.uvBuffer);
+            this._gpuMesh.uvBuffer = null;
+        }
+        if (this._gpuMesh.indexBuffer) {
+            gl.deleteBuffer(this._gpuMesh.indexBuffer);
+            this._gpuMesh.indexBuffer = null;
+        }
+        this._image = undefined;
+        this._ready = false;
         this._loading = false;
-        this._failedUntil = 0;
-        this._ready = true;
-        this.revokeObjectUrl();
+        this._aborted = true;
     }
-    draw(pMatrix, vMatrix, mMatrix, priority = 0, allowLoad = true) {
-        this.touch();
-        if (!this._ready && allowLoad) {
-            this.loadTexture(priority);
-        }
-        if (!this._ready || !this._texture) {
-            return;
-        }
-        this.drawWithGpuMesh({
-            positionBuffer: this._positionBuffer,
-            uvBuffer: this._uvBuffer,
-            indexBuffer: this._indexBuffer,
-            indexCount: this._indices.length,
-            indexType: this._indexType,
-        }, pMatrix, vMatrix, mMatrix);
-    }
-    drawRemapped(mesh, pMatrix, vMatrix, mMatrix) {
-        this.touch();
-        if (!this._ready || !this._texture) {
-            return;
-        }
-        this.drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix);
-    }
-    drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix) {
+    drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) {
         if (!this._texture) {
             return;
         }
         const gl = this._webgl;
-        this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix);
+        this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
         gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
         gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
@@ -4970,37 +5178,230 @@ class XYZTile {
         gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
         gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
     }
-    dispose() {
-        const gl = this._webgl;
-        if (this._texture) {
-            gl.deleteTexture(this._texture);
-            this._texture = null;
-        }
-        if (this._positionBuffer) {
-            gl.deleteBuffer(this._positionBuffer);
-            this._positionBuffer = null;
-        }
-        if (this._uvBuffer) {
-            gl.deleteBuffer(this._uvBuffer);
-            this._uvBuffer = null;
-        }
-        if (this._indexBuffer) {
-            gl.deleteBuffer(this._indexBuffer);
-            this._indexBuffer = null;
-        }
-        this._image = undefined;
-        this.revokeObjectUrl();
-        this._loading = false;
-        this._ready = false;
-    }
-    revokeObjectUrl() {
-        if (this._objectUrl) {
-            URL.revokeObjectURL(this._objectUrl);
-            this._objectUrl = null;
-        }
+    get key() {
+        return `${this._coord.z}/${this._coord.x}/${this._coord.y}`;
     }
 }
 exports.XYZTile = XYZTile;
+
+
+/***/ }),
+
+/***/ 1741:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMap = void 0;
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const XYZVisibleTilesManager_js_1 = __webpack_require__(6937);
+const XYZFoVHelper_js_1 = __webpack_require__(8284);
+const ColorMaps_js_1 = __webpack_require__(619);
+const LonLatGrid_js_1 = __webpack_require__(8124);
+const XYZShaderProgram_js_1 = __webpack_require__(149);
+const XYZTileBuffer_js_1 = __webpack_require__(2737);
+const XYZAnchestorTile_js_1 = __webpack_require__(3174);
+const XYZMeshBuilder_js_1 = __webpack_require__(8819);
+class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    _xyzShaderProgram;
+    _descriptor;
+    _visibleTilesManager;
+    _tileBuffer;
+    _meshBuilder;
+    _baseurl;
+    _zoom;
+    _latLonGrid;
+    _colorMapIdx = 0;
+    _colorMap = ColorMaps_js_1.ColorMaps['native'];
+    constructor(radius, position, xrad, yrad, descriptor, webgl) {
+        super(radius, position, xrad, yrad, descriptor.name, webgl, false);
+        this._descriptor = descriptor;
+        this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
+        this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
+        this._tileBuffer = new XYZTileBuffer_js_1.XYZTileBuffer(1);
+        this.initGL(webgl);
+        this._latLonGrid = new LonLatGrid_js_1.LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl);
+        this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager();
+        this._baseurl = descriptor.url;
+        this.initShaders();
+        const fov = 180;
+        this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
+    }
+    changeColorMap(colorMap) {
+        this._colorMap = colorMap;
+        switch (colorMap.name) {
+            case 'grayscale':
+                this._colorMapIdx = 1;
+                this._colorMap = ColorMaps_js_1.ColorMaps['grayscale'];
+                break;
+            case 'planck':
+                this._colorMapIdx = 2;
+                this._colorMap = ColorMaps_js_1.ColorMaps['planck'];
+                break;
+            case 'cmb':
+                this._colorMapIdx = 3;
+                this._colorMap = ColorMaps_js_1.ColorMaps['cmb'];
+                break;
+            case 'rainbow':
+                this._colorMapIdx = 4;
+                this._colorMap = ColorMaps_js_1.ColorMaps['rainbow'];
+                break;
+            case 'eosb':
+                this._colorMapIdx = 5;
+                this._colorMap = ColorMaps_js_1.ColorMaps['eosb'];
+                break;
+            case 'cubehelix':
+                this._colorMapIdx = 6;
+                this._colorMap = ColorMaps_js_1.ColorMaps['cubehelix'];
+                break;
+            case 'hot':
+                this._colorMapIdx = 7;
+                this._colorMap = ColorMaps_js_1.ColorMaps['hot'];
+                break;
+            case 'gray':
+                this._colorMapIdx = 8;
+                this._colorMap = ColorMaps_js_1.ColorMaps['gray'];
+                break;
+            case 'native':
+                this._colorMapIdx = 0;
+                this._colorMap = ColorMaps_js_1.ColorMaps['native'];
+                break;
+            default:
+                this._colorMapIdx = 9;
+                this._colorMap = colorMap;
+        }
+    }
+    initShaders() {
+        this._xyzShaderProgram.enableProgram();
+    }
+    isLonLatGridVisible() {
+        return this._latLonGrid.isVisible();
+    }
+    toggleLonLatGrid() {
+        return this._latLonGrid.toggleShowGrid();
+    }
+    getFoV() {
+        return this._latLonGrid.getFoV();
+    }
+    refresh(input) {
+        const fov = this._latLonGrid.refreshFoV(input);
+        // this._zoom = this.resolveVisibleZoom(fov)
+        this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
+    }
+    draw(input) {
+        const vMatrix = input.camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refresh(input);
+        const mMatrix = this.getModelMatrix();
+        this._xyzShaderProgram.setRuntimeColorMap(this._colorMap);
+        const tileSelection = this._visibleTilesManager.computeVisibleTiles(this._zoom, this, this._webgl, input.camera, input.pMatrix);
+        const visibleTiles = tileSelection.visibleTiles;
+        const ancestorsMap = tileSelection.ancestorsMap;
+        const tileKeys = this._tileBuffer.ensureTiles(this.getTilesToEnsure(visibleTiles, ancestorsMap), (coord) => this.createTile(coord));
+        this._tileBuffer.evictCached(this._descriptor.maxCachedTiles);
+        for (const tileKey of tileKeys) {
+            const tile = this._tileBuffer.getActiveTile(tileKey);
+            if (!tile || tile.coord.z !== tileSelection.currentZoom) {
+                continue;
+            }
+            const drawn = tile.draw(pMatrix, vMatrix, mMatrix, this._colorMapIdx);
+            if (drawn) {
+                continue;
+            }
+            const ancestorTile = this.findBestAvailableAncestor(tile.coord);
+            ancestorTile?.draw(tileSelection.currentZoom, [tile.coord], ancestorsMap, pMatrix, vMatrix, mMatrix, this._colorMapIdx);
+        }
+        this._latLonGrid.draw(input);
+    }
+    createTile(coord) {
+        return new XYZAnchestorTile_js_1.XYZAnchestorTile(coord, this.resolveTileUrl(coord), this._webgl, this._xyzShaderProgram, this._meshBuilder, this._descriptor.segmentsPerSide);
+    }
+    getTilesToEnsure(visibleTiles, ancestorsMap) {
+        const tilesByKey = new Map();
+        for (const tile of visibleTiles) {
+            tilesByKey.set(this.tileKey(tile), tile);
+        }
+        for (const ancestor of ancestorsMap.values()) {
+            tilesByKey.set(this.tileKey(ancestor), ancestor);
+        }
+        return Array.from(tilesByKey.values());
+    }
+    findBestAvailableAncestor(targetTile) {
+        for (let z = targetTile.z - 1; z >= 0; z--) {
+            const dz = targetTile.z - z;
+            const ancestorCoord = {
+                z,
+                x: targetTile.x >> dz,
+                y: targetTile.y >> dz,
+            };
+            const ancestorTile = this._tileBuffer.getAnyTile(this.tileKey(ancestorCoord));
+            if (ancestorTile?.ready) {
+                return ancestorTile;
+            }
+        }
+        return null;
+    }
+    resolveTileUrl(tile) {
+        const urlResolver = this._descriptor.urlResolver;
+        if (urlResolver) {
+            return urlResolver(tile);
+        }
+        const dim = 2 ** tile.z;
+        const y = this._descriptor.flipY ? dim - 1 - tile.y : tile.y;
+        const subdomains = this._descriptor.subdomains;
+        const subdomain = subdomains.length > 0
+            ? subdomains[Math.abs(tile.x + tile.y + tile.z) % subdomains.length]
+            : '';
+        return this._baseurl
+            .replace(/\{z\}/g, String(tile.z))
+            .replace(/\{x\}/g, String(tile.x))
+            .replace(/\{y\}/g, String(y))
+            .replace(/\{s\}/g, subdomain ?? '');
+    }
+    getDebugStats() {
+        const activeTiles = Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile);
+        const cachedTiles = Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile);
+        const allTiles = [...activeTiles, ...cachedTiles];
+        const selection = this._visibleTilesManager.selection;
+        return {
+            cacheSize: this._tileBuffer.size,
+            visibleTileCount: selection.visibleTiles.length,
+            currentTileCount: activeTiles.filter((tile) => tile.coord.z === selection.currentZoom).length,
+            fallbackTileCount: selection.ancestorsMap.size,
+            coreTileCount: selection.visibleTiles.length,
+            coverageTileCount: selection.visibleTiles.length,
+            readyTileCount: allTiles.filter((tile) => tile.ready).length,
+            loadingTileCount: allTiles.filter((tile) => tile.loading).length,
+            coolingDownTileCount: 0,
+            currentZoom: selection.currentZoom,
+            tileSelectionKey: selection.key,
+            isSettling: false,
+            coarseTileCount: selection.ancestorsMap.size,
+            hasPendingSelection: false,
+            pendingSelectionKey: null,
+        };
+    }
+    tileKey(tile) {
+        return `${tile.z}/${tile.x}/${tile.y}`;
+    }
+}
+exports.XYZMap = XYZMap;
 
 
 /***/ }),
@@ -12839,6 +13240,18 @@ var vec2_forEach = function () {
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -13008,203 +13421,236 @@ exports.VisibleTilesManager = VisibleTilesManager;
 
 /***/ }),
 
-/***/ 2330:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+/***/ 2166:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+/**
+ * Ray picking helpers for XYZ/WebMercator maps.
+ *
+ * Unlike RayPickingUtils, this module has no HEALPix dependency. It intersects
+ * screen rays with an XYZ sphere, converts the hit to lon/lat, then maps that
+ * position to XYZ z/x/y tile coordinates.
+ */
 
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZTileProvider = void 0;
-const Global_js_1 = __importDefault(__webpack_require__(4382));
+const gl_matrix_1 = __webpack_require__(1961);
 const MAX_MERCATOR_LAT = 85.0511287798066;
-class XYZTileProvider {
-    _config;
-    constructor(config) {
-        this._config = config;
+class XYZRayPickingUtils {
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
+        const gl = webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const x = (2.0 * mouseX) / rect.width - 1.0;
+        const y = 1.0 - (2.0 * mouseY) / rect.height;
+        const rayClip = [x, y, -1.0, 1.0];
+        const pInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(pInv, pMatrix);
+        const rayEye4 = [0, 0, 0, 0];
+        XYZRayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+        const vInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(vInv, vMatrix);
+        const rayWorld4 = [0, 0, 0, 0];
+        XYZRayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+        const rayWorld = gl_matrix_1.vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+        gl_matrix_1.vec3.normalize(rayWorld, rayWorld);
+        return rayWorld;
     }
-    get config() {
-        return this._config;
-    }
-    get minZoom() {
-        return Math.max(0, Math.floor(this._config.minZoom ?? 0));
-    }
-    get maxZoom() {
-        return Math.max(this.minZoom, Math.floor(this._config.maxZoom ?? 6));
-    }
-    getInitialTiles() {
-        return this.getVisibleTilesAtZoom(1, null, [], [], 1);
-    }
-    getTileUrl(tile) {
-        if (this._config.urlResolver) {
-            return this._config.urlResolver(tile);
+    static raySphere(rayOrigWorld, rayDirectionWorld, sphere) {
+        let intersectionDistance = -1;
+        const L = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.subtract(L, rayOrigWorld, sphere.center);
+        const b = gl_matrix_1.vec3.dot(rayDirectionWorld, L);
+        const c = gl_matrix_1.vec3.dot(L, L) - sphere.radius * sphere.radius;
+        const disc = b * b - c;
+        if (disc > 0.0) {
+            const s = Math.sqrt(disc);
+            const ta = -b + s;
+            const tb = -b - s;
+            if (ta >= 0.0 || tb >= 0.0) {
+                intersectionDistance = tb < 0.0 ? ta : Math.min(ta, tb);
+            }
         }
-        const effectiveY = this.getEffectiveTileY(tile);
-        const subdomain = this.getSubdomain(tile);
-        return this._config.urlTemplate
-            .replace(/\{z\}/g, String(tile.z))
-            .replace(/\{x\}/g, String(tile.x))
-            .replace(/\{y\}/g, String(effectiveY))
-            .replace(/\{s\}/g, subdomain);
-    }
-    resolveZoom(fovDeg) {
-        const safeFov = Math.max(0.01, Math.min(180, fovDeg));
-        const targetTileWidthDeg = Math.max(0.01, safeFov / 2);
-        const rawZoom = Math.ceil(Math.log2(360 / targetTileWidthDeg));
-        return this.clampZoom(rawZoom);
-    }
-    clampZoom(zoom) {
-        return Math.max(this.minZoom, Math.min(this.maxZoom, zoom));
-    }
-    getEffectiveTileY(tile) {
-        if (!this._config.flipY) {
-            return tile.y;
+        else if (disc === 0.0) {
+            const t = -b;
+            if (t >= 0.0) {
+                intersectionDistance = t;
+            }
         }
-        const dim = 2 ** tile.z;
-        return dim - 1 - tile.y;
+        return intersectionDistance;
     }
-    getSubdomain(tile) {
-        const subdomains = this._config.subdomains ?? [];
-        if (subdomains.length === 0) {
-            return '';
+    static getIntersectionPointWithModel(mouseX, mouseY, xyzModel, webgl, camera, pMatrix) {
+        const vMatrix = camera.getCameraMatrix();
+        const rayWorld = XYZRayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
+        const t = XYZRayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, xyzModel);
+        if (t < 0) {
+            return null;
         }
-        const index = Math.abs(tile.x + tile.y + tile.z) % subdomains.length;
-        return subdomains[index] ?? '';
+        const worldHit = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.scale(worldHit, rayWorld, t);
+        gl_matrix_1.vec3.add(worldHit, camera.getCameraPosition(), worldHit);
+        const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
+        const modelHit4 = [0, 0, 0, 0];
+        XYZRayPickingUtils.mat4MultiplyVec4(xyzModel.getModelMatrixInverse(), worldHit4, modelHit4);
+        return [modelHit4[0], modelHit4[1], modelHit4[2]];
     }
-    getVisibleTilesAtZoom(z, centerSphericalDeg, fovPolygon, viewportSphericalSamples, padding = 1) {
-        const dim = 2 ** z;
-        const center = this.resolveViewCenter(null, centerSphericalDeg);
-        const normalizedCenterLon = this.normalizeLonAround(center.lonDeg, center.lonDeg);
-        const polygonPoints = fovPolygon.length > 0
-            ? fovPolygon.map((point) => ({
-                lonDeg: this.normalizeLonAround(point.raDeg > 180 ? point.raDeg - 360 : point.raDeg, normalizedCenterLon),
-                latDeg: point.decDeg,
-            }))
-            : [center];
-        const samplePoints = viewportSphericalSamples.map((sample) => ({
-            lonDeg: this.normalizeLonAround(sample.phi > 180 ? sample.phi - 360 : sample.phi, normalizedCenterLon),
-            latDeg: 90 - sample.theta,
-        }));
-        const coveragePoints = [center, ...polygonPoints, ...samplePoints];
-        let minLon = normalizedCenterLon;
-        let maxLon = normalizedCenterLon;
-        let minLat = center.latDeg;
-        let maxLat = center.latDeg;
-        for (const point of coveragePoints) {
-            minLon = Math.min(minLon, point.lonDeg);
-            maxLon = Math.max(maxLon, point.lonDeg);
-            minLat = Math.min(minLat, point.latDeg);
-            maxLat = Math.max(maxLat, point.latDeg);
+    static getLonLatFromMouse(mouseX, mouseY, xyzModel, webgl, camera, pMatrix) {
+        const hit = XYZRayPickingUtils.getIntersectionPointWithModel(mouseX, mouseY, xyzModel, webgl, camera, pMatrix);
+        return hit ? XYZRayPickingUtils.modelPointToLonLat(hit) : null;
+    }
+    static getTileFromMouse(mouseX, mouseY, z, xyzModel, webgl, camera, pMatrix) {
+        const lonLat = XYZRayPickingUtils.getLonLatFromMouse(mouseX, mouseY, xyzModel, webgl, camera, pMatrix);
+        if (!lonLat || !XYZRayPickingUtils.isMercatorLatitude(lonLat.latDeg)) {
+            return null;
         }
-        const adaptivePadding = Math.max(padding, Math.min(3, Math.max(1, Math.ceil(z / 3))));
-        const minX = Math.floor(((minLon + 180) / 360) * dim) - adaptivePadding;
-        const maxX = Math.floor(((maxLon + 180) / 360) * dim) + adaptivePadding;
-        const minY = Math.floor(this.latToTileY(maxLat, z)) - adaptivePadding;
-        const maxY = Math.floor(this.latToTileY(minLat, z)) + adaptivePadding;
+        return XYZRayPickingUtils.lonLatToTile(lonLat.lonDeg, lonLat.latDeg, z);
+    }
+    static getVisibleTilesFromViewport(z, xyzModel, webgl, camera, pMatrix, sampleCount = 9, padding = 2) {
+        const gl = webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const samples = Math.max(2, Math.floor(sampleCount));
+        const edgeSamples = Math.max(samples * 2 + 1, 21);
+        const safePadding = Math.max(0, Math.floor(padding));
         const tiles = [];
-        for (let x = minX; x <= maxX; x++) {
-            for (let y = minY; y <= maxY; y++) {
-                tiles.push({
-                    z,
-                    x: this.wrapTileX(x, dim),
-                    y: this.clampTileY(y, dim),
-                });
-            }
-        }
-        for (const point of coveragePoints) {
-            const centerTileX = Math.floor(((point.lonDeg + 180) / 360) * dim);
-            const centerTileY = Math.floor(this.latToTileY(point.latDeg, z));
-            for (let dx = -adaptivePadding; dx <= adaptivePadding; dx++) {
-                for (let dy = -adaptivePadding; dy <= adaptivePadding; dy++) {
-                    tiles.push({
-                        z,
-                        x: this.wrapTileX(centerTileX + dx, dim),
-                        y: this.clampTileY(centerTileY + dy, dim),
-                    });
-                }
-            }
-        }
-        return this.deduplicateTiles(tiles);
-    }
-    tileFromSpherical(zoom, sphericalDeg) {
-        const lonDeg = sphericalDeg.phi > 180 ? sphericalDeg.phi - 360 : sphericalDeg.phi;
-        const latDeg = 90 - sphericalDeg.theta;
-        const dim = 2 ** zoom;
-        const x = Math.floor(((lonDeg + 180) / 360) * dim);
-        const y = Math.floor(this.latToTileY(latDeg, zoom));
-        return {
-            z: zoom,
-            x: this.wrapTileX(x, dim),
-            y: this.clampTileY(y, dim),
+        const addSample = (x, y) => {
+            const tile = XYZRayPickingUtils.getTileFromMouse(x, y, z, xyzModel, webgl, camera, pMatrix);
+            if (!tile)
+                return;
+            tiles.push(tile);
+            tiles.push(...XYZRayPickingUtils.getNeighborTiles(tile, safePadding));
         };
-    }
-    getNeighborTiles(tile, ring = 1) {
-        const dim = 2 ** tile.z;
-        const neighbors = [];
-        for (let dx = -ring; dx <= ring; dx++) {
-            for (let dy = -ring; dy <= ring; dy++) {
-                neighbors.push({
-                    z: tile.z,
-                    x: this.wrapTileX(tile.x + dx, dim),
-                    y: this.clampTileY(tile.y + dy, dim),
-                });
+        for (let iy = 0; iy < samples; iy++) {
+            const y = samples === 1 ? rect.height / 2 : (iy / (samples - 1)) * rect.height;
+            for (let ix = 0; ix < samples; ix++) {
+                const x = samples === 1 ? rect.width / 2 : (ix / (samples - 1)) * rect.width;
+                addSample(x, y);
             }
         }
-        return this.deduplicateTiles(neighbors);
+        for (let i = 0; i < edgeSamples; i++) {
+            const t = edgeSamples === 1 ? 0.5 : i / (edgeSamples - 1);
+            const x = t * rect.width;
+            const y = t * rect.height;
+            addSample(x, 0);
+            addSample(x, rect.height);
+            addSample(0, y);
+            addSample(rect.width, y);
+        }
+        return XYZRayPickingUtils.fillSmallTileGaps(XYZRayPickingUtils.deduplicateTiles(tiles));
     }
-    deduplicateTiles(tiles) {
-        const unique = new Map();
-        for (const tile of tiles) {
-            unique.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
-        }
-        return Array.from(unique.values());
-    }
-    resolveViewCenter(camera, centerSphericalDeg) {
-        if (centerSphericalDeg) {
-            return {
-                lonDeg: centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi,
-                latDeg: 90 - centerSphericalDeg.theta,
-            };
-        }
-        if (!camera) {
-            return { lonDeg: 0, latDeg: 0 };
-        }
-        const [x, y, z] = camera.getCameraPosition();
+    static modelPointToLonLat(point) {
+        const [x, y, z] = point;
         const len = Math.hypot(x, y, z);
         if (!Number.isFinite(len) || len === 0) {
             return { lonDeg: 0, latDeg: 0 };
         }
-        const scale = Global_js_1.default.insideSphere ? 1 / len : -1 / len;
-        const vx = x * scale;
-        const vy = y * scale;
-        const vz = z * scale;
-        const lonDeg = (Math.atan2(vy, vx) * 180) / Math.PI;
-        const latDeg = (Math.asin(Math.max(-1, Math.min(1, vz))) * 180) / Math.PI;
+        const lonDeg = (Math.atan2(y, x) * 180) / Math.PI;
+        const latDeg = (Math.asin(Math.max(-1, Math.min(1, z / len))) * 180) / Math.PI;
         return { lonDeg, latDeg };
     }
-    latToTileY(latDeg, z) {
+    static lonLatToTile(lonDeg, latDeg, z) {
+        const zoom = Math.max(0, Math.floor(z));
+        const dim = 2 ** zoom;
+        const x = Math.floor(((lonDeg + 180) / 360) * dim);
+        const y = Math.floor(XYZRayPickingUtils.latToTileY(latDeg, zoom));
+        return {
+            z: zoom,
+            x: XYZRayPickingUtils.wrapTileX(x, dim),
+            y: XYZRayPickingUtils.clampTileY(y, dim),
+        };
+    }
+    static getNeighborTiles(tile, ring = 1) {
+        const dim = 2 ** tile.z;
+        const tiles = [];
+        const safeRing = Math.max(0, Math.floor(ring));
+        for (let dx = -safeRing; dx <= safeRing; dx++) {
+            for (let dy = -safeRing; dy <= safeRing; dy++) {
+                tiles.push({
+                    z: tile.z,
+                    x: XYZRayPickingUtils.wrapTileX(tile.x + dx, dim),
+                    y: XYZRayPickingUtils.clampTileY(tile.y + dy, dim),
+                });
+            }
+        }
+        return XYZRayPickingUtils.deduplicateTiles(tiles);
+    }
+    static deduplicateTiles(tiles) {
+        const map = new Map();
+        for (const tile of tiles) {
+            map.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
+        }
+        return Array.from(map.values());
+    }
+    static fillSmallTileGaps(tiles) {
+        if (tiles.length === 0) {
+            return tiles;
+        }
+        const zoom = tiles[0].z;
+        const dim = 2 ** zoom;
+        const map = new Map();
+        const key = (tile) => `${tile.z}/${tile.x}/${tile.y}`;
+        const add = (tile) => {
+            map.set(key(tile), tile);
+        };
+        const has = (x, y) => (y >= 0 && y < dim && map.has(`${zoom}/${XYZRayPickingUtils.wrapTileX(x, dim)}/${y}`));
+        for (const tile of tiles) {
+            add(tile);
+        }
+        for (const tile of tiles) {
+            const x = tile.x;
+            const y = tile.y;
+            if (has(x - 2, y) && !has(x - 1, y)) {
+                add({ z: zoom, x: XYZRayPickingUtils.wrapTileX(x - 1, dim), y });
+            }
+            if (has(x + 2, y) && !has(x + 1, y)) {
+                add({ z: zoom, x: XYZRayPickingUtils.wrapTileX(x + 1, dim), y });
+            }
+            if (has(x, y - 2) && !has(x, y - 1)) {
+                add({ z: zoom, x, y: y - 1 });
+            }
+            if (has(x, y + 2) && !has(x, y + 1)) {
+                add({ z: zoom, x, y: y + 1 });
+            }
+        }
+        return Array.from(map.values());
+    }
+    static latToTileY(latDeg, z) {
         const lat = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, latDeg));
         const latRad = (lat * Math.PI) / 180;
-        const n = 2 ** z;
-        return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * n;
+        const dim = 2 ** z;
+        return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * dim;
     }
-    wrapTileX(x, dim) {
+    static isMercatorLatitude(latDeg) {
+        return Math.abs(latDeg) <= MAX_MERCATOR_LAT;
+    }
+    static wrapTileX(x, dim) {
         return ((x % dim) + dim) % dim;
     }
-    normalizeLonAround(lonDeg, referenceLonDeg) {
-        let lon = lonDeg;
-        while (lon - referenceLonDeg > 180)
-            lon -= 360;
-        while (lon - referenceLonDeg < -180)
-            lon += 360;
-        return lon;
-    }
-    clampTileY(y, dim) {
+    static clampTileY(y, dim) {
         return Math.max(0, Math.min(dim - 1, y));
     }
+    static mat4MultiplyVec4(a, b, out) {
+        const d = b[0], e = b[1], g = b[2], w = b[3];
+        out[0] = a[0] * d + a[4] * e + a[8] * g + a[12] * w;
+        out[1] = a[1] * d + a[5] * e + a[9] * g + a[13] * w;
+        out[2] = a[2] * d + a[6] * e + a[10] * g + a[14] * w;
+        out[3] = a[3] * d + a[7] * e + a[11] * g + a[15] * w;
+        return out;
+    }
 }
-exports.XYZTileProvider = XYZTileProvider;
+exports["default"] = XYZRayPickingUtils;
 
 
 /***/ }),
@@ -13212,6 +13658,18 @@ exports.XYZTileProvider = XYZTileProvider;
 /***/ 2368:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13455,6 +13913,18 @@ exports["default"] = AllSky;
 /***/ 2475:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -13568,271 +14038,36 @@ exports.Footprint = Footprint;
 
 /***/ }),
 
-/***/ 2502:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZLayer = void 0;
-const AbstractSkyEntity_js_1 = __webpack_require__(4735);
-const XYZShaderProgram_js_1 = __webpack_require__(149);
-const XYZAncestorMeshCache_js_1 = __webpack_require__(497);
-const XYZMeshBuilder_js_1 = __webpack_require__(8819);
-const XYZTileBuffer_js_1 = __webpack_require__(2737);
-const XYZTileProvider_js_1 = __webpack_require__(2330);
-const XYZVisibleTilesManager_js_1 = __webpack_require__(6937);
-class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
-    static DEFAULT_MAX_CACHED_TILES = 384;
-    _config;
-    _provider;
-    _visibleTilesManager;
-    _meshBuilder;
-    _xyzShaderProgram;
-    _tileBuffer;
-    _ancestorMeshCache;
-    _visibleTileKeys = [];
-    _fallbackVisibleTileKeys = [];
-    _baseVisibleTileKeys = [];
-    _tilePriorities = new Map();
-    _tileSelectionKey = null;
-    _currentTileCount = 0;
-    _fallbackTileCount = 0;
-    _coreTileCount = 0;
-    _coverageTileCount = 0;
-    constructor(config, webgl) {
-        super(1, [0, 0, 0], 0, 0, 'XYZ Earth Layer', webgl, false);
-        this._config = config;
-        this._provider = new XYZTileProvider_js_1.XYZTileProvider(config);
-        this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager(this._provider);
-        this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
-        this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
-        this._tileBuffer = new XYZTileBuffer_js_1.XYZTileBuffer(1, webgl, this._meshBuilder, this._xyzShaderProgram);
-        this._ancestorMeshCache = new XYZAncestorMeshCache_js_1.XYZAncestorMeshCache(webgl, this._meshBuilder);
-        this.initGL(webgl);
-        this.bootstrapTiles(180, null, null);
-    }
-    get config() {
-        return this._config;
-    }
-    getDebugStats() {
-        let readyTileCount = 0;
-        let loadingTileCount = 0;
-        let coolingDownTileCount = 0;
-        const now = Date.now();
-        const allTiles = [
-            ...Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile),
-            ...Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile),
-        ];
-        for (const tile of allTiles) {
-            if (tile.ready) {
-                readyTileCount += 1;
-            }
-            if (tile.loading) {
-                loadingTileCount += 1;
-            }
-            if (tile.failedUntil > now) {
-                coolingDownTileCount += 1;
-            }
-        }
-        const currentZoom = this._visibleTileKeys.reduce((maxZoom, tileKey) => {
-            const zoom = Number.parseInt(tileKey.split('/')[0] ?? '', 10);
-            if (!Number.isFinite(zoom)) {
-                return maxZoom;
-            }
-            return maxZoom == null ? zoom : Math.max(maxZoom, zoom);
-        }, null);
-        return {
-            cacheSize: this._tileBuffer.size,
-            visibleTileCount: this._visibleTileKeys.length,
-            currentTileCount: this._currentTileCount,
-            fallbackTileCount: this._fallbackTileCount,
-            coreTileCount: this._coreTileCount,
-            coverageTileCount: this._coverageTileCount,
-            readyTileCount,
-            loadingTileCount,
-            coolingDownTileCount,
-            currentZoom,
-            tileSelectionKey: this._tileSelectionKey,
-            isSettling: false,
-            coarseTileCount: 0,
-            hasPendingSelection: false,
-            pendingSelectionKey: null,
-        };
-    }
-    bootstrapTiles(fovDeg, camera, centerSphericalDeg, fovPolygon = null, viewportSphericalSamples = null) {
-        const selection = camera
-            ? this._visibleTilesManager.selectTiles({
-                fovDeg,
-                camera,
-                pMatrix: new Float32Array(),
-                centerSphericalDeg: centerSphericalDeg ?? undefined,
-                fovPolygon: fovPolygon ?? undefined,
-                viewportSphericalSamples: viewportSphericalSamples ?? undefined,
-            })
-            : {
-                key: 'initial',
-                currentTiles: this._provider.getInitialTiles(),
-                fallbackTiles: [],
-                currentZoom: 1,
-                coreTileCount: this._provider.getInitialTiles().length,
-                coverageTileCount: 0,
-            };
-        if (selection.key === this._tileSelectionKey) {
-            return;
-        }
-        this._tileSelectionKey = selection.key;
-        this._currentTileCount = selection.currentTiles.length;
-        this._fallbackTileCount = selection.fallbackTiles.length;
-        this._coreTileCount = selection.coreTileCount;
-        this._coverageTileCount = selection.coverageTileCount;
-        const segments = this._config.segmentsPerSide ?? 16;
-        const baseTiles = this._provider.getInitialTiles();
-        const coreTileKeys = new Set(selection.currentTiles
-            .slice(0, selection.coreTileCount)
-            .map((tileCoord) => this.getTileKey(tileCoord)));
-        const baseTileKeys = new Set(baseTiles.map((tileCoord) => this.getTileKey(tileCoord)));
-        const prioritizedBaseTiles = baseTiles.map((tileCoord, index) => ({
-            tileCoord,
-            priority: 5000 + (baseTiles.length - index),
-            role: 'base',
-        }));
-        const prioritizedCurrentTiles = selection.currentTiles.map((tileCoord, index) => ({
-            tileCoord,
-            priority: 10000 + (selection.currentTiles.length - index),
-            role: coreTileKeys.has(this.getTileKey(tileCoord)) ? 'current' : 'coverage',
-        }));
-        const prioritizedFallbackTiles = selection.fallbackTiles.map((tileCoord, index) => ({
-            tileCoord,
-            priority: 1000 + (selection.fallbackTiles.length - index),
-            role: 'fallback',
-        }));
-        const requestedTiles = [...prioritizedBaseTiles, ...prioritizedCurrentTiles, ...prioritizedFallbackTiles];
-        this._tilePriorities.clear();
-        this._fallbackVisibleTileKeys = [];
-        this._baseVisibleTileKeys = [];
-        const orderedRequests = requestedTiles
-            .sort((a, b) => a.tileCoord.z - b.tileCoord.z)
-            .map(({ tileCoord, priority, role }) => {
-            const tileKey = this.getTileKey(tileCoord);
-            this._tilePriorities.set(tileKey, priority);
-            return {
-                tileCoord,
-                priority,
-                url: this._provider.getTileUrl(tileCoord),
-                role,
-            };
-        });
-        const ensuredKeys = this._tileBuffer.ensureTiles(orderedRequests, segments);
-        const fallbackKeySet = new Set(selection.fallbackTiles.map((tileCoord) => this.getTileKey(tileCoord)));
-        this._baseVisibleTileKeys = ensuredKeys.filter((tileKey) => baseTileKeys.has(tileKey));
-        this._fallbackVisibleTileKeys = ensuredKeys.filter((tileKey) => fallbackKeySet.has(tileKey) && !baseTileKeys.has(tileKey));
-        this._visibleTileKeys = ensuredKeys.filter((tileKey) => !fallbackKeySet.has(tileKey) && !baseTileKeys.has(tileKey));
-        this.evictCache();
-    }
-    draw(input) {
-        const vMatrix = input.camera.getCameraMatrix();
-        if (!vMatrix)
-            return;
-        this.bootstrapTiles(input.fovDeg ?? 180, input.camera, input.centerSphericalDeg ?? null, input.fovPolygon ?? null, input.viewportSphericalSamples ?? null);
-        const pMatrix = input.pMatrix;
-        const mMatrix = this.getModelMatrix();
-        for (const tileKey of this._baseVisibleTileKeys) {
-            const tile = this._tileBuffer.getActiveTile(tileKey);
-            if (!tile)
-                continue;
-            tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0);
-        }
-        for (const tileKey of this._fallbackVisibleTileKeys) {
-            const tile = this._tileBuffer.getActiveTile(tileKey);
-            if (!tile)
-                continue;
-            tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0, false);
-        }
-        for (const tileKey of this._visibleTileKeys) {
-            const tile = this._tileBuffer.getActiveTile(tileKey);
-            if (tile?.ready) {
-                tile.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0);
-                continue;
-            }
-            const targetCoord = this.parseTileKey(tileKey);
-            if (targetCoord) {
-                const ancestorTile = this.findBestAvailableAncestor(targetCoord);
-                if (ancestorTile) {
-                    const ancestorMesh = this._ancestorMeshCache.getMesh(targetCoord, ancestorTile.coord, this._config.segmentsPerSide ?? 16);
-                    ancestorTile.drawRemapped(ancestorMesh, pMatrix, vMatrix, mMatrix);
-                }
-            }
-            tile?.draw(pMatrix, vMatrix, mMatrix, this._tilePriorities.get(tileKey) ?? 0);
-        }
-    }
-    evictCache() {
-        const maxCachedTiles = this._config.maxCachedTiles ?? XYZLayer.DEFAULT_MAX_CACHED_TILES;
-        this._tileBuffer.evictCached(maxCachedTiles);
-    }
-    disposeTiles() {
-        this._tileBuffer.dispose();
-        this._ancestorMeshCache.dispose();
-        this._visibleTileKeys = [];
-        this._fallbackVisibleTileKeys = [];
-        this._baseVisibleTileKeys = [];
-    }
-    getTileKey(tileCoord) {
-        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
-    }
-    parseTileKey(tileKey) {
-        const [zRaw, xRaw, yRaw] = tileKey.split('/');
-        const z = Number.parseInt(zRaw ?? '', 10);
-        const x = Number.parseInt(xRaw ?? '', 10);
-        const y = Number.parseInt(yRaw ?? '', 10);
-        if (!Number.isFinite(z) || !Number.isFinite(x) || !Number.isFinite(y)) {
-            return null;
-        }
-        return { z, x, y };
-    }
-    findBestAvailableAncestor(targetCoord) {
-        for (let z = targetCoord.z - 1; z >= this._provider.minZoom; z--) {
-            const dz = targetCoord.z - z;
-            const ancestorCoord = {
-                z,
-                x: targetCoord.x >> dz,
-                y: targetCoord.y >> dz,
-            };
-            const ancestor = this._tileBuffer.getAnyTile(this.getTileKey(ancestorCoord));
-            if (ancestor?.ready) {
-                return ancestor;
-            }
-        }
-        return null;
-    }
-}
-exports.XYZLayer = XYZLayer;
-
-
-/***/ }),
-
 /***/ 2737:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ ((__unused_webpack_module, exports) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZTileBuffer = void 0;
-const XYZTile_js_1 = __webpack_require__(1375);
 class XYZTileBuffer {
     _tiles = new Map();
     _cachedTiles = new Map();
     _cacheAliveMilliSeconds;
     _cleanerId;
-    _webgl;
-    _meshBuilder;
-    _shaderProgram;
-    constructor(minutesToLiveInCache = 1, webgl, meshBuilder, shaderProgram) {
+    constructor(minutesToLiveInCache = 1) {
         this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
-        this._webgl = webgl;
-        this._meshBuilder = meshBuilder;
-        this._shaderProgram = shaderProgram;
-        this._cleanerId = window.setInterval(() => {
-            this.cacheCleaner();
-        }, 10_000);
+        if (typeof window !== 'undefined') {
+            this._cleanerId = window.setInterval(() => {
+                this.cacheCleaner();
+            }, 10_000);
+        }
     }
     get activeTiles() {
         return this._tiles;
@@ -13843,64 +14078,31 @@ class XYZTileBuffer {
     get size() {
         return this._tiles.size + this._cachedTiles.size;
     }
-    getTile(tileCoord, url, segmentsPerSide, role) {
-        const tileKey = this.key(tileCoord);
-        if (!this._tiles.has(tileKey)) {
-            if (this._cachedTiles.has(tileKey)) {
-                const entry = this._cachedTiles.get(tileKey);
-                entry.cacheTime0 = undefined;
-                entry.role = role;
-                this._tiles.set(tileKey, entry);
-                this._cachedTiles.delete(tileKey);
-            }
-            else {
-                const mesh = this._meshBuilder.buildTileMesh(tileCoord, segmentsPerSide);
-                this._tiles.set(tileKey, {
-                    tile: new XYZTile_js_1.XYZTile(tileCoord, url, mesh, this._webgl, this._shaderProgram),
-                    role,
-                });
-            }
+    ensureTiles(visibleTiles, tileFactory) {
+        const visibleTileKeys = [];
+        for (const tileCoord of visibleTiles) {
+            const tile = this.getTile(tileCoord, tileFactory);
+            this.touchTile(tile);
+            visibleTileKeys.push(this.key(tileCoord));
         }
-        else {
-            const entry = this._tiles.get(tileKey);
-            entry.role = role;
-        }
-        return this._tiles.get(tileKey).tile;
+        this.syncVisibleTiles(visibleTileKeys);
+        return visibleTileKeys;
     }
-    getExistingTile(tileCoord, role) {
+    getTile(tileCoord, tileFactory) {
         const tileKey = this.key(tileCoord);
         if (this._tiles.has(tileKey)) {
-            const entry = this._tiles.get(tileKey);
-            entry.role = role;
-            return entry.tile;
+            return this._tiles.get(tileKey).tile;
         }
         if (this._cachedTiles.has(tileKey)) {
             const entry = this._cachedTiles.get(tileKey);
             entry.cacheTime0 = undefined;
-            entry.role = role;
             this._tiles.set(tileKey, entry);
             this._cachedTiles.delete(tileKey);
             return entry.tile;
         }
-        return null;
-    }
-    ensureTiles(requests, segmentsPerSide) {
-        const visibleTileKeys = [];
-        for (const request of requests) {
-            const tile = request.role === 'fallback'
-                ? this.getExistingTile(request.tileCoord, 'fallback')
-                : this.getTile(request.tileCoord, request.url, segmentsPerSide, request.role);
-            if (!tile) {
-                continue;
-            }
-            tile.touch();
-            if (request.role !== 'fallback') {
-                tile.primeLoad(request.priority);
-            }
-            visibleTileKeys.push(this.key(request.tileCoord));
-        }
-        this.syncVisibleTiles(visibleTileKeys);
-        return visibleTileKeys;
+        const tile = tileFactory(tileCoord);
+        this._tiles.set(tileKey, { tile });
+        return tile;
     }
     getActiveTile(tileKey) {
         return this._tiles.get(tileKey)?.tile ?? null;
@@ -13908,11 +14110,14 @@ class XYZTileBuffer {
     getAnyTile(tileKey) {
         return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null;
     }
+    getActiveTiles() {
+        return Array.from(this._tiles.values(), (entry) => entry.tile);
+    }
     syncVisibleTiles(visibleTileKeys) {
         const visibleKeySet = new Set(visibleTileKeys);
         for (const [tileKey, entry] of this._tiles) {
             if (visibleKeySet.has(tileKey)) {
-                entry.tile.touch();
+                this.touchTile(entry.tile);
                 continue;
             }
             entry.cacheTime0 = Date.now();
@@ -13925,9 +14130,7 @@ class XYZTileBuffer {
             return;
         }
         const candidates = Array.from(this._cachedTiles.entries()).sort((a, b) => {
-            const scoreA = Math.min(a[1].tile.lastUsedAt || a[1].tile.createdAt, a[1].tile.createdAt);
-            const scoreB = Math.min(b[1].tile.lastUsedAt || b[1].tile.createdAt, b[1].tile.createdAt);
-            return scoreA - scoreB;
+            return this.getTileAgeScore(a[1].tile) - this.getTileAgeScore(b[1].tile);
         });
         for (const [tileKey, entry] of candidates) {
             if (this.size <= maxCachedTiles) {
@@ -13936,33 +14139,48 @@ class XYZTileBuffer {
             if (entry.tile.loading) {
                 continue;
             }
-            entry.tile.dispose();
+            entry.tile.dispose?.();
             this._cachedTiles.delete(tileKey);
         }
     }
     dispose() {
-        window.clearInterval(this._cleanerId);
+        if (this._cleanerId !== undefined && typeof window !== 'undefined') {
+            window.clearInterval(this._cleanerId);
+            this._cleanerId = undefined;
+        }
         for (const entry of this._tiles.values()) {
-            entry.tile.dispose();
+            entry.tile.dispose?.();
         }
         for (const entry of this._cachedTiles.values()) {
-            entry.tile.dispose();
+            entry.tile.dispose?.();
         }
         this._tiles.clear();
         this._cachedTiles.clear();
+    }
+    key(tileCoord) {
+        return XYZTileBuffer.key(tileCoord);
+    }
+    static key(tileCoord) {
+        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
     }
     cacheCleaner() {
         const now = Date.now();
         for (const [tileKey, entry] of this._cachedTiles) {
             const t0 = entry.cacheTime0;
-            if (t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds && !entry.tile.loading) {
-                entry.tile.dispose();
-                this._cachedTiles.delete(tileKey);
+            if (t0 === undefined || now - t0 <= this._cacheAliveMilliSeconds || entry.tile.loading) {
+                continue;
             }
+            entry.tile.dispose?.();
+            this._cachedTiles.delete(tileKey);
         }
     }
-    key(tileCoord) {
-        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
+    touchTile(tile) {
+        tile.touch?.();
+    }
+    getTileAgeScore(tile) {
+        const lastUsedAt = tile.lastUsedAt ?? 0;
+        const createdAt = tile.createdAt ?? lastUsedAt;
+        return Math.min(lastUsedAt || createdAt, createdAt);
     }
 }
 exports.XYZTileBuffer = XYZTileBuffer;
@@ -13973,6 +14191,18 @@ exports.XYZTileBuffer = XYZTileBuffer;
 /***/ 2885:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -14232,6 +14462,18 @@ exports["default"] = AncestorTile;
 /***/ ((__unused_webpack_module, exports) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.bootSetup = exports.tapRepos = exports.hipsNodes = void 0;
 exports.hipsNodes = [
@@ -14273,6 +14515,18 @@ exports.bootSetup = {
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -14547,10 +14801,120 @@ exports["default"] = GeomUtils;
 
 /***/ }),
 
+/***/ 3174:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZAncestorTile = exports.XYZAnchestorTile = void 0;
+const XYZMeshBuilder_js_1 = __webpack_require__(8819);
+const XYZTile_js_1 = __webpack_require__(1375);
+class XYZAnchestorTile extends XYZTile_js_1.XYZTile {
+    _ancestorMeshBuilder;
+    _ancestorWebgl;
+    _segmentsPerSide;
+    _meshCache = new Map();
+    constructor(coord, url, webgl, shaderProgram, meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder(), segmentsPerSide = 16) {
+        super(coord, url, webgl, shaderProgram, meshBuilder, segmentsPerSide);
+        this._ancestorMeshBuilder = meshBuilder;
+        this._ancestorWebgl = webgl;
+        this._segmentsPerSide = segmentsPerSide;
+    }
+    draw(pMatrixOrVisibleZoom, vMatrixOrVisibleTiles, mMatrixOrAncestorsMap, colorMapIdxOrPMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (typeof pMatrixOrVisibleZoom !== 'number') {
+            return super.draw(pMatrixOrVisibleZoom, vMatrixOrVisibleTiles, mMatrixOrAncestorsMap, colorMapIdxOrPMatrix);
+        }
+        if (!vMatrix || !mMatrix || colorMapIdx === undefined) {
+            return false;
+        }
+        const visibleZoom = pMatrixOrVisibleZoom;
+        const visibleTiles = vMatrixOrVisibleTiles;
+        const ancestorsMap = mMatrixOrAncestorsMap;
+        const pMatrix = colorMapIdxOrPMatrix;
+        let drawn = false;
+        if (visibleZoom <= this.coord.z) {
+            return super.draw(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        }
+        for (const targetTile of visibleTiles) {
+            if (!this.isAncestorOf(targetTile)) {
+                continue;
+            }
+            const ancestorKey = `${this.coord.z}/${this.coord.x}/${this.coord.y}`;
+            if (!ancestorsMap.has(ancestorKey)) {
+                continue;
+            }
+            const mesh = this.getRemappedMesh(targetTile);
+            drawn = super.drawRemapped(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) || drawn;
+        }
+        return drawn;
+    }
+    dispose() {
+        for (const mesh of this._meshCache.values()) {
+            if (mesh.positionBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.positionBuffer);
+            if (mesh.uvBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.uvBuffer);
+            if (mesh.indexBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.indexBuffer);
+        }
+        this._meshCache.clear();
+        super.dispose();
+    }
+    getRemappedMesh(targetTile) {
+        const key = `${targetTile.z}/${targetTile.x}/${targetTile.y}->${this.coord.z}/${this.coord.x}/${this.coord.y}`;
+        const existing = this._meshCache.get(key);
+        if (existing) {
+            return existing;
+        }
+        const mesh = this._ancestorMeshBuilder.buildAncestorMesh(targetTile, this.coord, this._segmentsPerSide);
+        const uploaded = this._ancestorMeshBuilder.uploadMesh(mesh, this._ancestorWebgl);
+        this._meshCache.set(key, uploaded);
+        return uploaded;
+    }
+    isAncestorOf(targetTile) {
+        if (targetTile.z <= this.coord.z) {
+            return targetTile.z === this.coord.z
+                && targetTile.x === this.coord.x
+                && targetTile.y === this.coord.y;
+        }
+        const dz = targetTile.z - this.coord.z;
+        return (targetTile.x >> dz) === this.coord.x && (targetTile.y >> dz) === this.coord.y;
+    }
+}
+exports.XYZAnchestorTile = XYZAnchestorTile;
+exports.XYZAncestorTile = XYZAnchestorTile;
+
+
+/***/ }),
+
 /***/ 3559:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -14654,296 +15018,21 @@ exports.CatalogueShaderProgram = CatalogueShaderProgram;
 
 /***/ }),
 
-/***/ 3576:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FoV = void 0;
-/**
- * FoV singleton (TypeScript)
- * - Uses computePerspectiveMatrixSingleton.pMatrix
- * - Guards acos domain (numeric safety)
- * - Uses vec3.transformMat4 instead of custom mat4*vec3
- * - Keeps original “insideSphere ? 360 - angle : angle” behavior
- */
-const gl_matrix_1 = __webpack_require__(1961);
-const RayPickingUtils_js_1 = __importDefault(__webpack_require__(4639));
-const Utils_js_1 = __webpack_require__(7930);
-class FoV {
-    static MIN_FOV_DEG = 1e-6;
-    fovXDeg = 180;
-    fovYDeg = 180;
-    ratio = +0;
-    _minFoV = 180;
-    _webgl;
-    constructor(webgl) {
-        this._webgl = webgl;
-    }
-    /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere, healpixGridSingleton, camera, pMatrix) {
-        // const gl = webgl
-        const gl = this._webgl;
-        if (!gl || !gl.canvas) {
-            // Handle the error or assign default values
-            this.fovXDeg = 180;
-            this.fovYDeg = 180;
-            this._minFoV = this.minFoV;
-            return this;
-        }
-        // horizontal FoV: ray through (centerY)
-        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
-        const canvas = gl.canvas;
-        const rect = canvas.getBoundingClientRect();
-        const canvasWidth = rect.width;
-        const canvasHeight = rect.height;
-        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix)
-        const xFoVComputed = this.computeAngle(0, canvasHeight / 2, insideSphere, healpixGridSingleton, camera, pMatrix);
-        this.fovXDeg = xFoVComputed.angleDeg;
-        // vertical FoV: ray through (centerX)
-        // const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix)
-        const yFoVComputed = this.computeAngle(canvasWidth / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix);
-        this.fovYDeg = yFoVComputed.angleDeg;
-        this._minFoV = this.minFoV;
-        this.ratio = this.computeRatio(camera);
-        return this;
-    }
-    computeRatio(camera) {
-        // const camera = global.camera
-        if (!camera)
-            throw Error("Camera not defined");
-        const pos = camera.getCameraPosition();
-        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
-        const ratio = distanceFromCenter / this.fovYDeg;
-        return ratio;
-    }
-    changeMinFov(deg) {
-        console.log("inside changeMinFov");
-        if (this.fovYDeg <= this.fovXDeg) {
-            this.fovYDeg = deg;
-        }
-        else {
-            this.fovXDeg = deg;
-        }
-        console.log("changeMinFov: ping");
-        this.minFoV;
-        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
-    }
-    get minFoV() {
-        const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
-        this._minFoV = Math.max(minFov, FoV.MIN_FOV_DEG);
-        return this._minFoV;
-    }
-    get xFoV() {
-        return this.fovXDeg;
-    }
-    get yFoV() {
-        return this.fovYDeg;
-    }
-    computeDistanceFromAngle(angleDeg) {
-        const desiredFoV = angleDeg;
-        const distance = desiredFoV * this.ratio;
-        // return Math.abs(distance)
-        return distance;
-    }
-    /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera, pMatrix) {
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix
-        if (!pMatrix) {
-            // Handle the error or assign a default value
-            console.warn('FoV: projection matrix is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const vMatrix = camera.getCameraMatrix();
-        if (!camera) {
-            // Handle the error or assign a default value
-            console.warn('FoV: camera is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const rayWorld = RayPickingUtils_js_1.default.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix);
-        const intersectionDistance = RayPickingUtils_js_1.default.raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
-        let angleDeg;
-        if (intersectionDistance > 0) {
-            // world-space intersection point on the sphere
-            const hit = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.scale(hit, rayWorld, intersectionDistance);
-            gl_matrix_1.vec3.add(hit, camera.getCameraPosition(), hit);
-            const center = healpixGridSingleton.center;
-            // vectors from sphere center
-            const vHit = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.subtract(vHit, hit, center);
-            // reference vector: rotate world +Z into current camera orientation, then from center
-            const refWorldZ = gl_matrix_1.vec3.fromValues(center[0], center[1], center[2] + healpixGridSingleton.radius);
-            const vInv = gl_matrix_1.mat4.create();
-            gl_matrix_1.mat4.invert(vInv, camera.getCameraMatrix());
-            const refCamZ = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.transformMat4(refCamZ, refWorldZ, vInv);
-            const vRef = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.subtract(vRef, refCamZ, center);
-            // angle between vHit and vRef, doubled
-            const dot = gl_matrix_1.vec3.dot(vHit, vRef);
-            const n1 = gl_matrix_1.vec3.length(vHit);
-            const n2 = gl_matrix_1.vec3.length(vRef);
-            // numeric safety for acos
-            const c = Math.min(1, Math.max(-1, dot / (n1 * n2)));
-            const angleRad = Math.acos(c);
-            angleDeg = 2 * (0, Utils_js_1.radToDeg)(angleRad);
-        }
-        else {
-            angleDeg = 180;
-        }
-        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
-        // return insideSphere ? 360 - angleDeg : angleDeg
-        return { angleDeg: finalAngle, distance: intersectionDistance };
-    }
-    /**
-   * Computes the camera position (x,y,z) along the current view direction that would
-   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
-   * This method does NOT mutate the camera; it only returns the suggested position.
-   *
-   * Geometry: for a sphere of radius R observed from distance d (from center),
-   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
-   * along the tighter axis; we solve for d and place the camera on the current
-   * center→camera direction with that distance.
-   *
-   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
-   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
-   */
-    computeCameraPositionForMinFoV(targetMinFoVDeg) {
-        // const camera = global.camera
-        // const center = healpixGridSingleton.center
-        // const R = healpixGridSingleton.radius
-        // if (!camera) {
-        //   console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.')
-        //   return [center[0], center[1], center[2] + 2 * R]
-        // }
-        // // Clamp and validate input
-        // const eps = 1e-6
-        // const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg))
-        // const halfRad = (clamped * Math.PI / 180) * 0.5
-        // // Distance from center needed to achieve the angular diameter
-        // // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
-        // const sinHalf = Math.sin(halfRad)
-        // if (sinHalf <= 0) {
-        //   console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.')
-        //   return [center[0], center[1], center[2] + 2 * R]
-        // }
-        // let d = R / sinHalf
-        // // Ensure we remain strictly outside the sphere
-        // d = Math.max(d, R + 1e-4)
-        // // Use the current center→camera direction to keep orientation
-        // const camPos = camera.getCameraPosition()
-        // let dirX = camPos[0] - center[0]
-        // let dirY = camPos[1] - center[1]
-        // let dirZ = camPos[2] - center[2]
-        // const len = Math.hypot(dirX, dirY, dirZ)
-        // if (len < eps) {
-        //   // If somehow at the center, use +Z as a default direction
-        //   dirX = 0; dirY = 0; dirZ = 1;
-        // } else {
-        //   dirX /= len
-        //   dirY /= len
-        //   dirZ /= len
-        // }
-        // const newX = center[0] + dirX * d
-        // const newY = center[1] + dirY * d
-        // const newZ = center[2] + dirZ * d
-        // return [newX, newY, newZ]
-        return [0, 0, 0];
-    }
-    /**
-       * Computes the camera world-space position required to achieve a target FoV (deg),
-       * keeping the same viewing direction. Acts as the inverse of computeAngle().
-       *
-       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
-       * @param canvasWidth  canvas width in pixels
-       * @param canvasHeight canvas height in pixels
-       * @returns [x, y, z] coordinates for the new camera position
-       */
-    computeCameraPositionForFoV(targetFoVDeg) {
-        // const camera = global.camera;
-        // const center = healpixGridSingleton.center;
-        // const R = healpixGridSingleton.radius;
-        // if (!camera) {
-        //   console.warn("FoV.computeCameraPositionForFoV: camera missing.");
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // const eps = 1e-6;
-        // const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
-        // const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
-        // // Distance from center that yields this FoV
-        // const sinHalf = Math.sin(halfRad);
-        // if (sinHalf <= 0) {
-        //   console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // let d = R / sinHalf;
-        // // Slightly outside sphere to avoid clipping
-        // d = Math.max(d, R + 1e-4);
-        // // Get current viewing direction
-        // const camPos = camera.getCameraPosition();
-        // let dirX = camPos[0] - center[0];
-        // let dirY = camPos[1] - center[1];
-        // let dirZ = camPos[2] - center[2];
-        // const len = Math.hypot(dirX, dirY, dirZ);
-        // if (len < eps) {
-        //   dirX = 0; dirY = 0; dirZ = 1;
-        // } else {
-        //   dirX /= len;
-        //   dirY /= len;
-        //   dirZ /= len;
-        // }
-        // const newX = center[0] + dirX * d;
-        // const newY = center[1] + dirY * d;
-        // const newZ = center[2] + dirZ * d;
-        // return [newX, newY, newZ];
-        return [0, 0, 0];
-    }
-    /**
-   * Return a camera position such that the sphere's apparent angular diameter
-   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
-   * Keeps current view direction; does not mutate the camera.
-   *
-   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
-   * @returns [x,y,z] world position
-   */
-    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
-        // const camera = global.camera;
-        // const center = healpixGridSingleton.center;
-        // const R = healpixGridSingleton.radius;
-        // if (!camera) {
-        //   console.warn('computeCameraPositionForAngularDiameter: camera missing.');
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // const eps = 1e-6;
-        // const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
-        // const half = (α * Math.PI) / 360.0;
-        // const sinHalf = Math.sin(half);
-        // // d = R / sin(α/2)
-        // let d = R / sinHalf;
-        // d = Math.max(d, R + 1e-4); // stay outside
-        // // project along current center→camera direction
-        // const [cx, cy, cz] = center as [number, number, number];
-        // const [px, py, pz] = camera.getCameraPosition();
-        // let dx = px - cx, dy = py - cy, dz = pz - cz;
-        // const L = Math.hypot(dx, dy, dz);
-        // if (L < eps) { dx = 0; dy = 0; dz = 1; } else { dx /= L; dy /= L; dz /= L; }
-        // return [cx + dx * d, cy + dy * d, cz + dz * d];
-        return [0, 0, 0];
-    }
-}
-exports.FoV = FoV;
-
-
-/***/ }),
-
 /***/ 3726:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -14956,8 +15045,6 @@ exports.HiPS = void 0;
 const AbstractSkyEntity_js_1 = __webpack_require__(4735);
 const FoVHelper_js_1 = __webpack_require__(229);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
-// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
-// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 const AncestorTile_js_1 = __importDefault(__webpack_require__(2885));
 const AllSky_js_1 = __importDefault(__webpack_require__(2368));
 class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
@@ -14984,10 +15071,8 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
         super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
         this._descriptor = descriptor;
-        // this.initGL((global as any).gl as WebGL2RenderingContext)
         this.initGL(webgl);
         this._healpixGrid = healpixGrid;
-        // newTileBuffer.addHiPS(this)
         this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this);
         // DEBUG logs kept from JS (optional)
         // eslint-disable-next-line no-console
@@ -15136,7 +15221,6 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         if (!pMatrix)
             return;
         this.refresh();
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
         const mMatrix = this.getModelMatrix();
         super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
         if (this._allSky && this._allSkyTile) {
@@ -15158,13 +15242,9 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const order = this.isGalacticHips
             ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
             : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order;
-        // ? visibleTilesManager.galVisibleTilesByOrder.order
-        // : visibleTilesManager.visibleTilesByOrder.order
         const map = this.isGalacticHips
             ? this._healpixGrid.visibleTilesManager.galAncestorsMap
             : this._healpixGrid.visibleTilesManager.ancestorsMap;
-        // ? visibleTilesManager.galAncestorsMap
-        // : visibleTilesManager.ancestorsMap
         this._ancestorTiles.forEach((ancestor) => {
             ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
         });
@@ -15175,10 +15255,22 @@ exports.HiPS = HiPS;
 
 /***/ }),
 
-/***/ 3768:
+/***/ 3956:
 /***/ ((__unused_webpack_module, exports) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.WMTSAdapter = void 0;
 function replaceTokens(template, values) {
@@ -15275,6 +15367,18 @@ exports.WMTSAdapter = WMTSAdapter;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -15435,6 +15539,18 @@ exports.TileBuffer = TileBuffer;
 /***/ 4382:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 const healpixjs_1 = __webpack_require__(1138);
@@ -15495,6 +15611,18 @@ exports["default"] = global;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -15599,6 +15727,18 @@ exports["default"] = MouseHelper;
 /***/ 4595:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -15610,7 +15750,7 @@ const Global_js_1 = __importDefault(__webpack_require__(4382));
 const gl_matrix_1 = __webpack_require__(1961);
 const FoVHelper_js_1 = __webpack_require__(229);
 const FoVUtils_js_1 = __webpack_require__(8083);
-const FoV_js_1 = __webpack_require__(3576);
+const SphereFoV_js_1 = __webpack_require__(5803);
 const CoordsType_js_1 = __webpack_require__(8145);
 const Point_js_1 = __webpack_require__(6553);
 const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
@@ -15628,7 +15768,7 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     fragmentShader;
     vertexShader;
     defaultColor = '#ec0acaff';
-    gridText = new GridTextHelper_js_1.default();
+    gridText = new GridTextHelper_js_1.default('healpix');
     // private _hipsShaderProgram: HiPSShaderProgram
     _attribLocations = {
         position: 0,
@@ -15665,7 +15805,7 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
         this._indexBuffer = super.webgl.createBuffer();
         this._vertexCataloguePosition = new Float32Array(0);
-        this._fovObj = new FoV_js_1.FoV(super.webgl);
+        this._fovObj = new SphereFoV_js_1.SphereFoV(super.webgl);
     }
     get fovObj() {
         return this._fovObj;
@@ -15894,9 +16034,10 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
                 // NDC divide
                 clipspace[0] /= clipspace[3];
                 clipspace[1] /= clipspace[3];
-                // clip → pixels
-                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
-                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
+                // clip -> CSS pixels
+                const canvasRect = gl.canvas.getBoundingClientRect();
+                const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                 this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
                 // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
             }
@@ -15917,6 +16058,18 @@ exports.HealpixGrid = HealpixGrid;
 /***/ 4639:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 /**
  * @author Fabrizio Giordano (Fab)
  */
@@ -16036,6 +16189,18 @@ exports["default"] = RayPickingUtils;
 /***/ 4707:
 /***/ ((__unused_webpack_module, exports) => {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 // GridShaderManager.ts
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -16073,6 +16238,18 @@ exports["default"] = GridShaderManager;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -16091,9 +16268,11 @@ const EquatorialGrid_js_1 = __webpack_require__(9839);
 const HealpixGrid_js_1 = __webpack_require__(4595);
 const CoordsType_js_1 = __webpack_require__(8145);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
-const XYZLayer_js_1 = __webpack_require__(2502);
 const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
-const WMTSAdapter_js_1 = __webpack_require__(3768);
+const WMTSAdapter_js_1 = __webpack_require__(3956);
+const XYZMapDescriptor_js_1 = __webpack_require__(8868);
+const XYZMap_js_1 = __webpack_require__(1741);
+const gl_matrix_1 = __webpack_require__(1961);
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -16118,7 +16297,7 @@ class AstroSphere {
     pointerDownY = null;
     pointerDownAt = 0;
     _activeHiPS = null;
-    _activeXYZ = null;
+    _activeXYZ2 = null;
     _activeBaseLayer = null;
     startup = true;
     fov;
@@ -16130,6 +16309,9 @@ class AstroSphere {
     lastHoveredSource = null;
     lastHoveredCatalogue = null;
     zoomSensitivity = 1.0;
+    lockedEastWestRaDeg = null;
+    lockedNorthSouthDecDeg = null;
+    keepCameraNorthUp = false;
     constructor(canvas, webgl) {
         console.log('[AstroSphere] new instance for canvas', canvas.id);
         // Keep global GL context (as in original JS)
@@ -16228,6 +16410,118 @@ class AstroSphere {
     }
     getZoomSensitivity() {
         return this.zoomSensitivity;
+    }
+    filterRotationDeltaByAstroLocks(deltaX, deltaY) {
+        const lockEastWest = this._camera.isRotationLockedY();
+        const lockNorthSouth = this._camera.isRotationLockedX();
+        if (!lockEastWest && !lockNorthSouth) {
+            return { deltaX, deltaY };
+        }
+        const center = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(this.canvas.clientWidth / 2, this.canvas.clientHeight / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        if (!center || center.length < 3) {
+            return { deltaX, deltaY };
+        }
+        const centerVec = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.fromValues(center[0], center[1], center[2]));
+        const northAxis = gl_matrix_1.vec3.fromValues(0, 0, 1);
+        const eastVec = gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), northAxis, centerVec);
+        if (gl_matrix_1.vec3.length(eastVec) < 1e-6) {
+            gl_matrix_1.vec3.set(eastVec, 1, 0, 0);
+        }
+        else {
+            gl_matrix_1.vec3.normalize(eastVec, eastVec);
+        }
+        const northProjection = gl_matrix_1.vec3.scale(gl_matrix_1.vec3.create(), centerVec, gl_matrix_1.vec3.dot(northAxis, centerVec));
+        const northVec = gl_matrix_1.vec3.subtract(gl_matrix_1.vec3.create(), northAxis, northProjection);
+        if (gl_matrix_1.vec3.length(northVec) < 1e-6) {
+            gl_matrix_1.vec3.cross(northVec, centerVec, eastVec);
+        }
+        gl_matrix_1.vec3.normalize(northVec, northVec);
+        const eastScreen = this.projectModelDirectionToScreen(centerVec, eastVec);
+        const northScreen = this.projectModelDirectionToScreen(centerVec, northVec);
+        if (!eastScreen || !northScreen) {
+            return { deltaX, deltaY };
+        }
+        let nextDeltaX = deltaX;
+        let nextDeltaY = deltaY;
+        if (lockEastWest) {
+            const amount = nextDeltaX * eastScreen.x + nextDeltaY * eastScreen.y;
+            nextDeltaX -= amount * eastScreen.x;
+            nextDeltaY -= amount * eastScreen.y;
+        }
+        if (lockNorthSouth) {
+            const amount = nextDeltaX * northScreen.x + nextDeltaY * northScreen.y;
+            nextDeltaX -= amount * northScreen.x;
+            nextDeltaY -= amount * northScreen.y;
+        }
+        return {
+            deltaX: nextDeltaX,
+            deltaY: nextDeltaY,
+        };
+    }
+    projectModelDirectionToScreen(centerModel, directionModel) {
+        const offsetModel = gl_matrix_1.vec3.scaleAndAdd(gl_matrix_1.vec3.create(), centerModel, directionModel, 0.01);
+        const centerScreen = this.projectModelPointToScreen(centerModel);
+        const offsetScreen = this.projectModelPointToScreen(offsetModel);
+        if (!centerScreen || !offsetScreen) {
+            return null;
+        }
+        const x = offsetScreen.x - centerScreen.x;
+        const y = offsetScreen.y - centerScreen.y;
+        const len = Math.hypot(x, y);
+        if (len < 1e-6) {
+            return null;
+        }
+        return { x: x / len, y: y / len };
+    }
+    projectModelPointToScreen(pointModel) {
+        const vMatrix = this._camera.getCameraMatrix();
+        const mMatrix = this._healpixGrid.getModelMatrix();
+        const mvMatrix = gl_matrix_1.mat4.create();
+        const mvpMatrix = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        gl_matrix_1.mat4.multiply(mvpMatrix, this._perspectiveMatrixManager.pMatrix, mvMatrix);
+        const clip = gl_matrix_1.vec4.fromValues(pointModel[0], pointModel[1], pointModel[2], 1);
+        gl_matrix_1.vec4.transformMat4(clip, clip, mvpMatrix);
+        if (Math.abs(clip[3]) < 1e-6) {
+            return null;
+        }
+        return {
+            x: clip[0] / clip[3],
+            y: -(clip[1] / clip[3]),
+        };
+    }
+    enforceAstronomicalRotationLocks() {
+        if (this.lockedEastWestRaDeg == null && this.lockedNorthSouthDecDeg == null) {
+            return false;
+        }
+        const center = this.updateCentralPoint();
+        if (!center) {
+            return false;
+        }
+        const nextRa = this.lockedEastWestRaDeg ?? center.astroDeg.ra;
+        const nextDec = this.lockedNorthSouthDecDeg ?? center.astroDeg.dec;
+        const needsCorrection = Math.abs(nextRa - center.astroDeg.ra) > 1e-6 ||
+            Math.abs(nextDec - center.astroDeg.dec) > 1e-6;
+        if (!needsCorrection) {
+            return false;
+        }
+        this._camera.goTo(nextRa, nextDec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        this.updateCentralPoint();
+        return true;
+    }
+    enforceCameraNorthUp() {
+        if (!this.keepCameraNorthUp) {
+            return false;
+        }
+        const center = this.updateCentralPoint();
+        if (!center) {
+            return false;
+        }
+        this._camera.goTo(center.astroDeg.ra, center.astroDeg.dec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        this.updateCentralPoint();
+        return true;
     }
     emitCameraChanged(reason) {
         // avoid dispatch before scene is ready
@@ -16345,8 +16639,9 @@ class AstroSphere {
                 // Rotation deltas – either use client-space or local-space, but be consistent
                 const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
                 const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
-                this.inertiaX += 0.1 * deltaX;
-                this.inertiaY += 0.1 * deltaY;
+                const filteredDelta = this.filterRotationDeltaByAstroLocks(deltaX, deltaY);
+                this.inertiaX += 0.1 * filteredDelta.deltaX;
+                this.inertiaY += 0.1 * filteredDelta.deltaY;
                 this.updateCentralPoint();
             }
             else {
@@ -16498,12 +16793,17 @@ class AstroSphere {
         this._activeBaseLayer = 'hips';
     }
     activateXYZ(config) {
-        this._activeXYZ = new XYZLayer_js_1.XYZLayer(config, this._webgl);
+        this.activateXYZ2(new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384, 8, config.urlResolver));
+        this._activeBaseLayer = 'xyz';
+    }
+    activateXYZ2(config) {
+        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
         this._activeBaseLayer = 'xyz';
     }
     activateWMTS(config) {
         const adapter = new WMTSAdapter_js_1.WMTSAdapter(config);
-        this._activeXYZ = new XYZLayer_js_1.XYZLayer(adapter.toXYZLayerConfig(), this._webgl);
+        const xyzConfig = adapter.toXYZLayerConfig();
+        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor_js_1.XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : 'WMTS Earth2 Layer', xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
         this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
@@ -16538,7 +16838,39 @@ class AstroSphere {
     goTo(raDeg, decDeg) {
         this._camera.goTo(raDeg, decDeg);
     }
+    getActiveCoordinateMode() {
+        if (this._activeBaseLayer === 'xyz') {
+            return 'lonlat';
+        }
+        if (this._activeBaseLayer === 'hips' && this._activeHiPS?.isGalacticHips) {
+            return 'galactic';
+        }
+        return 'equatorial';
+    }
+    resetAxesOrientation() {
+        const center = this.updateCentralPoint();
+        if (!center)
+            return;
+        this.inertiaX = 0;
+        this.inertiaY = 0;
+        this._camera.goTo(center.astroDeg.ra, center.astroDeg.dec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        this.updateCentralPoint();
+        this._cameraStatusChanged = true;
+    }
+    setKeepCameraNorthUp(enabled) {
+        this.keepCameraNorthUp = enabled;
+        if (enabled) {
+            this.resetAxesOrientation();
+        }
+    }
+    isKeepCameraNorthUp() {
+        return this.keepCameraNorthUp;
+    }
     getFoV() {
+        if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
+            return this._activeXYZ2.getFoV();
+        }
         return this.fov;
     }
     getFoVPolygon() {
@@ -16624,10 +16956,11 @@ class AstroSphere {
         // return null
     }
     changeColorMap(cm) {
-        if (!this._activeHiPS)
+        if (!this._activeHiPS && !this._activeXYZ2)
             return;
         this._selectedColorMap = cm;
         this._activeHiPS?.changeColorMap(cm);
+        this._activeXYZ2?.changeColorMap(cm);
     }
     prevFov = 0;
     prevCentralRaDeg = null;
@@ -16636,12 +16969,36 @@ class AstroSphere {
         return this._activeHiPS;
     }
     get activeXYZ() {
-        return this._activeXYZ;
+        return this._activeXYZ2;
+    }
+    isLonLatGridVisible() {
+        return this._activeXYZ2?.isLonLatGridVisible() ?? false;
+    }
+    toggleLonLatGrid() {
+        return this._activeXYZ2?.toggleLonLatGrid() ?? false;
+    }
+    setEastWestRotationLocked(locked) {
+        this._camera.setRotationLock({ y: locked });
+        if (locked)
+            this.inertiaX = 0;
+        this.lockedEastWestRaDeg = locked ? this.updateCentralPoint()?.astroDeg.ra ?? null : null;
+    }
+    isEastWestRotationLocked() {
+        return this._camera.isRotationLockedY();
+    }
+    setNorthSouthRotationLocked(locked) {
+        this._camera.setRotationLock({ x: locked });
+        if (locked)
+            this.inertiaY = 0;
+        this.lockedNorthSouthDecDeg = locked ? this.updateCentralPoint()?.astroDeg.dec ?? null : null;
+    }
+    isNorthSouthRotationLocked() {
+        return this._camera.isRotationLockedX();
     }
     getXYZDebugStats() {
         return {
             activeBaseLayer: this._activeBaseLayer,
-            layer: this._activeXYZ?.getDebugStats() ?? null,
+            layer: this._activeXYZ2?.getDebugStats() ?? null,
             requests: XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getDebugStats(),
         };
     }
@@ -16650,7 +17007,7 @@ class AstroSphere {
             return;
         if (!this._webgl)
             return;
-        if (!this._activeHiPS && !this._activeXYZ)
+        if (!this._activeHiPS && !this._activeXYZ2)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -16687,12 +17044,17 @@ class AstroSphere {
         // Rotation inertia
         if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
             cameraRotated = true;
-            THETA = this.inertiaY;
-            PHI = this.inertiaX;
-            this.inertiaX *= 0.95;
-            this.inertiaY *= 0.95;
+            const filteredInertia = this.filterRotationDeltaByAstroLocks(this.inertiaX, this.inertiaY);
+            PHI = filteredInertia.deltaX;
+            THETA = filteredInertia.deltaY;
+            this.inertiaX = filteredInertia.deltaX * 0.95;
+            this.inertiaY = filteredInertia.deltaY * 0.95;
             this._camera.rotate(PHI, THETA);
             this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+            const lockCorrected = this.enforceAstronomicalRotationLocks();
+            if (!lockCorrected) {
+                this.enforceCameraNorthUp();
+            }
         }
         else {
             this.inertiaY = 0;
@@ -16751,7 +17113,7 @@ class AstroSphere {
             this._activeHiPS?.draw(skyEntityDrawInput);
         }
         if (this._activeBaseLayer === 'xyz') {
-            this._activeXYZ?.draw(skyEntityDrawInput);
+            this._activeXYZ2?.draw(skyEntityDrawInput);
         }
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
@@ -16773,14 +17135,14 @@ class AstroSphere {
             });
         }
         this.activeCatalogues.forEach(cat => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach(fst => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
@@ -16819,11 +17181,23 @@ exports["default"] = AstroSphere;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
-/**
- * @author Fabrizio Giordano (Fab)
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.AbstractSkyEntity = void 0;
+/**
+ * @author Fabrizio Giordano (Fab)
+ */
 const gl_matrix_1 = __webpack_require__(1961);
 const HiPSShaderProgram_js_1 = __webpack_require__(7786);
 class AbstractSkyEntity {
@@ -16973,6 +17347,18 @@ exports.AbstractSkyEntity = AbstractSkyEntity;
 /***/ 5087:
 /***/ ((__unused_webpack_module, exports) => {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 // HiPSDescriptor.ts
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
@@ -17115,97 +17501,100 @@ exports.HiPSDescriptor = HiPSDescriptor;
 /***/ ((__unused_webpack_module, exports) => {
 
 
-/**
- * @author Fabrizio Giordano (Fab)
- * @param in_radius - number
- * @param in_gl - GL context
- * @param in_position - array of double e.g. [0.0, 0.0, 0.0]
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 class GridTextHelper {
-    _divEqContainerElement;
-    _divHPXContainerElement;
-    _divSets;
-    _divSetNdx;
-    constructor() {
-        this._divEqContainerElement = document.querySelector('#gridcoords');
-        this._divHPXContainerElement = document.querySelector('#gridhpx');
-        this._divSetNdx = 0;
-        this._divSets = [];
+    static layers = new Map();
+    layer;
+    constructor(layer = 'equatorial') {
+        this.layer = layer;
+        GridTextHelper.getLayerState(layer);
     }
     initHtml() {
-        // Kept for API parity; nothing required here with current logic.
+        GridTextHelper.getLayerState(this.layer);
     }
-    resetDivSets() {
-        // Hide remaining divs and reset index
-        for (; this._divSetNdx < this._divSets.length; ++this._divSetNdx) {
-            this._divSets[this._divSetNdx].style.display = 'none';
+    resetDivSets(layer = this.layer) {
+        const state = GridTextHelper.getLayerState(layer);
+        for (; state.divSetNdx < state.divSets.length; ++state.divSetNdx) {
+            state.divSets[state.divSetNdx].style.display = 'none';
         }
-        this._divSetNdx = 0;
+        state.divSetNdx = 0;
     }
-    /**
-     * Add / reuse a floating label for HPX coordinates
-     */
     addHPXDivSet(msg, x, y) {
-        let divSet = this._divSets[this._divSetNdx++];
-        // Create on demand
+        this.addLabel('healpix', msg, x + 25, y, 'hpx');
+    }
+    addEqDivSet(msg, x, y, type) {
+        this.addLabel('equatorial', msg, type === 'ra' ? x + 25 : x, type === 'ra' ? y : y + 25, type);
+    }
+    addLonLatDivSet(msg, x, y, type) {
+        this.addLabel('lonlat', msg, type === 'lon' ? x + 25 : x, type === 'lon' ? y : y + 25, type);
+    }
+    addLabel(layer, msg, x, y, kind) {
+        const state = GridTextHelper.getLayerState(layer);
+        if (!state.container)
+            return;
+        let divSet = state.divSets[state.divSetNdx++];
         if (!divSet) {
             const div = document.createElement('div');
             const textNode = document.createTextNode('');
-            div.className = 'floating-div-ra'; // style like RA tags
             div.appendChild(textNode);
-            if (!this._divHPXContainerElement) {
-                this._divHPXContainerElement = document.querySelector('#gridhpx');
-            }
-            if (!this._divHPXContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divHPXContainerElement.appendChild(div);
+            state.container.appendChild(div);
             divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
+            state.divSets.push(divSet);
         }
-        // Show & position
+        divSet.div.className = this.classNameForKind(kind);
         divSet.style.display = 'block';
-        divSet.style.left = `${Math.floor(x + 25)}px`;
+        divSet.style.left = `${Math.floor(x)}px`;
         divSet.style.top = `${Math.floor(y)}px`;
         divSet.textNode.nodeValue = msg;
     }
-    /**
-     * Add / reuse a floating label for Equatorial coords
-     * @param type 'ra' or 'dec'
-     */
-    addEqDivSet(msg, x, y, type) {
-        let divSet = this._divSets[this._divSetNdx++];
-        if (!divSet) {
-            const div = document.createElement('div');
-            const textNode = document.createTextNode('');
-            div.className = type === 'ra' ? 'floating-div-ra' : 'floating-div-dec';
-            div.appendChild(textNode);
-            if (!this._divEqContainerElement) {
-                this._divEqContainerElement = document.querySelector('#gridcoords');
-            }
-            if (!this._divEqContainerElement) {
-                // If container is still missing, abort gracefully
-                return;
-            }
-            this._divEqContainerElement.appendChild(div);
-            divSet = { div, textNode, style: div.style };
-            this._divSets.push(divSet);
+    classNameForKind(kind) {
+        switch (kind) {
+            case 'dec':
+                return 'floating-div-dec';
+            case 'lat':
+                return 'floating-div-lat';
+            case 'lon':
+                return 'floating-div-lon';
+            case 'hpx':
+            case 'ra':
+            default:
+                return 'floating-div-ra';
         }
-        divSet.style.display = 'block';
-        if (type === 'ra') {
-            divSet.style.left = `${Math.floor(x + 25)}px`;
-            divSet.style.top = `${Math.floor(y)}px`;
+    }
+    static getLayerState(layer) {
+        const current = GridTextHelper.layers.get(layer);
+        if (current) {
+            if (!current.container)
+                current.container = GridTextHelper.resolveContainer(layer);
+            return current;
         }
-        else {
-            divSet.style.left = `${Math.floor(x)}px`;
-            divSet.style.top = `${Math.floor(y + 25)}px`;
+        const state = {
+            container: GridTextHelper.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
+        GridTextHelper.layers.set(layer, state);
+        return state;
+    }
+    static resolveContainer(layer) {
+        if (layer === 'healpix') {
+            return document.querySelector('#gridhpx');
         }
-        divSet.textNode.nodeValue = msg;
+        return document.querySelector('#gridcoords');
     }
 }
-// export const gridTextHelper = new GridTextHelper();
 exports["default"] = GridTextHelper;
 
 
@@ -17215,6 +17604,18 @@ exports["default"] = GridTextHelper;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MetadataManager = void 0;
 const MetadataColumn_js_1 = __webpack_require__(1072);
@@ -17342,6 +17743,18 @@ exports.MetadataManager = MetadataManager;
 /***/ ((__unused_webpack_module, exports) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.xyzTileRequestScheduler = exports.XYZTileRequestScheduler = exports.XYZTileRequestError = void 0;
 class XYZTileRequestError extends Error {
@@ -17420,9 +17833,8 @@ class XYZTileRequestScheduler {
     pump() {
         while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
             const item = this._queue.shift();
-            if (!item) {
+            if (!item)
                 return;
-            }
             const hostCooldown = this.getHostCooldown(item.url);
             const now = Date.now();
             if (hostCooldown > now) {
@@ -17515,6 +17927,18 @@ exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TerraPointSetGL = void 0;
 const CatalogueGL_js_1 = __webpack_require__(1232);
@@ -17526,11 +17950,228 @@ exports.TerraPointSetGL = TerraPointSetGL;
 
 /***/ }),
 
+/***/ 5803:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SphereFoV = void 0;
+const gl_matrix_1 = __webpack_require__(1961);
+const Utils_js_1 = __webpack_require__(7930);
+class SphereFoV {
+    static MIN_FOV_DEG = 1e-6;
+    fovXDeg = 180;
+    fovYDeg = 180;
+    ratio = 0;
+    _minFoV = 180;
+    _webgl;
+    _lastModel = null;
+    _lastCamera = null;
+    constructor(webgl) {
+        this._webgl = webgl;
+    }
+    getFoV(insideSphere, model, camera, pMatrix) {
+        this._lastModel = model;
+        this._lastCamera = camera;
+        const canvas = this._webgl.canvas;
+        if (!canvas) {
+            this.fovXDeg = 180;
+            this.fovYDeg = 180;
+            this._minFoV = this.minFoV;
+            return this;
+        }
+        const rect = canvas.getBoundingClientRect();
+        const canvasWidth = rect.width;
+        const canvasHeight = rect.height;
+        this.fovXDeg = this.computeAngle(0, canvasHeight / 2, insideSphere, model, camera, pMatrix).angleDeg;
+        this.fovYDeg = this.computeAngle(canvasWidth / 2, 0, insideSphere, model, camera, pMatrix).angleDeg;
+        this._minFoV = this.minFoV;
+        this.ratio = this.computeRatio(camera);
+        return this;
+    }
+    computeRatio(camera) {
+        const pos = camera.getCameraPosition();
+        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+        return distanceFromCenter / this.fovYDeg;
+    }
+    get minFoV() {
+        const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        this._minFoV = Math.max(minFov, SphereFoV.MIN_FOV_DEG);
+        return this._minFoV;
+    }
+    get xFoV() {
+        return this.fovXDeg;
+    }
+    get yFoV() {
+        return this.fovYDeg;
+    }
+    computeDistanceFromAngle(angleDeg) {
+        return angleDeg * this.ratio;
+    }
+    changeMinFov(deg) {
+        if (this.fovYDeg <= this.fovXDeg) {
+            this.fovYDeg = deg;
+        }
+        else {
+            this.fovXDeg = deg;
+        }
+        this.minFoV;
+    }
+    computeCameraPositionForMinFoV(targetMinFoVDeg) {
+        return this.computeCameraPositionForFoV(targetMinFoVDeg);
+    }
+    computeCameraPositionForFoV(targetFoVDeg) {
+        return this.computeCameraPositionForAngularDiameter(targetFoVDeg);
+    }
+    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
+        if (!this._lastModel || !this._lastCamera) {
+            return [0, 0, 0];
+        }
+        const eps = 1e-6;
+        const clamped = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
+        const halfRad = (clamped * Math.PI) / 360.0;
+        const sinHalf = Math.sin(halfRad);
+        if (sinHalf <= 0) {
+            return [0, 0, 0];
+        }
+        const model = this._lastModel;
+        const camera = this._lastCamera;
+        const targetDistance = Math.max(model.radius / sinHalf, model.radius + 1e-4);
+        const camPos = camera.getCameraPosition();
+        const direction = gl_matrix_1.vec3.fromValues(camPos[0] - model.center[0], camPos[1] - model.center[1], camPos[2] - model.center[2]);
+        if (gl_matrix_1.vec3.length(direction) < eps) {
+            gl_matrix_1.vec3.set(direction, 0, 0, 1);
+        }
+        else {
+            gl_matrix_1.vec3.normalize(direction, direction);
+        }
+        return [
+            model.center[0] + direction[0] * targetDistance,
+            model.center[1] + direction[1] * targetDistance,
+            model.center[2] + direction[2] * targetDistance,
+        ];
+    }
+    computeAngle(canvasX, canvasY, insideSphere, model, camera, pMatrix) {
+        const canvas = this._webgl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const centerHit = this.getIntersectionPointWithModel(rect.width / 2, rect.height / 2, model, camera, pMatrix);
+        const edgeHit = this.getIntersectionPointWithModel(canvasX, canvasY, model, camera, pMatrix);
+        if (!centerHit || !edgeHit) {
+            return { angleDeg: 180, distance: -1 };
+        }
+        const angleDeg = 2 * this.computeAngularDistanceDeg(centerHit.point, edgeHit.point);
+        return {
+            angleDeg: insideSphere ? 360 - angleDeg : angleDeg,
+            distance: edgeHit.distance,
+        };
+    }
+    computeAngularDistanceDeg(a, b) {
+        const aNorm = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), a);
+        const bNorm = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), b);
+        const dot = gl_matrix_1.vec3.dot(aNorm, bNorm);
+        const clamped = Math.min(1, Math.max(-1, dot));
+        return (0, Utils_js_1.radToDeg)(Math.acos(clamped));
+    }
+    getIntersectionPointWithModel(mouseX, mouseY, model, camera, pMatrix) {
+        const rayWorld = this.getRayFromMouse(mouseX, mouseY, pMatrix, camera.getCameraMatrix());
+        const distance = this.raySphere(camera.getCameraPosition(), rayWorld, model);
+        if (distance < 0) {
+            return null;
+        }
+        const worldHit = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.scale(worldHit, rayWorld, distance);
+        gl_matrix_1.vec3.add(worldHit, camera.getCameraPosition(), worldHit);
+        const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
+        const modelHit4 = [0, 0, 0, 0];
+        this.mat4MultiplyVec4(model.getModelMatrixInverse(), worldHit4, modelHit4);
+        return {
+            point: gl_matrix_1.vec3.fromValues(modelHit4[0], modelHit4[1], modelHit4[2]),
+            distance,
+        };
+    }
+    getRayFromMouse(mouseX, mouseY, pMatrix, vMatrix) {
+        const gl = this._webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const x = (2.0 * mouseX) / rect.width - 1.0;
+        const y = 1.0 - (2.0 * mouseY) / rect.height;
+        const rayClip = [x, y, -1.0, 1.0];
+        const pInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(pInv, pMatrix);
+        const rayEye4 = [0, 0, 0, 0];
+        this.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+        const vInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(vInv, vMatrix);
+        const rayWorld4 = [0, 0, 0, 0];
+        this.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+        const rayWorld = gl_matrix_1.vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+        gl_matrix_1.vec3.normalize(rayWorld, rayWorld);
+        return rayWorld;
+    }
+    raySphere(rayOrigWorld, rayDirectionWorld, sphere) {
+        let intersectionDistance = -1;
+        const L = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.subtract(L, rayOrigWorld, sphere.center);
+        const b = gl_matrix_1.vec3.dot(rayDirectionWorld, L);
+        const c = gl_matrix_1.vec3.dot(L, L) - sphere.radius * sphere.radius;
+        const disc = b * b - c;
+        if (disc > 0.0) {
+            const s = Math.sqrt(disc);
+            const ta = -b + s;
+            const tb = -b - s;
+            if (ta >= 0.0 || tb >= 0.0) {
+                intersectionDistance = tb < 0.0 ? ta : Math.min(ta, tb);
+            }
+        }
+        else if (disc === 0.0) {
+            const t = -b;
+            if (t >= 0.0) {
+                intersectionDistance = t;
+            }
+        }
+        return intersectionDistance;
+    }
+    mat4MultiplyVec4(m, v, out) {
+        out[0] = m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12] * v[3];
+        out[1] = m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13] * v[3];
+        out[2] = m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3];
+        out[3] = m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3];
+    }
+}
+exports.SphereFoV = SphereFoV;
+
+
+/***/ }),
+
 /***/ 5947:
 /***/ ((__unused_webpack_module, exports) => {
 
 
-// ShaderManager.ts
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 class ShaderManager {
     static catalogueVS() {
@@ -17882,6 +18523,18 @@ exports["default"] = ShaderManager;
 /***/ 6553:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 /**
  * @author Fabrizio Giordano (Fab77)
  */
@@ -18025,214 +18678,86 @@ exports.Point = Point;
 /***/ }),
 
 /***/ 6937:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZVisibleTilesManager = void 0;
+const XYZRayPickingUtils_js_1 = __importDefault(__webpack_require__(2166));
 class XYZVisibleTilesManager {
-    _provider;
-    constructor(provider) {
-        this._provider = provider;
+    _ancestorsMap = new Map();
+    _visibleTilesMap = new Map();
+    _visibleTiles = [];
+    _selection = {
+        key: '0:',
+        currentZoom: 0,
+        visibleTiles: [],
+        visibleTilesMap: new Map(),
+        ancestorsMap: new Map(),
+    };
+    get ancestorsMap() {
+        return this._ancestorsMap;
     }
-    selectTiles(input) {
-        const currentZoom = this._provider.resolveZoom(input.fovDeg ?? 180);
-        const coreTiles = this.orderTilesByScreenRelevance(this.buildCoreVisibleTiles(currentZoom, input), currentZoom, input.centerSphericalDeg ?? null);
-        const coverageTiles = this.orderTilesByScreenRelevance(this.buildCoverageTiles(currentZoom, input, coreTiles), currentZoom, input.centerSphericalDeg ?? null);
-        const currentTiles = [...coreTiles, ...coverageTiles];
-        const fallbackSeedTiles = this.buildFallbackSeedTiles(coreTiles, currentZoom, input.centerSphericalDeg ?? null);
-        const fallbackTiles = this.orderFallbackTiles(Array.from(this.buildFallbackMap(fallbackSeedTiles, currentZoom).values()), currentZoom, input.centerSphericalDeg ?? null);
-        const key = `${currentZoom}:${currentTiles.map((tile) => `${tile.x}/${tile.y}`).join('|')}`;
-        return {
-            key,
-            currentTiles,
-            fallbackTiles,
-            currentZoom,
-            coreTileCount: coreTiles.length,
-            coverageTileCount: coverageTiles.length,
+    get visibleTiles() {
+        return this._visibleTiles;
+    }
+    get visibleTilesMap() {
+        return this._visibleTilesMap;
+    }
+    get selection() {
+        return this._selection;
+    }
+    computeVisibleTiles(z, xyzModel, webgl, camera, pMatrix, sampleCount = 9, padding = 2) {
+        this._visibleTiles = XYZRayPickingUtils_js_1.default.getVisibleTilesFromViewport(z, xyzModel, webgl, camera, pMatrix, sampleCount, padding);
+        this._visibleTilesMap = this.buildTileMap(this._visibleTiles);
+        this.refreshAncestorsMap(this._visibleTiles);
+        this._selection = {
+            key: this.buildSelectionKey(z, this._visibleTiles),
+            currentZoom: z,
+            visibleTiles: this._visibleTiles,
+            visibleTilesMap: this._visibleTilesMap,
+            ancestorsMap: this._ancestorsMap,
         };
+        return this._selection;
     }
-    buildCoreVisibleTiles(currentZoom, input) {
-        const samples = this.collectCoverageSamples(input);
-        if (samples.length === 0) {
-            return this._provider.getVisibleTilesAtZoom(currentZoom, null, [], [], 0);
-        }
-        const tiles = [];
-        for (const sample of samples) {
-            tiles.push(this._provider.tileFromSpherical(currentZoom, sample));
-        }
-        return this._provider.deduplicateTiles(tiles);
-    }
-    buildCoverageTiles(currentZoom, input, coreTiles) {
-        if (coreTiles.length === 0) {
-            return [];
-        }
-        const ring = this.getNeighborRing(currentZoom, input.fovDeg ?? 180);
-        if (ring <= 0) {
-            return [];
-        }
-        const coreSet = new Set(coreTiles.map((tile) => this.key(tile)));
-        const coverageTiles = [];
-        for (const tile of coreTiles) {
-            if (!this.isBoundaryTile(tile, coreSet)) {
-                continue;
-            }
-            const neighbors = this._provider.getNeighborTiles(tile, ring);
-            for (const neighbor of neighbors) {
-                const neighborKey = this.key(neighbor);
-                if (coreSet.has(neighborKey)) {
-                    continue;
-                }
-                coverageTiles.push(neighbor);
-            }
-        }
-        return this._provider.deduplicateTiles(coverageTiles);
-    }
-    collectCoverageSamples(input) {
-        const samples = [];
-        if (input.centerSphericalDeg) {
-            samples.push(input.centerSphericalDeg);
-        }
-        for (const sample of input.viewportSphericalSamples ?? []) {
-            samples.push(sample);
-        }
-        const polygonSamples = this.interpolateFoVPolygon(input.fovPolygon ?? []);
-        for (const sample of polygonSamples) {
-            samples.push(sample);
-        }
-        return samples;
-    }
-    interpolateFoVPolygon(fovPolygon) {
-        if (fovPolygon.length === 0) {
-            return [];
-        }
-        const polygonSpherical = fovPolygon.map((point) => ({
-            phi: point.raDeg < 0 ? point.raDeg + 360 : point.raDeg,
-            theta: 90 - point.decDeg,
-        }));
-        const samples = [...polygonSpherical];
-        const segmentInterpolationCount = polygonSpherical.length >= 4 ? 3 : 1;
-        for (let i = 0; i < polygonSpherical.length; i++) {
-            const start = polygonSpherical[i];
-            const end = polygonSpherical[(i + 1) % polygonSpherical.length];
-            if (!start || !end)
-                continue;
-            const startPhi = this.normalizePhi(start.phi);
-            let endPhi = this.normalizePhi(end.phi);
-            if (Math.abs(endPhi - startPhi) > 180) {
-                endPhi += endPhi > startPhi ? -360 : 360;
-            }
-            for (let step = 1; step <= segmentInterpolationCount; step++) {
-                const t = step / (segmentInterpolationCount + 1);
-                const phi = this.normalizePhi(startPhi + (endPhi - startPhi) * t);
-                const theta = start.theta + (end.theta - start.theta) * t;
-                samples.push({ phi, theta });
-            }
-        }
-        return samples;
-    }
-    getNeighborRing(currentZoom, fovDeg) {
-        if (currentZoom >= 14 && fovDeg < 10) {
-            return 0;
-        }
-        return 1;
-    }
-    isBoundaryTile(tile, coreTileKeys) {
-        const directNeighbors = [
-            { z: tile.z, x: tile.x - 1, y: tile.y },
-            { z: tile.z, x: tile.x + 1, y: tile.y },
-            { z: tile.z, x: tile.x, y: tile.y - 1 },
-            { z: tile.z, x: tile.x, y: tile.y + 1 },
-        ];
-        return directNeighbors.some((neighbor) => !coreTileKeys.has(this.key(this.normalizeTile(neighbor))));
-    }
-    normalizeTile(tile) {
-        const dim = 2 ** tile.z;
-        return {
-            z: tile.z,
-            x: ((tile.x % dim) + dim) % dim,
-            y: Math.max(0, Math.min(dim - 1, tile.y)),
-        };
-    }
-    normalizePhi(phi) {
-        let value = phi;
-        while (value < 0)
-            value += 360;
-        while (value >= 360)
-            value -= 360;
-        return value;
-    }
-    buildFallbackMap(currentTiles, currentZoom) {
-        const fallbackMap = new Map();
-        const minFallbackZoom = Math.max(this._provider.minZoom, currentZoom - 2);
-        for (let z = currentZoom - 1; z >= minFallbackZoom; z--) {
-            const dz = currentZoom - z;
-            for (const tile of currentTiles) {
-                const fallback = {
+    refreshAncestorsMap(visibleTiles) {
+        this._ancestorsMap.clear();
+        for (const tile of visibleTiles) {
+            for (let z = tile.z - 1; z >= 0; z--) {
+                const dz = tile.z - z;
+                const ancestor = {
                     z,
                     x: tile.x >> dz,
                     y: tile.y >> dz,
                 };
-                fallbackMap.set(`${fallback.z}/${fallback.x}/${fallback.y}`, fallback);
+                this._ancestorsMap.set(`${ancestor.z}/${ancestor.x}/${ancestor.y}`, ancestor);
             }
         }
-        return fallbackMap;
     }
-    buildFallbackSeedTiles(coreTiles, zoom, centerSphericalDeg) {
-        if (coreTiles.length === 0) {
-            return [];
+    buildTileMap(tiles) {
+        const map = new Map();
+        for (const tile of tiles) {
+            map.set(this.key(tile), tile);
         }
-        const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);
-        if (!centerTile) {
-            return coreTiles;
-        }
-        const centerKey = this.key(centerTile);
-        if (coreTiles.some((tile) => this.key(tile) === centerKey)) {
-            return coreTiles;
-        }
-        return [...coreTiles, centerTile];
+        return map;
     }
-    orderTilesByScreenRelevance(tiles, zoom, centerSphericalDeg) {
-        const centerTile = this.getCenterTileCoord(zoom, centerSphericalDeg);
-        if (!centerTile) {
-            return tiles;
-        }
-        return [...tiles].sort((a, b) => {
-            const distanceA = Math.abs(a.x - centerTile.x) + Math.abs(a.y - centerTile.y);
-            const distanceB = Math.abs(b.x - centerTile.x) + Math.abs(b.y - centerTile.y);
-            return distanceA - distanceB;
-        });
-    }
-    orderFallbackTiles(tiles, currentZoom, centerSphericalDeg) {
-        return [...tiles].sort((a, b) => {
-            if (b.z !== a.z) {
-                return b.z - a.z;
-            }
-            const centerTileA = this.getCenterTileCoord(a.z, centerSphericalDeg);
-            const centerTileB = this.getCenterTileCoord(b.z, centerSphericalDeg);
-            if (!centerTileA || !centerTileB) {
-                return 0;
-            }
-            const distanceA = Math.abs(a.x - centerTileA.x) + Math.abs(a.y - centerTileA.y);
-            const distanceB = Math.abs(b.x - centerTileB.x) + Math.abs(b.y - centerTileB.y);
-            return distanceA - distanceB || currentZoom - a.z - (currentZoom - b.z);
-        });
-    }
-    getCenterTileCoord(zoom, centerSphericalDeg) {
-        if (!centerSphericalDeg) {
-            return null;
-        }
-        const lonDeg = centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi;
-        const latDeg = 90 - centerSphericalDeg.theta;
-        const dim = 2 ** zoom;
-        const x = Math.floor(((lonDeg + 180) / 360) * dim);
-        const latRad = (Math.max(-85.0511287798066, Math.min(85.0511287798066, latDeg)) * Math.PI) / 180;
-        const y = Math.floor(((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * dim);
-        return {
-            z: zoom,
-            x: ((x % dim) + dim) % dim,
-            y: Math.max(0, Math.min(dim - 1, y)),
-        };
+    buildSelectionKey(z, tiles) {
+        return `${z}:${tiles.map((tile) => `${tile.x}/${tile.y}`).join('|')}`;
     }
     key(tile) {
         return `${tile.z}/${tile.x}/${tile.y}`;
@@ -18247,6 +18772,18 @@ exports.XYZVisibleTilesManager = XYZVisibleTilesManager;
 /***/ ((__unused_webpack_module, exports) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 class Point2D {
     _x;
@@ -18271,6 +18808,18 @@ exports["default"] = Point2D;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -18321,10 +18870,19 @@ class Camera {
     }
     goToPhiTheta(ptDeg) {
         const xyz = (0, Utils_js_1.sphericalToCartesian)(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
+        const targetDirection = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.fromValues(xyz[0], xyz[1], xyz[2]));
+        const celestialNorth = gl_matrix_1.vec3.fromValues(0.0, 0.0, 1.0);
+        const northProjection = gl_matrix_1.vec3.scale(gl_matrix_1.vec3.create(), targetDirection, gl_matrix_1.vec3.dot(celestialNorth, targetDirection));
+        const cameraUp = gl_matrix_1.vec3.subtract(gl_matrix_1.vec3.create(), celestialNorth, northProjection);
+        if (gl_matrix_1.vec3.length(cameraUp) < 1e-6) {
+            gl_matrix_1.vec3.set(cameraUp, 0.0, 1.0, 0.0);
+        }
+        else {
+            gl_matrix_1.vec3.normalize(cameraUp, cameraUp);
+        }
         let cameraMatrix = gl_matrix_1.mat4.create();
         cameraMatrix = gl_matrix_1.mat4.translate(cameraMatrix, cameraMatrix, gl_matrix_1.vec3.fromValues(xyz[0], xyz[1], xyz[2]));
         const focusPoint = [0.0, 0.0, 0.0];
-        const cameraUp = gl_matrix_1.vec3.clone([0.0, 1.0, 0.0]);
         const cameraPos = [cameraMatrix[12], cameraMatrix[13], cameraMatrix[14]];
         cameraMatrix = gl_matrix_1.mat4.targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
         this.R = gl_matrix_1.mat4.clone(cameraMatrix);
@@ -18477,10 +19035,6 @@ class Camera {
         const totRot = Math.sqrt(phi * phi + theta * theta);
         if (totRot === 0)
             return;
-        // If both X and Y rotations are locked, nothing to do
-        if (this.lockRotX && this.lockRotY) {
-            return;
-        }
         const pos = this.getCameraPosition();
         const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
         const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
@@ -18491,9 +19045,8 @@ class Camera {
         const normalizedFoV = Math.min(1, this.FoV / 18);
         const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
         const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
-        // Build an axis from phi/theta, but zero components that are locked
-        let axisX = this.lockRotX ? 0 : theta;
-        let axisY = this.lockRotY ? 0 : phi;
+        let axisX = theta;
+        let axisY = phi;
         const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
         // If after locking we have no axis left, do nothing
         if (axisLen === 0) {
@@ -18614,6 +19167,18 @@ exports["default"] = Camera;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -18884,6 +19449,18 @@ exports.HiPSShaderProgram = HiPSShaderProgram;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.cartesianToSpherical = cartesianToSpherical;
 exports.colorHex2RGB = colorHex2RGB;
@@ -18977,6 +19554,18 @@ function decDegToDMS(decDeg) {
 /***/ 8083:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
@@ -19203,10 +19792,294 @@ exports.FoVUtils = FoVUtils;
 
 /***/ }),
 
+/***/ 8124:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LatLonGrid = void 0;
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+const gl_matrix_1 = __webpack_require__(1961);
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const XYZFoVHelper_js_1 = __webpack_require__(8284);
+const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
+const Utils_js_1 = __webpack_require__(7930);
+const SphereFoV_js_1 = __webpack_require__(5803);
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+const GridTextHelper_js_1 = __importDefault(__webpack_require__(5361));
+class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    _attribLocations = {
+        position: 0,
+    };
+    _lonVertexPositionBuffer;
+    _latVertexPositionBuffer;
+    _lonStep = 10;
+    _latStep = 10;
+    _segmentStep = 1;
+    _fovObj;
+    _fovDeg = 180;
+    _showGrid = true;
+    _lonArray = [];
+    _latArray = [];
+    defaultColor = '#41d4d4';
+    gridText = new GridTextHelper_js_1.default('lonlat');
+    constructor(radius, position, xrad, yrad, name, webgl) {
+        super(radius, position, xrad, yrad, name, webgl);
+        this._fovObj = new SphereFoV_js_1.SphereFoV(webgl);
+        this.init();
+    }
+    init() {
+        this.initGL(super.webgl);
+        const gl = super.webgl;
+        this._shaderProgram = gl.createProgram();
+        this.initShaders();
+        this._lonVertexPositionBuffer = gl.createBuffer();
+        this._latVertexPositionBuffer = gl.createBuffer();
+        this.initBuffers(this._fovDeg);
+    }
+    initShaders() {
+        const gl = super.webgl;
+        const fsSource = GridShaderManager_js_1.default.healpixGridFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fsSource);
+        gl.compileShader(this._fragmentShader);
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            const log = gl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
+            console.error(log);
+            alert(log);
+            return;
+        }
+        const vsSource = GridShaderManager_js_1.default.healpixGridVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vsSource);
+        gl.compileShader(this._vertexShader);
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            const log = gl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
+            console.error(log);
+            alert(log);
+            return;
+        }
+        gl.attachShader(this._shaderProgram, this._vertexShader);
+        gl.attachShader(this._shaderProgram, this._fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this._shaderProgram);
+    }
+    initBuffers(fovDeg) {
+        const steps = XYZFoVHelper_js_1.xyzFovHelper.getLonLatSteps(fovDeg);
+        this._lonStep = steps.lonStep;
+        this._latStep = steps.latStep;
+        this._segmentStep = Math.max(Math.min(this._lonStep, this._latStep), 0.25);
+        this._lonArray = [];
+        this._latArray = [];
+        for (let lon = -180; lon < 180; lon += this._lonStep) {
+            const vertices = [];
+            for (let lat = -90; lat <= 90; lat += this._segmentStep) {
+                vertices.push(...this.lonLatToCartesian(lon, Math.min(lat, 90)));
+            }
+            this._lonArray.push(new Float32Array(vertices));
+        }
+        for (let lat = -90 + this._latStep; lat < 90; lat += this._latStep) {
+            const vertices = [];
+            for (let lon = -180; lon <= 180; lon += this._segmentStep) {
+                vertices.push(...this.lonLatToCartesian(Math.min(lon, 180), lat));
+            }
+            this._latArray.push(new Float32Array(vertices));
+        }
+    }
+    lonLatToCartesian(lonDeg, latDeg) {
+        const lonRad = (0, Utils_js_1.degToRad)(lonDeg);
+        const latRad = (0, Utils_js_1.degToRad)(latDeg);
+        const cosLat = Math.cos(latRad);
+        return [
+            cosLat * Math.cos(lonRad),
+            cosLat * Math.sin(lonRad),
+            Math.sin(latRad),
+        ];
+    }
+    refresh(fovDeg) {
+        if (Math.abs(this._fovDeg - fovDeg) > 1e-6) {
+            this._fovDeg = fovDeg;
+            this.initBuffers(this._fovDeg);
+        }
+    }
+    refreshFoV(input) {
+        if (!input.camera || !input.pMatrix)
+            return this._fovDeg;
+        this._fovObj.getFoV(Global_js_1.default.insideSphere, this, input.camera, input.pMatrix);
+        this.refresh(this._fovObj.minFoV);
+        return this._fovObj.minFoV;
+    }
+    getMinFoVDeg() {
+        return this._fovObj.minFoV;
+    }
+    getFoV() {
+        return this._fovObj;
+    }
+    isVisible() {
+        return this._showGrid;
+    }
+    toggleShowGrid() {
+        this._showGrid = !this._showGrid;
+        return this._showGrid;
+    }
+    setShowGrid(showGrid) {
+        this._showGrid = showGrid;
+    }
+    enableShader(mMatrix, pMatrix, vMatrix) {
+        const gl = super.webgl;
+        gl.useProgram(this._shaderProgram);
+        const mvMatrix = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uPMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        if (uMVMatrixLoc)
+            gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
+        if (uPMatrixLoc)
+            gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
+        if (uColor) {
+            const rgb = (0, Utils_js_1.colorHex2RGB)(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    draw(input) {
+        if (!this._showGrid) {
+            this.gridText.resetDivSets();
+            return;
+        }
+        const gl = super.webgl;
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refreshFoV(input);
+        const vMatrix = camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
+        const mMatrix = this.getModelMatrix();
+        this.enableShader(mMatrix, pMatrix, vMatrix);
+        for (const lonLine of this._lonArray) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._lonVertexPositionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, lonLine, gl.STATIC_DRAW);
+            gl.vertexAttribPointer(this._attribLocations.position, LatLonGrid.ELEM_SIZE, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(this._attribLocations.position);
+            gl.drawArrays(gl.LINE_STRIP, 0, lonLine.length / LatLonGrid.ELEM_SIZE);
+        }
+        for (const latLine of this._latArray) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._latVertexPositionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, latLine, gl.STATIC_DRAW);
+            gl.vertexAttribPointer(this._attribLocations.position, LatLonGrid.ELEM_SIZE, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(this._attribLocations.position);
+            gl.drawArrays(gl.LINE_LOOP, 0, latLine.length / LatLonGrid.ELEM_SIZE);
+        }
+        this.drawLabels(input, mMatrix, pMatrix, vMatrix);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    drawLabels(input, mMatrix, pMatrix, vMatrix) {
+        const center = input.centerSphericalDeg;
+        if (!center) {
+            this.gridText.resetDivSets();
+            return;
+        }
+        const centerLon = this.normalizeLon(center.phi > 180 ? center.phi - 360 : center.phi);
+        const centerLat = 90 - center.theta;
+        const lonLine = this.normalizeLon(this.roundToStep(centerLon, this._lonStep));
+        const latLine = Math.max(-90 + this._latStep, Math.min(90 - this._latStep, this.roundToStep(centerLat, this._latStep)));
+        const lonLabelPoint = this.lonLatToCartesian(lonLine, Math.max(-80, Math.min(80, centerLat)));
+        const latLabelPoint = this.lonLatToCartesian(centerLon, latLine);
+        const lonScreen = this.projectPointToScreen(lonLabelPoint, mMatrix, pMatrix, vMatrix);
+        if (lonScreen) {
+            this.gridText.addLonLatDivSet(`${lonLine.toFixed(0)}° lon`, lonScreen.x, lonScreen.y, 'lon');
+        }
+        const latScreen = this.projectPointToScreen(latLabelPoint, mMatrix, pMatrix, vMatrix);
+        if (latScreen) {
+            this.gridText.addLonLatDivSet(`${latLine.toFixed(0)}° lat`, latScreen.x, latScreen.y, 'lat');
+        }
+        this.gridText.resetDivSets();
+    }
+    projectPointToScreen(point, mMatrix, pMatrix, vMatrix) {
+        const mvMatrix = gl_matrix_1.mat4.create();
+        const mvpMatrix = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        gl_matrix_1.mat4.multiply(mvpMatrix, pMatrix, mvMatrix);
+        const clipspace = gl_matrix_1.vec4.fromValues(point[0], point[1], point[2], 1);
+        gl_matrix_1.vec4.transformMat4(clipspace, clipspace, mvpMatrix);
+        if (Math.abs(clipspace[3]) < 1e-6) {
+            return null;
+        }
+        clipspace[0] /= clipspace[3];
+        clipspace[1] /= clipspace[3];
+        if (clipspace[0] < -1 || clipspace[0] > 1 || clipspace[1] < -1 || clipspace[1] > 1) {
+            return null;
+        }
+        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+        return {
+            x: canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width,
+            y: canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height,
+        };
+    }
+    roundToStep(value, step) {
+        if (step <= 0)
+            return value;
+        return Math.round(value / step) * step;
+    }
+    normalizeLon(lonDeg) {
+        let lon = lonDeg;
+        while (lon < -180)
+            lon += 360;
+        while (lon > 180)
+            lon -= 360;
+        return lon;
+    }
+}
+exports.LatLonGrid = LatLonGrid;
+
+
+/***/ }),
+
 /***/ 8145:
 /***/ ((__unused_webpack_module, exports) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CoordsType = void 0;
 /**
@@ -19228,6 +20101,18 @@ var CoordsType;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -19591,10 +20476,132 @@ exports["default"] = Tile;
 
 /***/ }),
 
+/***/ 8284:
+/***/ ((__unused_webpack_module, exports) => {
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+// FoVHelper.ts
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.xyzFovHelper = void 0;
+class XYZFoVHelper {
+    getZoom(fov) {
+        if (fov >= 179)
+            return 2;
+        if (fov >= 90)
+            return 3;
+        if (fov >= 30)
+            return 4;
+        if (fov >= 20)
+            return 5;
+        if (fov >= 6)
+            return 6;
+        if (fov >= 3.2)
+            return 7;
+        if (fov >= 1.6)
+            return 8;
+        if (fov >= 0.85)
+            return 9;
+        if (fov >= 0.42)
+            return 10;
+        if (fov >= 0.21)
+            return 11;
+        if (fov >= 0.12)
+            return 12;
+        if (fov >= 0.06)
+            return 13;
+        if (fov >= 0.015)
+            return 14;
+        return 15;
+    }
+    // used in grid drawing
+    getLonLatSteps(fov) {
+        let lonStep;
+        let latStep;
+        if (fov >= 179) {
+            lonStep = 10;
+            latStep = 10;
+        }
+        else if (fov >= 25) {
+            lonStep = 9;
+            latStep = 9;
+        }
+        else if (fov >= 12.5) {
+            lonStep = 8;
+            latStep = 8;
+        }
+        else if (fov >= 6) {
+            lonStep = 6;
+            latStep = 6;
+        }
+        else if (fov >= 3.2) {
+            lonStep = 5;
+            latStep = 5;
+        }
+        else if (fov >= 1.6) {
+            lonStep = 4;
+            latStep = 4;
+        }
+        else if (fov >= 0.85) {
+            lonStep = 3;
+            latStep = 3;
+        }
+        else if (fov >= 0.42) {
+            lonStep = 2;
+            latStep = 2;
+        }
+        else if (fov >= 0.21) {
+            lonStep = 1;
+            latStep = 1;
+        }
+        else if (fov >= 0.12) {
+            lonStep = 0.5;
+            latStep = 0.5;
+        }
+        else if (fov >= 0.06) {
+            lonStep = 0.25;
+            latStep = 0.25;
+        }
+        else {
+            lonStep = 10;
+            latStep = 10;
+        }
+        return { lonStep, latStep };
+    }
+}
+exports.xyzFovHelper = new XYZFoVHelper();
+exports["default"] = XYZFoVHelper;
+
+
+/***/ }),
+
 /***/ 8819:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZMeshBuilder = void 0;
 const Utils_js_1 = __webpack_require__(7930);
@@ -19634,8 +20641,7 @@ class XYZMeshBuilder {
                 uvs[uv++] = 1 - v;
             }
         }
-        const triangleCount = segments * segments * 2;
-        const rawIndices = new Uint32Array(triangleCount * 3);
+        const rawIndices = new Uint32Array(segments * segments * 2 * 3);
         let i = 0;
         for (let row = 0; row < segments; row++) {
             for (let col = 0; col < segments; col++) {
@@ -19699,10 +20705,110 @@ exports.XYZMeshBuilder = XYZMeshBuilder;
 
 /***/ }),
 
+/***/ 8868:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMapDescriptor = void 0;
+class XYZMapDescriptor {
+    _name;
+    _url;
+    _urlResolver;
+    _minZoom;
+    _maxZoom;
+    _segmentsPerSide;
+    _tileSize;
+    _maxCachedTiles;
+    _interactionDebounceMs;
+    _subdomains;
+    _attribution;
+    _flipY;
+    _maxConcurrentLoads;
+    constructor(name, url, minZoom = 0, maxZoom = 8, segmentsPerSide = 16, maxCachedTiles = 384, maxConcurrentLoads = 8, urlResolver) {
+        this._name = name;
+        this._url = url;
+        this._urlResolver = urlResolver;
+        this._minZoom = minZoom;
+        this._maxZoom = maxZoom;
+        this._segmentsPerSide = segmentsPerSide;
+        this._maxCachedTiles = maxCachedTiles;
+        this._interactionDebounceMs = 100;
+        this._subdomains = ['a', 'b', 'c'];
+        this._attribution = '';
+        this._flipY = false;
+        this._maxConcurrentLoads = maxConcurrentLoads;
+    }
+    get url() {
+        return this._url;
+    }
+    get urlResolver() {
+        return this._urlResolver;
+    }
+    get name() {
+        return this._name;
+    }
+    get minZoom() {
+        return this._minZoom;
+    }
+    get maxZoom() {
+        return this._maxZoom;
+    }
+    get segmentsPerSide() {
+        return this._segmentsPerSide;
+    }
+    get maxCachedTiles() {
+        return this._maxCachedTiles;
+    }
+    get interactionDebounceMs() {
+        return this._interactionDebounceMs;
+    }
+    get subdomains() {
+        return this._subdomains;
+    }
+    get attribution() {
+        return this._attribution;
+    }
+    get flipY() {
+        return this._flipY;
+    }
+    get maxConcurrentLoads() {
+        return this._maxConcurrentLoads;
+    }
+}
+exports.XYZMapDescriptor = XYZMapDescriptor;
+
+
+/***/ }),
+
 /***/ 8909:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -19802,6 +20908,18 @@ exports.FootprintShaderProgram = FootprintShaderProgram;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TerraFootprintSetGL = void 0;
 const FootprintSetGL_js_1 = __webpack_require__(592);
@@ -19817,6 +20935,18 @@ exports.TerraFootprintSetGL = TerraFootprintSetGL;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -19924,6 +21054,18 @@ exports["default"] = STCSParser;
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PerspectiveMatrixManager = void 0;
 const gl_matrix_1 = __webpack_require__(1961);
@@ -19971,6 +21113,18 @@ exports.PerspectiveMatrixManager = PerspectiveMatrixManager;
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -19997,7 +21151,7 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _vertexShader;
     _fragmentShader;
     defaultColor = '#41d421';
-    gridText = new GridTextHelper_js_1.default();
+    gridText = new GridTextHelper_js_1.default('equatorial');
     _attribLocations = {
         position: 0,
         selected: 1,
@@ -20238,9 +21392,10 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
                         // perspective divide
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
-                        // clip->pixel
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        // clip -> CSS pixels
+                        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+                        const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                        const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                         this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                         // gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
                     }
@@ -20261,8 +21416,9 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
                         gl_matrix_1.vec4.transformMat4(clipspace, phiPoint, mvpMatrix);
                         clipspace[0] /= clipspace[3];
                         clipspace[1] /= clipspace[3];
-                        const pixelX = (clipspace[0] * 0.5 + 0.5) * super.webgl.canvas.width;
-                        const pixelY = (clipspace[1] * -0.5 + 0.5) * super.webgl.canvas.height;
+                        const canvasRect = super.webgl.canvas.getBoundingClientRect();
+                        const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                        const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                         // gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                         this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
                     }
@@ -20343,14 +21499,28 @@ var __webpack_exports__ = {};
 (() => {
 var exports = __webpack_exports__;
 
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZLayer = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(5087);
 Object.defineProperty(exports, "HiPSDescriptor", ({ enumerable: true, get: function () { return HiPSDescriptor_js_1.HiPSDescriptor; } }));
-var FoV_js_1 = __webpack_require__(3576);
-Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return FoV_js_1.FoV; } }));
+var SphereFoV_js_1 = __webpack_require__(5803);
+Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return SphereFoV_js_1.SphereFoV; } }));
+var SphereFoV_js_2 = __webpack_require__(5803);
+Object.defineProperty(exports, "SphereFoV", ({ enumerable: true, get: function () { return SphereFoV_js_2.SphereFoV; } }));
 var FootprintSetGL_js_1 = __webpack_require__(592);
 Object.defineProperty(exports, "HoveredFootprintDetail", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.HoveredFootprintDetail; } }));
 Object.defineProperty(exports, "FootprintSetGL", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.FootprintSetGL; } }));
@@ -20382,9 +21552,9 @@ Object.defineProperty(exports, "COLOR_MAP_SAMPLE_COUNT", ({ enumerable: true, ge
 Object.defineProperty(exports, "createColorMapFromSamples", ({ enumerable: true, get: function () { return ColorMaps_js_1.createColorMapFromSamples; } }));
 var HiPS_js_1 = __webpack_require__(3726);
 Object.defineProperty(exports, "HiPS", ({ enumerable: true, get: function () { return HiPS_js_1.HiPS; } }));
-var XYZLayer_js_1 = __webpack_require__(2502);
-Object.defineProperty(exports, "XYZLayer", ({ enumerable: true, get: function () { return XYZLayer_js_1.XYZLayer; } }));
-var WMTSAdapter_js_1 = __webpack_require__(3768);
+var XYZMap_js_1 = __webpack_require__(1741);
+Object.defineProperty(exports, "XYZMap", ({ enumerable: true, get: function () { return XYZMap_js_1.XYZMap; } }));
+var WMTSAdapter_js_1 = __webpack_require__(3956);
 Object.defineProperty(exports, "WMTSAdapter", ({ enumerable: true, get: function () { return WMTSAdapter_js_1.WMTSAdapter; } }));
 var Source_js_1 = __webpack_require__(146);
 Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));

@@ -1,10 +1,22 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 'use strict';
 import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
 import global from '../../Global.js';
 import { mat4, vec4 } from 'gl-matrix';
 import { fovHelper } from '../hips/FoVHelper.js';
 import { FoVUtils } from '../../utils/FoVUtils.js';
-import { FoV } from '../FoV.js';
+import { SphereFoV } from '../SphereFoV.js';
 import { CoordsType } from '../../utils/CoordsType.js';
 import { Point } from '../Point.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
@@ -22,7 +34,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     fragmentShader;
     vertexShader;
     defaultColor = '#ec0acaff';
-    gridText = new GridTextHelper();
+    gridText = new GridTextHelper('healpix');
     // private _hipsShaderProgram: HiPSShaderProgram
     _attribLocations = {
         position: 0,
@@ -59,7 +71,7 @@ export class HealpixGrid extends AbstractSkyEntity {
         this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
         this._indexBuffer = super.webgl.createBuffer();
         this._vertexCataloguePosition = new Float32Array(0);
-        this._fovObj = new FoV(super.webgl);
+        this._fovObj = new SphereFoV(super.webgl);
     }
     get fovObj() {
         return this._fovObj;
@@ -288,9 +300,10 @@ export class HealpixGrid extends AbstractSkyEntity {
                 // NDC divide
                 clipspace[0] /= clipspace[3];
                 clipspace[1] /= clipspace[3];
-                // clip → pixels
-                const pixelX = (clipspace[0] * 0.5 + 0.5) * gl.canvas.width;
-                const pixelY = (clipspace[1] * -0.5 + 0.5) * gl.canvas.height;
+                // clip -> CSS pixels
+                const canvasRect = gl.canvas.getBoundingClientRect();
+                const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+                const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
                 this.gridText.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
                 // gridTextHelper.addHPXDivSet(this._visibleorder + '/' + pixels[p], pixelX, pixelY);
             }

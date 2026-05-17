@@ -1,3 +1,16 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { vec4, mat4, ReadonlyMat4 } from 'gl-matrix';
 
@@ -30,7 +43,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
 	private _fragmentShader!: WebGLShader;
 
 	private defaultColor = '#41d421'
-	private gridText: GridTextHelper = new GridTextHelper()
+	private gridText: GridTextHelper = new GridTextHelper('equatorial')
 
 	private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
 		position: 0,
@@ -324,9 +337,10 @@ export class EquatorialGrid extends AbstractSkyEntity {
 						clipspace[0] /= clipspace[3];
 						clipspace[1] /= clipspace[3];
 
-						// clip->pixel
-						const pixelX = (clipspace[0] * 0.5 + 0.5) * (super.webgl as GL).canvas.width;
-						const pixelY = (clipspace[1] * -0.5 + 0.5) * (super.webgl as GL).canvas.height;
+						// clip -> CSS pixels
+						const canvasRect = ((super.webgl as GL).canvas as HTMLCanvasElement).getBoundingClientRect();
+						const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+						const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
 						this.gridText.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
 						// gridTextHelper.addEqDivSet(decDeg.toFixed(2), pixelX, pixelY, 'dec');
 					}
@@ -351,8 +365,9 @@ export class EquatorialGrid extends AbstractSkyEntity {
 						clipspace[0] /= clipspace[3];
 						clipspace[1] /= clipspace[3];
 
-						const pixelX = (clipspace[0] * 0.5 + 0.5) * (super.webgl as GL).canvas.width;
-						const pixelY = (clipspace[1] * -0.5 + 0.5) * (super.webgl as GL).canvas.height;
+						const canvasRect = ((super.webgl as GL).canvas as HTMLCanvasElement).getBoundingClientRect();
+						const pixelX = canvasRect.left + (clipspace[0] * 0.5 + 0.5) * canvasRect.width;
+						const pixelY = canvasRect.top + (clipspace[1] * -0.5 + 0.5) * canvasRect.height;
 
 						// gridTextHelper.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');
 						this.gridText.addEqDivSet(raDeg.toFixed(2), pixelX, pixelY, 'ra');

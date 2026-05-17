@@ -1,3 +1,16 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+
 'use strict'
 /**
  * @author Fabrizio Giordano (Fab77)
@@ -6,15 +19,10 @@
 import {AbstractSkyEntity, SkyEntityDrawInput} from '../AbstractSkyEntity.js'
 import { fovHelper } from './FoVHelper.js'
 import ColorMaps, { ColorMap } from '../ColorMaps.js'
-// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
-// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import AncestorTile from './AncestorTile.js'
 import AllSky from './AllSky.js'
-// import global from '../../Global.js'
 import {HiPSDescriptor} from './HiPSDescriptor.js'
-// import computePerspectiveMatrixSingleton from '../../utils/ComputePerspectiveMatrix.js'
 import { HealpixGrid } from '../grid/HealpixGrid.js'
-import { ReadonlyMat4 } from 'gl-matrix'
 
 
 export class HiPS extends AbstractSkyEntity {
@@ -55,11 +63,9 @@ export class HiPS extends AbstractSkyEntity {
   ) {
     super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic)
     this._descriptor = descriptor
-    // this.initGL((global as any).gl as WebGL2RenderingContext)
     this.initGL(webgl as WebGL2RenderingContext)
     this._healpixGrid = healpixGrid
     
-    // newTileBuffer.addHiPS(this)
     this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this)
 
     // DEBUG logs kept from JS (optional)
@@ -220,8 +226,7 @@ export class HiPS extends AbstractSkyEntity {
     if (!pMatrix) return
 
     this.refresh()
-    
-    // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
+        
     const mMatrix = this.getModelMatrix() as Float32Array
     super.hipsShaderProgram.setRuntimeColorMap(this.colorMap)
 
@@ -256,14 +261,11 @@ export class HiPS extends AbstractSkyEntity {
     const order = this.isGalacticHips
       ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
       : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order
-      // ? visibleTilesManager.galVisibleTilesByOrder.order
-      // : visibleTilesManager.visibleTilesByOrder.order
+      
     const map = this.isGalacticHips
       ? this._healpixGrid.visibleTilesManager.galAncestorsMap
       : this._healpixGrid.visibleTilesManager.ancestorsMap
-      // ? visibleTilesManager.galAncestorsMap
-      // : visibleTilesManager.ancestorsMap
-
+      
     this._ancestorTiles.forEach((ancestor) => {
       ancestor.draw(order, map, pMatrix as Float32Array, vMatrix, mMatrix, this.colorMapIdx)
     })

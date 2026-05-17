@@ -1,7 +1,20 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+
 // import global from './Global.js'
 import AstroSphere from './AstroSphere.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
-import { FoV } from './model/FoV.js'
+import { SphereFoV } from './model/SphereFoV.js'
 import { Point } from './model/Point.js'
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
 import type { CameraChangedDetail, PointCoordinates } from './AstroSphere.js'
@@ -12,9 +25,10 @@ import Camera from './Camera.js'
 import { ReadonlyMat4 } from 'gl-matrix'
 import ColorMaps, { ColorMap, ColorMapName } from './model/ColorMaps.js'
 import {HiPS} from './model/hips/HiPS.js'
-import { XYZLayer } from './model/earth/XYZLayer.js'
-import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/XYZConfig.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
+import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js'
+import { XYZMap } from './model/earth/XYZMap.js'
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
@@ -193,6 +207,20 @@ createFootprintSet(footprintSetName: string,
     this.astroSphere.activateXYZ(config)
   }
 
+  activateXYZ2(config: XYZLayerConfig & { name?: string }): void {
+    const descriptor = new XYZMapDescriptor(
+      config.name ?? 'XYZ Earth2 Layer',
+      config.urlTemplate,
+      config.minZoom ?? 0,
+      config.maxZoom ?? 8,
+      config.segmentsPerSide ?? 48,
+      config.maxCachedTiles ?? 384,
+      8,
+      config.urlResolver,
+    )
+    this.astroSphere.activateXYZ2(descriptor)
+  }
+
   activateWMTS(config: WMTSLayerConfig): void {
     this.astroSphere.activateWMTS(config)
   }
@@ -235,7 +263,7 @@ createFootprintSet(footprintSetName: string,
     return this.astroSphere.activeHiPS
   }
 
-  getActiveXYZ(): XYZLayer | null {
+  getActiveXYZ(): XYZMap | null {
     return this.astroSphere.activeXYZ
   }
 
@@ -264,6 +292,11 @@ createFootprintSet(footprintSetName: string,
     // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
     this.astroSphere.goTo(raDeg, decDeg)
   }
+
+  getActiveCoordinateMode(): 'equatorial' | 'galactic' | 'lonlat' {
+    return this.astroSphere.getActiveCoordinateMode()
+  }
+
   getCenterCoordinates(): PointCoordinates | undefined {
     return this.astroSphere.getCentralPointCoordinates()
   }
@@ -296,8 +329,44 @@ createFootprintSet(footprintSetName: string,
     return this.astroSphere.equatorialGrid.isVisible()
   }
 
+  toggleLonLatGrid(): boolean {
+    return this.astroSphere.toggleLonLatGrid()
+  }
+
+  isLonLatGridVisible(): boolean {
+    return this.astroSphere.isLonLatGridVisible()
+  }
+
+  setEastWestRotationLocked(locked: boolean): void {
+    this.astroSphere.setEastWestRotationLocked(locked)
+  }
+
+  isEastWestRotationLocked(): boolean {
+    return this.astroSphere.isEastWestRotationLocked()
+  }
+
+  setNorthSouthRotationLocked(locked: boolean): void {
+    this.astroSphere.setNorthSouthRotationLocked(locked)
+  }
+
+  isNorthSouthRotationLocked(): boolean {
+    return this.astroSphere.isNorthSouthRotationLocked()
+  }
+
+  resetAxesOrientation(): void {
+    this.astroSphere.resetAxesOrientation()
+  }
+
+  setKeepCameraNorthUp(enabled: boolean): void {
+    this.astroSphere.setKeepCameraNorthUp(enabled)
+  }
+
+  isKeepCameraNorthUp(): boolean {
+    return this.astroSphere.isKeepCameraNorthUp()
+  }
+
   // FOV
-  getFoV(): FoV {
+  getFoV(): SphereFoV {
     return this.astroSphere.getFoV()
   }
 

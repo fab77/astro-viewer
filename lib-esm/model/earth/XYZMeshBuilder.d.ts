@@ -1,4 +1,4 @@
-import type { XYZTileCoord, XYZTileMesh, XYZTileGpuMesh } from './types.js';
+import type { XYZTileCoord, XYZTileGpuMesh, XYZTileMesh } from './XYZTypes.js';
 export declare class XYZMeshBuilder {
     buildTileMesh(tile: XYZTileCoord, segmentsPerSide?: number): XYZTileMesh;
     buildAncestorMesh(targetTile: XYZTileCoord, ancestorTile: XYZTileCoord, segmentsPerSide?: number): XYZTileMesh;

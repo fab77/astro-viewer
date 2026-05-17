@@ -1,3 +1,16 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+
 import { el, setStatus } from './ui.js';
 import { state } from './state.js';
 
@@ -7,12 +20,22 @@ export const WMTS_PRESETS = {
     capabilitiesUrl: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml',
     baseUrl: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/',
     preferredLayer: 'BlueMarble_ShadedRelief_Bathymetry',
+    tileMatrixSet: 'GoogleMapsCompatible_Level8',
+    style: 'default',
+    format: 'image/jpeg',
+    requestEncoding: 'rest',
+    urlTemplate: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}',
   },
   esriWorldImagery: {
     label: 'Esri World Imagery',
     capabilitiesUrl: 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/WMTS/1.0.0/WMTSCapabilities.xml',
     baseUrl: 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/WMTS/',
     preferredLayer: 'World_Imagery',
+    tileMatrixSet: 'default028mm',
+    style: 'default',
+    format: 'image/jpeg',
+    requestEncoding: 'kvp',
+    urlTemplate: '',
   },
 };
 
@@ -178,4 +201,12 @@ export function applyWMTSPreset(presetKey) {
   el('wmtsCapabilitiesUrl').value = preset.capabilitiesUrl;
   el('wmtsBaseUrl').value = preset.baseUrl;
   el('wmtsLayer').value = preset.preferredLayer;
+  el('wmtsTileMatrixSet').value = preset.tileMatrixSet || '';
+  el('wmtsStyle').value = preset.style || 'default';
+  el('wmtsTime').value = '';
+  el('wmtsFormat').value = preset.format || 'image/png';
+  el('wmtsEncoding').value = preset.requestEncoding || 'kvp';
+  el('wmtsUrlTemplate').value = preset.urlTemplate || '';
+  el('wmtsDimensions').value = '{}';
+  state.WMTS_CAPABILITIES = undefined;
 }

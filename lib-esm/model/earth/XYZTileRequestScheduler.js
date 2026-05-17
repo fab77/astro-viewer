@@ -1,3 +1,15 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 export class XYZTileRequestError extends Error {
     cooldownMs;
     retryable;
@@ -73,9 +85,8 @@ export class XYZTileRequestScheduler {
     pump() {
         while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
             const item = this._queue.shift();
-            if (!item) {
+            if (!item)
                 return;
-            }
             const hostCooldown = this.getHostCooldown(item.url);
             const now = Date.now();
             if (hostCooldown > now) {

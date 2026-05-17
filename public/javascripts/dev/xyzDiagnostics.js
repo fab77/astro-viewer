@@ -1,3 +1,16 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+
 import { el } from './ui.js';
 import { state } from './state.js';
 
@@ -17,13 +30,21 @@ function formatBackoffEntries(entries) {
 export function wireXYZDiagnostics() {
   const update = () => {
     const stats = state.AstroAPI?.getXYZDebugStats?.();
+    const fov = state.AstroAPI?.getFoV?.();
+    const fovEl = el('xyzDiagFoV');
     const summaryEl = el('xyzDiagSummary');
     const cacheEl = el('xyzDiagCache');
     const requestsEl = el('xyzDiagRequests');
     const backoffEl = el('xyzDiagBackoff');
 
-    if (!summaryEl || !cacheEl || !requestsEl || !backoffEl) {
+    if (!fovEl || !summaryEl || !cacheEl || !requestsEl || !backoffEl) {
       return;
+    }
+
+    if (fov) {
+      fovEl.value = `FoV: min ${fov.minFoV?.toFixed?.(4) ?? '—'}° · x ${fov.xFoV?.toFixed?.(4) ?? '—'}° · y ${fov.yFoV?.toFixed?.(4) ?? '—'}°`;
+    } else {
+      fovEl.value = 'FoV: —';
     }
 
     if (!stats) {

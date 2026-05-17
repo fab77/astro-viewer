@@ -1,203 +1,198 @@
-import { XYZShaderProgram } from '../../shader/XYZShaderProgram.js'
-import { XYZMeshBuilder } from './XYZMeshBuilder.js'
-import { XYZTile } from './XYZTile.js'
-import type { XYZTileCoord } from './types.js'
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
 
-export type XYZTileRequest = {
-  tileCoord: XYZTileCoord
-  url: string
-  priority: number
-  role: 'current' | 'coverage' | 'fallback' | 'base'
-}
+import type { XYZTileCoord } from './XYZTypes.js';
 
-type XYZTileBufferEntry = {
-  tile: XYZTile
-  cacheTime0?: number
-  role: 'current' | 'coverage' | 'fallback' | 'base'
-}
+export type XYZBufferedTile = {
+  coord: XYZTileCoord;
+  loading?: boolean;
+  lastUsedAt?: number;
+  createdAt?: number;
+  touch?: () => void;
+  dispose?: () => void;
+};
 
-export class XYZTileBuffer {
-  private _tiles: Map<string, XYZTileBufferEntry> = new Map()
-  private _cachedTiles: Map<string, XYZTileBufferEntry> = new Map()
-  private _cacheAliveMilliSeconds: number
-  private _cleanerId: number
-  private _webgl: WebGL2RenderingContext
-  private _meshBuilder: XYZMeshBuilder
-  private _shaderProgram: XYZShaderProgram
+export type XYZTileBufferEntry<TTile extends XYZBufferedTile = XYZBufferedTile> = {
+  tile: TTile;
+  cacheTime0?: number;
+};
 
-  constructor(
-    minutesToLiveInCache = 1,
-    webgl: WebGL2RenderingContext,
-    meshBuilder: XYZMeshBuilder,
-    shaderProgram: XYZShaderProgram,
-  ) {
-    this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000
-    this._webgl = webgl
-    this._meshBuilder = meshBuilder
-    this._shaderProgram = shaderProgram
-    this._cleanerId = window.setInterval(() => {
-      this.cacheCleaner()
-    }, 10_000)
+export type XYZTileFactory<TTile extends XYZBufferedTile = XYZBufferedTile> = (
+  coord: XYZTileCoord,
+) => TTile;
+
+export class XYZTileBuffer<TTile extends XYZBufferedTile = XYZBufferedTile> {
+  private _tiles: Map<string, XYZTileBufferEntry<TTile>> = new Map();
+  private _cachedTiles: Map<string, XYZTileBufferEntry<TTile>> = new Map();
+  private _cacheAliveMilliSeconds: number;
+  private _cleanerId: number | undefined;
+
+  constructor(minutesToLiveInCache = 1) {
+    this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
+
+    if (typeof window !== 'undefined') {
+      this._cleanerId = window.setInterval(() => {
+        this.cacheCleaner();
+      }, 10_000);
+    }
   }
 
-  get activeTiles(): Map<string, XYZTileBufferEntry> {
-    return this._tiles
+  get activeTiles(): Map<string, XYZTileBufferEntry<TTile>> {
+    return this._tiles;
   }
 
-  get cachedTiles(): Map<string, XYZTileBufferEntry> {
-    return this._cachedTiles
+  get cachedTiles(): Map<string, XYZTileBufferEntry<TTile>> {
+    return this._cachedTiles;
   }
 
   get size(): number {
-    return this._tiles.size + this._cachedTiles.size
+    return this._tiles.size + this._cachedTiles.size;
+  }
+
+  ensureTiles(
+    visibleTiles: XYZTileCoord[],
+    tileFactory: XYZTileFactory<TTile>,
+  ): string[] {
+    const visibleTileKeys: string[] = [];
+
+    for (const tileCoord of visibleTiles) {
+      const tile = this.getTile(tileCoord, tileFactory);
+      this.touchTile(tile);
+      visibleTileKeys.push(this.key(tileCoord));
+    }
+
+    this.syncVisibleTiles(visibleTileKeys);
+    return visibleTileKeys;
   }
 
   getTile(
     tileCoord: XYZTileCoord,
-    url: string,
-    segmentsPerSide: number,
-    role: 'current' | 'coverage' | 'fallback' | 'base',
-  ): XYZTile {
-    const tileKey = this.key(tileCoord)
-
-    if (!this._tiles.has(tileKey)) {
-      if (this._cachedTiles.has(tileKey)) {
-        const entry = this._cachedTiles.get(tileKey)!
-        entry.cacheTime0 = undefined
-        entry.role = role
-        this._tiles.set(tileKey, entry)
-        this._cachedTiles.delete(tileKey)
-      } else {
-        const mesh = this._meshBuilder.buildTileMesh(tileCoord, segmentsPerSide)
-        this._tiles.set(tileKey, {
-          tile: new XYZTile(tileCoord, url, mesh, this._webgl, this._shaderProgram),
-          role,
-        })
-      }
-    } else {
-      const entry = this._tiles.get(tileKey)!
-      entry.role = role
-    }
-
-    return this._tiles.get(tileKey)!.tile
-  }
-
-  private getExistingTile(tileCoord: XYZTileCoord, role: 'fallback'): XYZTile | null {
-    const tileKey = this.key(tileCoord)
+    tileFactory: XYZTileFactory<TTile>,
+  ): TTile {
+    const tileKey = this.key(tileCoord);
 
     if (this._tiles.has(tileKey)) {
-      const entry = this._tiles.get(tileKey)!
-      entry.role = role
-      return entry.tile
+      return this._tiles.get(tileKey)!.tile;
     }
 
     if (this._cachedTiles.has(tileKey)) {
-      const entry = this._cachedTiles.get(tileKey)!
-      entry.cacheTime0 = undefined
-      entry.role = role
-      this._tiles.set(tileKey, entry)
-      this._cachedTiles.delete(tileKey)
-      return entry.tile
+      const entry = this._cachedTiles.get(tileKey)!;
+      entry.cacheTime0 = undefined;
+      this._tiles.set(tileKey, entry);
+      this._cachedTiles.delete(tileKey);
+      return entry.tile;
     }
 
-    return null
+    const tile = tileFactory(tileCoord);
+    this._tiles.set(tileKey, { tile });
+    return tile;
   }
 
-  ensureTiles(
-    requests: XYZTileRequest[],
-    segmentsPerSide: number,
-  ): string[] {
-    const visibleTileKeys: string[] = []
-
-    for (const request of requests) {
-      const tile = request.role === 'fallback'
-        ? this.getExistingTile(request.tileCoord, 'fallback')
-        : this.getTile(request.tileCoord, request.url, segmentsPerSide, request.role)
-      if (!tile) {
-        continue
-      }
-      tile.touch()
-      if (request.role !== 'fallback') {
-        tile.primeLoad(request.priority)
-      }
-      visibleTileKeys.push(this.key(request.tileCoord))
-    }
-
-    this.syncVisibleTiles(visibleTileKeys)
-    return visibleTileKeys
+  getActiveTile(tileKey: string): TTile | null {
+    return this._tiles.get(tileKey)?.tile ?? null;
   }
 
-  getActiveTile(tileKey: string): XYZTile | null {
-    return this._tiles.get(tileKey)?.tile ?? null
+  getAnyTile(tileKey: string): TTile | null {
+    return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null;
   }
 
-  getAnyTile(tileKey: string): XYZTile | null {
-    return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null
+  getActiveTiles(): TTile[] {
+    return Array.from(this._tiles.values(), (entry) => entry.tile);
   }
 
   syncVisibleTiles(visibleTileKeys: string[]): void {
-    const visibleKeySet = new Set(visibleTileKeys)
+    const visibleKeySet = new Set(visibleTileKeys);
 
     for (const [tileKey, entry] of this._tiles) {
       if (visibleKeySet.has(tileKey)) {
-        entry.tile.touch()
-        continue
+        this.touchTile(entry.tile);
+        continue;
       }
 
-      entry.cacheTime0 = Date.now()
-      this._cachedTiles.set(tileKey, entry)
-      this._tiles.delete(tileKey)
+      entry.cacheTime0 = Date.now();
+      this._cachedTiles.set(tileKey, entry);
+      this._tiles.delete(tileKey);
     }
   }
 
   evictCached(maxCachedTiles: number): void {
     if (this.size <= maxCachedTiles) {
-      return
+      return;
     }
 
     const candidates = Array.from(this._cachedTiles.entries()).sort((a, b) => {
-      const scoreA = Math.min(a[1].tile.lastUsedAt || a[1].tile.createdAt, a[1].tile.createdAt)
-      const scoreB = Math.min(b[1].tile.lastUsedAt || b[1].tile.createdAt, b[1].tile.createdAt)
-      return scoreA - scoreB
-    })
+      return this.getTileAgeScore(a[1].tile) - this.getTileAgeScore(b[1].tile);
+    });
 
     for (const [tileKey, entry] of candidates) {
       if (this.size <= maxCachedTiles) {
-        break
+        break;
       }
       if (entry.tile.loading) {
-        continue
+        continue;
       }
-      entry.tile.dispose()
-      this._cachedTiles.delete(tileKey)
+
+      entry.tile.dispose?.();
+      this._cachedTiles.delete(tileKey);
     }
   }
 
   dispose(): void {
-    window.clearInterval(this._cleanerId)
+    if (this._cleanerId !== undefined && typeof window !== 'undefined') {
+      window.clearInterval(this._cleanerId);
+      this._cleanerId = undefined;
+    }
+
     for (const entry of this._tiles.values()) {
-      entry.tile.dispose()
+      entry.tile.dispose?.();
     }
     for (const entry of this._cachedTiles.values()) {
-      entry.tile.dispose()
+      entry.tile.dispose?.();
     }
-    this._tiles.clear()
-    this._cachedTiles.clear()
+
+    this._tiles.clear();
+    this._cachedTiles.clear();
+  }
+
+  key(tileCoord: XYZTileCoord): string {
+    return XYZTileBuffer.key(tileCoord);
+  }
+
+  static key(tileCoord: XYZTileCoord): string {
+    return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
   }
 
   private cacheCleaner(): void {
-    const now = Date.now()
+    const now = Date.now();
 
     for (const [tileKey, entry] of this._cachedTiles) {
-      const t0 = entry.cacheTime0
-      if (t0 !== undefined && now - t0 > this._cacheAliveMilliSeconds && !entry.tile.loading) {
-        entry.tile.dispose()
-        this._cachedTiles.delete(tileKey)
+      const t0 = entry.cacheTime0;
+      if (t0 === undefined || now - t0 <= this._cacheAliveMilliSeconds || entry.tile.loading) {
+        continue;
       }
+
+      entry.tile.dispose?.();
+      this._cachedTiles.delete(tileKey);
     }
   }
 
-  private key(tileCoord: XYZTileCoord): string {
-    return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`
+  private touchTile(tile: TTile): void {
+    tile.touch?.();
+  }
+
+  private getTileAgeScore(tile: TTile): number {
+    const lastUsedAt = tile.lastUsedAt ?? 0;
+    const createdAt = tile.createdAt ?? lastUsedAt;
+    return Math.min(lastUsedAt || createdAt, createdAt);
   }
 }

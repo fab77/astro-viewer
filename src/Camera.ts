@@ -1,3 +1,16 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+
 /**
  * @author Fabrizio Giordano (Fab)
  */
@@ -70,12 +83,28 @@ class Camera implements CameraLike {
 
   private goToPhiTheta(ptDeg: SphericalCoords): void {
     const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
+    const targetDirection = vec3.normalize(
+      vec3.create(),
+      vec3.fromValues(xyz[0], xyz[1], xyz[2])
+    );
+    const celestialNorth = vec3.fromValues(0.0, 0.0, 1.0);
+    const northProjection = vec3.scale(
+      vec3.create(),
+      targetDirection,
+      vec3.dot(celestialNorth, targetDirection)
+    );
+    const cameraUp = vec3.subtract(vec3.create(), celestialNorth, northProjection);
+
+    if (vec3.length(cameraUp) < 1e-6) {
+      vec3.set(cameraUp, 0.0, 1.0, 0.0);
+    } else {
+      vec3.normalize(cameraUp, cameraUp);
+    }
 
     let cameraMatrix = mat4.create();
     cameraMatrix = mat4.translate(cameraMatrix, cameraMatrix, vec3.fromValues(xyz[0], xyz[1], xyz[2]));
 
     const focusPoint: Vec3Tuple = [0.0, 0.0, 0.0];
-    const cameraUp: vec3 = vec3.clone([0.0, 1.0, 0.0]);
     const cameraPos: Vec3Tuple = [cameraMatrix[12], cameraMatrix[13], cameraMatrix[14]];
 
     cameraMatrix = mat4.targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
@@ -244,11 +273,6 @@ class Camera implements CameraLike {
     const totRot = Math.sqrt(phi * phi + theta * theta);
     if (totRot === 0) return;
 
-    // If both X and Y rotations are locked, nothing to do
-    if (this.lockRotX && this.lockRotY) {
-      return;
-    }
-
     const pos = this.getCameraPosition();
     const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
     const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
@@ -261,9 +285,8 @@ class Camera implements CameraLike {
     const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
     const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
 
-    // Build an axis from phi/theta, but zero components that are locked
-    let axisX = this.lockRotX ? 0 : theta;
-    let axisY = this.lockRotY ? 0 : phi;
+    let axisX = theta;
+    let axisY = phi;
     const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
 
     // If after locking we have no axis left, do nothing

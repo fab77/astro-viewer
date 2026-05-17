@@ -1,3 +1,16 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+export {};
 // import {FootprintSetGL} from '../model/footprints/FootprintSetGL.js'
 // import healpixGridSingleton from '../model/grid/HealpixGridSingleton.js';
 // import Point from '../model/Point.js';
@@ -5,7 +18,6 @@
 // import {TapMetadataList} from '../model/tap/TapMetadataList.js'
 // import { TapRepo } from '../model/tap/TapRepo.js';
 // import { queryAsync } from './tapRepoService.js'
-export {};
 // interface ColumnLike {
 //   _name: string;
 // }

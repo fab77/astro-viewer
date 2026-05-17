@@ -1,8 +1,20 @@
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+export {};
 // import {CatalogueGL} from '../model/catalogues/CatalogueGL.js'
 // import {TapMetadata} from '../model/tap/TapMetadata.js'
 // import {TapMetadataList} from '../model/tap/TapMetadataList.js'
 // import { queryAsync } from './tapRepoService.js'
-export {};
 // // Optional timeout; adjust or remove if you don’t use timeouts.
 // const TAP_QUERY_TIMEOUT_MS = 60_000
 // // Small helpers to be robust with slightly different metadata shapes
