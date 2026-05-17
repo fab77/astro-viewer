@@ -229,6 +229,12 @@ export class AstroViewer {
     resetAxesOrientation() {
         this.astroSphere.resetAxesOrientation();
     }
+    setKeepCameraNorthUp(enabled) {
+        this.astroSphere.setKeepCameraNorthUp(enabled);
+    }
+    isKeepCameraNorthUp() {
+        return this.astroSphere.isKeepCameraNorthUp();
+    }
     // FOV
     getFoV() {
         return this.astroSphere.getFoV();

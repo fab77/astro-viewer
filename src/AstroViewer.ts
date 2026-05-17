@@ -344,6 +344,14 @@ createFootprintSet(footprintSetName: string,
     this.astroSphere.resetAxesOrientation()
   }
 
+  setKeepCameraNorthUp(enabled: boolean): void {
+    this.astroSphere.setKeepCameraNorthUp(enabled)
+  }
+
+  isKeepCameraNorthUp(): boolean {
+    return this.astroSphere.isKeepCameraNorthUp()
+  }
+
   // FOV
   getFoV(): SphereFoV {
     return this.astroSphere.getFoV()

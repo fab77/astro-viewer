@@ -39,6 +39,7 @@ async function bootstrap() {
       const lonLatChk = el('lonLatGridChk');
       const lockEastWestChk = el('lockEastWestRotationChk');
       const lockNorthSouthChk = el('lockNorthSouthRotationChk');
+      const keepNorthUpChk = el('keepCameraNorthUpChk');
       const xyzConcurrentInput = el('xyzMaxConcurrentRequests');
       if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
         healpixChk.checked = !!AC.isHealpixGridVisible();
@@ -54,6 +55,9 @@ async function bootstrap() {
       }
       if (lockNorthSouthChk && typeof AC.isNorthSouthRotationLocked === "function") {
         lockNorthSouthChk.checked = !!AC.isNorthSouthRotationLocked();
+      }
+      if (keepNorthUpChk && typeof AC.isKeepCameraNorthUp === "function") {
+        keepNorthUpChk.checked = !!AC.isKeepCameraNorthUp();
       }
       if (xyzConcurrentInput && typeof AC.getXYZMaxConcurrentRequests === "function") {
         xyzConcurrentInput.value = String(AC.getXYZMaxConcurrentRequests());
@@ -360,6 +364,15 @@ function wireUI() {
 
   el('btnResetAxesOrientation')?.addEventListener('click', () => {
     state.AstroAPI?.resetAxesOrientation?.();
+  });
+
+  el('keepCameraNorthUpChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.setKeepCameraNorthUp?.(!!ev.target.checked);
+      ev.target.checked = !!state.AstroAPI?.isKeepCameraNorthUp?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
+    }
   });
 
   // grid toggles

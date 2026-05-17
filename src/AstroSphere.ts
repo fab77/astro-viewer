@@ -112,6 +112,7 @@ class AstroSphere {
   private zoomSensitivity = 1.0
   private lockedEastWestRaDeg: number | null = null
   private lockedNorthSouthDecDeg: number | null = null
+  private keepCameraNorthUp = false
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     console.log('[AstroSphere] new instance for canvas', canvas.id);
@@ -372,6 +373,28 @@ class AstroSphere {
     }
 
     this._camera.goTo(nextRa, nextDec)
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    )
+    this.updateCentralPoint()
+    return true
+  }
+
+  private enforceCameraNorthUp(): boolean {
+    if (!this.keepCameraNorthUp) {
+      return false
+    }
+
+    const center = this.updateCentralPoint()
+    if (!center) {
+      return false
+    }
+
+    this._camera.goTo(center.astroDeg.ra, center.astroDeg.dec)
     this._perspectiveMatrixManager.computePerspectiveMatrix(
       this.canvas,
       this._camera,
@@ -884,6 +907,17 @@ class AstroSphere {
     this._cameraStatusChanged = true
   }
 
+  setKeepCameraNorthUp(enabled: boolean): void {
+    this.keepCameraNorthUp = enabled
+    if (enabled) {
+      this.resetAxesOrientation()
+    }
+  }
+
+  isKeepCameraNorthUp(): boolean {
+    return this.keepCameraNorthUp
+  }
+
   getFoV(): SphereFoV {
     if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
       return this._activeXYZ2.getFoV()
@@ -1117,7 +1151,10 @@ class AstroSphere {
       this.inertiaY = filteredInertia.deltaY * 0.95
       this._camera.rotate(PHI, THETA)
       this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere)
-      this.enforceAstronomicalRotationLocks()
+      const lockCorrected = this.enforceAstronomicalRotationLocks()
+      if (!lockCorrected) {
+        this.enforceCameraNorthUp()
+      }
     } else {
       this.inertiaY = 0
       this.inertiaX = 0

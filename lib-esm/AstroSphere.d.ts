@@ -72,6 +72,7 @@ declare class AstroSphere {
     private zoomSensitivity;
     private lockedEastWestRaDeg;
     private lockedNorthSouthDecDeg;
+    private keepCameraNorthUp;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private initCamera;
     setCamera(camera: Camera): void;
@@ -92,6 +93,7 @@ declare class AstroSphere {
     private projectModelDirectionToScreen;
     private projectModelPointToScreen;
     private enforceAstronomicalRotationLocks;
+    private enforceCameraNorthUp;
     private emitCameraChanged;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
@@ -108,6 +110,8 @@ declare class AstroSphere {
     goTo(raDeg: number, decDeg: number): void;
     getActiveCoordinateMode(): 'equatorial' | 'galactic' | 'lonlat';
     resetAxesOrientation(): void;
+    setKeepCameraNorthUp(enabled: boolean): void;
+    isKeepCameraNorthUp(): boolean;
     getFoV(): SphereFoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;

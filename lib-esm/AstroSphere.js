@@ -57,6 +57,7 @@ class AstroSphere {
     zoomSensitivity = 1.0;
     lockedEastWestRaDeg = null;
     lockedNorthSouthDecDeg = null;
+    keepCameraNorthUp = false;
     constructor(canvas, webgl) {
         console.log('[AstroSphere] new instance for canvas', canvas.id);
         // Keep global GL context (as in original JS)
@@ -251,6 +252,19 @@ class AstroSphere {
             return false;
         }
         this._camera.goTo(nextRa, nextDec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere);
+        this.updateCentralPoint();
+        return true;
+    }
+    enforceCameraNorthUp() {
+        if (!this.keepCameraNorthUp) {
+            return false;
+        }
+        const center = this.updateCentralPoint();
+        if (!center) {
+            return false;
+        }
+        this._camera.goTo(center.astroDeg.ra, center.astroDeg.dec);
         this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere);
         this.updateCentralPoint();
         return true;
@@ -593,6 +607,15 @@ class AstroSphere {
         this.updateCentralPoint();
         this._cameraStatusChanged = true;
     }
+    setKeepCameraNorthUp(enabled) {
+        this.keepCameraNorthUp = enabled;
+        if (enabled) {
+            this.resetAxesOrientation();
+        }
+    }
+    isKeepCameraNorthUp() {
+        return this.keepCameraNorthUp;
+    }
     getFoV() {
         if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
             return this._activeXYZ2.getFoV();
@@ -777,7 +800,10 @@ class AstroSphere {
             this.inertiaY = filteredInertia.deltaY * 0.95;
             this._camera.rotate(PHI, THETA);
             this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere);
-            this.enforceAstronomicalRotationLocks();
+            const lockCorrected = this.enforceAstronomicalRotationLocks();
+            if (!lockCorrected) {
+                this.enforceCameraNorthUp();
+            }
         }
         else {
             this.inertiaY = 0;
