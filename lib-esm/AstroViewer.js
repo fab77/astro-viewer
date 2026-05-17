@@ -118,7 +118,7 @@ export class AstroViewer {
         this.astroSphere.activateXYZ(config);
     }
     activateXYZ2(config) {
-        const descriptor = new XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 16, config.maxCachedTiles ?? 384);
+        const descriptor = new XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384);
         this.astroSphere.activateXYZ2(descriptor);
     }
     activateWMTS(config) {

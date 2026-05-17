@@ -102,8 +102,8 @@ export class XYZMap extends AbstractSkyEntity {
   }
 
   private refresh(input: SkyEntityDrawInput): void {
-    // const fov = healpixGridSingleton.getMinFoV()
     const fov = this._latLonGrid.refreshFoV(input)
+    // this._zoom = this.resolveVisibleZoom(fov)
     this._zoom = xyzFovHelper.getZoom(fov)
   }
 
@@ -224,5 +224,14 @@ export class XYZMap extends AbstractSkyEntity {
   private tileKey(tile: XYZTileCoord): string {
     return `${tile.z}/${tile.x}/${tile.y}`
   }
+
+  // private resolveVisibleZoom(fovDeg: number): number {
+  //   const rawZoom = xyzFovHelper.getZoom(fovDeg)
+  //   const minUsefulZoom = 2
+  //   const minZoom = Math.max(this._descriptor.minZoom, minUsefulZoom)
+  //   const maxZoom = Math.max(minZoom, this._descriptor.maxZoom)
+
+  //   return Math.max(minZoom, Math.min(maxZoom, rawZoom))
+  // }
 
 }

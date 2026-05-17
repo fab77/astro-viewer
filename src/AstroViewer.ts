@@ -200,7 +200,7 @@ createFootprintSet(footprintSetName: string,
       config.urlTemplate,
       config.minZoom ?? 0,
       config.maxZoom ?? 8,
-      config.segmentsPerSide ?? 16,
+      config.segmentsPerSide ?? 48,
       config.maxCachedTiles ?? 384,
     )
     this.astroSphere.activateXYZ2(descriptor)

@@ -672,8 +672,8 @@ class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this._xyzShaderProgram.enableProgram();
     }
     refresh(input) {
-        // const fov = healpixGridSingleton.getMinFoV()
         const fov = this._latLonGrid.refreshFoV(input);
+        // this._zoom = this.resolveVisibleZoom(fov)
         this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
     }
     draw(input) {
@@ -2786,7 +2786,7 @@ class AstroViewer {
         this.astroSphere.activateXYZ(config);
     }
     activateXYZ2(config) {
-        const descriptor = new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 16, config.maxCachedTiles ?? 384);
+        const descriptor = new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384);
         this.astroSphere.activateXYZ2(descriptor);
     }
     activateWMTS(config) {
@@ -20903,32 +20903,32 @@ exports.xyzFovHelper = void 0;
 class XYZFoVHelper {
     getZoom(fov) {
         if (fov >= 179)
-            return 0;
-        if (fov >= 90)
-            return 1;
-        if (fov >= 30)
             return 2;
-        if (fov >= 20)
+        if (fov >= 90)
             return 3;
-        if (fov >= 6)
+        if (fov >= 30)
             return 4;
-        if (fov >= 3.2)
+        if (fov >= 20)
             return 5;
-        if (fov >= 1.6)
+        if (fov >= 6)
             return 6;
-        if (fov >= 0.85)
+        if (fov >= 3.2)
             return 7;
-        if (fov >= 0.42)
+        if (fov >= 1.6)
             return 8;
-        if (fov >= 0.21)
+        if (fov >= 0.85)
             return 9;
-        if (fov >= 0.12)
+        if (fov >= 0.42)
             return 10;
-        if (fov >= 0.06)
+        if (fov >= 0.21)
             return 11;
-        if (fov >= 0.015)
+        if (fov >= 0.12)
             return 12;
-        return 13;
+        if (fov >= 0.06)
+            return 13;
+        if (fov >= 0.015)
+            return 14;
+        return 15;
     }
     // used in grid drawing
     getLonLatSteps(fov) {

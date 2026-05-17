@@ -80,8 +80,8 @@ export class XYZMap extends AbstractSkyEntity {
         this._xyzShaderProgram.enableProgram();
     }
     refresh(input) {
-        // const fov = healpixGridSingleton.getMinFoV()
         const fov = this._latLonGrid.refreshFoV(input);
+        // this._zoom = this.resolveVisibleZoom(fov)
         this._zoom = xyzFovHelper.getZoom(fov);
     }
     draw(input) {
