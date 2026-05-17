@@ -2,15 +2,16 @@ import { setStatus } from './ui.js';
 import { state } from './state.js';
 
 export function loadXYZ(urlTemplate, options = {}) {
-  if (!state.AstroAPI?.activateXYZ) {
-    throw new Error('AstroAPI.activateXYZ unavailable')
+  if (!state.AstroAPI?.activateXYZ2) {
+    throw new Error('AstroAPI.activateXYZ2 unavailable')
   }
 
   if (Number.isFinite(options.maxConcurrentRequests) && state.AstroAPI?.setXYZMaxConcurrentRequests) {
     state.AstroAPI.setXYZMaxConcurrentRequests(options.maxConcurrentRequests)
   }
 
-  state.AstroAPI.activateXYZ({
+  state.AstroAPI.activateXYZ2({
+    name: 'XYZ Earth2 Test Layer',
     urlTemplate,
     minZoom: options.minZoom,
     maxZoom: options.maxZoom,

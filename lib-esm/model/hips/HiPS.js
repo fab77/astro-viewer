@@ -5,8 +5,6 @@
 import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
 import { fovHelper } from './FoVHelper.js';
 import ColorMaps from '../ColorMaps.js';
-// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
-// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import AncestorTile from './AncestorTile.js';
 import AllSky from './AllSky.js';
 export class HiPS extends AbstractSkyEntity {
@@ -33,10 +31,8 @@ export class HiPS extends AbstractSkyEntity {
     constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
         super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
         this._descriptor = descriptor;
-        // this.initGL((global as any).gl as WebGL2RenderingContext)
         this.initGL(webgl);
         this._healpixGrid = healpixGrid;
-        // newTileBuffer.addHiPS(this)
         this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this);
         // DEBUG logs kept from JS (optional)
         // eslint-disable-next-line no-console
@@ -185,7 +181,6 @@ export class HiPS extends AbstractSkyEntity {
         if (!pMatrix)
             return;
         this.refresh();
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
         const mMatrix = this.getModelMatrix();
         super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
         if (this._allSky && this._allSkyTile) {
@@ -207,13 +202,9 @@ export class HiPS extends AbstractSkyEntity {
         const order = this.isGalacticHips
             ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
             : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order;
-        // ? visibleTilesManager.galVisibleTilesByOrder.order
-        // : visibleTilesManager.visibleTilesByOrder.order
         const map = this.isGalacticHips
             ? this._healpixGrid.visibleTilesManager.galAncestorsMap
             : this._healpixGrid.visibleTilesManager.ancestorsMap;
-        // ? visibleTilesManager.galAncestorsMap
-        // : visibleTilesManager.ancestorsMap
         this._ancestorTiles.forEach((ancestor) => {
             ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
         });

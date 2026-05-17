@@ -15,6 +15,7 @@ import {HiPS} from './model/hips/HiPS.js'
 import { XYZLayer } from './model/earth/XYZLayer.js'
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
+import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js'
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
@@ -191,6 +192,18 @@ createFootprintSet(footprintSetName: string,
 
   activateXYZ(config: XYZLayerConfig): void {
     this.astroSphere.activateXYZ(config)
+  }
+
+  activateXYZ2(config: XYZLayerConfig & { name?: string }): void {
+    const descriptor = new XYZMapDescriptor(
+      config.name ?? 'XYZ Earth2 Layer',
+      config.urlTemplate,
+      config.minZoom ?? 0,
+      config.maxZoom ?? 8,
+      config.segmentsPerSide ?? 16,
+      config.maxCachedTiles ?? 384,
+    )
+    this.astroSphere.activateXYZ2(descriptor)
   }
 
   activateWMTS(config: WMTSLayerConfig): void {

@@ -78,15 +78,24 @@ exports.Source = Source;
 /***/ }),
 
 /***/ 149:
-/***/ ((__unused_webpack_module, exports) => {
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.XYZShaderProgram = void 0;
+const ColorMaps_js_1 = __webpack_require__(619);
 class XYZShaderProgram {
     locations;
     _webgl;
     _shaderProgram;
+    _colorMapBlockIndex = null;
+    _colorMapBuffer = null;
+    _runtimeColorMap;
+    _colorMapVariableInfo = {
+        r_palette: { index: 0, offset: 0 },
+        g_palette: { index: 0, offset: 0 },
+        b_palette: { index: 0, offset: 0 },
+    };
     constructor(webgl) {
         this._webgl = webgl;
         this.locations = {
@@ -94,6 +103,7 @@ class XYZShaderProgram {
             mMatrix: null,
             vMatrix: null,
             sampler: null,
+            colorMapIdx: null,
             vertexPositionAttribute: -1,
             textureCoordAttribute: -1,
         };
@@ -114,7 +124,10 @@ class XYZShaderProgram {
     enableProgram() {
         this._webgl.useProgram(this.shaderProgram);
     }
-    enableShaders(pMatrix, vMatrix, mMatrix) {
+    setRuntimeColorMap(colorMap) {
+        this._runtimeColorMap = colorMap;
+    }
+    enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx = 0) {
         const gl = this._webgl;
         const program = this.shaderProgram;
         gl.useProgram(program);
@@ -122,12 +135,17 @@ class XYZShaderProgram {
         this.locations.mMatrix = gl.getUniformLocation(program, 'uMMatrix');
         this.locations.vMatrix = gl.getUniformLocation(program, 'uVMatrix');
         this.locations.sampler = gl.getUniformLocation(program, 'uSampler');
+        this.locations.colorMapIdx = gl.getUniformLocation(program, 'cmapIdx');
         this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
         this.locations.textureCoordAttribute = gl.getAttribLocation(program, 'aTextureCoord');
         gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
         gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
         gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
         gl.uniform1i(this.locations.sampler, 0);
+        gl.uniform1i(this.locations.colorMapIdx, colorMapIdx);
+        if (colorMapIdx >= 2) {
+            this.uploadColorMap(colorMapIdx);
+        }
     }
     initShaders() {
         const gl = this._webgl;
@@ -146,9 +164,40 @@ class XYZShaderProgram {
       precision mediump float;
       in vec2 vTextureCoord;
       uniform sampler2D uSampler;
+      uniform int cmapIdx;
+
+      layout (std140) uniform colormap {
+        float r_palette[256];
+        float g_palette[256];
+        float b_palette[256];
+      };
+
       out vec4 outColor;
+
       void main(void) {
-        outColor = texture(uSampler, vTextureCoord);
+        vec4 color = texture(uSampler, vTextureCoord);
+
+        if (cmapIdx == 1) {
+          float gray = 0.21 * color.r + 0.71 * color.g + 0.07 * color.b;
+          outColor = vec4(vec3(gray), color.a);
+          return;
+        }
+
+        if (cmapIdx >= 2) {
+          int rIndex = int(clamp(color.r * 255.0, 0.0, 255.0));
+          int gIndex = int(clamp(color.g * 255.0, 0.0, 255.0));
+          int bIndex = int(clamp(color.b * 255.0, 0.0, 255.0));
+
+          outColor = vec4(
+            r_palette[rIndex] / 256.0,
+            g_palette[gIndex] / 256.0,
+            b_palette[bIndex] / 256.0,
+            color.a
+          );
+          return;
+        }
+
+        outColor = color;
       }`);
         gl.attachShader(this._shaderProgram, vertexShader);
         gl.attachShader(this._shaderProgram, fragmentShader);
@@ -156,6 +205,7 @@ class XYZShaderProgram {
         if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
             throw new Error(gl.getProgramInfoLog(this._shaderProgram) || 'Could not initialise XYZ shaders');
         }
+        this.initColorMapBuffer();
     }
     compileShader(type, source) {
         const gl = this._webgl;
@@ -170,8 +220,209 @@ class XYZShaderProgram {
         }
         return shader;
     }
+    initColorMapBuffer() {
+        const gl = this._webgl;
+        const program = this._shaderProgram;
+        const blockIndex = gl.getUniformBlockIndex(program, 'colormap');
+        if (blockIndex === gl.INVALID_INDEX) {
+            this._colorMapBlockIndex = null;
+            return;
+        }
+        this._colorMapBlockIndex = blockIndex;
+        const variableNames = ['r_palette', 'g_palette', 'b_palette'];
+        const variableIndices = gl.getUniformIndices(program, variableNames);
+        const variableOffsets = gl.getActiveUniforms(program, variableIndices, gl.UNIFORM_OFFSET);
+        variableNames.forEach((name, index) => {
+            this._colorMapVariableInfo[name] = {
+                index: variableIndices[index],
+                offset: variableOffsets[index],
+            };
+        });
+        this._colorMapBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.UNIFORM_BUFFER, this._colorMapBuffer);
+        gl.bufferData(gl.UNIFORM_BUFFER, 3 * 4096, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+        gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._colorMapBuffer);
+        gl.uniformBlockBinding(program, blockIndex, 0);
+    }
+    uploadColorMap(colorMapIdx) {
+        if (!this._colorMapBuffer || this._colorMapBlockIndex === null) {
+            return;
+        }
+        const colorMap = this.getColorMap(colorMapIdx);
+        if (!colorMap) {
+            return;
+        }
+        const gl = this._webgl;
+        const program = this.shaderProgram;
+        gl.uniformBlockBinding(program, this._colorMapBlockIndex, 0);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, this._colorMapBuffer);
+        const info = this._colorMapVariableInfo;
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.r_palette.offset, colorMap.r, 0);
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.g_palette.offset, colorMap.g, 0);
+        gl.bufferSubData(gl.UNIFORM_BUFFER, info.b_palette.offset, colorMap.b, 0);
+        gl.bindBuffer(gl.UNIFORM_BUFFER, null);
+    }
+    getColorMap(colorMapIdx) {
+        switch (colorMapIdx) {
+            case 2:
+                return ColorMaps_js_1.ColorMaps.planck;
+            case 3:
+                return ColorMaps_js_1.ColorMaps.cmb;
+            case 4:
+                return ColorMaps_js_1.ColorMaps.rainbow;
+            case 5:
+                return ColorMaps_js_1.ColorMaps.eosb;
+            case 6:
+                return ColorMaps_js_1.ColorMaps.cubehelix;
+            case 7:
+                return ColorMaps_js_1.ColorMaps.hot;
+            case 8:
+                return ColorMaps_js_1.ColorMaps.gray;
+            default:
+                return this._runtimeColorMap;
+        }
+    }
 }
 exports.XYZShaderProgram = XYZShaderProgram;
+
+
+/***/ }),
+
+/***/ 207:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZTileBuffer = void 0;
+class XYZTileBuffer {
+    _tiles = new Map();
+    _cachedTiles = new Map();
+    _cacheAliveMilliSeconds;
+    _cleanerId;
+    constructor(minutesToLiveInCache = 1) {
+        this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
+        if (typeof window !== 'undefined') {
+            this._cleanerId = window.setInterval(() => {
+                this.cacheCleaner();
+            }, 10_000);
+        }
+    }
+    get activeTiles() {
+        return this._tiles;
+    }
+    get cachedTiles() {
+        return this._cachedTiles;
+    }
+    get size() {
+        return this._tiles.size + this._cachedTiles.size;
+    }
+    ensureTiles(visibleTiles, tileFactory) {
+        const visibleTileKeys = [];
+        for (const tileCoord of visibleTiles) {
+            const tile = this.getTile(tileCoord, tileFactory);
+            this.touchTile(tile);
+            visibleTileKeys.push(this.key(tileCoord));
+        }
+        this.syncVisibleTiles(visibleTileKeys);
+        return visibleTileKeys;
+    }
+    getTile(tileCoord, tileFactory) {
+        const tileKey = this.key(tileCoord);
+        if (this._tiles.has(tileKey)) {
+            return this._tiles.get(tileKey).tile;
+        }
+        if (this._cachedTiles.has(tileKey)) {
+            const entry = this._cachedTiles.get(tileKey);
+            entry.cacheTime0 = undefined;
+            this._tiles.set(tileKey, entry);
+            this._cachedTiles.delete(tileKey);
+            return entry.tile;
+        }
+        const tile = tileFactory(tileCoord);
+        this._tiles.set(tileKey, { tile });
+        return tile;
+    }
+    getActiveTile(tileKey) {
+        return this._tiles.get(tileKey)?.tile ?? null;
+    }
+    getAnyTile(tileKey) {
+        return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null;
+    }
+    getActiveTiles() {
+        return Array.from(this._tiles.values(), (entry) => entry.tile);
+    }
+    syncVisibleTiles(visibleTileKeys) {
+        const visibleKeySet = new Set(visibleTileKeys);
+        for (const [tileKey, entry] of this._tiles) {
+            if (visibleKeySet.has(tileKey)) {
+                this.touchTile(entry.tile);
+                continue;
+            }
+            entry.cacheTime0 = Date.now();
+            this._cachedTiles.set(tileKey, entry);
+            this._tiles.delete(tileKey);
+        }
+    }
+    evictCached(maxCachedTiles) {
+        if (this.size <= maxCachedTiles) {
+            return;
+        }
+        const candidates = Array.from(this._cachedTiles.entries()).sort((a, b) => {
+            return this.getTileAgeScore(a[1].tile) - this.getTileAgeScore(b[1].tile);
+        });
+        for (const [tileKey, entry] of candidates) {
+            if (this.size <= maxCachedTiles) {
+                break;
+            }
+            if (entry.tile.loading) {
+                continue;
+            }
+            entry.tile.dispose?.();
+            this._cachedTiles.delete(tileKey);
+        }
+    }
+    dispose() {
+        if (this._cleanerId !== undefined && typeof window !== 'undefined') {
+            window.clearInterval(this._cleanerId);
+            this._cleanerId = undefined;
+        }
+        for (const entry of this._tiles.values()) {
+            entry.tile.dispose?.();
+        }
+        for (const entry of this._cachedTiles.values()) {
+            entry.tile.dispose?.();
+        }
+        this._tiles.clear();
+        this._cachedTiles.clear();
+    }
+    key(tileCoord) {
+        return XYZTileBuffer.key(tileCoord);
+    }
+    static key(tileCoord) {
+        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
+    }
+    cacheCleaner() {
+        const now = Date.now();
+        for (const [tileKey, entry] of this._cachedTiles) {
+            const t0 = entry.cacheTime0;
+            if (t0 === undefined || now - t0 <= this._cacheAliveMilliSeconds || entry.tile.loading) {
+                continue;
+            }
+            entry.tile.dispose?.();
+            this._cachedTiles.delete(tileKey);
+        }
+    }
+    touchTile(tile) {
+        tile.touch?.();
+    }
+    getTileAgeScore(tile) {
+        const lastUsedAt = tile.lastUsedAt ?? 0;
+        const createdAt = tile.createdAt ?? lastUsedAt;
+        return Math.min(lastUsedAt || createdAt, createdAt);
+    }
+}
+exports.XYZTileBuffer = XYZTileBuffer;
 
 
 /***/ }),
@@ -329,6 +580,176 @@ class XYZAncestorMeshCache {
     }
 }
 exports.XYZAncestorMeshCache = XYZAncestorMeshCache;
+
+
+/***/ }),
+
+/***/ 583:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMap = void 0;
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const XYZVisibleTilesManager_js_1 = __webpack_require__(7671);
+const XYZFoVHelper_js_1 = __webpack_require__(8486);
+const ColorMaps_js_1 = __webpack_require__(619);
+const LonLatGrid_js_1 = __webpack_require__(8124);
+const XYZShaderProgram_js_1 = __webpack_require__(149);
+const XYZTileBuffer_js_1 = __webpack_require__(207);
+const XYZAnchestorTile_js_1 = __webpack_require__(2532);
+const XYZMeshBuilder_js_1 = __webpack_require__(4697);
+class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    _xyzShaderProgram;
+    _descriptor;
+    _visibleTilesManager;
+    _tileBuffer;
+    _meshBuilder;
+    _baseurl;
+    _zoom;
+    _latLonGrid;
+    _colorMapIdx = 0;
+    _colorMap = ColorMaps_js_1.ColorMaps['native'];
+    constructor(radius, position, xrad, yrad, descriptor, webgl) {
+        super(radius, position, xrad, yrad, descriptor.name, webgl, false);
+        this._descriptor = descriptor;
+        this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
+        this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
+        this._tileBuffer = new XYZTileBuffer_js_1.XYZTileBuffer(1);
+        this.initGL(webgl);
+        this._latLonGrid = new LonLatGrid_js_1.LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl);
+        this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager();
+        this._baseurl = descriptor.url;
+        this.initShaders();
+        const fov = 180;
+        this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
+    }
+    changeColorMap(colorMap) {
+        this._colorMap = colorMap;
+        switch (colorMap.name) {
+            case 'grayscale':
+                this._colorMapIdx = 1;
+                this._colorMap = ColorMaps_js_1.ColorMaps['grayscale'];
+                break;
+            case 'planck':
+                this._colorMapIdx = 2;
+                this._colorMap = ColorMaps_js_1.ColorMaps['planck'];
+                break;
+            case 'cmb':
+                this._colorMapIdx = 3;
+                this._colorMap = ColorMaps_js_1.ColorMaps['cmb'];
+                break;
+            case 'rainbow':
+                this._colorMapIdx = 4;
+                this._colorMap = ColorMaps_js_1.ColorMaps['rainbow'];
+                break;
+            case 'eosb':
+                this._colorMapIdx = 5;
+                this._colorMap = ColorMaps_js_1.ColorMaps['eosb'];
+                break;
+            case 'cubehelix':
+                this._colorMapIdx = 6;
+                this._colorMap = ColorMaps_js_1.ColorMaps['cubehelix'];
+                break;
+            case 'hot':
+                this._colorMapIdx = 7;
+                this._colorMap = ColorMaps_js_1.ColorMaps['hot'];
+                break;
+            case 'gray':
+                this._colorMapIdx = 8;
+                this._colorMap = ColorMaps_js_1.ColorMaps['gray'];
+                break;
+            case 'native':
+                this._colorMapIdx = 0;
+                this._colorMap = ColorMaps_js_1.ColorMaps['native'];
+                break;
+            default:
+                this._colorMapIdx = 9;
+                this._colorMap = colorMap;
+        }
+    }
+    initShaders() {
+        this._xyzShaderProgram.enableProgram();
+    }
+    refresh(input) {
+        // const fov = healpixGridSingleton.getMinFoV()
+        const fov = this._latLonGrid.refreshFoV(input);
+        this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
+    }
+    draw(input) {
+        const vMatrix = input.camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refresh(input);
+        const mMatrix = this.getModelMatrix();
+        this._xyzShaderProgram.setRuntimeColorMap(this._colorMap);
+        const tileSelection = this._visibleTilesManager.computeVisibleTiles(this._zoom, this, this._webgl, input.camera, input.pMatrix);
+        const visibleTiles = tileSelection.visibleTiles;
+        const ancestorsMap = tileSelection.ancestorsMap;
+        const tileKeys = this._tileBuffer.ensureTiles(this.getTilesToEnsure(visibleTiles, ancestorsMap), (coord) => this.createTile(coord));
+        for (const tileKey of tileKeys) {
+            const tile = this._tileBuffer.getActiveTile(tileKey);
+            if (!tile || tile.coord.z !== tileSelection.currentZoom) {
+                continue;
+            }
+            const drawn = tile.draw(pMatrix, vMatrix, mMatrix, this._colorMapIdx);
+            if (drawn) {
+                continue;
+            }
+            const ancestorTile = this.findBestAvailableAncestor(tile.coord);
+            ancestorTile?.draw(tileSelection.currentZoom, [tile.coord], ancestorsMap, pMatrix, vMatrix, mMatrix, this._colorMapIdx);
+        }
+        this._latLonGrid.draw(input);
+    }
+    createTile(coord) {
+        return new XYZAnchestorTile_js_1.XYZAnchestorTile(coord, this.resolveTileUrl(coord), this._webgl, this._xyzShaderProgram, this._meshBuilder, this._descriptor.segmentsPerSide);
+    }
+    getTilesToEnsure(visibleTiles, ancestorsMap) {
+        const tilesByKey = new Map();
+        for (const tile of visibleTiles) {
+            tilesByKey.set(this.tileKey(tile), tile);
+        }
+        for (const ancestor of ancestorsMap.values()) {
+            tilesByKey.set(this.tileKey(ancestor), ancestor);
+        }
+        return Array.from(tilesByKey.values());
+    }
+    findBestAvailableAncestor(targetTile) {
+        for (let z = targetTile.z - 1; z >= 0; z--) {
+            const dz = targetTile.z - z;
+            const ancestorCoord = {
+                z,
+                x: targetTile.x >> dz,
+                y: targetTile.y >> dz,
+            };
+            const ancestorTile = this._tileBuffer.getAnyTile(this.tileKey(ancestorCoord));
+            if (ancestorTile?.ready) {
+                return ancestorTile;
+            }
+        }
+        return null;
+    }
+    resolveTileUrl(tile) {
+        const dim = 2 ** tile.z;
+        const y = this._descriptor.flipY ? dim - 1 - tile.y : tile.y;
+        const subdomains = this._descriptor.subdomains;
+        const subdomain = subdomains.length > 0
+            ? subdomains[Math.abs(tile.x + tile.y + tile.z) % subdomains.length]
+            : '';
+        return this._baseurl
+            .replace(/\{z\}/g, String(tile.z))
+            .replace(/\{x\}/g, String(tile.x))
+            .replace(/\{y\}/g, String(y))
+            .replace(/\{s\}/g, subdomain ?? '');
+    }
+    tileKey(tile) {
+        return `${tile.z}/${tile.x}/${tile.y}`;
+    }
+}
+exports.XYZMap = XYZMap;
 
 
 /***/ }),
@@ -2253,6 +2674,7 @@ const FootprintSetGL_js_1 = __webpack_require__(592);
 const Config_js_1 = __webpack_require__(2919);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
 const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
+const XYZMapDescriptor_js_1 = __webpack_require__(7274);
 const TerraPointSetGL_js_1 = __webpack_require__(5781);
 const TerraFootprintSetGL_js_1 = __webpack_require__(9022);
 // & {
@@ -2362,6 +2784,10 @@ class AstroViewer {
     }
     activateXYZ(config) {
         this.astroSphere.activateXYZ(config);
+    }
+    activateXYZ2(config) {
+        const descriptor = new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 16, config.maxCachedTiles ?? 384);
+        this.astroSphere.activateXYZ2(descriptor);
     }
     activateWMTS(config) {
         this.astroSphere.activateWMTS(config);
@@ -13008,6 +13434,175 @@ exports.VisibleTilesManager = VisibleTilesManager;
 
 /***/ }),
 
+/***/ 2166:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+/**
+ * Ray picking helpers for XYZ/WebMercator maps.
+ *
+ * Unlike RayPickingUtils, this module has no HEALPix dependency. It intersects
+ * screen rays with an XYZ sphere, converts the hit to lon/lat, then maps that
+ * position to XYZ z/x/y tile coordinates.
+ */
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const gl_matrix_1 = __webpack_require__(1961);
+const MAX_MERCATOR_LAT = 85.0511287798066;
+class XYZRayPickingUtils {
+    static getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix) {
+        const gl = webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const x = (2.0 * mouseX) / rect.width - 1.0;
+        const y = 1.0 - (2.0 * mouseY) / rect.height;
+        const rayClip = [x, y, -1.0, 1.0];
+        const pInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(pInv, pMatrix);
+        const rayEye4 = [0, 0, 0, 0];
+        XYZRayPickingUtils.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+        const vInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(vInv, vMatrix);
+        const rayWorld4 = [0, 0, 0, 0];
+        XYZRayPickingUtils.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+        const rayWorld = gl_matrix_1.vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+        gl_matrix_1.vec3.normalize(rayWorld, rayWorld);
+        return rayWorld;
+    }
+    static raySphere(rayOrigWorld, rayDirectionWorld, sphere) {
+        let intersectionDistance = -1;
+        const L = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.subtract(L, rayOrigWorld, sphere.center);
+        const b = gl_matrix_1.vec3.dot(rayDirectionWorld, L);
+        const c = gl_matrix_1.vec3.dot(L, L) - sphere.radius * sphere.radius;
+        const disc = b * b - c;
+        if (disc > 0.0) {
+            const s = Math.sqrt(disc);
+            const ta = -b + s;
+            const tb = -b - s;
+            if (ta >= 0.0 || tb >= 0.0) {
+                intersectionDistance = tb < 0.0 ? ta : Math.min(ta, tb);
+            }
+        }
+        else if (disc === 0.0) {
+            const t = -b;
+            if (t >= 0.0) {
+                intersectionDistance = t;
+            }
+        }
+        return intersectionDistance;
+    }
+    static getIntersectionPointWithModel(mouseX, mouseY, xyzModel, webgl, camera, pMatrix) {
+        const vMatrix = camera.getCameraMatrix();
+        const rayWorld = XYZRayPickingUtils.getRayFromMouse(mouseX, mouseY, pMatrix, webgl, vMatrix);
+        const t = XYZRayPickingUtils.raySphere(camera.getCameraPosition(), rayWorld, xyzModel);
+        if (t < 0) {
+            return null;
+        }
+        const worldHit = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.scale(worldHit, rayWorld, t);
+        gl_matrix_1.vec3.add(worldHit, camera.getCameraPosition(), worldHit);
+        const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
+        const modelHit4 = [0, 0, 0, 0];
+        XYZRayPickingUtils.mat4MultiplyVec4(xyzModel.getModelMatrixInverse(), worldHit4, modelHit4);
+        return [modelHit4[0], modelHit4[1], modelHit4[2]];
+    }
+    static getLonLatFromMouse(mouseX, mouseY, xyzModel, webgl, camera, pMatrix) {
+        const hit = XYZRayPickingUtils.getIntersectionPointWithModel(mouseX, mouseY, xyzModel, webgl, camera, pMatrix);
+        return hit ? XYZRayPickingUtils.modelPointToLonLat(hit) : null;
+    }
+    static getTileFromMouse(mouseX, mouseY, z, xyzModel, webgl, camera, pMatrix) {
+        const lonLat = XYZRayPickingUtils.getLonLatFromMouse(mouseX, mouseY, xyzModel, webgl, camera, pMatrix);
+        return lonLat ? XYZRayPickingUtils.lonLatToTile(lonLat.lonDeg, lonLat.latDeg, z) : null;
+    }
+    static getVisibleTilesFromViewport(z, xyzModel, webgl, camera, pMatrix, sampleCount = 7, padding = 1) {
+        const gl = webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const samples = Math.max(2, Math.floor(sampleCount));
+        const tiles = [];
+        for (let iy = 0; iy < samples; iy++) {
+            const y = samples === 1 ? rect.height / 2 : (iy / (samples - 1)) * rect.height;
+            for (let ix = 0; ix < samples; ix++) {
+                const x = samples === 1 ? rect.width / 2 : (ix / (samples - 1)) * rect.width;
+                const tile = XYZRayPickingUtils.getTileFromMouse(x, y, z, xyzModel, webgl, camera, pMatrix);
+                if (!tile)
+                    continue;
+                tiles.push(tile);
+                tiles.push(...XYZRayPickingUtils.getNeighborTiles(tile, padding));
+            }
+        }
+        return XYZRayPickingUtils.deduplicateTiles(tiles);
+    }
+    static modelPointToLonLat(point) {
+        const [x, y, z] = point;
+        const len = Math.hypot(x, y, z);
+        if (!Number.isFinite(len) || len === 0) {
+            return { lonDeg: 0, latDeg: 0 };
+        }
+        const lonDeg = (Math.atan2(y, x) * 180) / Math.PI;
+        const latDeg = (Math.asin(Math.max(-1, Math.min(1, z / len))) * 180) / Math.PI;
+        return { lonDeg, latDeg };
+    }
+    static lonLatToTile(lonDeg, latDeg, z) {
+        const zoom = Math.max(0, Math.floor(z));
+        const dim = 2 ** zoom;
+        const x = Math.floor(((lonDeg + 180) / 360) * dim);
+        const y = Math.floor(XYZRayPickingUtils.latToTileY(latDeg, zoom));
+        return {
+            z: zoom,
+            x: XYZRayPickingUtils.wrapTileX(x, dim),
+            y: XYZRayPickingUtils.clampTileY(y, dim),
+        };
+    }
+    static getNeighborTiles(tile, ring = 1) {
+        const dim = 2 ** tile.z;
+        const tiles = [];
+        const safeRing = Math.max(0, Math.floor(ring));
+        for (let dx = -safeRing; dx <= safeRing; dx++) {
+            for (let dy = -safeRing; dy <= safeRing; dy++) {
+                tiles.push({
+                    z: tile.z,
+                    x: XYZRayPickingUtils.wrapTileX(tile.x + dx, dim),
+                    y: XYZRayPickingUtils.clampTileY(tile.y + dy, dim),
+                });
+            }
+        }
+        return XYZRayPickingUtils.deduplicateTiles(tiles);
+    }
+    static deduplicateTiles(tiles) {
+        const map = new Map();
+        for (const tile of tiles) {
+            map.set(`${tile.z}/${tile.x}/${tile.y}`, tile);
+        }
+        return Array.from(map.values());
+    }
+    static latToTileY(latDeg, z) {
+        const lat = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, latDeg));
+        const latRad = (lat * Math.PI) / 180;
+        const dim = 2 ** z;
+        return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * dim;
+    }
+    static wrapTileX(x, dim) {
+        return ((x % dim) + dim) % dim;
+    }
+    static clampTileY(y, dim) {
+        return Math.max(0, Math.min(dim - 1, y));
+    }
+    static mat4MultiplyVec4(a, b, out) {
+        const d = b[0], e = b[1], g = b[2], w = b[3];
+        out[0] = a[0] * d + a[4] * e + a[8] * g + a[12] * w;
+        out[1] = a[1] * d + a[5] * e + a[9] * g + a[13] * w;
+        out[2] = a[2] * d + a[6] * e + a[10] * g + a[14] * w;
+        out[3] = a[3] * d + a[7] * e + a[11] * g + a[15] * w;
+        return out;
+    }
+}
+exports["default"] = XYZRayPickingUtils;
+
+
+/***/ }),
+
 /***/ 2330:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -13806,6 +14401,92 @@ class XYZLayer extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     }
 }
 exports.XYZLayer = XYZLayer;
+
+
+/***/ }),
+
+/***/ 2532:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZAncestorTile = exports.XYZAnchestorTile = void 0;
+const XYZMeshBuilder_js_1 = __webpack_require__(4697);
+const XYZTile_js_1 = __webpack_require__(7741);
+class XYZAnchestorTile extends XYZTile_js_1.XYZTile {
+    _ancestorMeshBuilder;
+    _ancestorWebgl;
+    _segmentsPerSide;
+    _meshCache = new Map();
+    constructor(coord, url, webgl, shaderProgram, meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder(), segmentsPerSide = 16) {
+        super(coord, url, webgl, shaderProgram, meshBuilder, segmentsPerSide);
+        this._ancestorMeshBuilder = meshBuilder;
+        this._ancestorWebgl = webgl;
+        this._segmentsPerSide = segmentsPerSide;
+    }
+    draw(pMatrixOrVisibleZoom, vMatrixOrVisibleTiles, mMatrixOrAncestorsMap, colorMapIdxOrPMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (typeof pMatrixOrVisibleZoom !== 'number') {
+            return super.draw(pMatrixOrVisibleZoom, vMatrixOrVisibleTiles, mMatrixOrAncestorsMap, colorMapIdxOrPMatrix);
+        }
+        if (!vMatrix || !mMatrix || colorMapIdx === undefined) {
+            return false;
+        }
+        const visibleZoom = pMatrixOrVisibleZoom;
+        const visibleTiles = vMatrixOrVisibleTiles;
+        const ancestorsMap = mMatrixOrAncestorsMap;
+        const pMatrix = colorMapIdxOrPMatrix;
+        let drawn = false;
+        if (visibleZoom <= this.coord.z) {
+            return super.draw(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        }
+        for (const targetTile of visibleTiles) {
+            if (!this.isAncestorOf(targetTile)) {
+                continue;
+            }
+            const ancestorKey = `${this.coord.z}/${this.coord.x}/${this.coord.y}`;
+            if (!ancestorsMap.has(ancestorKey)) {
+                continue;
+            }
+            const mesh = this.getRemappedMesh(targetTile);
+            drawn = super.drawRemapped(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) || drawn;
+        }
+        return drawn;
+    }
+    dispose() {
+        for (const mesh of this._meshCache.values()) {
+            if (mesh.positionBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.positionBuffer);
+            if (mesh.uvBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.uvBuffer);
+            if (mesh.indexBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.indexBuffer);
+        }
+        this._meshCache.clear();
+        super.dispose();
+    }
+    getRemappedMesh(targetTile) {
+        const key = `${targetTile.z}/${targetTile.x}/${targetTile.y}->${this.coord.z}/${this.coord.x}/${this.coord.y}`;
+        const existing = this._meshCache.get(key);
+        if (existing) {
+            return existing;
+        }
+        const mesh = this._ancestorMeshBuilder.buildAncestorMesh(targetTile, this.coord, this._segmentsPerSide);
+        const uploaded = this._ancestorMeshBuilder.uploadMesh(mesh, this._ancestorWebgl);
+        this._meshCache.set(key, uploaded);
+        return uploaded;
+    }
+    isAncestorOf(targetTile) {
+        if (targetTile.z <= this.coord.z) {
+            return targetTile.z === this.coord.z
+                && targetTile.x === this.coord.x
+                && targetTile.y === this.coord.y;
+        }
+        const dz = targetTile.z - this.coord.z;
+        return (targetTile.x >> dz) === this.coord.x && (targetTile.y >> dz) === this.coord.y;
+    }
+}
+exports.XYZAnchestorTile = XYZAnchestorTile;
+exports.XYZAncestorTile = XYZAnchestorTile;
 
 
 /***/ }),
@@ -14956,8 +15637,6 @@ exports.HiPS = void 0;
 const AbstractSkyEntity_js_1 = __webpack_require__(4735);
 const FoVHelper_js_1 = __webpack_require__(229);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
-// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
-// import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
 const AncestorTile_js_1 = __importDefault(__webpack_require__(2885));
 const AllSky_js_1 = __importDefault(__webpack_require__(2368));
 class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
@@ -14984,10 +15663,8 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     constructor(radius, position, xrad, yrad, descriptor, webgl, healpixGrid) {
         super(radius, position, xrad, yrad, descriptor.surveyName, webgl, descriptor.isGalactic);
         this._descriptor = descriptor;
-        // this.initGL((global as any).gl as WebGL2RenderingContext)
         this.initGL(webgl);
         this._healpixGrid = healpixGrid;
-        // newTileBuffer.addHiPS(this)
         this._healpixGrid.visibleTilesManager.tileBuffer.addHiPS(this);
         // DEBUG logs kept from JS (optional)
         // eslint-disable-next-line no-console
@@ -15136,7 +15813,6 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         if (!pMatrix)
             return;
         this.refresh();
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix as Float32Array
         const mMatrix = this.getModelMatrix();
         super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
         if (this._allSky && this._allSkyTile) {
@@ -15158,13 +15834,9 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const order = this.isGalacticHips
             ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder.order
             : this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order;
-        // ? visibleTilesManager.galVisibleTilesByOrder.order
-        // : visibleTilesManager.visibleTilesByOrder.order
         const map = this.isGalacticHips
             ? this._healpixGrid.visibleTilesManager.galAncestorsMap
             : this._healpixGrid.visibleTilesManager.ancestorsMap;
-        // ? visibleTilesManager.galAncestorsMap
-        // : visibleTilesManager.ancestorsMap
         this._ancestorTiles.forEach((ancestor) => {
             ancestor.draw(order, map, pMatrix, vMatrix, mMatrix, this.colorMapIdx);
         });
@@ -16033,6 +16705,113 @@ exports["default"] = RayPickingUtils;
 
 /***/ }),
 
+/***/ 4697:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMeshBuilder = void 0;
+const Utils_js_1 = __webpack_require__(7930);
+const MAX_MERCATOR_LAT = 85.0511287798066;
+function mercatorYToLatDeg(yNormalized) {
+    const mercator = Math.PI * (1 - 2 * yNormalized);
+    return (Math.atan(Math.sinh(mercator)) * 180) / Math.PI;
+}
+function wrapLonToPhi(lonDeg) {
+    return lonDeg < 0 ? lonDeg + 360 : lonDeg;
+}
+class XYZMeshBuilder {
+    buildTileMesh(tile, segmentsPerSide = 16) {
+        const segments = Math.max(1, Math.floor(segmentsPerSide));
+        const gridSize = segments + 1;
+        const vertexCount = gridSize * gridSize;
+        const positions = new Float32Array(vertexCount * 3);
+        const uvs = new Float32Array(vertexCount * 2);
+        const tileCount = 2 ** tile.z;
+        let p = 0;
+        let uv = 0;
+        for (let row = 0; row <= segments; row++) {
+            const v = row / segments;
+            const yNormalized = (tile.y + v) / tileCount;
+            const latDeg = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, mercatorYToLatDeg(yNormalized)));
+            const thetaDeg = 90 - latDeg;
+            for (let col = 0; col <= segments; col++) {
+                const u = col / segments;
+                const xNormalized = (tile.x + u) / tileCount;
+                const lonDeg = xNormalized * 360 - 180;
+                const phiDeg = wrapLonToPhi(lonDeg);
+                const [x, y, z] = (0, Utils_js_1.sphericalToCartesian)(phiDeg, thetaDeg, 1);
+                positions[p++] = x;
+                positions[p++] = y;
+                positions[p++] = z;
+                uvs[uv++] = u;
+                uvs[uv++] = 1 - v;
+            }
+        }
+        const rawIndices = new Uint32Array(segments * segments * 2 * 3);
+        let i = 0;
+        for (let row = 0; row < segments; row++) {
+            for (let col = 0; col < segments; col++) {
+                const topLeft = row * gridSize + col;
+                const topRight = topLeft + 1;
+                const bottomLeft = topLeft + gridSize;
+                const bottomRight = bottomLeft + 1;
+                rawIndices[i++] = topLeft;
+                rawIndices[i++] = bottomLeft;
+                rawIndices[i++] = topRight;
+                rawIndices[i++] = topRight;
+                rawIndices[i++] = bottomLeft;
+                rawIndices[i++] = bottomRight;
+            }
+        }
+        const indices = rawIndices.length > 65535 ? rawIndices : new Uint16Array(rawIndices);
+        return { positions, uvs, indices };
+    }
+    buildAncestorMesh(targetTile, ancestorTile, segmentsPerSide = 16) {
+        const baseMesh = this.buildTileMesh(targetTile, segmentsPerSide);
+        const dz = targetTile.z - ancestorTile.z;
+        const scale = 2 ** dz;
+        const subTileX = targetTile.x - (ancestorTile.x << dz);
+        const subTileY = targetTile.y - (ancestorTile.y << dz);
+        const uvs = new Float32Array(baseMesh.uvs.length);
+        for (let i = 0; i < baseMesh.uvs.length; i += 2) {
+            const u = baseMesh.uvs[i] ?? 0;
+            const baseV = baseMesh.uvs[i + 1] ?? 0;
+            const v = 1 - baseV;
+            uvs[i] = (subTileX + u) / scale;
+            uvs[i + 1] = 1 - (subTileY + v) / scale;
+        }
+        return {
+            positions: baseMesh.positions,
+            uvs,
+            indices: baseMesh.indices,
+        };
+    }
+    uploadMesh(mesh, webgl) {
+        const positionBuffer = webgl.createBuffer();
+        const uvBuffer = webgl.createBuffer();
+        const indexBuffer = webgl.createBuffer();
+        const indexType = mesh.indices instanceof Uint32Array ? webgl.UNSIGNED_INT : webgl.UNSIGNED_SHORT;
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, positionBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.positions, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, uvBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
+        return {
+            positionBuffer,
+            uvBuffer,
+            indexBuffer,
+            indexCount: mesh.indices.length,
+            indexType,
+        };
+    }
+}
+exports.XYZMeshBuilder = XYZMeshBuilder;
+
+
+/***/ }),
+
 /***/ 4707:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -16094,6 +16873,7 @@ const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
 const XYZLayer_js_1 = __webpack_require__(2502);
 const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
 const WMTSAdapter_js_1 = __webpack_require__(3768);
+const XYZMap_js_1 = __webpack_require__(583);
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -16119,6 +16899,7 @@ class AstroSphere {
     pointerDownAt = 0;
     _activeHiPS = null;
     _activeXYZ = null;
+    _activeXYZ2 = null;
     _activeBaseLayer = null;
     startup = true;
     fov;
@@ -16499,11 +17280,18 @@ class AstroSphere {
     }
     activateXYZ(config) {
         this._activeXYZ = new XYZLayer_js_1.XYZLayer(config, this._webgl);
+        this._activeXYZ2 = null;
+        this._activeBaseLayer = 'xyz';
+    }
+    activateXYZ2(config) {
+        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
+        this._activeXYZ = null;
         this._activeBaseLayer = 'xyz';
     }
     activateWMTS(config) {
         const adapter = new WMTSAdapter_js_1.WMTSAdapter(config);
         this._activeXYZ = new XYZLayer_js_1.XYZLayer(adapter.toXYZLayerConfig(), this._webgl);
+        this._activeXYZ2 = null;
         this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
@@ -16624,10 +17412,11 @@ class AstroSphere {
         // return null
     }
     changeColorMap(cm) {
-        if (!this._activeHiPS)
+        if (!this._activeHiPS && !this._activeXYZ2)
             return;
         this._selectedColorMap = cm;
         this._activeHiPS?.changeColorMap(cm);
+        this._activeXYZ2?.changeColorMap(cm);
     }
     prevFov = 0;
     prevCentralRaDeg = null;
@@ -16650,7 +17439,7 @@ class AstroSphere {
             return;
         if (!this._webgl)
             return;
-        if (!this._activeHiPS && !this._activeXYZ)
+        if (!this._activeHiPS && !this._activeXYZ && !this._activeXYZ2)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -16752,6 +17541,7 @@ class AstroSphere {
         }
         if (this._activeBaseLayer === 'xyz') {
             this._activeXYZ?.draw(skyEntityDrawInput);
+            this._activeXYZ2?.draw(skyEntityDrawInput);
         }
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
@@ -16773,14 +17563,14 @@ class AstroSphere {
             });
         }
         this.activeCatalogues.forEach(cat => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach(fst => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
@@ -18243,6 +19033,77 @@ exports.XYZVisibleTilesManager = XYZVisibleTilesManager;
 
 /***/ }),
 
+/***/ 7274:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMapDescriptor = void 0;
+class XYZMapDescriptor {
+    _name;
+    _url;
+    _minZoom;
+    _maxZoom;
+    _segmentsPerSide;
+    _tileSize;
+    _maxCachedTiles;
+    _interactionDebounceMs;
+    _subdomains;
+    _attribution;
+    _flipY;
+    _maxConcurrentLoads;
+    constructor(name, url, minZoom = 0, maxZoom = 8, segmentsPerSide = 16, maxCachedTiles = 384, maxConcurrentLoads = 8) {
+        this._name = name;
+        this._url = url;
+        this._minZoom = minZoom;
+        this._maxZoom = maxZoom;
+        this._segmentsPerSide = segmentsPerSide;
+        this._maxCachedTiles = maxCachedTiles;
+        this._interactionDebounceMs = 100;
+        this._subdomains = ['a', 'b', 'c'];
+        this._attribution = '';
+        this._flipY = false;
+        this._maxConcurrentLoads = maxConcurrentLoads;
+    }
+    get url() {
+        return this._url;
+    }
+    get name() {
+        return this._name;
+    }
+    get minZoom() {
+        return this._minZoom;
+    }
+    get maxZoom() {
+        return this._maxZoom;
+    }
+    get segmentsPerSide() {
+        return this._segmentsPerSide;
+    }
+    get maxCachedTiles() {
+        return this._maxCachedTiles;
+    }
+    get interactionDebounceMs() {
+        return this._interactionDebounceMs;
+    }
+    get subdomains() {
+        return this._subdomains;
+    }
+    get attribution() {
+        return this._attribution;
+    }
+    get flipY() {
+        return this._flipY;
+    }
+    get maxConcurrentLoads() {
+        return this._maxConcurrentLoads;
+    }
+}
+exports.XYZMapDescriptor = XYZMapDescriptor;
+
+
+/***/ }),
+
 /***/ 7559:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -18263,6 +19124,85 @@ class Point2D {
     }
 }
 exports["default"] = Point2D;
+
+
+/***/ }),
+
+/***/ 7671:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZVisibleTilesManager = void 0;
+const XYZRayPickingUtils_js_1 = __importDefault(__webpack_require__(2166));
+class XYZVisibleTilesManager {
+    _ancestorsMap = new Map();
+    _visibleTilesMap = new Map();
+    _visibleTiles = [];
+    _selection = {
+        key: '0:',
+        currentZoom: 0,
+        visibleTiles: [],
+        visibleTilesMap: new Map(),
+        ancestorsMap: new Map(),
+    };
+    get ancestorsMap() {
+        return this._ancestorsMap;
+    }
+    get visibleTiles() {
+        return this._visibleTiles;
+    }
+    get visibleTilesMap() {
+        return this._visibleTilesMap;
+    }
+    get selection() {
+        return this._selection;
+    }
+    computeVisibleTiles(z, xyzModel, webgl, camera, pMatrix, sampleCount = 7, padding = 1) {
+        this._visibleTiles = XYZRayPickingUtils_js_1.default.getVisibleTilesFromViewport(z, xyzModel, webgl, camera, pMatrix, sampleCount, padding);
+        this._visibleTilesMap = this.buildTileMap(this._visibleTiles);
+        this.refreshAncestorsMap(this._visibleTiles);
+        this._selection = {
+            key: this.buildSelectionKey(z, this._visibleTiles),
+            currentZoom: z,
+            visibleTiles: this._visibleTiles,
+            visibleTilesMap: this._visibleTilesMap,
+            ancestorsMap: this._ancestorsMap,
+        };
+        return this._selection;
+    }
+    refreshAncestorsMap(visibleTiles) {
+        this._ancestorsMap.clear();
+        for (const tile of visibleTiles) {
+            for (let z = tile.z - 1; z >= 0; z--) {
+                const dz = tile.z - z;
+                const ancestor = {
+                    z,
+                    x: tile.x >> dz,
+                    y: tile.y >> dz,
+                };
+                this._ancestorsMap.set(`${ancestor.z}/${ancestor.x}/${ancestor.y}`, ancestor);
+            }
+        }
+    }
+    buildTileMap(tiles) {
+        const map = new Map();
+        for (const tile of tiles) {
+            map.set(this.key(tile), tile);
+        }
+        return map;
+    }
+    buildSelectionKey(z, tiles) {
+        return `${z}:${tiles.map((tile) => `${tile.x}/${tile.y}`).join('|')}`;
+    }
+    key(tile) {
+        return `${tile.z}/${tile.x}/${tile.y}`;
+    }
+}
+exports.XYZVisibleTilesManager = XYZVisibleTilesManager;
 
 
 /***/ }),
@@ -18606,6 +19546,172 @@ class Camera {
     isRotationLockedZ() { return this.lockRotZ; }
 }
 exports["default"] = Camera;
+
+
+/***/ }),
+
+/***/ 7741:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZTile = void 0;
+const XYZMeshBuilder_js_1 = __webpack_require__(4697);
+class XYZTile {
+    _coord;
+    _url;
+    _webgl;
+    _shaderProgram;
+    _meshBuilder;
+    _gpuMesh;
+    _texture = null;
+    _image;
+    _ready = false;
+    _loading = false;
+    _aborted = false;
+    _failedUntil = 0;
+    _lastUsedAt = 0;
+    _createdAt = Date.now();
+    constructor(coord, url, webgl, shaderProgram, meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder(), segmentsPerSide = 16) {
+        this._coord = coord;
+        this._url = url;
+        this._webgl = webgl;
+        this._shaderProgram = shaderProgram;
+        this._meshBuilder = meshBuilder;
+        const mesh = this._meshBuilder.buildTileMesh(coord, segmentsPerSide);
+        this._gpuMesh = this._meshBuilder.uploadMesh(mesh, this._webgl);
+        this.initImage();
+    }
+    get coord() {
+        return this._coord;
+    }
+    get ready() {
+        return this._ready;
+    }
+    get loading() {
+        return this._loading;
+    }
+    get failedUntil() {
+        return this._failedUntil;
+    }
+    get lastUsedAt() {
+        return this._lastUsedAt;
+    }
+    get createdAt() {
+        return this._createdAt;
+    }
+    touch() {
+        this._lastUsedAt = Date.now();
+    }
+    initImage() {
+        if (this._loading || this._ready || this._aborted) {
+            return;
+        }
+        const now = Date.now();
+        if (this._failedUntil > now) {
+            return;
+        }
+        this._loading = true;
+        const image = new Image();
+        this._image = image;
+        image.crossOrigin = 'anonymous';
+        image.onload = () => this.imageLoaded();
+        image.onerror = () => {
+            this._ready = false;
+            this._loading = false;
+            this._failedUntil = Date.now() + 30_000;
+        };
+        image.src = this._url;
+    }
+    imageLoaded() {
+        if (!this._image || this._aborted) {
+            return;
+        }
+        this.textureLoaded(this._image);
+        this._loading = false;
+        this._failedUntil = 0;
+        this._ready = true;
+    }
+    textureLoaded(image) {
+        const gl = this._webgl;
+        this._shaderProgram.enableProgram();
+        const texture = gl.createTexture();
+        if (!texture) {
+            throw new Error(`Could not create XYZ texture for ${this.key}`);
+        }
+        this._texture = texture;
+        gl.activeTexture(gl.TEXTURE0);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    }
+    draw(pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        this.touch();
+        if (!this._ready || !this._texture || this._aborted) {
+            return false;
+        }
+        this.drawWithGpuMesh(this._gpuMesh, pMatrix, vMatrix, mMatrix, colorMapIdx);
+        return true;
+    }
+    drawRemapped(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        this.touch();
+        if (!this._ready || !this._texture || this._aborted) {
+            return false;
+        }
+        this.drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx);
+        return true;
+    }
+    dispose() {
+        const gl = this._webgl;
+        if (this._texture) {
+            gl.deleteTexture(this._texture);
+            this._texture = null;
+        }
+        if (this._gpuMesh.positionBuffer) {
+            gl.deleteBuffer(this._gpuMesh.positionBuffer);
+            this._gpuMesh.positionBuffer = null;
+        }
+        if (this._gpuMesh.uvBuffer) {
+            gl.deleteBuffer(this._gpuMesh.uvBuffer);
+            this._gpuMesh.uvBuffer = null;
+        }
+        if (this._gpuMesh.indexBuffer) {
+            gl.deleteBuffer(this._gpuMesh.indexBuffer);
+            this._gpuMesh.indexBuffer = null;
+        }
+        this._image = undefined;
+        this._ready = false;
+        this._loading = false;
+        this._aborted = true;
+    }
+    drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (!this._texture) {
+            return;
+        }
+        const gl = this._webgl;
+        this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount, mesh.indexType, 0);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
+    }
+    get key() {
+        return `${this._coord.z}/${this._coord.x}/${this._coord.y}`;
+    }
+}
+exports.XYZTile = XYZTile;
 
 
 /***/ }),
@@ -19203,6 +20309,202 @@ exports.FoVUtils = FoVUtils;
 
 /***/ }),
 
+/***/ 8124:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.LatLonGrid = void 0;
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+const gl_matrix_1 = __webpack_require__(1961);
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const XYZFoVHelper_js_1 = __webpack_require__(8486);
+const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
+const Utils_js_1 = __webpack_require__(7930);
+const FoV_js_1 = __webpack_require__(3576);
+const Global_js_1 = __importDefault(__webpack_require__(4382));
+class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    _shaderProgram;
+    _vertexShader;
+    _fragmentShader;
+    _attribLocations = {
+        position: 0,
+    };
+    _lonVertexPositionBuffer;
+    _latVertexPositionBuffer;
+    _lonStep = 10;
+    _latStep = 10;
+    _segmentStep = 1;
+    _fovObj;
+    _fovDeg = 180;
+    _showGrid = true;
+    _lonArray = [];
+    _latArray = [];
+    defaultColor = '#41d4d4';
+    constructor(radius, position, xrad, yrad, name, webgl) {
+        super(radius, position, xrad, yrad, name, webgl);
+        this._fovObj = new FoV_js_1.FoV(webgl);
+        this.init();
+    }
+    init() {
+        this.initGL(super.webgl);
+        const gl = super.webgl;
+        this._shaderProgram = gl.createProgram();
+        this.initShaders();
+        this._lonVertexPositionBuffer = gl.createBuffer();
+        this._latVertexPositionBuffer = gl.createBuffer();
+        this.initBuffers(this._fovDeg);
+    }
+    initShaders() {
+        const gl = super.webgl;
+        const fsSource = GridShaderManager_js_1.default.healpixGridFS();
+        this._fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+        gl.shaderSource(this._fragmentShader, fsSource);
+        gl.compileShader(this._fragmentShader);
+        if (!gl.getShaderParameter(this._fragmentShader, gl.COMPILE_STATUS)) {
+            const log = gl.getShaderInfoLog(this._fragmentShader) || 'Unknown fragment shader error';
+            console.error(log);
+            alert(log);
+            return;
+        }
+        const vsSource = GridShaderManager_js_1.default.healpixGridVS();
+        this._vertexShader = gl.createShader(gl.VERTEX_SHADER);
+        gl.shaderSource(this._vertexShader, vsSource);
+        gl.compileShader(this._vertexShader);
+        if (!gl.getShaderParameter(this._vertexShader, gl.COMPILE_STATUS)) {
+            const log = gl.getShaderInfoLog(this._vertexShader) || 'Unknown vertex shader error';
+            console.error(log);
+            alert(log);
+            return;
+        }
+        gl.attachShader(this._shaderProgram, this._vertexShader);
+        gl.attachShader(this._shaderProgram, this._fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            alert('Could not initialise shaders');
+        }
+        gl.useProgram(this._shaderProgram);
+    }
+    initBuffers(fovDeg) {
+        const steps = XYZFoVHelper_js_1.xyzFovHelper.getLonLatSteps(fovDeg);
+        this._lonStep = steps.lonStep;
+        this._latStep = steps.latStep;
+        this._segmentStep = Math.max(Math.min(this._lonStep, this._latStep), 0.25);
+        this._lonArray = [];
+        this._latArray = [];
+        for (let lon = -180; lon < 180; lon += this._lonStep) {
+            const vertices = [];
+            for (let lat = -90; lat <= 90; lat += this._segmentStep) {
+                vertices.push(...this.lonLatToCartesian(lon, Math.min(lat, 90)));
+            }
+            this._lonArray.push(new Float32Array(vertices));
+        }
+        for (let lat = -90 + this._latStep; lat < 90; lat += this._latStep) {
+            const vertices = [];
+            for (let lon = -180; lon <= 180; lon += this._segmentStep) {
+                vertices.push(...this.lonLatToCartesian(Math.min(lon, 180), lat));
+            }
+            this._latArray.push(new Float32Array(vertices));
+        }
+    }
+    lonLatToCartesian(lonDeg, latDeg) {
+        const lonRad = (0, Utils_js_1.degToRad)(lonDeg);
+        const latRad = (0, Utils_js_1.degToRad)(latDeg);
+        const cosLat = Math.cos(latRad);
+        return [
+            cosLat * Math.cos(lonRad),
+            cosLat * Math.sin(lonRad),
+            Math.sin(latRad),
+        ];
+    }
+    refresh(fovDeg) {
+        if (Math.abs(this._fovDeg - fovDeg) > 1e-6) {
+            this._fovDeg = fovDeg;
+            this.initBuffers(this._fovDeg);
+        }
+    }
+    refreshFoV(input) {
+        if (!input.camera || !input.pMatrix)
+            return this._fovDeg;
+        this._fovObj.getFoV(Global_js_1.default.insideSphere, this, input.camera, input.pMatrix);
+        this.refresh(this._fovObj.minFoV);
+        return this._fovObj.minFoV;
+    }
+    getMinFoVDeg() {
+        return this._fovObj.minFoV;
+    }
+    isVisible() {
+        return this._showGrid;
+    }
+    toggleShowGrid() {
+        this._showGrid = !this._showGrid;
+        return this._showGrid;
+    }
+    setShowGrid(showGrid) {
+        this._showGrid = showGrid;
+    }
+    enableShader(mMatrix, pMatrix, vMatrix) {
+        const gl = super.webgl;
+        gl.useProgram(this._shaderProgram);
+        const mvMatrix = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        const uMVMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uMVMatrix');
+        const uPMatrixLoc = gl.getUniformLocation(this._shaderProgram, 'uPMatrix');
+        const uColor = gl.getUniformLocation(this._shaderProgram, 'u_fragcolor');
+        this._attribLocations.position = gl.getAttribLocation(this._shaderProgram, 'aCatPosition');
+        if (uMVMatrixLoc)
+            gl.uniformMatrix4fv(uMVMatrixLoc, false, mvMatrix);
+        if (uPMatrixLoc)
+            gl.uniformMatrix4fv(uPMatrixLoc, false, pMatrix);
+        if (uColor) {
+            const rgb = (0, Utils_js_1.colorHex2RGB)(this.defaultColor);
+            gl.uniform4f(uColor, rgb[0], rgb[1], rgb[2], 1.0);
+        }
+    }
+    draw(input) {
+        if (!this._showGrid)
+            return;
+        const gl = super.webgl;
+        const camera = input.camera;
+        if (!camera)
+            return;
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refreshFoV(input);
+        const vMatrix = camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
+        const mMatrix = this.getModelMatrix();
+        this.enableShader(mMatrix, pMatrix, vMatrix);
+        for (const lonLine of this._lonArray) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._lonVertexPositionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, lonLine, gl.STATIC_DRAW);
+            gl.vertexAttribPointer(this._attribLocations.position, LatLonGrid.ELEM_SIZE, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(this._attribLocations.position);
+            gl.drawArrays(gl.LINE_STRIP, 0, lonLine.length / LatLonGrid.ELEM_SIZE);
+        }
+        for (const latLine of this._latArray) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._latVertexPositionBuffer);
+            gl.bufferData(gl.ARRAY_BUFFER, latLine, gl.STATIC_DRAW);
+            gl.vertexAttribPointer(this._attribLocations.position, LatLonGrid.ELEM_SIZE, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(this._attribLocations.position);
+            gl.drawArrays(gl.LINE_LOOP, 0, latLine.length / LatLonGrid.ELEM_SIZE);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+}
+exports.LatLonGrid = LatLonGrid;
+
+
+/***/ }),
+
 /***/ 8145:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -19587,6 +20889,104 @@ class Tile {
     }
 }
 exports["default"] = Tile;
+
+
+/***/ }),
+
+/***/ 8486:
+/***/ ((__unused_webpack_module, exports) => {
+
+// FoVHelper.ts
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.xyzFovHelper = void 0;
+class XYZFoVHelper {
+    getZoom(fov) {
+        if (fov >= 179)
+            return 0;
+        if (fov >= 90)
+            return 1;
+        if (fov >= 30)
+            return 2;
+        if (fov >= 20)
+            return 3;
+        if (fov >= 6)
+            return 4;
+        if (fov >= 3.2)
+            return 5;
+        if (fov >= 1.6)
+            return 6;
+        if (fov >= 0.85)
+            return 7;
+        if (fov >= 0.42)
+            return 8;
+        if (fov >= 0.21)
+            return 9;
+        if (fov >= 0.12)
+            return 10;
+        if (fov >= 0.06)
+            return 11;
+        if (fov >= 0.015)
+            return 12;
+        return 13;
+    }
+    // used in grid drawing
+    getLonLatSteps(fov) {
+        let lonStep;
+        let latStep;
+        if (fov >= 179) {
+            lonStep = 10;
+            latStep = 10;
+        }
+        else if (fov >= 25) {
+            lonStep = 9;
+            latStep = 9;
+        }
+        else if (fov >= 12.5) {
+            lonStep = 8;
+            latStep = 8;
+        }
+        else if (fov >= 6) {
+            lonStep = 6;
+            latStep = 6;
+        }
+        else if (fov >= 3.2) {
+            lonStep = 5;
+            latStep = 5;
+        }
+        else if (fov >= 1.6) {
+            lonStep = 4;
+            latStep = 4;
+        }
+        else if (fov >= 0.85) {
+            lonStep = 3;
+            latStep = 3;
+        }
+        else if (fov >= 0.42) {
+            lonStep = 2;
+            latStep = 2;
+        }
+        else if (fov >= 0.21) {
+            lonStep = 1;
+            latStep = 1;
+        }
+        else if (fov >= 0.12) {
+            lonStep = 0.5;
+            latStep = 0.5;
+        }
+        else if (fov >= 0.06) {
+            lonStep = 0.25;
+            latStep = 0.25;
+        }
+        else {
+            lonStep = 10;
+            latStep = 10;
+        }
+        return { lonStep, latStep };
+    }
+}
+exports.xyzFovHelper = new XYZFoVHelper();
+exports["default"] = XYZFoVHelper;
 
 
 /***/ }),

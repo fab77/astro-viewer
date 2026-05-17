@@ -6,6 +6,7 @@ import { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 import { bootSetup } from './Config.js';
 import ColorMaps from './model/ColorMaps.js';
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
+import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 // & {
@@ -115,6 +116,10 @@ export class AstroViewer {
     }
     activateXYZ(config) {
         this.astroSphere.activateXYZ(config);
+    }
+    activateXYZ2(config) {
+        const descriptor = new XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 16, config.maxCachedTiles ?? 384);
+        this.astroSphere.activateXYZ2(descriptor);
     }
     activateWMTS(config) {
         this.astroSphere.activateWMTS(config);

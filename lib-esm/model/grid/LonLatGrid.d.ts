@@ -1,0 +1,33 @@
+import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
+export declare class LatLonGrid extends AbstractSkyEntity {
+    static ELEM_SIZE: number;
+    static BYTES_X_ELEM: number;
+    private _shaderProgram;
+    private _vertexShader;
+    private _fragmentShader;
+    private _attribLocations;
+    private _lonVertexPositionBuffer;
+    private _latVertexPositionBuffer;
+    private _lonStep;
+    private _latStep;
+    private _segmentStep;
+    private _fovObj;
+    private _fovDeg;
+    private _showGrid;
+    private _lonArray;
+    private _latArray;
+    private defaultColor;
+    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, name: string, webgl: WebGL2RenderingContext);
+    init(): void;
+    private initShaders;
+    private initBuffers;
+    private lonLatToCartesian;
+    private refresh;
+    refreshFoV(input: SkyEntityDrawInput): number;
+    getMinFoVDeg(): number;
+    isVisible(): boolean;
+    toggleShowGrid(): boolean;
+    setShowGrid(showGrid: boolean): void;
+    private enableShader;
+    draw(input: SkyEntityDrawInput): void;
+}

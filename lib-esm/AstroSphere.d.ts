@@ -11,6 +11,7 @@ import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { ColorMap } from './model/ColorMaps.js';
 import { XYZLayer } from './model/earth/XYZLayer.js';
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
+import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -57,6 +58,7 @@ declare class AstroSphere {
     private pointerDownAt;
     private _activeHiPS;
     private _activeXYZ;
+    private _activeXYZ2;
     private _activeBaseLayer;
     private startup;
     private fov;
@@ -90,6 +92,7 @@ declare class AstroSphere {
     private collectViewportSphericalSamples;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     activateXYZ(config: XYZLayerConfig): void;
+    activateXYZ2(config: XYZMapDescriptor): void;
     activateWMTS(config: WMTSLayerConfig): void;
     showCatalogue(cat: CatalogueGL): Promise<CatalogueGL>;
     deleteCatalogue(catalogue: CatalogueGL): void;

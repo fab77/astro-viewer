@@ -35,6 +35,8 @@ import { XYZLayer } from './model/earth/XYZLayer.js'
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
 import { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js'
+import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js'
+import { XYZMap } from './model/earth2/XYZMap.js'
 
 export type PointCoordinates = {
   astroDeg: AstroCoords
@@ -92,6 +94,7 @@ class AstroSphere {
 
   private _activeHiPS: HiPS | null = null
   private _activeXYZ: XYZLayer | null = null
+  private _activeXYZ2: XYZMap | null = null
   private _activeBaseLayer: 'hips' | 'xyz' | null = null
 
   private startup = true
@@ -634,12 +637,24 @@ class AstroSphere {
 
   activateXYZ(config: XYZLayerConfig) {
     this._activeXYZ = new XYZLayer(config, this._webgl)
+    this._activeXYZ2 = null
+    this._activeBaseLayer = 'xyz'
+  }
+  activateXYZ2(config: XYZMapDescriptor) {
+    this._activeXYZ2 = new XYZMap(
+      1,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      config, this._webgl)
+    this._activeXYZ = null
     this._activeBaseLayer = 'xyz'
   }
 
   activateWMTS(config: WMTSLayerConfig) {
     const adapter = new WMTSAdapter(config)
     this._activeXYZ = new XYZLayer(adapter.toXYZLayerConfig(), this._webgl)
+    this._activeXYZ2 = null
     this._activeBaseLayer = 'xyz'
   }
 
@@ -800,9 +815,10 @@ class AstroSphere {
   }
 
   changeColorMap(cm: ColorMap) {
-    if (!this._activeHiPS) return
+    if (!this._activeHiPS && !this._activeXYZ2) return
     this._selectedColorMap = cm
     this._activeHiPS?.changeColorMap(cm)
+    this._activeXYZ2?.changeColorMap(cm)
   }
 
   private prevFov: number = 0
@@ -829,7 +845,7 @@ class AstroSphere {
 
     if (this._refreshingStatus) return
     if (!this._webgl) return
-    if (!this._activeHiPS && !this._activeXYZ) return
+    if (!this._activeHiPS && !this._activeXYZ && !this._activeXYZ2) return
 
     if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0) return
     if ((this._healpixGrid as any).fovObj === undefined) return
@@ -959,6 +975,7 @@ class AstroSphere {
     }
     if (this._activeBaseLayer === 'xyz') {
       this._activeXYZ?.draw(skyEntityDrawInput)
+      this._activeXYZ2?.draw(skyEntityDrawInput)
     }
 
     this._healpixGrid.draw(skyEntityDrawInput)
@@ -986,7 +1003,7 @@ class AstroSphere {
 
     this.activeCatalogues.forEach(cat => {
       const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix()
+        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix()
       if (activeModelMatrix) {
         cat.draw(activeModelMatrix as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }
@@ -996,7 +1013,7 @@ class AstroSphere {
 
     this.activeFootprintSets.forEach(fst => {
       const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix()
+        this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix()
       if (activeModelMatrix) {
         fst.draw(activeModelMatrix as Float32Array, this.mouseHelper, this._camera.getCameraMatrix() as Float32Array, this._perspectiveMatrixManager.pMatrix as Float32Array)
       }

@@ -49,6 +49,9 @@ export declare class AstroViewer {
     getDefaultHiPSURL(): string;
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     activateXYZ(config: XYZLayerConfig): void;
+    activateXYZ2(config: XYZLayerConfig & {
+        name?: string;
+    }): void;
     activateWMTS(config: WMTSLayerConfig): void;
     setXYZMaxConcurrentRequests(value: number): void;
     getXYZMaxConcurrentRequests(): number;

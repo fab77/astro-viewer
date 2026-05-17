@@ -15,6 +15,7 @@ import ColorMaps from './model/ColorMaps.js';
 import { XYZLayer } from './model/earth/XYZLayer.js';
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
 import { WMTSAdapter } from './model/earth/wmts/WMTSAdapter.js';
+import { XYZMap } from './model/earth2/XYZMap.js';
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -40,6 +41,7 @@ class AstroSphere {
     pointerDownAt = 0;
     _activeHiPS = null;
     _activeXYZ = null;
+    _activeXYZ2 = null;
     _activeBaseLayer = null;
     startup = true;
     fov;
@@ -420,11 +422,18 @@ class AstroSphere {
     }
     activateXYZ(config) {
         this._activeXYZ = new XYZLayer(config, this._webgl);
+        this._activeXYZ2 = null;
+        this._activeBaseLayer = 'xyz';
+    }
+    activateXYZ2(config) {
+        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
+        this._activeXYZ = null;
         this._activeBaseLayer = 'xyz';
     }
     activateWMTS(config) {
         const adapter = new WMTSAdapter(config);
         this._activeXYZ = new XYZLayer(adapter.toXYZLayerConfig(), this._webgl);
+        this._activeXYZ2 = null;
         this._activeBaseLayer = 'xyz';
     }
     // Catalogue section
@@ -545,10 +554,11 @@ class AstroSphere {
         // return null
     }
     changeColorMap(cm) {
-        if (!this._activeHiPS)
+        if (!this._activeHiPS && !this._activeXYZ2)
             return;
         this._selectedColorMap = cm;
         this._activeHiPS?.changeColorMap(cm);
+        this._activeXYZ2?.changeColorMap(cm);
     }
     prevFov = 0;
     prevCentralRaDeg = null;
@@ -571,7 +581,7 @@ class AstroSphere {
             return;
         if (!this._webgl)
             return;
-        if (!this._activeHiPS && !this._activeXYZ)
+        if (!this._activeHiPS && !this._activeXYZ && !this._activeXYZ2)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -673,6 +683,7 @@ class AstroSphere {
         }
         if (this._activeBaseLayer === 'xyz') {
             this._activeXYZ?.draw(skyEntityDrawInput);
+            this._activeXYZ2?.draw(skyEntityDrawInput);
         }
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
@@ -694,14 +705,14 @@ class AstroSphere {
             });
         }
         this.activeCatalogues.forEach(cat => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach(fst => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix();
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
