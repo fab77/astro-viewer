@@ -17,13 +17,21 @@ function formatBackoffEntries(entries) {
 export function wireXYZDiagnostics() {
   const update = () => {
     const stats = state.AstroAPI?.getXYZDebugStats?.();
+    const fov = state.AstroAPI?.getFoV?.();
+    const fovEl = el('xyzDiagFoV');
     const summaryEl = el('xyzDiagSummary');
     const cacheEl = el('xyzDiagCache');
     const requestsEl = el('xyzDiagRequests');
     const backoffEl = el('xyzDiagBackoff');
 
-    if (!summaryEl || !cacheEl || !requestsEl || !backoffEl) {
+    if (!fovEl || !summaryEl || !cacheEl || !requestsEl || !backoffEl) {
       return;
+    }
+
+    if (fov) {
+      fovEl.value = `FoV: min ${fov.minFoV?.toFixed?.(4) ?? '—'}° · x ${fov.xFoV?.toFixed?.(4) ?? '—'}° · y ${fov.yFoV?.toFixed?.(4) ?? '—'}°`;
+    } else {
+      fovEl.value = 'FoV: —';
     }
 
     if (!stats) {
