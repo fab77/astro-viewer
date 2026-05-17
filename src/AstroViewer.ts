@@ -309,6 +309,14 @@ createFootprintSet(footprintSetName: string,
     return this.astroSphere.equatorialGrid.isVisible()
   }
 
+  toggleLonLatGrid(): boolean {
+    return this.astroSphere.toggleLonLatGrid()
+  }
+
+  isLonLatGridVisible(): boolean {
+    return this.astroSphere.isLonLatGridVisible()
+  }
+
   // FOV
   getFoV(): FoV {
     return this.astroSphere.getFoV()

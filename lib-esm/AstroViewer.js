@@ -205,6 +205,12 @@ export class AstroViewer {
         // return equatorialGridSingleton.isVisible()
         return this.astroSphere.equatorialGrid.isVisible();
     }
+    toggleLonLatGrid() {
+        return this.astroSphere.toggleLonLatGrid();
+    }
+    isLonLatGridVisible() {
+        return this.astroSphere.isLonLatGridVisible();
+    }
     // FOV
     getFoV() {
         return this.astroSphere.getFoV();

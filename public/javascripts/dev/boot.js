@@ -36,12 +36,16 @@ async function bootstrap() {
     try {
       const healpixChk = el('healpixGridChk');
       const equatChk = el('equatorialGridChk');
+      const lonLatChk = el('lonLatGridChk');
       const xyzConcurrentInput = el('xyzMaxConcurrentRequests');
       if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
         healpixChk.checked = !!AC.isHealpixGridVisible();
       }
       if (equatChk && typeof AC.isEquatorialGridVisible === "function") {
         equatChk.checked = !!AC.isEquatorialGridVisible();
+      }
+      if (lonLatChk && typeof AC.isLonLatGridVisible === "function") {
+        lonLatChk.checked = !!AC.isLonLatGridVisible();
       }
       if (xyzConcurrentInput && typeof AC.getXYZMaxConcurrentRequests === "function") {
         xyzConcurrentInput.value = String(AC.getXYZMaxConcurrentRequests());
@@ -346,6 +350,15 @@ function wireUI() {
       state.AstroAPI?.toggleEquatorialGrid?.();
       // (optional) re-sync from getter if needed:
       // ev.target.checked = !!state.AstroAPI?.isEquatorialGridVisible?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
+    }
+  });
+
+  el('lonLatGridChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.toggleLonLatGrid?.();
+      ev.target.checked = !!state.AstroAPI?.isLonLatGridVisible?.();
     } catch (e) {
       ev.target.checked = !ev.target.checked;
     }

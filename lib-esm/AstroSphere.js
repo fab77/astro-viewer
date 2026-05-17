@@ -569,6 +569,12 @@ class AstroSphere {
     get activeXYZ() {
         return this._activeXYZ;
     }
+    isLonLatGridVisible() {
+        return this._activeXYZ2?.isLonLatGridVisible() ?? false;
+    }
+    toggleLonLatGrid() {
+        return this._activeXYZ2?.toggleLonLatGrid() ?? false;
+    }
     getXYZDebugStats() {
         return {
             activeBaseLayer: this._activeBaseLayer,

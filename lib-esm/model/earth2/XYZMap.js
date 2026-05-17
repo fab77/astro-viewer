@@ -79,6 +79,12 @@ export class XYZMap extends AbstractSkyEntity {
     initShaders() {
         this._xyzShaderProgram.enableProgram();
     }
+    isLonLatGridVisible() {
+        return this._latLonGrid.isVisible();
+    }
+    toggleLonLatGrid() {
+        return this._latLonGrid.toggleShowGrid();
+    }
     refresh(input) {
         const fov = this._latLonGrid.refreshFoV(input);
         // this._zoom = this.resolveVisibleZoom(fov)

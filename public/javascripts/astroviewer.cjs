@@ -671,6 +671,12 @@ class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     initShaders() {
         this._xyzShaderProgram.enableProgram();
     }
+    isLonLatGridVisible() {
+        return this._latLonGrid.isVisible();
+    }
+    toggleLonLatGrid() {
+        return this._latLonGrid.toggleShowGrid();
+    }
     refresh(input) {
         const fov = this._latLonGrid.refreshFoV(input);
         // this._zoom = this.resolveVisibleZoom(fov)
@@ -2872,6 +2878,12 @@ class AstroViewer {
     isEquatorialGridVisible() {
         // return equatorialGridSingleton.isVisible()
         return this.astroSphere.equatorialGrid.isVisible();
+    }
+    toggleLonLatGrid() {
+        return this.astroSphere.toggleLonLatGrid();
+    }
+    isLonLatGridVisible() {
+        return this.astroSphere.isLonLatGridVisible();
     }
     // FOV
     getFoV() {
@@ -17426,6 +17438,12 @@ class AstroSphere {
     }
     get activeXYZ() {
         return this._activeXYZ;
+    }
+    isLonLatGridVisible() {
+        return this._activeXYZ2?.isLonLatGridVisible() ?? false;
+    }
+    toggleLonLatGrid() {
+        return this._activeXYZ2?.toggleLonLatGrid() ?? false;
     }
     getXYZDebugStats() {
         return {

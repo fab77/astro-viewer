@@ -74,6 +74,8 @@ export declare class AstroViewer {
     isHealpixGridVisible(): boolean;
     toggleEquatorialGrid(): void;
     isEquatorialGridVisible(): boolean;
+    toggleLonLatGrid(): boolean;
+    isLonLatGridVisible(): boolean;
     getFoV(): FoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;

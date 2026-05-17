@@ -15,6 +15,8 @@ export declare class XYZMap extends AbstractSkyEntity {
     constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, descriptor: XYZMapDescriptor, webgl: WebGL2RenderingContext);
     changeColorMap(colorMap: ColorMap): void;
     private initShaders;
+    isLonLatGridVisible(): boolean;
+    toggleLonLatGrid(): boolean;
     private refresh;
     draw(input: SkyEntityDrawInput): void;
     private createTile;

@@ -118,6 +118,8 @@ declare class AstroSphere {
     private prevCentralDecDeg;
     get activeHiPS(): HiPS | null;
     get activeXYZ(): XYZLayer | null;
+    isLonLatGridVisible(): boolean;
+    toggleLonLatGrid(): boolean;
     getXYZDebugStats(): XYZDebugStats;
     draw(canvas: HTMLCanvasElement): void;
     private emitHoveredSourceIfChanged;

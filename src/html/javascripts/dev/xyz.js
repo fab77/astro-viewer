@@ -19,6 +19,11 @@ export function loadXYZ(urlTemplate, options = {}) {
     maxCachedTiles: options.maxCachedTiles,
   })
 
+  const lonLatChk = document.getElementById('lonLatGridChk')
+  if (lonLatChk && typeof state.AstroAPI?.isLonLatGridVisible === 'function') {
+    lonLatChk.checked = !!state.AstroAPI.isLonLatGridVisible()
+  }
+
   setStatus(
     `🌍 XYZ loaded (zoom ${options.minZoom ?? 0}-${options.maxZoom ?? 6}, cache ${options.maxCachedTiles ?? 384}, concurrent ${options.maxConcurrentRequests ?? 4}).`
   )
