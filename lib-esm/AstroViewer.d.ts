@@ -1,5 +1,5 @@
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
-import { FoV } from './model/FoV.js';
+import { SphereFoV } from './model/SphereFoV.js';
 import { Point } from './model/Point.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import type { CameraChangedDetail, PointCoordinates } from './AstroSphere.js';
@@ -76,7 +76,7 @@ export declare class AstroViewer {
     isEquatorialGridVisible(): boolean;
     toggleLonLatGrid(): boolean;
     isLonLatGridVisible(): boolean;
-    getFoV(): FoV;
+    getFoV(): SphereFoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;
     changeFoV2(deg: number): void;

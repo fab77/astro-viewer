@@ -8,7 +8,7 @@ import { Healpix } from 'healpixjs';
 
 import { fovHelper } from '../hips/FoVHelper.js';
 import {FoVUtils} from '../../utils/FoVUtils.js';
-import { FoV } from '../FoV.js';
+import { SphereFoV } from '../SphereFoV.js';
 
 import {CoordsType} from '../../utils/CoordsType.js';
 import {Point} from '../Point.js';
@@ -60,7 +60,7 @@ export class HealpixGrid extends AbstractSkyEntity {
   private _vertexCataloguePosition: Float32Array = new Float32Array(0);
   private _indexes: Uint32Array = new Uint32Array(0);
 
-  private _fovObj!: FoV;
+  private _fovObj!: SphereFoV;
 
   static INITIAL_FOV = 180;
   static RADIUS = 1;
@@ -94,10 +94,10 @@ export class HealpixGrid extends AbstractSkyEntity {
 
     this._vertexCataloguePosition = new Float32Array(0);
 
-    this._fovObj = new FoV(super.webgl);
+    this._fovObj = new SphereFoV(super.webgl);
   }
 
-  get fovObj(): FoV {
+  get fovObj(): SphereFoV {
     return this._fovObj
   }
 
@@ -121,7 +121,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     return this._fovObj.getFoV(global.insideSphere, this, camera, pMatrix) ;
   }
 
-  getFoV(): FoV {
+  getFoV(): SphereFoV {
     return this._fovObj
   }
 

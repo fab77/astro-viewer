@@ -1,6 +1,7 @@
 import { AbstractSkyEntity, SkyEntityDrawInput } from "../AbstractSkyEntity.js";
 import { XYZMapDescriptor } from "./XYZMapDescriptor.js";
 import { ColorMap } from "../ColorMaps.js";
+import { SphereFoV } from "../SphereFoV.js";
 export declare class XYZMap extends AbstractSkyEntity {
     private _xyzShaderProgram;
     private _descriptor;
@@ -17,6 +18,7 @@ export declare class XYZMap extends AbstractSkyEntity {
     private initShaders;
     isLonLatGridVisible(): boolean;
     toggleLonLatGrid(): boolean;
+    getFoV(): SphereFoV;
     private refresh;
     draw(input: SkyEntityDrawInput): void;
     private createTile;

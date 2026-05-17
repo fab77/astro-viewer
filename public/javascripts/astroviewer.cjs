@@ -677,6 +677,9 @@ class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     toggleLonLatGrid() {
         return this._latLonGrid.toggleShowGrid();
     }
+    getFoV() {
+        return this._latLonGrid.getFoV();
+    }
     refresh(input) {
         const fov = this._latLonGrid.refreshFoV(input);
         // this._zoom = this.resolveVisibleZoom(fov)
@@ -15347,293 +15350,6 @@ exports.CatalogueShaderProgram = CatalogueShaderProgram;
 
 /***/ }),
 
-/***/ 3576:
-/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.FoV = void 0;
-/**
- * FoV singleton (TypeScript)
- * - Uses computePerspectiveMatrixSingleton.pMatrix
- * - Guards acos domain (numeric safety)
- * - Uses vec3.transformMat4 instead of custom mat4*vec3
- * - Keeps original “insideSphere ? 360 - angle : angle” behavior
- */
-const gl_matrix_1 = __webpack_require__(1961);
-const RayPickingUtils_js_1 = __importDefault(__webpack_require__(4639));
-const Utils_js_1 = __webpack_require__(7930);
-class FoV {
-    static MIN_FOV_DEG = 1e-6;
-    fovXDeg = 180;
-    fovYDeg = 180;
-    ratio = +0;
-    _minFoV = 180;
-    _webgl;
-    constructor(webgl) {
-        this._webgl = webgl;
-    }
-    /** Recomputes FoV for current camera + projection */
-    getFoV(insideSphere, healpixGridSingleton, camera, pMatrix) {
-        // const gl = webgl
-        const gl = this._webgl;
-        if (!gl || !gl.canvas) {
-            // Handle the error or assign default values
-            this.fovXDeg = 180;
-            this.fovYDeg = 180;
-            this._minFoV = this.minFoV;
-            return this;
-        }
-        // horizontal FoV: ray through (centerY)
-        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera)
-        const canvas = gl.canvas;
-        const rect = canvas.getBoundingClientRect();
-        const canvasWidth = rect.width;
-        const canvasHeight = rect.height;
-        // const xFoVComputed = this.computeAngle(0, gl.canvas.height / 2, insideSphere, healpixGridSingleton, camera, pMatrix)
-        const xFoVComputed = this.computeAngle(0, canvasHeight / 2, insideSphere, healpixGridSingleton, camera, pMatrix);
-        this.fovXDeg = xFoVComputed.angleDeg;
-        // vertical FoV: ray through (centerX)
-        // const yFoVComputed = this.computeAngle(gl.canvas.width / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix)
-        const yFoVComputed = this.computeAngle(canvasWidth / 2, 0, insideSphere, healpixGridSingleton, camera, pMatrix);
-        this.fovYDeg = yFoVComputed.angleDeg;
-        this._minFoV = this.minFoV;
-        this.ratio = this.computeRatio(camera);
-        return this;
-    }
-    computeRatio(camera) {
-        // const camera = global.camera
-        if (!camera)
-            throw Error("Camera not defined");
-        const pos = camera.getCameraPosition();
-        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
-        // const distanceFromSphere = distanceFromCenter - healpixGridSingleton.RADIUS
-        const ratio = distanceFromCenter / this.fovYDeg;
-        return ratio;
-    }
-    changeMinFov(deg) {
-        console.log("inside changeMinFov");
-        if (this.fovYDeg <= this.fovXDeg) {
-            this.fovYDeg = deg;
-        }
-        else {
-            this.fovXDeg = deg;
-        }
-        console.log("changeMinFov: ping");
-        this.minFoV;
-        // this.fovYDeg <= this.fovXDeg ? this.fovYDeg = deg : this.fovXDeg = deg
-    }
-    get minFoV() {
-        const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
-        this._minFoV = Math.max(minFov, FoV.MIN_FOV_DEG);
-        return this._minFoV;
-    }
-    get xFoV() {
-        return this.fovXDeg;
-    }
-    get yFoV() {
-        return this.fovYDeg;
-    }
-    computeDistanceFromAngle(angleDeg) {
-        const desiredFoV = angleDeg;
-        const distance = desiredFoV * this.ratio;
-        // return Math.abs(distance)
-        return distance;
-    }
-    /** FoV half-screen chord angle doubled (deg) along a given canvas axis */
-    computeAngle(canvasX, canvasY, insideSphere, healpixGridSingleton, camera, pMatrix) {
-        // const pMatrix = computePerspectiveMatrixSingleton.pMatrix
-        if (!pMatrix) {
-            // Handle the error or assign a default value
-            console.warn('FoV: projection matrix is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const vMatrix = camera.getCameraMatrix();
-        if (!camera) {
-            // Handle the error or assign a default value
-            console.warn('FoV: camera is null');
-            return { angleDeg: 180, distance: 1 };
-        }
-        const rayWorld = RayPickingUtils_js_1.default.getRayFromMouse(canvasX, canvasY, pMatrix, this._webgl, vMatrix);
-        const intersectionDistance = RayPickingUtils_js_1.default.raySphere(camera.getCameraPosition(), rayWorld, healpixGridSingleton);
-        let angleDeg;
-        if (intersectionDistance > 0) {
-            // world-space intersection point on the sphere
-            const hit = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.scale(hit, rayWorld, intersectionDistance);
-            gl_matrix_1.vec3.add(hit, camera.getCameraPosition(), hit);
-            const center = healpixGridSingleton.center;
-            // vectors from sphere center
-            const vHit = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.subtract(vHit, hit, center);
-            // reference vector: rotate world +Z into current camera orientation, then from center
-            const refWorldZ = gl_matrix_1.vec3.fromValues(center[0], center[1], center[2] + healpixGridSingleton.radius);
-            const vInv = gl_matrix_1.mat4.create();
-            gl_matrix_1.mat4.invert(vInv, camera.getCameraMatrix());
-            const refCamZ = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.transformMat4(refCamZ, refWorldZ, vInv);
-            const vRef = gl_matrix_1.vec3.create();
-            gl_matrix_1.vec3.subtract(vRef, refCamZ, center);
-            // angle between vHit and vRef, doubled
-            const dot = gl_matrix_1.vec3.dot(vHit, vRef);
-            const n1 = gl_matrix_1.vec3.length(vHit);
-            const n2 = gl_matrix_1.vec3.length(vRef);
-            // numeric safety for acos
-            const c = Math.min(1, Math.max(-1, dot / (n1 * n2)));
-            const angleRad = Math.acos(c);
-            angleDeg = 2 * (0, Utils_js_1.radToDeg)(angleRad);
-        }
-        else {
-            angleDeg = 180;
-        }
-        const finalAngle = insideSphere ? 360 - angleDeg : angleDeg;
-        // return insideSphere ? 360 - angleDeg : angleDeg
-        return { angleDeg: finalAngle, distance: intersectionDistance };
-    }
-    /**
-   * Computes the camera position (x,y,z) along the current view direction that would
-   * yield the requested minFoV (in degrees), assuming the camera is OUTSIDE the sphere.
-   * This method does NOT mutate the camera; it only returns the suggested position.
-   *
-   * Geometry: for a sphere of radius R observed from distance d (from center),
-   * the apparent angular diameter is 2*arcsin(R/d). Our minFoV is that angular diameter
-   * along the tighter axis; we solve for d and place the camera on the current
-   * center→camera direction with that distance.
-   *
-   * @param targetMinFoVDeg Desired min FoV in degrees, 0 < targetMinFoVDeg < 180
-   * @returns Tuple [x, y, z] for the recommended camera position in world coordinates.
-   */
-    computeCameraPositionForMinFoV(targetMinFoVDeg) {
-        // const camera = global.camera
-        // const center = healpixGridSingleton.center
-        // const R = healpixGridSingleton.radius
-        // if (!camera) {
-        //   console.warn('FoV.computeCameraPositionForMinFoV: camera not available; returning a sensible default.')
-        //   return [center[0], center[1], center[2] + 2 * R]
-        // }
-        // // Clamp and validate input
-        // const eps = 1e-6
-        // const clamped = Math.max(eps, Math.min(180 - eps, targetMinFoVDeg))
-        // const halfRad = (clamped * Math.PI / 180) * 0.5
-        // // Distance from center needed to achieve the angular diameter
-        // // minFoV = 2 * arcsin(R / d)  =>  d = R / sin(minFoV/2)
-        // const sinHalf = Math.sin(halfRad)
-        // if (sinHalf <= 0) {
-        //   console.warn('FoV.computeCameraPositionForMinFoV: invalid targetMinFoVDeg, using fallback.')
-        //   return [center[0], center[1], center[2] + 2 * R]
-        // }
-        // let d = R / sinHalf
-        // // Ensure we remain strictly outside the sphere
-        // d = Math.max(d, R + 1e-4)
-        // // Use the current center→camera direction to keep orientation
-        // const camPos = camera.getCameraPosition()
-        // let dirX = camPos[0] - center[0]
-        // let dirY = camPos[1] - center[1]
-        // let dirZ = camPos[2] - center[2]
-        // const len = Math.hypot(dirX, dirY, dirZ)
-        // if (len < eps) {
-        //   // If somehow at the center, use +Z as a default direction
-        //   dirX = 0; dirY = 0; dirZ = 1;
-        // } else {
-        //   dirX /= len
-        //   dirY /= len
-        //   dirZ /= len
-        // }
-        // const newX = center[0] + dirX * d
-        // const newY = center[1] + dirY * d
-        // const newZ = center[2] + dirZ * d
-        // return [newX, newY, newZ]
-        return [0, 0, 0];
-    }
-    /**
-       * Computes the camera world-space position required to achieve a target FoV (deg),
-       * keeping the same viewing direction. Acts as the inverse of computeAngle().
-       *
-       * @param targetFoVDeg desired full FoV angle in degrees (0 < FoV < 180)
-       * @param canvasWidth  canvas width in pixels
-       * @param canvasHeight canvas height in pixels
-       * @returns [x, y, z] coordinates for the new camera position
-       */
-    computeCameraPositionForFoV(targetFoVDeg) {
-        // const camera = global.camera;
-        // const center = healpixGridSingleton.center;
-        // const R = healpixGridSingleton.radius;
-        // if (!camera) {
-        //   console.warn("FoV.computeCameraPositionForFoV: camera missing.");
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // const eps = 1e-6;
-        // const clamped = Math.max(eps, Math.min(180 - eps, targetFoVDeg));
-        // const halfRad = (clamped * Math.PI) / 360.0; // half-angle in radians
-        // // Distance from center that yields this FoV
-        // const sinHalf = Math.sin(halfRad);
-        // if (sinHalf <= 0) {
-        //   console.warn("FoV.computeCameraPositionForFoV: invalid FoV.");
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // let d = R / sinHalf;
-        // // Slightly outside sphere to avoid clipping
-        // d = Math.max(d, R + 1e-4);
-        // // Get current viewing direction
-        // const camPos = camera.getCameraPosition();
-        // let dirX = camPos[0] - center[0];
-        // let dirY = camPos[1] - center[1];
-        // let dirZ = camPos[2] - center[2];
-        // const len = Math.hypot(dirX, dirY, dirZ);
-        // if (len < eps) {
-        //   dirX = 0; dirY = 0; dirZ = 1;
-        // } else {
-        //   dirX /= len;
-        //   dirY /= len;
-        //   dirZ /= len;
-        // }
-        // const newX = center[0] + dirX * d;
-        // const newY = center[1] + dirY * d;
-        // const newZ = center[2] + dirZ * d;
-        // return [newX, newY, newZ];
-        return [0, 0, 0];
-    }
-    /**
-   * Return a camera position such that the sphere's apparent angular diameter
-   * (the silhouette, not the surface coverage) equals targetAngularDiameterDeg.
-   * Keeps current view direction; does not mutate the camera.
-   *
-   * @param targetAngularDiameterDeg desired apparent diameter in degrees (0<α<180)
-   * @returns [x,y,z] world position
-   */
-    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
-        // const camera = global.camera;
-        // const center = healpixGridSingleton.center;
-        // const R = healpixGridSingleton.radius;
-        // if (!camera) {
-        //   console.warn('computeCameraPositionForAngularDiameter: camera missing.');
-        //   return [center[0], center[1], center[2] + 2 * R];
-        // }
-        // const eps = 1e-6;
-        // const α = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
-        // const half = (α * Math.PI) / 360.0;
-        // const sinHalf = Math.sin(half);
-        // // d = R / sin(α/2)
-        // let d = R / sinHalf;
-        // d = Math.max(d, R + 1e-4); // stay outside
-        // // project along current center→camera direction
-        // const [cx, cy, cz] = center as [number, number, number];
-        // const [px, py, pz] = camera.getCameraPosition();
-        // let dx = px - cx, dy = py - cy, dz = pz - cz;
-        // const L = Math.hypot(dx, dy, dz);
-        // if (L < eps) { dx = 0; dy = 0; dz = 1; } else { dx /= L; dy /= L; dz /= L; }
-        // return [cx + dx * d, cy + dy * d, cz + dz * d];
-        return [0, 0, 0];
-    }
-}
-exports.FoV = FoV;
-
-
-/***/ }),
-
 /***/ 3726:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -16294,7 +16010,7 @@ const Global_js_1 = __importDefault(__webpack_require__(4382));
 const gl_matrix_1 = __webpack_require__(1961);
 const FoVHelper_js_1 = __webpack_require__(229);
 const FoVUtils_js_1 = __webpack_require__(8083);
-const FoV_js_1 = __webpack_require__(3576);
+const SphereFoV_js_1 = __webpack_require__(5803);
 const CoordsType_js_1 = __webpack_require__(8145);
 const Point_js_1 = __webpack_require__(6553);
 const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
@@ -16349,7 +16065,7 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         this._vertexCataloguePositionBuffer = super.webgl.createBuffer();
         this._indexBuffer = super.webgl.createBuffer();
         this._vertexCataloguePosition = new Float32Array(0);
-        this._fovObj = new FoV_js_1.FoV(super.webgl);
+        this._fovObj = new SphereFoV_js_1.SphereFoV(super.webgl);
     }
     get fovObj() {
         return this._fovObj;
@@ -17339,6 +17055,9 @@ class AstroSphere {
         this._camera.goTo(raDeg, decDeg);
     }
     getFoV() {
+        if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
+            return this._activeXYZ2.getFoV();
+        }
         return this.fov;
     }
     getFoVPolygon() {
@@ -18330,6 +18049,200 @@ class TerraPointSetGL extends CatalogueGL_js_1.CatalogueGL {
     _kind = 'TerraPointSetGL';
 }
 exports.TerraPointSetGL = TerraPointSetGL;
+
+
+/***/ }),
+
+/***/ 5803:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SphereFoV = void 0;
+const gl_matrix_1 = __webpack_require__(1961);
+const Utils_js_1 = __webpack_require__(7930);
+class SphereFoV {
+    static MIN_FOV_DEG = 1e-6;
+    fovXDeg = 180;
+    fovYDeg = 180;
+    ratio = 0;
+    _minFoV = 180;
+    _webgl;
+    _lastModel = null;
+    _lastCamera = null;
+    constructor(webgl) {
+        this._webgl = webgl;
+    }
+    getFoV(insideSphere, model, camera, pMatrix) {
+        this._lastModel = model;
+        this._lastCamera = camera;
+        const canvas = this._webgl.canvas;
+        if (!canvas) {
+            this.fovXDeg = 180;
+            this.fovYDeg = 180;
+            this._minFoV = this.minFoV;
+            return this;
+        }
+        const rect = canvas.getBoundingClientRect();
+        const canvasWidth = rect.width;
+        const canvasHeight = rect.height;
+        this.fovXDeg = this.computeAngle(0, canvasHeight / 2, insideSphere, model, camera, pMatrix).angleDeg;
+        this.fovYDeg = this.computeAngle(canvasWidth / 2, 0, insideSphere, model, camera, pMatrix).angleDeg;
+        this._minFoV = this.minFoV;
+        this.ratio = this.computeRatio(camera);
+        return this;
+    }
+    computeRatio(camera) {
+        const pos = camera.getCameraPosition();
+        const distanceFromCenter = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+        return distanceFromCenter / this.fovYDeg;
+    }
+    get minFoV() {
+        const minFov = this.fovYDeg <= this.fovXDeg ? this.fovYDeg : this.fovXDeg;
+        this._minFoV = Math.max(minFov, SphereFoV.MIN_FOV_DEG);
+        return this._minFoV;
+    }
+    get xFoV() {
+        return this.fovXDeg;
+    }
+    get yFoV() {
+        return this.fovYDeg;
+    }
+    computeDistanceFromAngle(angleDeg) {
+        return angleDeg * this.ratio;
+    }
+    changeMinFov(deg) {
+        if (this.fovYDeg <= this.fovXDeg) {
+            this.fovYDeg = deg;
+        }
+        else {
+            this.fovXDeg = deg;
+        }
+        this.minFoV;
+    }
+    computeCameraPositionForMinFoV(targetMinFoVDeg) {
+        return this.computeCameraPositionForFoV(targetMinFoVDeg);
+    }
+    computeCameraPositionForFoV(targetFoVDeg) {
+        return this.computeCameraPositionForAngularDiameter(targetFoVDeg);
+    }
+    computeCameraPositionForAngularDiameter(targetAngularDiameterDeg) {
+        if (!this._lastModel || !this._lastCamera) {
+            return [0, 0, 0];
+        }
+        const eps = 1e-6;
+        const clamped = Math.max(eps, Math.min(180 - eps, targetAngularDiameterDeg));
+        const halfRad = (clamped * Math.PI) / 360.0;
+        const sinHalf = Math.sin(halfRad);
+        if (sinHalf <= 0) {
+            return [0, 0, 0];
+        }
+        const model = this._lastModel;
+        const camera = this._lastCamera;
+        const targetDistance = Math.max(model.radius / sinHalf, model.radius + 1e-4);
+        const camPos = camera.getCameraPosition();
+        const direction = gl_matrix_1.vec3.fromValues(camPos[0] - model.center[0], camPos[1] - model.center[1], camPos[2] - model.center[2]);
+        if (gl_matrix_1.vec3.length(direction) < eps) {
+            gl_matrix_1.vec3.set(direction, 0, 0, 1);
+        }
+        else {
+            gl_matrix_1.vec3.normalize(direction, direction);
+        }
+        return [
+            model.center[0] + direction[0] * targetDistance,
+            model.center[1] + direction[1] * targetDistance,
+            model.center[2] + direction[2] * targetDistance,
+        ];
+    }
+    computeAngle(canvasX, canvasY, insideSphere, model, camera, pMatrix) {
+        const canvas = this._webgl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const centerHit = this.getIntersectionPointWithModel(rect.width / 2, rect.height / 2, model, camera, pMatrix);
+        const edgeHit = this.getIntersectionPointWithModel(canvasX, canvasY, model, camera, pMatrix);
+        if (!centerHit || !edgeHit) {
+            return { angleDeg: 180, distance: -1 };
+        }
+        const angleDeg = 2 * this.computeAngularDistanceDeg(centerHit.point, edgeHit.point);
+        return {
+            angleDeg: insideSphere ? 360 - angleDeg : angleDeg,
+            distance: edgeHit.distance,
+        };
+    }
+    computeAngularDistanceDeg(a, b) {
+        const aNorm = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), a);
+        const bNorm = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), b);
+        const dot = gl_matrix_1.vec3.dot(aNorm, bNorm);
+        const clamped = Math.min(1, Math.max(-1, dot));
+        return (0, Utils_js_1.radToDeg)(Math.acos(clamped));
+    }
+    getIntersectionPointWithModel(mouseX, mouseY, model, camera, pMatrix) {
+        const rayWorld = this.getRayFromMouse(mouseX, mouseY, pMatrix, camera.getCameraMatrix());
+        const distance = this.raySphere(camera.getCameraPosition(), rayWorld, model);
+        if (distance < 0) {
+            return null;
+        }
+        const worldHit = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.scale(worldHit, rayWorld, distance);
+        gl_matrix_1.vec3.add(worldHit, camera.getCameraPosition(), worldHit);
+        const worldHit4 = [worldHit[0], worldHit[1], worldHit[2], 1.0];
+        const modelHit4 = [0, 0, 0, 0];
+        this.mat4MultiplyVec4(model.getModelMatrixInverse(), worldHit4, modelHit4);
+        return {
+            point: gl_matrix_1.vec3.fromValues(modelHit4[0], modelHit4[1], modelHit4[2]),
+            distance,
+        };
+    }
+    getRayFromMouse(mouseX, mouseY, pMatrix, vMatrix) {
+        const gl = this._webgl;
+        const canvas = gl.canvas;
+        const rect = canvas.getBoundingClientRect();
+        const x = (2.0 * mouseX) / rect.width - 1.0;
+        const y = 1.0 - (2.0 * mouseY) / rect.height;
+        const rayClip = [x, y, -1.0, 1.0];
+        const pInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(pInv, pMatrix);
+        const rayEye4 = [0, 0, 0, 0];
+        this.mat4MultiplyVec4(pInv, rayClip, rayEye4);
+        const rayEye = [rayEye4[0], rayEye4[1], -1.0, 0.0];
+        const vInv = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.invert(vInv, vMatrix);
+        const rayWorld4 = [0, 0, 0, 0];
+        this.mat4MultiplyVec4(vInv, rayEye, rayWorld4);
+        const rayWorld = gl_matrix_1.vec3.fromValues(rayWorld4[0], rayWorld4[1], rayWorld4[2]);
+        gl_matrix_1.vec3.normalize(rayWorld, rayWorld);
+        return rayWorld;
+    }
+    raySphere(rayOrigWorld, rayDirectionWorld, sphere) {
+        let intersectionDistance = -1;
+        const L = gl_matrix_1.vec3.create();
+        gl_matrix_1.vec3.subtract(L, rayOrigWorld, sphere.center);
+        const b = gl_matrix_1.vec3.dot(rayDirectionWorld, L);
+        const c = gl_matrix_1.vec3.dot(L, L) - sphere.radius * sphere.radius;
+        const disc = b * b - c;
+        if (disc > 0.0) {
+            const s = Math.sqrt(disc);
+            const ta = -b + s;
+            const tb = -b - s;
+            if (ta >= 0.0 || tb >= 0.0) {
+                intersectionDistance = tb < 0.0 ? ta : Math.min(ta, tb);
+            }
+        }
+        else if (disc === 0.0) {
+            const t = -b;
+            if (t >= 0.0) {
+                intersectionDistance = t;
+            }
+        }
+        return intersectionDistance;
+    }
+    mat4MultiplyVec4(m, v, out) {
+        out[0] = m[0] * v[0] + m[4] * v[1] + m[8] * v[2] + m[12] * v[3];
+        out[1] = m[1] * v[0] + m[5] * v[1] + m[9] * v[2] + m[13] * v[3];
+        out[2] = m[2] * v[0] + m[6] * v[1] + m[10] * v[2] + m[14] * v[3];
+        out[3] = m[3] * v[0] + m[7] * v[1] + m[11] * v[2] + m[15] * v[3];
+    }
+}
+exports.SphereFoV = SphereFoV;
 
 
 /***/ }),
@@ -20351,7 +20264,7 @@ const AbstractSkyEntity_js_1 = __webpack_require__(4735);
 const XYZFoVHelper_js_1 = __webpack_require__(8486);
 const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
 const Utils_js_1 = __webpack_require__(7930);
-const FoV_js_1 = __webpack_require__(3576);
+const SphereFoV_js_1 = __webpack_require__(5803);
 const Global_js_1 = __importDefault(__webpack_require__(4382));
 class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     static ELEM_SIZE = 3;
@@ -20375,7 +20288,7 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     defaultColor = '#41d4d4';
     constructor(radius, position, xrad, yrad, name, webgl) {
         super(radius, position, xrad, yrad, name, webgl);
-        this._fovObj = new FoV_js_1.FoV(webgl);
+        this._fovObj = new SphereFoV_js_1.SphereFoV(webgl);
         this.init();
     }
     init() {
@@ -20464,6 +20377,9 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     }
     getMinFoVDeg() {
         return this._fovObj.minFoV;
+    }
+    getFoV() {
+        return this._fovObj;
     }
     isVisible() {
         return this._showGrid;
@@ -21771,13 +21687,15 @@ var __webpack_exports__ = {};
 var exports = __webpack_exports__;
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZLayer = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZLayer = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(5087);
 Object.defineProperty(exports, "HiPSDescriptor", ({ enumerable: true, get: function () { return HiPSDescriptor_js_1.HiPSDescriptor; } }));
-var FoV_js_1 = __webpack_require__(3576);
-Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return FoV_js_1.FoV; } }));
+var SphereFoV_js_1 = __webpack_require__(5803);
+Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return SphereFoV_js_1.SphereFoV; } }));
+var SphereFoV_js_2 = __webpack_require__(5803);
+Object.defineProperty(exports, "SphereFoV", ({ enumerable: true, get: function () { return SphereFoV_js_2.SphereFoV; } }));
 var FootprintSetGL_js_1 = __webpack_require__(592);
 Object.defineProperty(exports, "HoveredFootprintDetail", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.HoveredFootprintDetail; } }));
 Object.defineProperty(exports, "FootprintSetGL", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.FootprintSetGL; } }));

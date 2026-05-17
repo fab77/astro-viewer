@@ -1,6 +1,7 @@
 export { AstroViewer } from './AstroViewer.js';
 export { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
-export { FoV } from './model/FoV.js';
+export { SphereFoV as FoV } from './model/SphereFoV.js';
+export { SphereFoV } from './model/SphereFoV.js';
 export type { PointCoordinates, CameraChangedDetail } from './AstroSphere.js';
 export { HoveredFootprintDetail, FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 export { CatalogueGL } from './model/catalogues/CatalogueGL.js';

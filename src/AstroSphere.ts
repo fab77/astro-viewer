@@ -19,7 +19,7 @@ import {
 import { HiPS } from './model/hips/HiPS.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
 import { PerspectiveMatrixManager } from './utils/PerspectiveMatrixManager.js'
-import { FoV } from './model/FoV.js'
+import { SphereFoV } from './model/SphereFoV.js'
 import { Point } from './model/Point.js'
 import { FoVUtils } from './utils/FoVUtils.js'
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
@@ -99,7 +99,7 @@ class AstroSphere {
 
   private startup = true
 
-  private fov: FoV
+  private fov: SphereFoV
 
   private activeCatalogues: CatalogueGL[] = []
   private activeFootprintSets: FootprintSetGL[] = []
@@ -698,7 +698,11 @@ class AstroSphere {
     this._camera.goTo(raDeg, decDeg)
   }
 
-  getFoV(): FoV {
+  getFoV(): SphereFoV {
+    if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
+      return this._activeXYZ2.getFoV()
+    }
+
     return this.fov
   }
 

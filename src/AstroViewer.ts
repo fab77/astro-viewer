@@ -1,7 +1,7 @@
 // import global from './Global.js'
 import AstroSphere from './AstroSphere.js'
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js'
-import { FoV } from './model/FoV.js'
+import { SphereFoV } from './model/SphereFoV.js'
 import { Point } from './model/Point.js'
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js'
 import type { CameraChangedDetail, PointCoordinates } from './AstroSphere.js'
@@ -318,7 +318,7 @@ createFootprintSet(footprintSetName: string,
   }
 
   // FOV
-  getFoV(): FoV {
+  getFoV(): SphereFoV {
     return this.astroSphere.getFoV()
   }
 

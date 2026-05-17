@@ -469,6 +469,9 @@ class AstroSphere {
         this._camera.goTo(raDeg, decDeg);
     }
     getFoV() {
+        if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
+            return this._activeXYZ2.getFoV();
+        }
         return this.fov;
     }
     getFoVPolygon() {

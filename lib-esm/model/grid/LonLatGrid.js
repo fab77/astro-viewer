@@ -4,7 +4,7 @@ import { AbstractSkyEntity } from '../AbstractSkyEntity.js';
 import { xyzFovHelper } from '../earth2/XYZFoVHelper.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
-import { FoV } from '../FoV.js';
+import { SphereFoV } from '../SphereFoV.js';
 import global from '../../Global.js';
 export class LatLonGrid extends AbstractSkyEntity {
     static ELEM_SIZE = 3;
@@ -28,7 +28,7 @@ export class LatLonGrid extends AbstractSkyEntity {
     defaultColor = '#41d4d4';
     constructor(radius, position, xrad, yrad, name, webgl) {
         super(radius, position, xrad, yrad, name, webgl);
-        this._fovObj = new FoV(webgl);
+        this._fovObj = new SphereFoV(webgl);
         this.init();
     }
     init() {
@@ -117,6 +117,9 @@ export class LatLonGrid extends AbstractSkyEntity {
     }
     getMinFoVDeg() {
         return this._fovObj.minFoV;
+    }
+    getFoV() {
+        return this._fovObj;
     }
     isVisible() {
         return this._showGrid;

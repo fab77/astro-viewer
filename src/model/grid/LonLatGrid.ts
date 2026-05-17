@@ -5,7 +5,7 @@ import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import { xyzFovHelper } from '../earth2/XYZFoVHelper.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
-import { FoV } from '../FoV.js';
+import { SphereFoV } from '../SphereFoV.js';
 import global from '../../Global.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
@@ -27,7 +27,7 @@ export class LatLonGrid extends AbstractSkyEntity {
   private _lonStep = 10;
   private _latStep = 10;
   private _segmentStep = 1;
-  private _fovObj: FoV;
+  private _fovObj: SphereFoV;
   private _fovDeg = 180;
   private _showGrid = true;
   private _lonArray: Float32Array[] = [];
@@ -44,7 +44,7 @@ export class LatLonGrid extends AbstractSkyEntity {
   ) {
     super(radius, position, xrad, yrad, name, webgl);
 
-    this._fovObj = new FoV(webgl);
+    this._fovObj = new SphereFoV(webgl);
     this.init();
   }
 
@@ -144,13 +144,17 @@ export class LatLonGrid extends AbstractSkyEntity {
   refreshFoV(input: SkyEntityDrawInput): number {
     if (!input.camera || !input.pMatrix) return this._fovDeg;
 
-    this._fovObj.getFoV(global.insideSphere, this as any, input.camera, input.pMatrix);
+    this._fovObj.getFoV(global.insideSphere, this, input.camera, input.pMatrix);
     this.refresh(this._fovObj.minFoV);
     return this._fovObj.minFoV;
   }
 
   getMinFoVDeg(): number {
     return this._fovObj.minFoV;
+  }
+
+  getFoV(): SphereFoV {
+    return this._fovObj;
   }
 
   isVisible(): boolean {

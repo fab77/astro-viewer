@@ -1,4 +1,5 @@
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
+import { SphereFoV } from '../SphereFoV.js';
 export declare class LatLonGrid extends AbstractSkyEntity {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
@@ -25,6 +26,7 @@ export declare class LatLonGrid extends AbstractSkyEntity {
     private refresh;
     refreshFoV(input: SkyEntityDrawInput): number;
     getMinFoVDeg(): number;
+    getFoV(): SphereFoV;
     isVisible(): boolean;
     toggleShowGrid(): boolean;
     setShowGrid(showGrid: boolean): void;

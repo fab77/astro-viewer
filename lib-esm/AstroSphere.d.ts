@@ -2,7 +2,7 @@ import Camera from './Camera.js';
 import { AstroCoords, HMS, SphericalCoords, DMS } from './utils/Utils.js';
 import { HiPS } from './model/hips/HiPS.js';
 import { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
-import { FoV } from './model/FoV.js';
+import { SphereFoV } from './model/SphereFoV.js';
 import { Point } from './model/Point.js';
 import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/FootprintSetGL.js';
@@ -100,7 +100,7 @@ declare class AstroSphere {
     deleteFootprintSet(footprintSet: FootprintSetGL): void;
     getHoveredFootprints(): HoveredFootprintDetail[];
     goTo(raDeg: number, decDeg: number): void;
-    getFoV(): FoV;
+    getFoV(): SphereFoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;
     changeFoV2(deg: number): void;
