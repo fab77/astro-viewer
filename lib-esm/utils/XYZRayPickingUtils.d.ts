@@ -1,7 +1,7 @@
 import { ReadonlyMat4, ReadonlyVec3, vec3 } from 'gl-matrix';
 import Camera from '../Camera.js';
 import { AbstractSkyEntity } from '../model/AbstractSkyEntity.js';
-import type { XYZTileCoord } from '../model/earth2/XYZTypes.js';
+import type { XYZTileCoord } from '../model/earth/XYZTypes.js';
 export type XYZLonLat = {
     lonDeg: number;
     latDeg: number;

@@ -2,7 +2,7 @@
 import { mat4, ReadonlyMat4, vec4 } from 'gl-matrix';
 
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
-import { xyzFovHelper } from '../earth2/XYZFoVHelper.js';
+import { xyzFovHelper } from '../earth/XYZFoVHelper.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
 import { SphereFoV } from '../SphereFoV.js';

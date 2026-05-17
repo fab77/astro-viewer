@@ -11,7 +11,7 @@ import { mat4, ReadonlyMat4, ReadonlyVec3, vec3 } from 'gl-matrix';
 
 import Camera from '../Camera.js';
 import { AbstractSkyEntity } from '../model/AbstractSkyEntity.js';
-import type { XYZTileCoord } from '../model/earth2/XYZTypes.js';
+import type { XYZTileCoord } from '../model/earth/XYZTypes.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 

@@ -12,10 +12,10 @@ import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { CoordsType } from './utils/CoordsType.js';
 import ColorMaps from './model/ColorMaps.js';
-import { xyzTileRequestScheduler } from './model/earth2/XYZTileRequestScheduler.js';
-import { WMTSAdapter } from './model/earth2/WMTSAdapter.js';
-import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js';
-import { XYZMap } from './model/earth2/XYZMap.js';
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
+import { WMTSAdapter } from './model/earth/WMTSAdapter.js';
+import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js';
+import { XYZMap } from './model/earth/XYZMap.js';
 import { mat4, vec3, vec4 } from 'gl-matrix';
 /**
  * AstroSphere — main WebGL scene controller (TS port)

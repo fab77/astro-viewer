@@ -9,9 +9,9 @@ import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/Footp
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { ColorMap } from './model/ColorMaps.js';
-import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth2/XYZConfig.js';
-import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js';
-import { XYZMap } from './model/earth2/XYZMap.js';
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/XYZConfig.js';
+import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js';
+import { XYZMap } from './model/earth/XYZMap.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;

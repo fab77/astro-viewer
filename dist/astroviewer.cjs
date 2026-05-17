@@ -289,144 +289,6 @@ exports.XYZShaderProgram = XYZShaderProgram;
 
 /***/ }),
 
-/***/ 207:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZTileBuffer = void 0;
-class XYZTileBuffer {
-    _tiles = new Map();
-    _cachedTiles = new Map();
-    _cacheAliveMilliSeconds;
-    _cleanerId;
-    constructor(minutesToLiveInCache = 1) {
-        this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
-        if (typeof window !== 'undefined') {
-            this._cleanerId = window.setInterval(() => {
-                this.cacheCleaner();
-            }, 10_000);
-        }
-    }
-    get activeTiles() {
-        return this._tiles;
-    }
-    get cachedTiles() {
-        return this._cachedTiles;
-    }
-    get size() {
-        return this._tiles.size + this._cachedTiles.size;
-    }
-    ensureTiles(visibleTiles, tileFactory) {
-        const visibleTileKeys = [];
-        for (const tileCoord of visibleTiles) {
-            const tile = this.getTile(tileCoord, tileFactory);
-            this.touchTile(tile);
-            visibleTileKeys.push(this.key(tileCoord));
-        }
-        this.syncVisibleTiles(visibleTileKeys);
-        return visibleTileKeys;
-    }
-    getTile(tileCoord, tileFactory) {
-        const tileKey = this.key(tileCoord);
-        if (this._tiles.has(tileKey)) {
-            return this._tiles.get(tileKey).tile;
-        }
-        if (this._cachedTiles.has(tileKey)) {
-            const entry = this._cachedTiles.get(tileKey);
-            entry.cacheTime0 = undefined;
-            this._tiles.set(tileKey, entry);
-            this._cachedTiles.delete(tileKey);
-            return entry.tile;
-        }
-        const tile = tileFactory(tileCoord);
-        this._tiles.set(tileKey, { tile });
-        return tile;
-    }
-    getActiveTile(tileKey) {
-        return this._tiles.get(tileKey)?.tile ?? null;
-    }
-    getAnyTile(tileKey) {
-        return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null;
-    }
-    getActiveTiles() {
-        return Array.from(this._tiles.values(), (entry) => entry.tile);
-    }
-    syncVisibleTiles(visibleTileKeys) {
-        const visibleKeySet = new Set(visibleTileKeys);
-        for (const [tileKey, entry] of this._tiles) {
-            if (visibleKeySet.has(tileKey)) {
-                this.touchTile(entry.tile);
-                continue;
-            }
-            entry.cacheTime0 = Date.now();
-            this._cachedTiles.set(tileKey, entry);
-            this._tiles.delete(tileKey);
-        }
-    }
-    evictCached(maxCachedTiles) {
-        if (this.size <= maxCachedTiles) {
-            return;
-        }
-        const candidates = Array.from(this._cachedTiles.entries()).sort((a, b) => {
-            return this.getTileAgeScore(a[1].tile) - this.getTileAgeScore(b[1].tile);
-        });
-        for (const [tileKey, entry] of candidates) {
-            if (this.size <= maxCachedTiles) {
-                break;
-            }
-            if (entry.tile.loading) {
-                continue;
-            }
-            entry.tile.dispose?.();
-            this._cachedTiles.delete(tileKey);
-        }
-    }
-    dispose() {
-        if (this._cleanerId !== undefined && typeof window !== 'undefined') {
-            window.clearInterval(this._cleanerId);
-            this._cleanerId = undefined;
-        }
-        for (const entry of this._tiles.values()) {
-            entry.tile.dispose?.();
-        }
-        for (const entry of this._cachedTiles.values()) {
-            entry.tile.dispose?.();
-        }
-        this._tiles.clear();
-        this._cachedTiles.clear();
-    }
-    key(tileCoord) {
-        return XYZTileBuffer.key(tileCoord);
-    }
-    static key(tileCoord) {
-        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
-    }
-    cacheCleaner() {
-        const now = Date.now();
-        for (const [tileKey, entry] of this._cachedTiles) {
-            const t0 = entry.cacheTime0;
-            if (t0 === undefined || now - t0 <= this._cacheAliveMilliSeconds || entry.tile.loading) {
-                continue;
-            }
-            entry.tile.dispose?.();
-            this._cachedTiles.delete(tileKey);
-        }
-    }
-    touchTile(tile) {
-        tile.touch?.();
-    }
-    getTileAgeScore(tile) {
-        const lastUsedAt = tile.lastUsedAt ?? 0;
-        const createdAt = tile.createdAt ?? lastUsedAt;
-        return Math.min(lastUsedAt || createdAt, createdAt);
-    }
-}
-exports.XYZTileBuffer = XYZTileBuffer;
-
-
-/***/ }),
-
 /***/ 229:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -538,385 +400,6 @@ class FoVHelper {
 }
 exports.fovHelper = new FoVHelper();
 exports["default"] = FoVHelper;
-
-
-/***/ }),
-
-/***/ 579:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.xyzTileRequestScheduler = exports.XYZTileRequestScheduler = exports.XYZTileRequestError = void 0;
-class XYZTileRequestError extends Error {
-    cooldownMs;
-    retryable;
-    constructor(message, cooldownMs, retryable = true) {
-        super(message);
-        this.name = 'XYZTileRequestError';
-        this.cooldownMs = cooldownMs;
-        this.retryable = retryable;
-    }
-}
-exports.XYZTileRequestError = XYZTileRequestError;
-class XYZTileRequestScheduler {
-    _maxConcurrent;
-    _activeCount = 0;
-    _queue = [];
-    _inflight = new Map();
-    _hostBackoff = new Map();
-    _sequence = 0;
-    constructor(maxConcurrent = 4) {
-        this._maxConcurrent = maxConcurrent;
-    }
-    setMaxConcurrent(maxConcurrent) {
-        this._maxConcurrent = Math.max(1, Math.floor(maxConcurrent));
-        this.pump();
-    }
-    getMaxConcurrent() {
-        return this._maxConcurrent;
-    }
-    getDebugStats() {
-        const now = Date.now();
-        const hostsInBackoff = Array.from(this._hostBackoff.entries())
-            .map(([host, state]) => ({
-            host,
-            cooldownMs: Math.max(0, state.cooldownUntil - now),
-            consecutiveFailures: state.consecutiveFailures,
-        }))
-            .filter((entry) => entry.cooldownMs > 0 || entry.consecutiveFailures > 0)
-            .sort((a, b) => b.cooldownMs - a.cooldownMs);
-        return {
-            activeRequests: this._activeCount,
-            queuedRequests: this._queue.length,
-            inflightRequests: this._inflight.size,
-            maxConcurrentRequests: this._maxConcurrent,
-            highestQueuedPriority: this._queue[0]?.priority ?? null,
-            hostsInBackoff,
-        };
-    }
-    load(url, priority = 0) {
-        const inflight = this._inflight.get(url);
-        if (inflight) {
-            return inflight;
-        }
-        const hostCooldown = this.getHostCooldown(url);
-        const now = Date.now();
-        if (hostCooldown > now) {
-            return Promise.reject(new XYZTileRequestError(`Cooldown active for ${new URL(url).host}`, hostCooldown - now));
-        }
-        const promise = new Promise((resolve, reject) => {
-            this._queue.push({
-                url,
-                resolve,
-                reject,
-                priority,
-                sequence: this._sequence++,
-            });
-            this._queue.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
-            this.pump();
-        }).finally(() => {
-            this._inflight.delete(url);
-        });
-        this._inflight.set(url, promise);
-        return promise;
-    }
-    pump() {
-        while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
-            const item = this._queue.shift();
-            if (!item)
-                return;
-            const hostCooldown = this.getHostCooldown(item.url);
-            const now = Date.now();
-            if (hostCooldown > now) {
-                item.reject(new XYZTileRequestError(`Cooldown active for ${new URL(item.url).host}`, hostCooldown - now));
-                continue;
-            }
-            this._activeCount += 1;
-            this.fetchBlob(item)
-                .then(item.resolve)
-                .catch(item.reject)
-                .finally(() => {
-                this._activeCount -= 1;
-                this.pump();
-            });
-        }
-    }
-    async fetchBlob(item) {
-        try {
-            const response = await fetch(item.url, {
-                mode: 'cors',
-                cache: 'force-cache',
-            });
-            if (!response.ok) {
-                const isTransient = response.status === 429 || response.status >= 500;
-                const cooldownMs = this.registerFailure(item.url, isTransient);
-                throw new XYZTileRequestError(`HTTP ${response.status} loading ${item.url}`, isTransient ? cooldownMs : 5 * 60 * 1000, isTransient);
-            }
-            this.registerSuccess(item.url);
-            return await response.blob();
-        }
-        catch (error) {
-            if (error instanceof XYZTileRequestError) {
-                throw error;
-            }
-            const cooldownMs = this.registerFailure(item.url, false);
-            throw new XYZTileRequestError(`Network/CORS failure loading ${item.url}`, cooldownMs, true);
-        }
-    }
-    getHostCooldown(url) {
-        try {
-            return this._hostBackoff.get(new URL(url).host)?.cooldownUntil ?? 0;
-        }
-        catch {
-            return 0;
-        }
-    }
-    registerSuccess(url) {
-        try {
-            const host = new URL(url).host;
-            this._hostBackoff.set(host, {
-                cooldownUntil: 0,
-                consecutiveFailures: 0,
-            });
-        }
-        catch {
-            // no-op
-        }
-    }
-    registerFailure(url, isRateLimited) {
-        if (!isRateLimited) {
-            return 0;
-        }
-        try {
-            const host = new URL(url).host;
-            const previous = this._hostBackoff.get(host) ?? {
-                cooldownUntil: 0,
-                consecutiveFailures: 0,
-            };
-            const consecutiveFailures = previous.consecutiveFailures + 1;
-            const baseDelayMs = 4000;
-            const cooldownMs = Math.min(120000, baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)));
-            this._hostBackoff.set(host, {
-                cooldownUntil: Date.now() + cooldownMs,
-                consecutiveFailures,
-            });
-            return cooldownMs;
-        }
-        catch {
-            return 30000;
-        }
-    }
-}
-exports.XYZTileRequestScheduler = XYZTileRequestScheduler;
-exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
-
-
-/***/ }),
-
-/***/ 583:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZMap = void 0;
-const AbstractSkyEntity_js_1 = __webpack_require__(4735);
-const XYZVisibleTilesManager_js_1 = __webpack_require__(7671);
-const XYZFoVHelper_js_1 = __webpack_require__(8486);
-const ColorMaps_js_1 = __webpack_require__(619);
-const LonLatGrid_js_1 = __webpack_require__(8124);
-const XYZShaderProgram_js_1 = __webpack_require__(149);
-const XYZTileBuffer_js_1 = __webpack_require__(207);
-const XYZAnchestorTile_js_1 = __webpack_require__(2532);
-const XYZMeshBuilder_js_1 = __webpack_require__(4697);
-class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
-    _xyzShaderProgram;
-    _descriptor;
-    _visibleTilesManager;
-    _tileBuffer;
-    _meshBuilder;
-    _baseurl;
-    _zoom;
-    _latLonGrid;
-    _colorMapIdx = 0;
-    _colorMap = ColorMaps_js_1.ColorMaps['native'];
-    constructor(radius, position, xrad, yrad, descriptor, webgl) {
-        super(radius, position, xrad, yrad, descriptor.name, webgl, false);
-        this._descriptor = descriptor;
-        this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
-        this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
-        this._tileBuffer = new XYZTileBuffer_js_1.XYZTileBuffer(1);
-        this.initGL(webgl);
-        this._latLonGrid = new LonLatGrid_js_1.LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl);
-        this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager();
-        this._baseurl = descriptor.url;
-        this.initShaders();
-        const fov = 180;
-        this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
-    }
-    changeColorMap(colorMap) {
-        this._colorMap = colorMap;
-        switch (colorMap.name) {
-            case 'grayscale':
-                this._colorMapIdx = 1;
-                this._colorMap = ColorMaps_js_1.ColorMaps['grayscale'];
-                break;
-            case 'planck':
-                this._colorMapIdx = 2;
-                this._colorMap = ColorMaps_js_1.ColorMaps['planck'];
-                break;
-            case 'cmb':
-                this._colorMapIdx = 3;
-                this._colorMap = ColorMaps_js_1.ColorMaps['cmb'];
-                break;
-            case 'rainbow':
-                this._colorMapIdx = 4;
-                this._colorMap = ColorMaps_js_1.ColorMaps['rainbow'];
-                break;
-            case 'eosb':
-                this._colorMapIdx = 5;
-                this._colorMap = ColorMaps_js_1.ColorMaps['eosb'];
-                break;
-            case 'cubehelix':
-                this._colorMapIdx = 6;
-                this._colorMap = ColorMaps_js_1.ColorMaps['cubehelix'];
-                break;
-            case 'hot':
-                this._colorMapIdx = 7;
-                this._colorMap = ColorMaps_js_1.ColorMaps['hot'];
-                break;
-            case 'gray':
-                this._colorMapIdx = 8;
-                this._colorMap = ColorMaps_js_1.ColorMaps['gray'];
-                break;
-            case 'native':
-                this._colorMapIdx = 0;
-                this._colorMap = ColorMaps_js_1.ColorMaps['native'];
-                break;
-            default:
-                this._colorMapIdx = 9;
-                this._colorMap = colorMap;
-        }
-    }
-    initShaders() {
-        this._xyzShaderProgram.enableProgram();
-    }
-    isLonLatGridVisible() {
-        return this._latLonGrid.isVisible();
-    }
-    toggleLonLatGrid() {
-        return this._latLonGrid.toggleShowGrid();
-    }
-    getFoV() {
-        return this._latLonGrid.getFoV();
-    }
-    refresh(input) {
-        const fov = this._latLonGrid.refreshFoV(input);
-        // this._zoom = this.resolveVisibleZoom(fov)
-        this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
-    }
-    draw(input) {
-        const vMatrix = input.camera.getCameraMatrix();
-        if (!vMatrix)
-            return;
-        const pMatrix = input.pMatrix;
-        if (!pMatrix)
-            return;
-        this.refresh(input);
-        const mMatrix = this.getModelMatrix();
-        this._xyzShaderProgram.setRuntimeColorMap(this._colorMap);
-        const tileSelection = this._visibleTilesManager.computeVisibleTiles(this._zoom, this, this._webgl, input.camera, input.pMatrix);
-        const visibleTiles = tileSelection.visibleTiles;
-        const ancestorsMap = tileSelection.ancestorsMap;
-        const tileKeys = this._tileBuffer.ensureTiles(this.getTilesToEnsure(visibleTiles, ancestorsMap), (coord) => this.createTile(coord));
-        this._tileBuffer.evictCached(this._descriptor.maxCachedTiles);
-        for (const tileKey of tileKeys) {
-            const tile = this._tileBuffer.getActiveTile(tileKey);
-            if (!tile || tile.coord.z !== tileSelection.currentZoom) {
-                continue;
-            }
-            const drawn = tile.draw(pMatrix, vMatrix, mMatrix, this._colorMapIdx);
-            if (drawn) {
-                continue;
-            }
-            const ancestorTile = this.findBestAvailableAncestor(tile.coord);
-            ancestorTile?.draw(tileSelection.currentZoom, [tile.coord], ancestorsMap, pMatrix, vMatrix, mMatrix, this._colorMapIdx);
-        }
-        this._latLonGrid.draw(input);
-    }
-    createTile(coord) {
-        return new XYZAnchestorTile_js_1.XYZAnchestorTile(coord, this.resolveTileUrl(coord), this._webgl, this._xyzShaderProgram, this._meshBuilder, this._descriptor.segmentsPerSide);
-    }
-    getTilesToEnsure(visibleTiles, ancestorsMap) {
-        const tilesByKey = new Map();
-        for (const tile of visibleTiles) {
-            tilesByKey.set(this.tileKey(tile), tile);
-        }
-        for (const ancestor of ancestorsMap.values()) {
-            tilesByKey.set(this.tileKey(ancestor), ancestor);
-        }
-        return Array.from(tilesByKey.values());
-    }
-    findBestAvailableAncestor(targetTile) {
-        for (let z = targetTile.z - 1; z >= 0; z--) {
-            const dz = targetTile.z - z;
-            const ancestorCoord = {
-                z,
-                x: targetTile.x >> dz,
-                y: targetTile.y >> dz,
-            };
-            const ancestorTile = this._tileBuffer.getAnyTile(this.tileKey(ancestorCoord));
-            if (ancestorTile?.ready) {
-                return ancestorTile;
-            }
-        }
-        return null;
-    }
-    resolveTileUrl(tile) {
-        const urlResolver = this._descriptor.urlResolver;
-        if (urlResolver) {
-            return urlResolver(tile);
-        }
-        const dim = 2 ** tile.z;
-        const y = this._descriptor.flipY ? dim - 1 - tile.y : tile.y;
-        const subdomains = this._descriptor.subdomains;
-        const subdomain = subdomains.length > 0
-            ? subdomains[Math.abs(tile.x + tile.y + tile.z) % subdomains.length]
-            : '';
-        return this._baseurl
-            .replace(/\{z\}/g, String(tile.z))
-            .replace(/\{x\}/g, String(tile.x))
-            .replace(/\{y\}/g, String(y))
-            .replace(/\{s\}/g, subdomain ?? '');
-    }
-    getDebugStats() {
-        const activeTiles = Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile);
-        const cachedTiles = Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile);
-        const allTiles = [...activeTiles, ...cachedTiles];
-        const selection = this._visibleTilesManager.selection;
-        return {
-            cacheSize: this._tileBuffer.size,
-            visibleTileCount: selection.visibleTiles.length,
-            currentTileCount: activeTiles.filter((tile) => tile.coord.z === selection.currentZoom).length,
-            fallbackTileCount: selection.ancestorsMap.size,
-            coreTileCount: selection.visibleTiles.length,
-            coverageTileCount: selection.visibleTiles.length,
-            readyTileCount: allTiles.filter((tile) => tile.ready).length,
-            loadingTileCount: allTiles.filter((tile) => tile.loading).length,
-            coolingDownTileCount: 0,
-            currentZoom: selection.currentZoom,
-            tileSelectionKey: selection.key,
-            isSettling: false,
-            coarseTileCount: selection.ancestorsMap.size,
-            hasPendingSelection: false,
-            pendingSelectionKey: null,
-        };
-    }
-    tileKey(tile) {
-        return `${tile.z}/${tile.x}/${tile.y}`;
-    }
-}
-exports.XYZMap = XYZMap;
 
 
 /***/ }),
@@ -2840,8 +2323,8 @@ const CatalogueGL_js_1 = __webpack_require__(1232);
 const FootprintSetGL_js_1 = __webpack_require__(592);
 const Config_js_1 = __webpack_require__(2919);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
-const XYZTileRequestScheduler_js_1 = __webpack_require__(579);
-const XYZMapDescriptor_js_1 = __webpack_require__(7274);
+const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
+const XYZMapDescriptor_js_1 = __webpack_require__(8868);
 const TerraPointSetGL_js_1 = __webpack_require__(5781);
 const TerraFootprintSetGL_js_1 = __webpack_require__(9022);
 // & {
@@ -5426,6 +4909,379 @@ class CatalogueGL {
 }
 exports.CatalogueGL = CatalogueGL;
 // export default CatalogueGL;
+
+
+/***/ }),
+
+/***/ 1375:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZTile = void 0;
+const XYZMeshBuilder_js_1 = __webpack_require__(8819);
+class XYZTile {
+    _coord;
+    _url;
+    _webgl;
+    _shaderProgram;
+    _meshBuilder;
+    _gpuMesh;
+    _texture = null;
+    _image;
+    _ready = false;
+    _loading = false;
+    _aborted = false;
+    _failedUntil = 0;
+    _lastUsedAt = 0;
+    _createdAt = Date.now();
+    constructor(coord, url, webgl, shaderProgram, meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder(), segmentsPerSide = 16) {
+        this._coord = coord;
+        this._url = url;
+        this._webgl = webgl;
+        this._shaderProgram = shaderProgram;
+        this._meshBuilder = meshBuilder;
+        const mesh = this._meshBuilder.buildTileMesh(coord, segmentsPerSide);
+        this._gpuMesh = this._meshBuilder.uploadMesh(mesh, this._webgl);
+        this.initImage();
+    }
+    get coord() {
+        return this._coord;
+    }
+    get ready() {
+        return this._ready;
+    }
+    get loading() {
+        return this._loading;
+    }
+    get failedUntil() {
+        return this._failedUntil;
+    }
+    get lastUsedAt() {
+        return this._lastUsedAt;
+    }
+    get createdAt() {
+        return this._createdAt;
+    }
+    touch() {
+        this._lastUsedAt = Date.now();
+    }
+    initImage() {
+        if (this._loading || this._ready || this._aborted) {
+            return;
+        }
+        const now = Date.now();
+        if (this._failedUntil > now) {
+            return;
+        }
+        this._loading = true;
+        const image = new Image();
+        this._image = image;
+        image.crossOrigin = 'anonymous';
+        image.onload = () => this.imageLoaded();
+        image.onerror = () => {
+            this._ready = false;
+            this._loading = false;
+            this._failedUntil = Date.now() + 30_000;
+        };
+        image.src = this._url;
+    }
+    imageLoaded() {
+        if (!this._image || this._aborted) {
+            return;
+        }
+        this.textureLoaded(this._image);
+        this._loading = false;
+        this._failedUntil = 0;
+        this._ready = true;
+    }
+    textureLoaded(image) {
+        const gl = this._webgl;
+        this._shaderProgram.enableProgram();
+        const texture = gl.createTexture();
+        if (!texture) {
+            throw new Error(`Could not create XYZ texture for ${this.key}`);
+        }
+        this._texture = texture;
+        gl.activeTexture(gl.TEXTURE0);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    }
+    draw(pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        this.touch();
+        if (!this._ready || !this._texture || this._aborted) {
+            return false;
+        }
+        this.drawWithGpuMesh(this._gpuMesh, pMatrix, vMatrix, mMatrix, colorMapIdx);
+        return true;
+    }
+    drawRemapped(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        this.touch();
+        if (!this._ready || !this._texture || this._aborted) {
+            return false;
+        }
+        this.drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx);
+        return true;
+    }
+    dispose() {
+        const gl = this._webgl;
+        if (this._texture) {
+            gl.deleteTexture(this._texture);
+            this._texture = null;
+        }
+        if (this._gpuMesh.positionBuffer) {
+            gl.deleteBuffer(this._gpuMesh.positionBuffer);
+            this._gpuMesh.positionBuffer = null;
+        }
+        if (this._gpuMesh.uvBuffer) {
+            gl.deleteBuffer(this._gpuMesh.uvBuffer);
+            this._gpuMesh.uvBuffer = null;
+        }
+        if (this._gpuMesh.indexBuffer) {
+            gl.deleteBuffer(this._gpuMesh.indexBuffer);
+            this._gpuMesh.indexBuffer = null;
+        }
+        this._image = undefined;
+        this._ready = false;
+        this._loading = false;
+        this._aborted = true;
+    }
+    drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (!this._texture) {
+            return;
+        }
+        const gl = this._webgl;
+        this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this._texture);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, mesh.indexCount, mesh.indexType, 0);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
+    }
+    get key() {
+        return `${this._coord.z}/${this._coord.x}/${this._coord.y}`;
+    }
+}
+exports.XYZTile = XYZTile;
+
+
+/***/ }),
+
+/***/ 1741:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMap = void 0;
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const XYZVisibleTilesManager_js_1 = __webpack_require__(6937);
+const XYZFoVHelper_js_1 = __webpack_require__(8284);
+const ColorMaps_js_1 = __webpack_require__(619);
+const LonLatGrid_js_1 = __webpack_require__(8124);
+const XYZShaderProgram_js_1 = __webpack_require__(149);
+const XYZTileBuffer_js_1 = __webpack_require__(2737);
+const XYZAnchestorTile_js_1 = __webpack_require__(3174);
+const XYZMeshBuilder_js_1 = __webpack_require__(8819);
+class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    _xyzShaderProgram;
+    _descriptor;
+    _visibleTilesManager;
+    _tileBuffer;
+    _meshBuilder;
+    _baseurl;
+    _zoom;
+    _latLonGrid;
+    _colorMapIdx = 0;
+    _colorMap = ColorMaps_js_1.ColorMaps['native'];
+    constructor(radius, position, xrad, yrad, descriptor, webgl) {
+        super(radius, position, xrad, yrad, descriptor.name, webgl, false);
+        this._descriptor = descriptor;
+        this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
+        this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
+        this._tileBuffer = new XYZTileBuffer_js_1.XYZTileBuffer(1);
+        this.initGL(webgl);
+        this._latLonGrid = new LonLatGrid_js_1.LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl);
+        this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager();
+        this._baseurl = descriptor.url;
+        this.initShaders();
+        const fov = 180;
+        this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
+    }
+    changeColorMap(colorMap) {
+        this._colorMap = colorMap;
+        switch (colorMap.name) {
+            case 'grayscale':
+                this._colorMapIdx = 1;
+                this._colorMap = ColorMaps_js_1.ColorMaps['grayscale'];
+                break;
+            case 'planck':
+                this._colorMapIdx = 2;
+                this._colorMap = ColorMaps_js_1.ColorMaps['planck'];
+                break;
+            case 'cmb':
+                this._colorMapIdx = 3;
+                this._colorMap = ColorMaps_js_1.ColorMaps['cmb'];
+                break;
+            case 'rainbow':
+                this._colorMapIdx = 4;
+                this._colorMap = ColorMaps_js_1.ColorMaps['rainbow'];
+                break;
+            case 'eosb':
+                this._colorMapIdx = 5;
+                this._colorMap = ColorMaps_js_1.ColorMaps['eosb'];
+                break;
+            case 'cubehelix':
+                this._colorMapIdx = 6;
+                this._colorMap = ColorMaps_js_1.ColorMaps['cubehelix'];
+                break;
+            case 'hot':
+                this._colorMapIdx = 7;
+                this._colorMap = ColorMaps_js_1.ColorMaps['hot'];
+                break;
+            case 'gray':
+                this._colorMapIdx = 8;
+                this._colorMap = ColorMaps_js_1.ColorMaps['gray'];
+                break;
+            case 'native':
+                this._colorMapIdx = 0;
+                this._colorMap = ColorMaps_js_1.ColorMaps['native'];
+                break;
+            default:
+                this._colorMapIdx = 9;
+                this._colorMap = colorMap;
+        }
+    }
+    initShaders() {
+        this._xyzShaderProgram.enableProgram();
+    }
+    isLonLatGridVisible() {
+        return this._latLonGrid.isVisible();
+    }
+    toggleLonLatGrid() {
+        return this._latLonGrid.toggleShowGrid();
+    }
+    getFoV() {
+        return this._latLonGrid.getFoV();
+    }
+    refresh(input) {
+        const fov = this._latLonGrid.refreshFoV(input);
+        // this._zoom = this.resolveVisibleZoom(fov)
+        this._zoom = XYZFoVHelper_js_1.xyzFovHelper.getZoom(fov);
+    }
+    draw(input) {
+        const vMatrix = input.camera.getCameraMatrix();
+        if (!vMatrix)
+            return;
+        const pMatrix = input.pMatrix;
+        if (!pMatrix)
+            return;
+        this.refresh(input);
+        const mMatrix = this.getModelMatrix();
+        this._xyzShaderProgram.setRuntimeColorMap(this._colorMap);
+        const tileSelection = this._visibleTilesManager.computeVisibleTiles(this._zoom, this, this._webgl, input.camera, input.pMatrix);
+        const visibleTiles = tileSelection.visibleTiles;
+        const ancestorsMap = tileSelection.ancestorsMap;
+        const tileKeys = this._tileBuffer.ensureTiles(this.getTilesToEnsure(visibleTiles, ancestorsMap), (coord) => this.createTile(coord));
+        this._tileBuffer.evictCached(this._descriptor.maxCachedTiles);
+        for (const tileKey of tileKeys) {
+            const tile = this._tileBuffer.getActiveTile(tileKey);
+            if (!tile || tile.coord.z !== tileSelection.currentZoom) {
+                continue;
+            }
+            const drawn = tile.draw(pMatrix, vMatrix, mMatrix, this._colorMapIdx);
+            if (drawn) {
+                continue;
+            }
+            const ancestorTile = this.findBestAvailableAncestor(tile.coord);
+            ancestorTile?.draw(tileSelection.currentZoom, [tile.coord], ancestorsMap, pMatrix, vMatrix, mMatrix, this._colorMapIdx);
+        }
+        this._latLonGrid.draw(input);
+    }
+    createTile(coord) {
+        return new XYZAnchestorTile_js_1.XYZAnchestorTile(coord, this.resolveTileUrl(coord), this._webgl, this._xyzShaderProgram, this._meshBuilder, this._descriptor.segmentsPerSide);
+    }
+    getTilesToEnsure(visibleTiles, ancestorsMap) {
+        const tilesByKey = new Map();
+        for (const tile of visibleTiles) {
+            tilesByKey.set(this.tileKey(tile), tile);
+        }
+        for (const ancestor of ancestorsMap.values()) {
+            tilesByKey.set(this.tileKey(ancestor), ancestor);
+        }
+        return Array.from(tilesByKey.values());
+    }
+    findBestAvailableAncestor(targetTile) {
+        for (let z = targetTile.z - 1; z >= 0; z--) {
+            const dz = targetTile.z - z;
+            const ancestorCoord = {
+                z,
+                x: targetTile.x >> dz,
+                y: targetTile.y >> dz,
+            };
+            const ancestorTile = this._tileBuffer.getAnyTile(this.tileKey(ancestorCoord));
+            if (ancestorTile?.ready) {
+                return ancestorTile;
+            }
+        }
+        return null;
+    }
+    resolveTileUrl(tile) {
+        const urlResolver = this._descriptor.urlResolver;
+        if (urlResolver) {
+            return urlResolver(tile);
+        }
+        const dim = 2 ** tile.z;
+        const y = this._descriptor.flipY ? dim - 1 - tile.y : tile.y;
+        const subdomains = this._descriptor.subdomains;
+        const subdomain = subdomains.length > 0
+            ? subdomains[Math.abs(tile.x + tile.y + tile.z) % subdomains.length]
+            : '';
+        return this._baseurl
+            .replace(/\{z\}/g, String(tile.z))
+            .replace(/\{x\}/g, String(tile.x))
+            .replace(/\{y\}/g, String(y))
+            .replace(/\{s\}/g, subdomain ?? '');
+    }
+    getDebugStats() {
+        const activeTiles = Array.from(this._tileBuffer.activeTiles.values(), (entry) => entry.tile);
+        const cachedTiles = Array.from(this._tileBuffer.cachedTiles.values(), (entry) => entry.tile);
+        const allTiles = [...activeTiles, ...cachedTiles];
+        const selection = this._visibleTilesManager.selection;
+        return {
+            cacheSize: this._tileBuffer.size,
+            visibleTileCount: selection.visibleTiles.length,
+            currentTileCount: activeTiles.filter((tile) => tile.coord.z === selection.currentZoom).length,
+            fallbackTileCount: selection.ancestorsMap.size,
+            coreTileCount: selection.visibleTiles.length,
+            coverageTileCount: selection.visibleTiles.length,
+            readyTileCount: allTiles.filter((tile) => tile.ready).length,
+            loadingTileCount: allTiles.filter((tile) => tile.loading).length,
+            coolingDownTileCount: 0,
+            currentZoom: selection.currentZoom,
+            tileSelectionKey: selection.key,
+            isSettling: false,
+            coarseTileCount: selection.ancestorsMap.size,
+            hasPendingSelection: false,
+            pendingSelectionKey: null,
+        };
+    }
+    tileKey(tile) {
+        return `${tile.z}/${tile.x}/${tile.y}`;
+    }
+}
+exports.XYZMap = XYZMap;
 
 
 /***/ }),
@@ -14014,88 +13870,140 @@ exports.Footprint = Footprint;
 
 /***/ }),
 
-/***/ 2532:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+/***/ 2737:
+/***/ ((__unused_webpack_module, exports) => {
 
 
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZAncestorTile = exports.XYZAnchestorTile = void 0;
-const XYZMeshBuilder_js_1 = __webpack_require__(4697);
-const XYZTile_js_1 = __webpack_require__(7741);
-class XYZAnchestorTile extends XYZTile_js_1.XYZTile {
-    _ancestorMeshBuilder;
-    _ancestorWebgl;
-    _segmentsPerSide;
-    _meshCache = new Map();
-    constructor(coord, url, webgl, shaderProgram, meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder(), segmentsPerSide = 16) {
-        super(coord, url, webgl, shaderProgram, meshBuilder, segmentsPerSide);
-        this._ancestorMeshBuilder = meshBuilder;
-        this._ancestorWebgl = webgl;
-        this._segmentsPerSide = segmentsPerSide;
+exports.XYZTileBuffer = void 0;
+class XYZTileBuffer {
+    _tiles = new Map();
+    _cachedTiles = new Map();
+    _cacheAliveMilliSeconds;
+    _cleanerId;
+    constructor(minutesToLiveInCache = 1) {
+        this._cacheAliveMilliSeconds = minutesToLiveInCache * 60 * 1000;
+        if (typeof window !== 'undefined') {
+            this._cleanerId = window.setInterval(() => {
+                this.cacheCleaner();
+            }, 10_000);
+        }
     }
-    draw(pMatrixOrVisibleZoom, vMatrixOrVisibleTiles, mMatrixOrAncestorsMap, colorMapIdxOrPMatrix, vMatrix, mMatrix, colorMapIdx) {
-        if (typeof pMatrixOrVisibleZoom !== 'number') {
-            return super.draw(pMatrixOrVisibleZoom, vMatrixOrVisibleTiles, mMatrixOrAncestorsMap, colorMapIdxOrPMatrix);
+    get activeTiles() {
+        return this._tiles;
+    }
+    get cachedTiles() {
+        return this._cachedTiles;
+    }
+    get size() {
+        return this._tiles.size + this._cachedTiles.size;
+    }
+    ensureTiles(visibleTiles, tileFactory) {
+        const visibleTileKeys = [];
+        for (const tileCoord of visibleTiles) {
+            const tile = this.getTile(tileCoord, tileFactory);
+            this.touchTile(tile);
+            visibleTileKeys.push(this.key(tileCoord));
         }
-        if (!vMatrix || !mMatrix || colorMapIdx === undefined) {
-            return false;
+        this.syncVisibleTiles(visibleTileKeys);
+        return visibleTileKeys;
+    }
+    getTile(tileCoord, tileFactory) {
+        const tileKey = this.key(tileCoord);
+        if (this._tiles.has(tileKey)) {
+            return this._tiles.get(tileKey).tile;
         }
-        const visibleZoom = pMatrixOrVisibleZoom;
-        const visibleTiles = vMatrixOrVisibleTiles;
-        const ancestorsMap = mMatrixOrAncestorsMap;
-        const pMatrix = colorMapIdxOrPMatrix;
-        let drawn = false;
-        if (visibleZoom <= this.coord.z) {
-            return super.draw(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        if (this._cachedTiles.has(tileKey)) {
+            const entry = this._cachedTiles.get(tileKey);
+            entry.cacheTime0 = undefined;
+            this._tiles.set(tileKey, entry);
+            this._cachedTiles.delete(tileKey);
+            return entry.tile;
         }
-        for (const targetTile of visibleTiles) {
-            if (!this.isAncestorOf(targetTile)) {
+        const tile = tileFactory(tileCoord);
+        this._tiles.set(tileKey, { tile });
+        return tile;
+    }
+    getActiveTile(tileKey) {
+        return this._tiles.get(tileKey)?.tile ?? null;
+    }
+    getAnyTile(tileKey) {
+        return this._tiles.get(tileKey)?.tile ?? this._cachedTiles.get(tileKey)?.tile ?? null;
+    }
+    getActiveTiles() {
+        return Array.from(this._tiles.values(), (entry) => entry.tile);
+    }
+    syncVisibleTiles(visibleTileKeys) {
+        const visibleKeySet = new Set(visibleTileKeys);
+        for (const [tileKey, entry] of this._tiles) {
+            if (visibleKeySet.has(tileKey)) {
+                this.touchTile(entry.tile);
                 continue;
             }
-            const ancestorKey = `${this.coord.z}/${this.coord.x}/${this.coord.y}`;
-            if (!ancestorsMap.has(ancestorKey)) {
+            entry.cacheTime0 = Date.now();
+            this._cachedTiles.set(tileKey, entry);
+            this._tiles.delete(tileKey);
+        }
+    }
+    evictCached(maxCachedTiles) {
+        if (this.size <= maxCachedTiles) {
+            return;
+        }
+        const candidates = Array.from(this._cachedTiles.entries()).sort((a, b) => {
+            return this.getTileAgeScore(a[1].tile) - this.getTileAgeScore(b[1].tile);
+        });
+        for (const [tileKey, entry] of candidates) {
+            if (this.size <= maxCachedTiles) {
+                break;
+            }
+            if (entry.tile.loading) {
                 continue;
             }
-            const mesh = this.getRemappedMesh(targetTile);
-            drawn = super.drawRemapped(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) || drawn;
+            entry.tile.dispose?.();
+            this._cachedTiles.delete(tileKey);
         }
-        return drawn;
     }
     dispose() {
-        for (const mesh of this._meshCache.values()) {
-            if (mesh.positionBuffer)
-                this._ancestorWebgl.deleteBuffer(mesh.positionBuffer);
-            if (mesh.uvBuffer)
-                this._ancestorWebgl.deleteBuffer(mesh.uvBuffer);
-            if (mesh.indexBuffer)
-                this._ancestorWebgl.deleteBuffer(mesh.indexBuffer);
+        if (this._cleanerId !== undefined && typeof window !== 'undefined') {
+            window.clearInterval(this._cleanerId);
+            this._cleanerId = undefined;
         }
-        this._meshCache.clear();
-        super.dispose();
+        for (const entry of this._tiles.values()) {
+            entry.tile.dispose?.();
+        }
+        for (const entry of this._cachedTiles.values()) {
+            entry.tile.dispose?.();
+        }
+        this._tiles.clear();
+        this._cachedTiles.clear();
     }
-    getRemappedMesh(targetTile) {
-        const key = `${targetTile.z}/${targetTile.x}/${targetTile.y}->${this.coord.z}/${this.coord.x}/${this.coord.y}`;
-        const existing = this._meshCache.get(key);
-        if (existing) {
-            return existing;
-        }
-        const mesh = this._ancestorMeshBuilder.buildAncestorMesh(targetTile, this.coord, this._segmentsPerSide);
-        const uploaded = this._ancestorMeshBuilder.uploadMesh(mesh, this._ancestorWebgl);
-        this._meshCache.set(key, uploaded);
-        return uploaded;
+    key(tileCoord) {
+        return XYZTileBuffer.key(tileCoord);
     }
-    isAncestorOf(targetTile) {
-        if (targetTile.z <= this.coord.z) {
-            return targetTile.z === this.coord.z
-                && targetTile.x === this.coord.x
-                && targetTile.y === this.coord.y;
+    static key(tileCoord) {
+        return `${tileCoord.z}/${tileCoord.x}/${tileCoord.y}`;
+    }
+    cacheCleaner() {
+        const now = Date.now();
+        for (const [tileKey, entry] of this._cachedTiles) {
+            const t0 = entry.cacheTime0;
+            if (t0 === undefined || now - t0 <= this._cacheAliveMilliSeconds || entry.tile.loading) {
+                continue;
+            }
+            entry.tile.dispose?.();
+            this._cachedTiles.delete(tileKey);
         }
-        const dz = targetTile.z - this.coord.z;
-        return (targetTile.x >> dz) === this.coord.x && (targetTile.y >> dz) === this.coord.y;
+    }
+    touchTile(tile) {
+        tile.touch?.();
+    }
+    getTileAgeScore(tile) {
+        const lastUsedAt = tile.lastUsedAt ?? 0;
+        const createdAt = tile.createdAt ?? lastUsedAt;
+        return Math.min(lastUsedAt || createdAt, createdAt);
     }
 }
-exports.XYZAnchestorTile = XYZAnchestorTile;
-exports.XYZAncestorTile = XYZAnchestorTile;
+exports.XYZTileBuffer = XYZTileBuffer;
 
 
 /***/ }),
@@ -14677,6 +14585,92 @@ exports["default"] = GeomUtils;
 
 /***/ }),
 
+/***/ 3174:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZAncestorTile = exports.XYZAnchestorTile = void 0;
+const XYZMeshBuilder_js_1 = __webpack_require__(8819);
+const XYZTile_js_1 = __webpack_require__(1375);
+class XYZAnchestorTile extends XYZTile_js_1.XYZTile {
+    _ancestorMeshBuilder;
+    _ancestorWebgl;
+    _segmentsPerSide;
+    _meshCache = new Map();
+    constructor(coord, url, webgl, shaderProgram, meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder(), segmentsPerSide = 16) {
+        super(coord, url, webgl, shaderProgram, meshBuilder, segmentsPerSide);
+        this._ancestorMeshBuilder = meshBuilder;
+        this._ancestorWebgl = webgl;
+        this._segmentsPerSide = segmentsPerSide;
+    }
+    draw(pMatrixOrVisibleZoom, vMatrixOrVisibleTiles, mMatrixOrAncestorsMap, colorMapIdxOrPMatrix, vMatrix, mMatrix, colorMapIdx) {
+        if (typeof pMatrixOrVisibleZoom !== 'number') {
+            return super.draw(pMatrixOrVisibleZoom, vMatrixOrVisibleTiles, mMatrixOrAncestorsMap, colorMapIdxOrPMatrix);
+        }
+        if (!vMatrix || !mMatrix || colorMapIdx === undefined) {
+            return false;
+        }
+        const visibleZoom = pMatrixOrVisibleZoom;
+        const visibleTiles = vMatrixOrVisibleTiles;
+        const ancestorsMap = mMatrixOrAncestorsMap;
+        const pMatrix = colorMapIdxOrPMatrix;
+        let drawn = false;
+        if (visibleZoom <= this.coord.z) {
+            return super.draw(pMatrix, vMatrix, mMatrix, colorMapIdx);
+        }
+        for (const targetTile of visibleTiles) {
+            if (!this.isAncestorOf(targetTile)) {
+                continue;
+            }
+            const ancestorKey = `${this.coord.z}/${this.coord.x}/${this.coord.y}`;
+            if (!ancestorsMap.has(ancestorKey)) {
+                continue;
+            }
+            const mesh = this.getRemappedMesh(targetTile);
+            drawn = super.drawRemapped(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) || drawn;
+        }
+        return drawn;
+    }
+    dispose() {
+        for (const mesh of this._meshCache.values()) {
+            if (mesh.positionBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.positionBuffer);
+            if (mesh.uvBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.uvBuffer);
+            if (mesh.indexBuffer)
+                this._ancestorWebgl.deleteBuffer(mesh.indexBuffer);
+        }
+        this._meshCache.clear();
+        super.dispose();
+    }
+    getRemappedMesh(targetTile) {
+        const key = `${targetTile.z}/${targetTile.x}/${targetTile.y}->${this.coord.z}/${this.coord.x}/${this.coord.y}`;
+        const existing = this._meshCache.get(key);
+        if (existing) {
+            return existing;
+        }
+        const mesh = this._ancestorMeshBuilder.buildAncestorMesh(targetTile, this.coord, this._segmentsPerSide);
+        const uploaded = this._ancestorMeshBuilder.uploadMesh(mesh, this._ancestorWebgl);
+        this._meshCache.set(key, uploaded);
+        return uploaded;
+    }
+    isAncestorOf(targetTile) {
+        if (targetTile.z <= this.coord.z) {
+            return targetTile.z === this.coord.z
+                && targetTile.x === this.coord.x
+                && targetTile.y === this.coord.y;
+        }
+        const dz = targetTile.z - this.coord.z;
+        return (targetTile.x >> dz) === this.coord.x && (targetTile.y >> dz) === this.coord.y;
+    }
+}
+exports.XYZAnchestorTile = XYZAnchestorTile;
+exports.XYZAncestorTile = XYZAnchestorTile;
+
+
+/***/ }),
+
 /***/ 3559:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -15005,6 +14999,102 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     }
 }
 exports.HiPS = HiPS;
+
+
+/***/ }),
+
+/***/ 3956:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.WMTSAdapter = void 0;
+function replaceTokens(template, values) {
+    return Object.entries(values).reduce((result, [key, value]) => result.replace(new RegExp(`\\{${key}\\}`, 'g'), value), template);
+}
+class WMTSAdapter {
+    _config;
+    constructor(config) {
+        this._config = config;
+    }
+    toXYZLayerConfig() {
+        const inferredMaxZoom = this.getInferredMaxZoom();
+        return {
+            urlTemplate: this._config.urlTemplate ?? this._config.baseUrl,
+            minZoom: this._config.minZoom,
+            maxZoom: inferredMaxZoom,
+            segmentsPerSide: this._config.segmentsPerSide,
+            tileSize: this._config.tileSize,
+            maxCachedTiles: this._config.maxCachedTiles,
+            subdomains: this._config.subdomains,
+            attribution: this._config.attribution,
+            flipY: this._config.flipY,
+            urlResolver: (tile) => this.getTileUrl(tile),
+        };
+    }
+    getInferredMaxZoom() {
+        const matrixLabelCount = this._config.matrixLabels?.length ?? 0;
+        const maxFromLabels = matrixLabelCount > 0 ? matrixLabelCount - 1 : undefined;
+        if (maxFromLabels == null) {
+            return this._config.maxZoom;
+        }
+        if (this._config.maxZoom == null) {
+            return maxFromLabels;
+        }
+        return Math.min(this._config.maxZoom, maxFromLabels);
+    }
+    getTileUrl(tile) {
+        return this._config.requestEncoding === 'rest'
+            ? this.buildRestUrl(tile)
+            : this.buildKvpUrl(tile);
+    }
+    buildRestUrl(tile) {
+        const template = this._config.urlTemplate ?? this._config.baseUrl;
+        const values = this.getCommonTokenValues(tile);
+        const resolved = replaceTokens(template, values);
+        return resolved.replace(/(?<!:)\/{2,}/g, '/');
+    }
+    buildKvpUrl(tile) {
+        const baseUrl = new URL(this._config.baseUrl);
+        const values = this.getCommonTokenValues(tile);
+        const params = baseUrl.searchParams;
+        params.set('SERVICE', 'WMTS');
+        params.set('REQUEST', 'GetTile');
+        params.set('VERSION', this._config.version ?? '1.0.0');
+        params.set('LAYER', this._config.layer);
+        params.set('STYLE', this._config.style ?? 'default');
+        params.set('FORMAT', this._config.format ?? 'image/png');
+        params.set('TILEMATRIXSET', this._config.tileMatrixSet);
+        params.set('TILEMATRIX', values.TileMatrix);
+        params.set('TILEROW', values.TileRow);
+        params.set('TILECOL', values.TileCol);
+        for (const [key, value] of Object.entries(this._config.dimensions ?? {})) {
+            params.set(key, value);
+        }
+        return baseUrl.toString();
+    }
+    getCommonTokenValues(tile) {
+        const dim = 2 ** tile.z;
+        const effectiveY = this._config.flipY ? dim - 1 - tile.y : tile.y;
+        const matrixLabel = this._config.matrixLabels?.[tile.z] ?? String(tile.z);
+        const tileFormat = this._config.format ?? 'image/png';
+        const tileFormatExtension = tileFormat.replace(/^image\//, '');
+        return {
+            Layer: this._config.layer,
+            Style: this._config.style ?? 'default',
+            Time: this._config.time ?? '',
+            TileMatrixSet: this._config.tileMatrixSet,
+            TileMatrix: matrixLabel,
+            TileRow: String(effectiveY),
+            TileCol: String(tile.x),
+            Format: tileFormatExtension,
+            TileFormat: tileFormat,
+            TileFormatExtension: tileFormatExtension,
+            ...Object.fromEntries(Object.entries(this._config.dimensions ?? {}).map(([key, value]) => [key, value])),
+        };
+    }
+}
+exports.WMTSAdapter = WMTSAdapter;
 
 
 /***/ }),
@@ -15772,113 +15862,6 @@ exports["default"] = RayPickingUtils;
 
 /***/ }),
 
-/***/ 4697:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZMeshBuilder = void 0;
-const Utils_js_1 = __webpack_require__(7930);
-const MAX_MERCATOR_LAT = 85.0511287798066;
-function mercatorYToLatDeg(yNormalized) {
-    const mercator = Math.PI * (1 - 2 * yNormalized);
-    return (Math.atan(Math.sinh(mercator)) * 180) / Math.PI;
-}
-function wrapLonToPhi(lonDeg) {
-    return lonDeg < 0 ? lonDeg + 360 : lonDeg;
-}
-class XYZMeshBuilder {
-    buildTileMesh(tile, segmentsPerSide = 16) {
-        const segments = Math.max(1, Math.floor(segmentsPerSide));
-        const gridSize = segments + 1;
-        const vertexCount = gridSize * gridSize;
-        const positions = new Float32Array(vertexCount * 3);
-        const uvs = new Float32Array(vertexCount * 2);
-        const tileCount = 2 ** tile.z;
-        let p = 0;
-        let uv = 0;
-        for (let row = 0; row <= segments; row++) {
-            const v = row / segments;
-            const yNormalized = (tile.y + v) / tileCount;
-            const latDeg = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, mercatorYToLatDeg(yNormalized)));
-            const thetaDeg = 90 - latDeg;
-            for (let col = 0; col <= segments; col++) {
-                const u = col / segments;
-                const xNormalized = (tile.x + u) / tileCount;
-                const lonDeg = xNormalized * 360 - 180;
-                const phiDeg = wrapLonToPhi(lonDeg);
-                const [x, y, z] = (0, Utils_js_1.sphericalToCartesian)(phiDeg, thetaDeg, 1);
-                positions[p++] = x;
-                positions[p++] = y;
-                positions[p++] = z;
-                uvs[uv++] = u;
-                uvs[uv++] = 1 - v;
-            }
-        }
-        const rawIndices = new Uint32Array(segments * segments * 2 * 3);
-        let i = 0;
-        for (let row = 0; row < segments; row++) {
-            for (let col = 0; col < segments; col++) {
-                const topLeft = row * gridSize + col;
-                const topRight = topLeft + 1;
-                const bottomLeft = topLeft + gridSize;
-                const bottomRight = bottomLeft + 1;
-                rawIndices[i++] = topLeft;
-                rawIndices[i++] = bottomLeft;
-                rawIndices[i++] = topRight;
-                rawIndices[i++] = topRight;
-                rawIndices[i++] = bottomLeft;
-                rawIndices[i++] = bottomRight;
-            }
-        }
-        const indices = rawIndices.length > 65535 ? rawIndices : new Uint16Array(rawIndices);
-        return { positions, uvs, indices };
-    }
-    buildAncestorMesh(targetTile, ancestorTile, segmentsPerSide = 16) {
-        const baseMesh = this.buildTileMesh(targetTile, segmentsPerSide);
-        const dz = targetTile.z - ancestorTile.z;
-        const scale = 2 ** dz;
-        const subTileX = targetTile.x - (ancestorTile.x << dz);
-        const subTileY = targetTile.y - (ancestorTile.y << dz);
-        const uvs = new Float32Array(baseMesh.uvs.length);
-        for (let i = 0; i < baseMesh.uvs.length; i += 2) {
-            const u = baseMesh.uvs[i] ?? 0;
-            const baseV = baseMesh.uvs[i + 1] ?? 0;
-            const v = 1 - baseV;
-            uvs[i] = (subTileX + u) / scale;
-            uvs[i + 1] = 1 - (subTileY + v) / scale;
-        }
-        return {
-            positions: baseMesh.positions,
-            uvs,
-            indices: baseMesh.indices,
-        };
-    }
-    uploadMesh(mesh, webgl) {
-        const positionBuffer = webgl.createBuffer();
-        const uvBuffer = webgl.createBuffer();
-        const indexBuffer = webgl.createBuffer();
-        const indexType = mesh.indices instanceof Uint32Array ? webgl.UNSIGNED_INT : webgl.UNSIGNED_SHORT;
-        webgl.bindBuffer(webgl.ARRAY_BUFFER, positionBuffer);
-        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.positions, webgl.STATIC_DRAW);
-        webgl.bindBuffer(webgl.ARRAY_BUFFER, uvBuffer);
-        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
-        webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-        webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
-        return {
-            positionBuffer,
-            uvBuffer,
-            indexBuffer,
-            indexCount: mesh.indices.length,
-            indexType,
-        };
-    }
-}
-exports.XYZMeshBuilder = XYZMeshBuilder;
-
-
-/***/ }),
-
 /***/ 4707:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -15937,10 +15920,10 @@ const EquatorialGrid_js_1 = __webpack_require__(9839);
 const HealpixGrid_js_1 = __webpack_require__(4595);
 const CoordsType_js_1 = __webpack_require__(8145);
 const ColorMaps_js_1 = __importDefault(__webpack_require__(619));
-const XYZTileRequestScheduler_js_1 = __webpack_require__(579);
-const WMTSAdapter_js_1 = __webpack_require__(8474);
-const XYZMapDescriptor_js_1 = __webpack_require__(7274);
-const XYZMap_js_1 = __webpack_require__(583);
+const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
+const WMTSAdapter_js_1 = __webpack_require__(3956);
+const XYZMapDescriptor_js_1 = __webpack_require__(8868);
+const XYZMap_js_1 = __webpack_require__(1741);
 const gl_matrix_1 = __webpack_require__(1961);
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -17360,6 +17343,178 @@ exports.MetadataManager = MetadataManager;
 
 /***/ }),
 
+/***/ 5409:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.xyzTileRequestScheduler = exports.XYZTileRequestScheduler = exports.XYZTileRequestError = void 0;
+class XYZTileRequestError extends Error {
+    cooldownMs;
+    retryable;
+    constructor(message, cooldownMs, retryable = true) {
+        super(message);
+        this.name = 'XYZTileRequestError';
+        this.cooldownMs = cooldownMs;
+        this.retryable = retryable;
+    }
+}
+exports.XYZTileRequestError = XYZTileRequestError;
+class XYZTileRequestScheduler {
+    _maxConcurrent;
+    _activeCount = 0;
+    _queue = [];
+    _inflight = new Map();
+    _hostBackoff = new Map();
+    _sequence = 0;
+    constructor(maxConcurrent = 4) {
+        this._maxConcurrent = maxConcurrent;
+    }
+    setMaxConcurrent(maxConcurrent) {
+        this._maxConcurrent = Math.max(1, Math.floor(maxConcurrent));
+        this.pump();
+    }
+    getMaxConcurrent() {
+        return this._maxConcurrent;
+    }
+    getDebugStats() {
+        const now = Date.now();
+        const hostsInBackoff = Array.from(this._hostBackoff.entries())
+            .map(([host, state]) => ({
+            host,
+            cooldownMs: Math.max(0, state.cooldownUntil - now),
+            consecutiveFailures: state.consecutiveFailures,
+        }))
+            .filter((entry) => entry.cooldownMs > 0 || entry.consecutiveFailures > 0)
+            .sort((a, b) => b.cooldownMs - a.cooldownMs);
+        return {
+            activeRequests: this._activeCount,
+            queuedRequests: this._queue.length,
+            inflightRequests: this._inflight.size,
+            maxConcurrentRequests: this._maxConcurrent,
+            highestQueuedPriority: this._queue[0]?.priority ?? null,
+            hostsInBackoff,
+        };
+    }
+    load(url, priority = 0) {
+        const inflight = this._inflight.get(url);
+        if (inflight) {
+            return inflight;
+        }
+        const hostCooldown = this.getHostCooldown(url);
+        const now = Date.now();
+        if (hostCooldown > now) {
+            return Promise.reject(new XYZTileRequestError(`Cooldown active for ${new URL(url).host}`, hostCooldown - now));
+        }
+        const promise = new Promise((resolve, reject) => {
+            this._queue.push({
+                url,
+                resolve,
+                reject,
+                priority,
+                sequence: this._sequence++,
+            });
+            this._queue.sort((a, b) => b.priority - a.priority || a.sequence - b.sequence);
+            this.pump();
+        }).finally(() => {
+            this._inflight.delete(url);
+        });
+        this._inflight.set(url, promise);
+        return promise;
+    }
+    pump() {
+        while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
+            const item = this._queue.shift();
+            if (!item)
+                return;
+            const hostCooldown = this.getHostCooldown(item.url);
+            const now = Date.now();
+            if (hostCooldown > now) {
+                item.reject(new XYZTileRequestError(`Cooldown active for ${new URL(item.url).host}`, hostCooldown - now));
+                continue;
+            }
+            this._activeCount += 1;
+            this.fetchBlob(item)
+                .then(item.resolve)
+                .catch(item.reject)
+                .finally(() => {
+                this._activeCount -= 1;
+                this.pump();
+            });
+        }
+    }
+    async fetchBlob(item) {
+        try {
+            const response = await fetch(item.url, {
+                mode: 'cors',
+                cache: 'force-cache',
+            });
+            if (!response.ok) {
+                const isTransient = response.status === 429 || response.status >= 500;
+                const cooldownMs = this.registerFailure(item.url, isTransient);
+                throw new XYZTileRequestError(`HTTP ${response.status} loading ${item.url}`, isTransient ? cooldownMs : 5 * 60 * 1000, isTransient);
+            }
+            this.registerSuccess(item.url);
+            return await response.blob();
+        }
+        catch (error) {
+            if (error instanceof XYZTileRequestError) {
+                throw error;
+            }
+            const cooldownMs = this.registerFailure(item.url, false);
+            throw new XYZTileRequestError(`Network/CORS failure loading ${item.url}`, cooldownMs, true);
+        }
+    }
+    getHostCooldown(url) {
+        try {
+            return this._hostBackoff.get(new URL(url).host)?.cooldownUntil ?? 0;
+        }
+        catch {
+            return 0;
+        }
+    }
+    registerSuccess(url) {
+        try {
+            const host = new URL(url).host;
+            this._hostBackoff.set(host, {
+                cooldownUntil: 0,
+                consecutiveFailures: 0,
+            });
+        }
+        catch {
+            // no-op
+        }
+    }
+    registerFailure(url, isRateLimited) {
+        if (!isRateLimited) {
+            return 0;
+        }
+        try {
+            const host = new URL(url).host;
+            const previous = this._hostBackoff.get(host) ?? {
+                cooldownUntil: 0,
+                consecutiveFailures: 0,
+            };
+            const consecutiveFailures = previous.consecutiveFailures + 1;
+            const baseDelayMs = 4000;
+            const cooldownMs = Math.min(120000, baseDelayMs * (2 ** Math.min(consecutiveFailures - 1, 5)));
+            this._hostBackoff.set(host, {
+                cooldownUntil: Date.now() + cooldownMs,
+                consecutiveFailures,
+            });
+            return cooldownMs;
+        }
+        catch {
+            return 30000;
+        }
+    }
+}
+exports.XYZTileRequestScheduler = XYZTileRequestScheduler;
+exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
+
+
+/***/ }),
+
 /***/ 5781:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -18067,107 +18222,7 @@ exports.Point = Point;
 
 /***/ }),
 
-/***/ 7274:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZMapDescriptor = void 0;
-class XYZMapDescriptor {
-    _name;
-    _url;
-    _urlResolver;
-    _minZoom;
-    _maxZoom;
-    _segmentsPerSide;
-    _tileSize;
-    _maxCachedTiles;
-    _interactionDebounceMs;
-    _subdomains;
-    _attribution;
-    _flipY;
-    _maxConcurrentLoads;
-    constructor(name, url, minZoom = 0, maxZoom = 8, segmentsPerSide = 16, maxCachedTiles = 384, maxConcurrentLoads = 8, urlResolver) {
-        this._name = name;
-        this._url = url;
-        this._urlResolver = urlResolver;
-        this._minZoom = minZoom;
-        this._maxZoom = maxZoom;
-        this._segmentsPerSide = segmentsPerSide;
-        this._maxCachedTiles = maxCachedTiles;
-        this._interactionDebounceMs = 100;
-        this._subdomains = ['a', 'b', 'c'];
-        this._attribution = '';
-        this._flipY = false;
-        this._maxConcurrentLoads = maxConcurrentLoads;
-    }
-    get url() {
-        return this._url;
-    }
-    get urlResolver() {
-        return this._urlResolver;
-    }
-    get name() {
-        return this._name;
-    }
-    get minZoom() {
-        return this._minZoom;
-    }
-    get maxZoom() {
-        return this._maxZoom;
-    }
-    get segmentsPerSide() {
-        return this._segmentsPerSide;
-    }
-    get maxCachedTiles() {
-        return this._maxCachedTiles;
-    }
-    get interactionDebounceMs() {
-        return this._interactionDebounceMs;
-    }
-    get subdomains() {
-        return this._subdomains;
-    }
-    get attribution() {
-        return this._attribution;
-    }
-    get flipY() {
-        return this._flipY;
-    }
-    get maxConcurrentLoads() {
-        return this._maxConcurrentLoads;
-    }
-}
-exports.XYZMapDescriptor = XYZMapDescriptor;
-
-
-/***/ }),
-
-/***/ 7559:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-class Point2D {
-    _x;
-    _y;
-    constructor(x, y) {
-        this._x = x;
-        this._y = y;
-    }
-    get x() {
-        return this._x;
-    }
-    get y() {
-        return this._y;
-    }
-}
-exports["default"] = Point2D;
-
-
-/***/ }),
-
-/***/ 7671:
+/***/ 6937:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 
@@ -18242,6 +18297,30 @@ class XYZVisibleTilesManager {
     }
 }
 exports.XYZVisibleTilesManager = XYZVisibleTilesManager;
+
+
+/***/ }),
+
+/***/ 7559:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+class Point2D {
+    _x;
+    _y;
+    constructor(x, y) {
+        this._x = x;
+        this._y = y;
+    }
+    get x() {
+        return this._x;
+    }
+    get y() {
+        return this._y;
+    }
+}
+exports["default"] = Point2D;
 
 
 /***/ }),
@@ -18589,172 +18668,6 @@ class Camera {
     isRotationLockedZ() { return this.lockRotZ; }
 }
 exports["default"] = Camera;
-
-
-/***/ }),
-
-/***/ 7741:
-/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.XYZTile = void 0;
-const XYZMeshBuilder_js_1 = __webpack_require__(4697);
-class XYZTile {
-    _coord;
-    _url;
-    _webgl;
-    _shaderProgram;
-    _meshBuilder;
-    _gpuMesh;
-    _texture = null;
-    _image;
-    _ready = false;
-    _loading = false;
-    _aborted = false;
-    _failedUntil = 0;
-    _lastUsedAt = 0;
-    _createdAt = Date.now();
-    constructor(coord, url, webgl, shaderProgram, meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder(), segmentsPerSide = 16) {
-        this._coord = coord;
-        this._url = url;
-        this._webgl = webgl;
-        this._shaderProgram = shaderProgram;
-        this._meshBuilder = meshBuilder;
-        const mesh = this._meshBuilder.buildTileMesh(coord, segmentsPerSide);
-        this._gpuMesh = this._meshBuilder.uploadMesh(mesh, this._webgl);
-        this.initImage();
-    }
-    get coord() {
-        return this._coord;
-    }
-    get ready() {
-        return this._ready;
-    }
-    get loading() {
-        return this._loading;
-    }
-    get failedUntil() {
-        return this._failedUntil;
-    }
-    get lastUsedAt() {
-        return this._lastUsedAt;
-    }
-    get createdAt() {
-        return this._createdAt;
-    }
-    touch() {
-        this._lastUsedAt = Date.now();
-    }
-    initImage() {
-        if (this._loading || this._ready || this._aborted) {
-            return;
-        }
-        const now = Date.now();
-        if (this._failedUntil > now) {
-            return;
-        }
-        this._loading = true;
-        const image = new Image();
-        this._image = image;
-        image.crossOrigin = 'anonymous';
-        image.onload = () => this.imageLoaded();
-        image.onerror = () => {
-            this._ready = false;
-            this._loading = false;
-            this._failedUntil = Date.now() + 30_000;
-        };
-        image.src = this._url;
-    }
-    imageLoaded() {
-        if (!this._image || this._aborted) {
-            return;
-        }
-        this.textureLoaded(this._image);
-        this._loading = false;
-        this._failedUntil = 0;
-        this._ready = true;
-    }
-    textureLoaded(image) {
-        const gl = this._webgl;
-        this._shaderProgram.enableProgram();
-        const texture = gl.createTexture();
-        if (!texture) {
-            throw new Error(`Could not create XYZ texture for ${this.key}`);
-        }
-        this._texture = texture;
-        gl.activeTexture(gl.TEXTURE0);
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    }
-    draw(pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        this.touch();
-        if (!this._ready || !this._texture || this._aborted) {
-            return false;
-        }
-        this.drawWithGpuMesh(this._gpuMesh, pMatrix, vMatrix, mMatrix, colorMapIdx);
-        return true;
-    }
-    drawRemapped(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        this.touch();
-        if (!this._ready || !this._texture || this._aborted) {
-            return false;
-        }
-        this.drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx);
-        return true;
-    }
-    dispose() {
-        const gl = this._webgl;
-        if (this._texture) {
-            gl.deleteTexture(this._texture);
-            this._texture = null;
-        }
-        if (this._gpuMesh.positionBuffer) {
-            gl.deleteBuffer(this._gpuMesh.positionBuffer);
-            this._gpuMesh.positionBuffer = null;
-        }
-        if (this._gpuMesh.uvBuffer) {
-            gl.deleteBuffer(this._gpuMesh.uvBuffer);
-            this._gpuMesh.uvBuffer = null;
-        }
-        if (this._gpuMesh.indexBuffer) {
-            gl.deleteBuffer(this._gpuMesh.indexBuffer);
-            this._gpuMesh.indexBuffer = null;
-        }
-        this._image = undefined;
-        this._ready = false;
-        this._loading = false;
-        this._aborted = true;
-    }
-    drawWithGpuMesh(mesh, pMatrix, vMatrix, mMatrix, colorMapIdx) {
-        if (!this._texture) {
-            return;
-        }
-        const gl = this._webgl;
-        this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, colorMapIdx);
-        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.positionBuffer);
-        gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
-        gl.bindBuffer(gl.ARRAY_BUFFER, mesh.uvBuffer);
-        gl.vertexAttribPointer(this._shaderProgram.locations.textureCoordAttribute, 2, gl.FLOAT, false, 0, 0);
-        gl.enableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, this._texture);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
-        gl.drawElements(gl.TRIANGLES, mesh.indexCount, mesh.indexType, 0);
-        gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
-        gl.disableVertexAttribArray(this._shaderProgram.locations.textureCoordAttribute);
-    }
-    get key() {
-        return `${this._coord.z}/${this._coord.x}/${this._coord.y}`;
-    }
-}
-exports.XYZTile = XYZTile;
 
 
 /***/ }),
@@ -19364,7 +19277,7 @@ exports.LatLonGrid = void 0;
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
 const gl_matrix_1 = __webpack_require__(1961);
 const AbstractSkyEntity_js_1 = __webpack_require__(4735);
-const XYZFoVHelper_js_1 = __webpack_require__(8486);
+const XYZFoVHelper_js_1 = __webpack_require__(8284);
 const GridShaderManager_js_1 = __importDefault(__webpack_require__(4707));
 const Utils_js_1 = __webpack_require__(7930);
 const SphereFoV_js_1 = __webpack_require__(5803);
@@ -20000,103 +19913,7 @@ exports["default"] = Tile;
 
 /***/ }),
 
-/***/ 8474:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.WMTSAdapter = void 0;
-function replaceTokens(template, values) {
-    return Object.entries(values).reduce((result, [key, value]) => result.replace(new RegExp(`\\{${key}\\}`, 'g'), value), template);
-}
-class WMTSAdapter {
-    _config;
-    constructor(config) {
-        this._config = config;
-    }
-    toXYZLayerConfig() {
-        const inferredMaxZoom = this.getInferredMaxZoom();
-        return {
-            urlTemplate: this._config.urlTemplate ?? this._config.baseUrl,
-            minZoom: this._config.minZoom,
-            maxZoom: inferredMaxZoom,
-            segmentsPerSide: this._config.segmentsPerSide,
-            tileSize: this._config.tileSize,
-            maxCachedTiles: this._config.maxCachedTiles,
-            subdomains: this._config.subdomains,
-            attribution: this._config.attribution,
-            flipY: this._config.flipY,
-            urlResolver: (tile) => this.getTileUrl(tile),
-        };
-    }
-    getInferredMaxZoom() {
-        const matrixLabelCount = this._config.matrixLabels?.length ?? 0;
-        const maxFromLabels = matrixLabelCount > 0 ? matrixLabelCount - 1 : undefined;
-        if (maxFromLabels == null) {
-            return this._config.maxZoom;
-        }
-        if (this._config.maxZoom == null) {
-            return maxFromLabels;
-        }
-        return Math.min(this._config.maxZoom, maxFromLabels);
-    }
-    getTileUrl(tile) {
-        return this._config.requestEncoding === 'rest'
-            ? this.buildRestUrl(tile)
-            : this.buildKvpUrl(tile);
-    }
-    buildRestUrl(tile) {
-        const template = this._config.urlTemplate ?? this._config.baseUrl;
-        const values = this.getCommonTokenValues(tile);
-        const resolved = replaceTokens(template, values);
-        return resolved.replace(/(?<!:)\/{2,}/g, '/');
-    }
-    buildKvpUrl(tile) {
-        const baseUrl = new URL(this._config.baseUrl);
-        const values = this.getCommonTokenValues(tile);
-        const params = baseUrl.searchParams;
-        params.set('SERVICE', 'WMTS');
-        params.set('REQUEST', 'GetTile');
-        params.set('VERSION', this._config.version ?? '1.0.0');
-        params.set('LAYER', this._config.layer);
-        params.set('STYLE', this._config.style ?? 'default');
-        params.set('FORMAT', this._config.format ?? 'image/png');
-        params.set('TILEMATRIXSET', this._config.tileMatrixSet);
-        params.set('TILEMATRIX', values.TileMatrix);
-        params.set('TILEROW', values.TileRow);
-        params.set('TILECOL', values.TileCol);
-        for (const [key, value] of Object.entries(this._config.dimensions ?? {})) {
-            params.set(key, value);
-        }
-        return baseUrl.toString();
-    }
-    getCommonTokenValues(tile) {
-        const dim = 2 ** tile.z;
-        const effectiveY = this._config.flipY ? dim - 1 - tile.y : tile.y;
-        const matrixLabel = this._config.matrixLabels?.[tile.z] ?? String(tile.z);
-        const tileFormat = this._config.format ?? 'image/png';
-        const tileFormatExtension = tileFormat.replace(/^image\//, '');
-        return {
-            Layer: this._config.layer,
-            Style: this._config.style ?? 'default',
-            Time: this._config.time ?? '',
-            TileMatrixSet: this._config.tileMatrixSet,
-            TileMatrix: matrixLabel,
-            TileRow: String(effectiveY),
-            TileCol: String(tile.x),
-            Format: tileFormatExtension,
-            TileFormat: tileFormat,
-            TileFormatExtension: tileFormatExtension,
-            ...Object.fromEntries(Object.entries(this._config.dimensions ?? {}).map(([key, value]) => [key, value])),
-        };
-    }
-}
-exports.WMTSAdapter = WMTSAdapter;
-
-
-/***/ }),
-
-/***/ 8486:
+/***/ 8284:
 /***/ ((__unused_webpack_module, exports) => {
 
 // FoVHelper.ts
@@ -20190,6 +20007,189 @@ class XYZFoVHelper {
 }
 exports.xyzFovHelper = new XYZFoVHelper();
 exports["default"] = XYZFoVHelper;
+
+
+/***/ }),
+
+/***/ 8819:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMeshBuilder = void 0;
+const Utils_js_1 = __webpack_require__(7930);
+const MAX_MERCATOR_LAT = 85.0511287798066;
+function mercatorYToLatDeg(yNormalized) {
+    const mercator = Math.PI * (1 - 2 * yNormalized);
+    return (Math.atan(Math.sinh(mercator)) * 180) / Math.PI;
+}
+function wrapLonToPhi(lonDeg) {
+    return lonDeg < 0 ? lonDeg + 360 : lonDeg;
+}
+class XYZMeshBuilder {
+    buildTileMesh(tile, segmentsPerSide = 16) {
+        const segments = Math.max(1, Math.floor(segmentsPerSide));
+        const gridSize = segments + 1;
+        const vertexCount = gridSize * gridSize;
+        const positions = new Float32Array(vertexCount * 3);
+        const uvs = new Float32Array(vertexCount * 2);
+        const tileCount = 2 ** tile.z;
+        let p = 0;
+        let uv = 0;
+        for (let row = 0; row <= segments; row++) {
+            const v = row / segments;
+            const yNormalized = (tile.y + v) / tileCount;
+            const latDeg = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, mercatorYToLatDeg(yNormalized)));
+            const thetaDeg = 90 - latDeg;
+            for (let col = 0; col <= segments; col++) {
+                const u = col / segments;
+                const xNormalized = (tile.x + u) / tileCount;
+                const lonDeg = xNormalized * 360 - 180;
+                const phiDeg = wrapLonToPhi(lonDeg);
+                const [x, y, z] = (0, Utils_js_1.sphericalToCartesian)(phiDeg, thetaDeg, 1);
+                positions[p++] = x;
+                positions[p++] = y;
+                positions[p++] = z;
+                uvs[uv++] = u;
+                uvs[uv++] = 1 - v;
+            }
+        }
+        const rawIndices = new Uint32Array(segments * segments * 2 * 3);
+        let i = 0;
+        for (let row = 0; row < segments; row++) {
+            for (let col = 0; col < segments; col++) {
+                const topLeft = row * gridSize + col;
+                const topRight = topLeft + 1;
+                const bottomLeft = topLeft + gridSize;
+                const bottomRight = bottomLeft + 1;
+                rawIndices[i++] = topLeft;
+                rawIndices[i++] = bottomLeft;
+                rawIndices[i++] = topRight;
+                rawIndices[i++] = topRight;
+                rawIndices[i++] = bottomLeft;
+                rawIndices[i++] = bottomRight;
+            }
+        }
+        const indices = rawIndices.length > 65535 ? rawIndices : new Uint16Array(rawIndices);
+        return { positions, uvs, indices };
+    }
+    buildAncestorMesh(targetTile, ancestorTile, segmentsPerSide = 16) {
+        const baseMesh = this.buildTileMesh(targetTile, segmentsPerSide);
+        const dz = targetTile.z - ancestorTile.z;
+        const scale = 2 ** dz;
+        const subTileX = targetTile.x - (ancestorTile.x << dz);
+        const subTileY = targetTile.y - (ancestorTile.y << dz);
+        const uvs = new Float32Array(baseMesh.uvs.length);
+        for (let i = 0; i < baseMesh.uvs.length; i += 2) {
+            const u = baseMesh.uvs[i] ?? 0;
+            const baseV = baseMesh.uvs[i + 1] ?? 0;
+            const v = 1 - baseV;
+            uvs[i] = (subTileX + u) / scale;
+            uvs[i + 1] = 1 - (subTileY + v) / scale;
+        }
+        return {
+            positions: baseMesh.positions,
+            uvs,
+            indices: baseMesh.indices,
+        };
+    }
+    uploadMesh(mesh, webgl) {
+        const positionBuffer = webgl.createBuffer();
+        const uvBuffer = webgl.createBuffer();
+        const indexBuffer = webgl.createBuffer();
+        const indexType = mesh.indices instanceof Uint32Array ? webgl.UNSIGNED_INT : webgl.UNSIGNED_SHORT;
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, positionBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.positions, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ARRAY_BUFFER, uvBuffer);
+        webgl.bufferData(webgl.ARRAY_BUFFER, mesh.uvs, webgl.STATIC_DRAW);
+        webgl.bindBuffer(webgl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        webgl.bufferData(webgl.ELEMENT_ARRAY_BUFFER, mesh.indices, webgl.STATIC_DRAW);
+        return {
+            positionBuffer,
+            uvBuffer,
+            indexBuffer,
+            indexCount: mesh.indices.length,
+            indexType,
+        };
+    }
+}
+exports.XYZMeshBuilder = XYZMeshBuilder;
+
+
+/***/ }),
+
+/***/ 8868:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.XYZMapDescriptor = void 0;
+class XYZMapDescriptor {
+    _name;
+    _url;
+    _urlResolver;
+    _minZoom;
+    _maxZoom;
+    _segmentsPerSide;
+    _tileSize;
+    _maxCachedTiles;
+    _interactionDebounceMs;
+    _subdomains;
+    _attribution;
+    _flipY;
+    _maxConcurrentLoads;
+    constructor(name, url, minZoom = 0, maxZoom = 8, segmentsPerSide = 16, maxCachedTiles = 384, maxConcurrentLoads = 8, urlResolver) {
+        this._name = name;
+        this._url = url;
+        this._urlResolver = urlResolver;
+        this._minZoom = minZoom;
+        this._maxZoom = maxZoom;
+        this._segmentsPerSide = segmentsPerSide;
+        this._maxCachedTiles = maxCachedTiles;
+        this._interactionDebounceMs = 100;
+        this._subdomains = ['a', 'b', 'c'];
+        this._attribution = '';
+        this._flipY = false;
+        this._maxConcurrentLoads = maxConcurrentLoads;
+    }
+    get url() {
+        return this._url;
+    }
+    get urlResolver() {
+        return this._urlResolver;
+    }
+    get name() {
+        return this._name;
+    }
+    get minZoom() {
+        return this._minZoom;
+    }
+    get maxZoom() {
+        return this._maxZoom;
+    }
+    get segmentsPerSide() {
+        return this._segmentsPerSide;
+    }
+    get maxCachedTiles() {
+        return this._maxCachedTiles;
+    }
+    get interactionDebounceMs() {
+        return this._interactionDebounceMs;
+    }
+    get subdomains() {
+        return this._subdomains;
+    }
+    get attribution() {
+        return this._attribution;
+    }
+    get flipY() {
+        return this._flipY;
+    }
+    get maxConcurrentLoads() {
+        return this._maxConcurrentLoads;
+    }
+}
+exports.XYZMapDescriptor = XYZMapDescriptor;
 
 
 /***/ }),
@@ -20881,9 +20881,9 @@ Object.defineProperty(exports, "COLOR_MAP_SAMPLE_COUNT", ({ enumerable: true, ge
 Object.defineProperty(exports, "createColorMapFromSamples", ({ enumerable: true, get: function () { return ColorMaps_js_1.createColorMapFromSamples; } }));
 var HiPS_js_1 = __webpack_require__(3726);
 Object.defineProperty(exports, "HiPS", ({ enumerable: true, get: function () { return HiPS_js_1.HiPS; } }));
-var XYZMap_js_1 = __webpack_require__(583);
+var XYZMap_js_1 = __webpack_require__(1741);
 Object.defineProperty(exports, "XYZMap", ({ enumerable: true, get: function () { return XYZMap_js_1.XYZMap; } }));
-var WMTSAdapter_js_1 = __webpack_require__(8474);
+var WMTSAdapter_js_1 = __webpack_require__(3956);
 Object.defineProperty(exports, "WMTSAdapter", ({ enumerable: true, get: function () { return WMTSAdapter_js_1.WMTSAdapter; } }));
 var Source_js_1 = __webpack_require__(146);
 Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));

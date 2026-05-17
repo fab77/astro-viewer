@@ -5,8 +5,8 @@ import { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 import { FootprintSetGL } from './model/footprints/FootprintSetGL.js';
 import { bootSetup } from './Config.js';
 import ColorMaps from './model/ColorMaps.js';
-import { xyzTileRequestScheduler } from './model/earth2/XYZTileRequestScheduler.js';
-import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js';
+import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js';
+import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 // & {
