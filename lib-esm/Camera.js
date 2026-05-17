@@ -44,10 +44,19 @@ class Camera {
     }
     goToPhiTheta(ptDeg) {
         const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
+        const targetDirection = vec3.normalize(vec3.create(), vec3.fromValues(xyz[0], xyz[1], xyz[2]));
+        const celestialNorth = vec3.fromValues(0.0, 0.0, 1.0);
+        const northProjection = vec3.scale(vec3.create(), targetDirection, vec3.dot(celestialNorth, targetDirection));
+        const cameraUp = vec3.subtract(vec3.create(), celestialNorth, northProjection);
+        if (vec3.length(cameraUp) < 1e-6) {
+            vec3.set(cameraUp, 0.0, 1.0, 0.0);
+        }
+        else {
+            vec3.normalize(cameraUp, cameraUp);
+        }
         let cameraMatrix = mat4.create();
         cameraMatrix = mat4.translate(cameraMatrix, cameraMatrix, vec3.fromValues(xyz[0], xyz[1], xyz[2]));
         const focusPoint = [0.0, 0.0, 0.0];
-        const cameraUp = vec3.clone([0.0, 1.0, 0.0]);
         const cameraPos = [cameraMatrix[12], cameraMatrix[13], cameraMatrix[14]];
         cameraMatrix = mat4.targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
         this.R = mat4.clone(cameraMatrix);

@@ -19279,10 +19279,19 @@ class Camera {
     }
     goToPhiTheta(ptDeg) {
         const xyz = (0, Utils_js_1.sphericalToCartesian)(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
+        const targetDirection = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.fromValues(xyz[0], xyz[1], xyz[2]));
+        const celestialNorth = gl_matrix_1.vec3.fromValues(0.0, 0.0, 1.0);
+        const northProjection = gl_matrix_1.vec3.scale(gl_matrix_1.vec3.create(), targetDirection, gl_matrix_1.vec3.dot(celestialNorth, targetDirection));
+        const cameraUp = gl_matrix_1.vec3.subtract(gl_matrix_1.vec3.create(), celestialNorth, northProjection);
+        if (gl_matrix_1.vec3.length(cameraUp) < 1e-6) {
+            gl_matrix_1.vec3.set(cameraUp, 0.0, 1.0, 0.0);
+        }
+        else {
+            gl_matrix_1.vec3.normalize(cameraUp, cameraUp);
+        }
         let cameraMatrix = gl_matrix_1.mat4.create();
         cameraMatrix = gl_matrix_1.mat4.translate(cameraMatrix, cameraMatrix, gl_matrix_1.vec3.fromValues(xyz[0], xyz[1], xyz[2]));
         const focusPoint = [0.0, 0.0, 0.0];
-        const cameraUp = gl_matrix_1.vec3.clone([0.0, 1.0, 0.0]);
         const cameraPos = [cameraMatrix[12], cameraMatrix[13], cameraMatrix[14]];
         cameraMatrix = gl_matrix_1.mat4.targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
         this.R = gl_matrix_1.mat4.clone(cameraMatrix);

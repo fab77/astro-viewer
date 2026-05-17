@@ -626,8 +626,11 @@ class AstroSphere {
     this._activeHiPS = new HiPS(
       1,
       [0.0, 0.0, 0.0],
+      
       0,
       0,
+      
+      
       hipsDescriptor,
       this._webgl,
       this._healpixGrid
