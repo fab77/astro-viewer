@@ -70,6 +70,8 @@ declare class AstroSphere {
     private lastHoveredSource;
     private lastHoveredCatalogue;
     private zoomSensitivity;
+    private lockedEastWestRaDeg;
+    private lockedNorthSouthDecDeg;
     constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
     private initCamera;
     setCamera(camera: Camera): void;
@@ -86,6 +88,10 @@ declare class AstroSphere {
     private computeZoomStep;
     setZoomSensitivity(value: number): void;
     getZoomSensitivity(): number;
+    private filterRotationDeltaByAstroLocks;
+    private projectModelDirectionToScreen;
+    private projectModelPointToScreen;
+    private enforceAstronomicalRotationLocks;
     private emitCameraChanged;
     private addEventListeners;
     getPhiThetaDeg(canvas: HTMLCanvasElement): SphericalCoords;
@@ -120,6 +126,10 @@ declare class AstroSphere {
     get activeXYZ(): XYZLayer | null;
     isLonLatGridVisible(): boolean;
     toggleLonLatGrid(): boolean;
+    setEastWestRotationLocked(locked: boolean): void;
+    isEastWestRotationLocked(): boolean;
+    setNorthSouthRotationLocked(locked: boolean): void;
+    isNorthSouthRotationLocked(): boolean;
     getXYZDebugStats(): XYZDebugStats;
     draw(canvas: HTMLCanvasElement): void;
     private emitHoveredSourceIfChanged;

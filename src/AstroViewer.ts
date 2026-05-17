@@ -317,6 +317,22 @@ createFootprintSet(footprintSetName: string,
     return this.astroSphere.isLonLatGridVisible()
   }
 
+  setEastWestRotationLocked(locked: boolean): void {
+    this.astroSphere.setEastWestRotationLocked(locked)
+  }
+
+  isEastWestRotationLocked(): boolean {
+    return this.astroSphere.isEastWestRotationLocked()
+  }
+
+  setNorthSouthRotationLocked(locked: boolean): void {
+    this.astroSphere.setNorthSouthRotationLocked(locked)
+  }
+
+  isNorthSouthRotationLocked(): boolean {
+    return this.astroSphere.isNorthSouthRotationLocked()
+  }
+
   // FOV
   getFoV(): SphereFoV {
     return this.astroSphere.getFoV()

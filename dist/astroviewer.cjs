@@ -2888,6 +2888,18 @@ class AstroViewer {
     isLonLatGridVisible() {
         return this.astroSphere.isLonLatGridVisible();
     }
+    setEastWestRotationLocked(locked) {
+        this.astroSphere.setEastWestRotationLocked(locked);
+    }
+    isEastWestRotationLocked() {
+        return this.astroSphere.isEastWestRotationLocked();
+    }
+    setNorthSouthRotationLocked(locked) {
+        this.astroSphere.setNorthSouthRotationLocked(locked);
+    }
+    isNorthSouthRotationLocked() {
+        return this.astroSphere.isNorthSouthRotationLocked();
+    }
     // FOV
     getFoV() {
         return this.astroSphere.getFoV();
@@ -16602,6 +16614,7 @@ const XYZLayer_js_1 = __webpack_require__(2502);
 const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
 const WMTSAdapter_js_1 = __webpack_require__(3768);
 const XYZMap_js_1 = __webpack_require__(583);
+const gl_matrix_1 = __webpack_require__(1961);
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -16639,6 +16652,8 @@ class AstroSphere {
     lastHoveredSource = null;
     lastHoveredCatalogue = null;
     zoomSensitivity = 1.0;
+    lockedEastWestRaDeg = null;
+    lockedNorthSouthDecDeg = null;
     constructor(canvas, webgl) {
         console.log('[AstroSphere] new instance for canvas', canvas.id);
         // Keep global GL context (as in original JS)
@@ -16737,6 +16752,105 @@ class AstroSphere {
     }
     getZoomSensitivity() {
         return this.zoomSensitivity;
+    }
+    filterRotationDeltaByAstroLocks(deltaX, deltaY) {
+        const lockEastWest = this._camera.isRotationLockedY();
+        const lockNorthSouth = this._camera.isRotationLockedX();
+        if (!lockEastWest && !lockNorthSouth) {
+            return { deltaX, deltaY };
+        }
+        const center = RayPickingUtils_js_1.default.getIntersectionPointWithSingleModel(this.canvas.clientWidth / 2, this.canvas.clientHeight / 2, this._healpixGrid, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        if (!center || center.length < 3) {
+            return { deltaX, deltaY };
+        }
+        const centerVec = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.fromValues(center[0], center[1], center[2]));
+        const northAxis = gl_matrix_1.vec3.fromValues(0, 0, 1);
+        const eastVec = gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), northAxis, centerVec);
+        if (gl_matrix_1.vec3.length(eastVec) < 1e-6) {
+            gl_matrix_1.vec3.set(eastVec, 1, 0, 0);
+        }
+        else {
+            gl_matrix_1.vec3.normalize(eastVec, eastVec);
+        }
+        const northProjection = gl_matrix_1.vec3.scale(gl_matrix_1.vec3.create(), centerVec, gl_matrix_1.vec3.dot(northAxis, centerVec));
+        const northVec = gl_matrix_1.vec3.subtract(gl_matrix_1.vec3.create(), northAxis, northProjection);
+        if (gl_matrix_1.vec3.length(northVec) < 1e-6) {
+            gl_matrix_1.vec3.cross(northVec, centerVec, eastVec);
+        }
+        gl_matrix_1.vec3.normalize(northVec, northVec);
+        const eastScreen = this.projectModelDirectionToScreen(centerVec, eastVec);
+        const northScreen = this.projectModelDirectionToScreen(centerVec, northVec);
+        if (!eastScreen || !northScreen) {
+            return { deltaX, deltaY };
+        }
+        let nextDeltaX = deltaX;
+        let nextDeltaY = deltaY;
+        if (lockEastWest) {
+            const amount = nextDeltaX * eastScreen.x + nextDeltaY * eastScreen.y;
+            nextDeltaX -= amount * eastScreen.x;
+            nextDeltaY -= amount * eastScreen.y;
+        }
+        if (lockNorthSouth) {
+            const amount = nextDeltaX * northScreen.x + nextDeltaY * northScreen.y;
+            nextDeltaX -= amount * northScreen.x;
+            nextDeltaY -= amount * northScreen.y;
+        }
+        return {
+            deltaX: nextDeltaX,
+            deltaY: nextDeltaY,
+        };
+    }
+    projectModelDirectionToScreen(centerModel, directionModel) {
+        const offsetModel = gl_matrix_1.vec3.scaleAndAdd(gl_matrix_1.vec3.create(), centerModel, directionModel, 0.01);
+        const centerScreen = this.projectModelPointToScreen(centerModel);
+        const offsetScreen = this.projectModelPointToScreen(offsetModel);
+        if (!centerScreen || !offsetScreen) {
+            return null;
+        }
+        const x = offsetScreen.x - centerScreen.x;
+        const y = offsetScreen.y - centerScreen.y;
+        const len = Math.hypot(x, y);
+        if (len < 1e-6) {
+            return null;
+        }
+        return { x: x / len, y: y / len };
+    }
+    projectModelPointToScreen(pointModel) {
+        const vMatrix = this._camera.getCameraMatrix();
+        const mMatrix = this._healpixGrid.getModelMatrix();
+        const mvMatrix = gl_matrix_1.mat4.create();
+        const mvpMatrix = gl_matrix_1.mat4.create();
+        gl_matrix_1.mat4.multiply(mvMatrix, vMatrix, mMatrix);
+        gl_matrix_1.mat4.multiply(mvpMatrix, this._perspectiveMatrixManager.pMatrix, mvMatrix);
+        const clip = gl_matrix_1.vec4.fromValues(pointModel[0], pointModel[1], pointModel[2], 1);
+        gl_matrix_1.vec4.transformMat4(clip, clip, mvpMatrix);
+        if (Math.abs(clip[3]) < 1e-6) {
+            return null;
+        }
+        return {
+            x: clip[0] / clip[3],
+            y: -(clip[1] / clip[3]),
+        };
+    }
+    enforceAstronomicalRotationLocks() {
+        if (this.lockedEastWestRaDeg == null && this.lockedNorthSouthDecDeg == null) {
+            return false;
+        }
+        const center = this.updateCentralPoint();
+        if (!center) {
+            return false;
+        }
+        const nextRa = this.lockedEastWestRaDeg ?? center.astroDeg.ra;
+        const nextDec = this.lockedNorthSouthDecDeg ?? center.astroDeg.dec;
+        const needsCorrection = Math.abs(nextRa - center.astroDeg.ra) > 1e-6 ||
+            Math.abs(nextDec - center.astroDeg.dec) > 1e-6;
+        if (!needsCorrection) {
+            return false;
+        }
+        this._camera.goTo(nextRa, nextDec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        this.updateCentralPoint();
+        return true;
     }
     emitCameraChanged(reason) {
         // avoid dispatch before scene is ready
@@ -16854,8 +16968,9 @@ class AstroSphere {
                 // Rotation deltas – either use client-space or local-space, but be consistent
                 const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
                 const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
-                this.inertiaX += 0.1 * deltaX;
-                this.inertiaY += 0.1 * deltaY;
+                const filteredDelta = this.filterRotationDeltaByAstroLocks(deltaX, deltaY);
+                this.inertiaX += 0.1 * filteredDelta.deltaX;
+                this.inertiaY += 0.1 * filteredDelta.deltaY;
                 this.updateCentralPoint();
             }
             else {
@@ -17164,6 +17279,24 @@ class AstroSphere {
     toggleLonLatGrid() {
         return this._activeXYZ2?.toggleLonLatGrid() ?? false;
     }
+    setEastWestRotationLocked(locked) {
+        this._camera.setRotationLock({ y: locked });
+        if (locked)
+            this.inertiaX = 0;
+        this.lockedEastWestRaDeg = locked ? this.updateCentralPoint()?.astroDeg.ra ?? null : null;
+    }
+    isEastWestRotationLocked() {
+        return this._camera.isRotationLockedY();
+    }
+    setNorthSouthRotationLocked(locked) {
+        this._camera.setRotationLock({ x: locked });
+        if (locked)
+            this.inertiaY = 0;
+        this.lockedNorthSouthDecDeg = locked ? this.updateCentralPoint()?.astroDeg.dec ?? null : null;
+    }
+    isNorthSouthRotationLocked() {
+        return this._camera.isRotationLockedX();
+    }
     getXYZDebugStats() {
         return {
             activeBaseLayer: this._activeBaseLayer,
@@ -17213,12 +17346,14 @@ class AstroSphere {
         // Rotation inertia
         if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
             cameraRotated = true;
-            THETA = this.inertiaY;
-            PHI = this.inertiaX;
-            this.inertiaX *= 0.95;
-            this.inertiaY *= 0.95;
+            const filteredInertia = this.filterRotationDeltaByAstroLocks(this.inertiaX, this.inertiaY);
+            PHI = filteredInertia.deltaX;
+            THETA = filteredInertia.deltaY;
+            this.inertiaX = filteredInertia.deltaX * 0.95;
+            this.inertiaY = filteredInertia.deltaY * 0.95;
             this._camera.rotate(PHI, THETA);
             this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+            this.enforceAstronomicalRotationLocks();
         }
         else {
             this.inertiaY = 0;
@@ -19357,10 +19492,6 @@ class Camera {
         const totRot = Math.sqrt(phi * phi + theta * theta);
         if (totRot === 0)
             return;
-        // If both X and Y rotations are locked, nothing to do
-        if (this.lockRotX && this.lockRotY) {
-            return;
-        }
         const pos = this.getCameraPosition();
         const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
         const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
@@ -19371,9 +19502,8 @@ class Camera {
         const normalizedFoV = Math.min(1, this.FoV / 18);
         const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
         const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
-        // Build an axis from phi/theta, but zero components that are locked
-        let axisX = this.lockRotX ? 0 : theta;
-        let axisY = this.lockRotY ? 0 : phi;
+        let axisX = theta;
+        let axisY = phi;
         const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
         // If after locking we have no axis left, do nothing
         if (axisLen === 0) {

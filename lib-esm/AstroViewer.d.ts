@@ -76,6 +76,10 @@ export declare class AstroViewer {
     isEquatorialGridVisible(): boolean;
     toggleLonLatGrid(): boolean;
     isLonLatGridVisible(): boolean;
+    setEastWestRotationLocked(locked: boolean): void;
+    isEastWestRotationLocked(): boolean;
+    setNorthSouthRotationLocked(locked: boolean): void;
+    isNorthSouthRotationLocked(): boolean;
     getFoV(): SphereFoV;
     getFoVPolygon(): Point[];
     changeFoV(deg: number): void;

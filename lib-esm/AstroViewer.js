@@ -211,6 +211,18 @@ export class AstroViewer {
     isLonLatGridVisible() {
         return this.astroSphere.isLonLatGridVisible();
     }
+    setEastWestRotationLocked(locked) {
+        this.astroSphere.setEastWestRotationLocked(locked);
+    }
+    isEastWestRotationLocked() {
+        return this.astroSphere.isEastWestRotationLocked();
+    }
+    setNorthSouthRotationLocked(locked) {
+        this.astroSphere.setNorthSouthRotationLocked(locked);
+    }
+    isNorthSouthRotationLocked() {
+        return this.astroSphere.isNorthSouthRotationLocked();
+    }
     // FOV
     getFoV() {
         return this.astroSphere.getFoV();

@@ -209,10 +209,6 @@ class Camera {
         const totRot = Math.sqrt(phi * phi + theta * theta);
         if (totRot === 0)
             return;
-        // If both X and Y rotations are locked, nothing to do
-        if (this.lockRotX && this.lockRotY) {
-            return;
-        }
         const pos = this.getCameraPosition();
         const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
         const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
@@ -223,9 +219,8 @@ class Camera {
         const normalizedFoV = Math.min(1, this.FoV / 18);
         const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
         const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
-        // Build an axis from phi/theta, but zero components that are locked
-        let axisX = this.lockRotX ? 0 : theta;
-        let axisY = this.lockRotY ? 0 : phi;
+        let axisX = theta;
+        let axisY = phi;
         const axisLen = Math.sqrt(axisX * axisX + axisY * axisY);
         // If after locking we have no axis left, do nothing
         if (axisLen === 0) {

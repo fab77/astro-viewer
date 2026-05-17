@@ -37,6 +37,8 @@ async function bootstrap() {
       const healpixChk = el('healpixGridChk');
       const equatChk = el('equatorialGridChk');
       const lonLatChk = el('lonLatGridChk');
+      const lockEastWestChk = el('lockEastWestRotationChk');
+      const lockNorthSouthChk = el('lockNorthSouthRotationChk');
       const xyzConcurrentInput = el('xyzMaxConcurrentRequests');
       if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
         healpixChk.checked = !!AC.isHealpixGridVisible();
@@ -46,6 +48,12 @@ async function bootstrap() {
       }
       if (lonLatChk && typeof AC.isLonLatGridVisible === "function") {
         lonLatChk.checked = !!AC.isLonLatGridVisible();
+      }
+      if (lockEastWestChk && typeof AC.isEastWestRotationLocked === "function") {
+        lockEastWestChk.checked = !!AC.isEastWestRotationLocked();
+      }
+      if (lockNorthSouthChk && typeof AC.isNorthSouthRotationLocked === "function") {
+        lockNorthSouthChk.checked = !!AC.isNorthSouthRotationLocked();
       }
       if (xyzConcurrentInput && typeof AC.getXYZMaxConcurrentRequests === "function") {
         xyzConcurrentInput.value = String(AC.getXYZMaxConcurrentRequests());
@@ -329,6 +337,24 @@ function wireUI() {
     } finally {
       // store preference regardless of API success
       persistBasic();
+    }
+  });
+
+  el('lockEastWestRotationChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.setEastWestRotationLocked?.(!!ev.target.checked);
+      ev.target.checked = !!state.AstroAPI?.isEastWestRotationLocked?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
+    }
+  });
+
+  el('lockNorthSouthRotationChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.setNorthSouthRotationLocked?.(!!ev.target.checked);
+      ev.target.checked = !!state.AstroAPI?.isNorthSouthRotationLocked?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
     }
   });
 
