@@ -22,7 +22,7 @@ export class XYZVisibleTilesManager {
     get selection() {
         return this._selection;
     }
-    computeVisibleTiles(z, xyzModel, webgl, camera, pMatrix, sampleCount = 7, padding = 1) {
+    computeVisibleTiles(z, xyzModel, webgl, camera, pMatrix, sampleCount = 9, padding = 2) {
         this._visibleTiles = XYZRayPickingUtils.getVisibleTilesFromViewport(z, xyzModel, webgl, camera, pMatrix, sampleCount, padding);
         this._visibleTilesMap = this.buildTileMap(this._visibleTiles);
         this.refreshAncestorsMap(this._visibleTiles);

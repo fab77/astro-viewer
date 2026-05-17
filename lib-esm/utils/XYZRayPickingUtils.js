@@ -73,26 +73,43 @@ class XYZRayPickingUtils {
     }
     static getTileFromMouse(mouseX, mouseY, z, xyzModel, webgl, camera, pMatrix) {
         const lonLat = XYZRayPickingUtils.getLonLatFromMouse(mouseX, mouseY, xyzModel, webgl, camera, pMatrix);
-        return lonLat ? XYZRayPickingUtils.lonLatToTile(lonLat.lonDeg, lonLat.latDeg, z) : null;
+        if (!lonLat || !XYZRayPickingUtils.isMercatorLatitude(lonLat.latDeg)) {
+            return null;
+        }
+        return XYZRayPickingUtils.lonLatToTile(lonLat.lonDeg, lonLat.latDeg, z);
     }
-    static getVisibleTilesFromViewport(z, xyzModel, webgl, camera, pMatrix, sampleCount = 7, padding = 1) {
+    static getVisibleTilesFromViewport(z, xyzModel, webgl, camera, pMatrix, sampleCount = 9, padding = 2) {
         const gl = webgl;
         const canvas = gl.canvas;
         const rect = canvas.getBoundingClientRect();
         const samples = Math.max(2, Math.floor(sampleCount));
+        const edgeSamples = Math.max(samples * 2 + 1, 21);
+        const safePadding = Math.max(0, Math.floor(padding));
         const tiles = [];
+        const addSample = (x, y) => {
+            const tile = XYZRayPickingUtils.getTileFromMouse(x, y, z, xyzModel, webgl, camera, pMatrix);
+            if (!tile)
+                return;
+            tiles.push(tile);
+            tiles.push(...XYZRayPickingUtils.getNeighborTiles(tile, safePadding));
+        };
         for (let iy = 0; iy < samples; iy++) {
             const y = samples === 1 ? rect.height / 2 : (iy / (samples - 1)) * rect.height;
             for (let ix = 0; ix < samples; ix++) {
                 const x = samples === 1 ? rect.width / 2 : (ix / (samples - 1)) * rect.width;
-                const tile = XYZRayPickingUtils.getTileFromMouse(x, y, z, xyzModel, webgl, camera, pMatrix);
-                if (!tile)
-                    continue;
-                tiles.push(tile);
-                tiles.push(...XYZRayPickingUtils.getNeighborTiles(tile, padding));
+                addSample(x, y);
             }
         }
-        return XYZRayPickingUtils.deduplicateTiles(tiles);
+        for (let i = 0; i < edgeSamples; i++) {
+            const t = edgeSamples === 1 ? 0.5 : i / (edgeSamples - 1);
+            const x = t * rect.width;
+            const y = t * rect.height;
+            addSample(x, 0);
+            addSample(x, rect.height);
+            addSample(0, y);
+            addSample(rect.width, y);
+        }
+        return XYZRayPickingUtils.fillSmallTileGaps(XYZRayPickingUtils.deduplicateTiles(tiles));
     }
     static modelPointToLonLat(point) {
         const [x, y, z] = point;
@@ -137,11 +154,47 @@ class XYZRayPickingUtils {
         }
         return Array.from(map.values());
     }
+    static fillSmallTileGaps(tiles) {
+        if (tiles.length === 0) {
+            return tiles;
+        }
+        const zoom = tiles[0].z;
+        const dim = 2 ** zoom;
+        const map = new Map();
+        const key = (tile) => `${tile.z}/${tile.x}/${tile.y}`;
+        const add = (tile) => {
+            map.set(key(tile), tile);
+        };
+        const has = (x, y) => (y >= 0 && y < dim && map.has(`${zoom}/${XYZRayPickingUtils.wrapTileX(x, dim)}/${y}`));
+        for (const tile of tiles) {
+            add(tile);
+        }
+        for (const tile of tiles) {
+            const x = tile.x;
+            const y = tile.y;
+            if (has(x - 2, y) && !has(x - 1, y)) {
+                add({ z: zoom, x: XYZRayPickingUtils.wrapTileX(x - 1, dim), y });
+            }
+            if (has(x + 2, y) && !has(x + 1, y)) {
+                add({ z: zoom, x: XYZRayPickingUtils.wrapTileX(x + 1, dim), y });
+            }
+            if (has(x, y - 2) && !has(x, y - 1)) {
+                add({ z: zoom, x, y: y - 1 });
+            }
+            if (has(x, y + 2) && !has(x, y + 1)) {
+                add({ z: zoom, x, y: y + 1 });
+            }
+        }
+        return Array.from(map.values());
+    }
     static latToTileY(latDeg, z) {
         const lat = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, latDeg));
         const latRad = (lat * Math.PI) / 180;
         const dim = 2 ** z;
         return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * dim;
+    }
+    static isMercatorLatitude(latDeg) {
+        return Math.abs(latDeg) <= MAX_MERCATOR_LAT;
     }
     static wrapTileX(x, dim) {
         return ((x % dim) + dim) % dim;

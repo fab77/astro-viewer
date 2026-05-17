@@ -154,7 +154,11 @@ class XYZRayPickingUtils {
       pMatrix,
     );
 
-    return lonLat ? XYZRayPickingUtils.lonLatToTile(lonLat.lonDeg, lonLat.latDeg, z) : null;
+    if (!lonLat || !XYZRayPickingUtils.isMercatorLatitude(lonLat.latDeg)) {
+      return null;
+    }
+
+    return XYZRayPickingUtils.lonLatToTile(lonLat.lonDeg, lonLat.latDeg, z);
   }
 
   static getVisibleTilesFromViewport(
@@ -163,28 +167,45 @@ class XYZRayPickingUtils {
     webgl: WebGL2RenderingContext,
     camera: Camera,
     pMatrix: ReadonlyMat4,
-    sampleCount = 7,
-    padding = 1,
+    sampleCount = 9,
+    padding = 2,
   ): XYZTileCoord[] {
     const gl = webgl as GL;
     const canvas = gl.canvas as HTMLCanvasElement;
     const rect = canvas.getBoundingClientRect();
     const samples = Math.max(2, Math.floor(sampleCount));
+    const edgeSamples = Math.max(samples * 2 + 1, 21);
+    const safePadding = Math.max(0, Math.floor(padding));
     const tiles: XYZTileCoord[] = [];
+
+    const addSample = (x: number, y: number): void => {
+      const tile = XYZRayPickingUtils.getTileFromMouse(x, y, z, xyzModel, webgl, camera, pMatrix);
+      if (!tile) return;
+
+      tiles.push(tile);
+      tiles.push(...XYZRayPickingUtils.getNeighborTiles(tile, safePadding));
+    };
 
     for (let iy = 0; iy < samples; iy++) {
       const y = samples === 1 ? rect.height / 2 : (iy / (samples - 1)) * rect.height;
       for (let ix = 0; ix < samples; ix++) {
         const x = samples === 1 ? rect.width / 2 : (ix / (samples - 1)) * rect.width;
-        const tile = XYZRayPickingUtils.getTileFromMouse(x, y, z, xyzModel, webgl, camera, pMatrix);
-        if (!tile) continue;
-
-        tiles.push(tile);
-        tiles.push(...XYZRayPickingUtils.getNeighborTiles(tile, padding));
+        addSample(x, y);
       }
     }
 
-    return XYZRayPickingUtils.deduplicateTiles(tiles);
+    for (let i = 0; i < edgeSamples; i++) {
+      const t = edgeSamples === 1 ? 0.5 : i / (edgeSamples - 1);
+      const x = t * rect.width;
+      const y = t * rect.height;
+
+      addSample(x, 0);
+      addSample(x, rect.height);
+      addSample(0, y);
+      addSample(rect.width, y);
+    }
+
+    return XYZRayPickingUtils.fillSmallTileGaps(XYZRayPickingUtils.deduplicateTiles(tiles));
   }
 
   static modelPointToLonLat(point: Readonly<[number, number, number]>): XYZLonLat {
@@ -239,11 +260,56 @@ class XYZRayPickingUtils {
     return Array.from(map.values());
   }
 
+  private static fillSmallTileGaps(tiles: XYZTileCoord[]): XYZTileCoord[] {
+    if (tiles.length === 0) {
+      return tiles;
+    }
+
+    const zoom = tiles[0].z;
+    const dim = 2 ** zoom;
+    const map = new Map<string, XYZTileCoord>();
+    const key = (tile: XYZTileCoord): string => `${tile.z}/${tile.x}/${tile.y}`;
+    const add = (tile: XYZTileCoord): void => {
+      map.set(key(tile), tile);
+    };
+    const has = (x: number, y: number): boolean => (
+      y >= 0 && y < dim && map.has(`${zoom}/${XYZRayPickingUtils.wrapTileX(x, dim)}/${y}`)
+    );
+
+    for (const tile of tiles) {
+      add(tile);
+    }
+
+    for (const tile of tiles) {
+      const x = tile.x;
+      const y = tile.y;
+
+      if (has(x - 2, y) && !has(x - 1, y)) {
+        add({ z: zoom, x: XYZRayPickingUtils.wrapTileX(x - 1, dim), y });
+      }
+      if (has(x + 2, y) && !has(x + 1, y)) {
+        add({ z: zoom, x: XYZRayPickingUtils.wrapTileX(x + 1, dim), y });
+      }
+      if (has(x, y - 2) && !has(x, y - 1)) {
+        add({ z: zoom, x, y: y - 1 });
+      }
+      if (has(x, y + 2) && !has(x, y + 1)) {
+        add({ z: zoom, x, y: y + 1 });
+      }
+    }
+
+    return Array.from(map.values());
+  }
+
   private static latToTileY(latDeg: number, z: number): number {
     const lat = Math.max(-MAX_MERCATOR_LAT, Math.min(MAX_MERCATOR_LAT, latDeg));
     const latRad = (lat * Math.PI) / 180;
     const dim = 2 ** z;
     return ((1 - Math.asinh(Math.tan(latRad)) / Math.PI) / 2) * dim;
+  }
+
+  private static isMercatorLatitude(latDeg: number): boolean {
+    return Math.abs(latDeg) <= MAX_MERCATOR_LAT;
   }
 
   private static wrapTileX(x: number, dim: number): number {

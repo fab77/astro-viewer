@@ -40,8 +40,8 @@ export class XYZVisibleTilesManager {
     webgl: WebGL2RenderingContext,
     camera: Camera,
     pMatrix: ReadonlyMat4,
-    sampleCount = 7,
-    padding = 1,
+    sampleCount = 9,
+    padding = 2,
   ): XYZVisibleTileSelection {
     this._visibleTiles = XYZRayPickingUtils.getVisibleTilesFromViewport(
       z,

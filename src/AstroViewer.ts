@@ -12,10 +12,10 @@ import Camera from './Camera.js'
 import { ReadonlyMat4 } from 'gl-matrix'
 import ColorMaps, { ColorMap, ColorMapName } from './model/ColorMaps.js'
 import {HiPS} from './model/hips/HiPS.js'
-import { XYZLayer } from './model/earth/XYZLayer.js'
-import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js'
-import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth2/XYZConfig.js'
+import { xyzTileRequestScheduler } from './model/earth2/XYZTileRequestScheduler.js'
 import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js'
+import { XYZMap } from './model/earth2/XYZMap.js'
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
@@ -250,7 +250,7 @@ createFootprintSet(footprintSetName: string,
     return this.astroSphere.activeHiPS
   }
 
-  getActiveXYZ(): XYZLayer | null {
+  getActiveXYZ(): XYZMap | null {
     return this.astroSphere.activeXYZ
   }
 

@@ -1,3 +1,5 @@
+import type { XYZRequestSchedulerDebugStats } from './XYZConfig.js'
+
 type QueueItem = {
   url: string
   resolve: (blob: Blob) => void
@@ -10,8 +12,6 @@ type HostBackoffState = {
   cooldownUntil: number
   consecutiveFailures: number
 }
-
-import type { XYZRequestSchedulerDebugStats } from './types.js'
 
 export class XYZTileRequestError extends Error {
   cooldownMs: number
@@ -105,9 +105,7 @@ export class XYZTileRequestScheduler {
   private pump(): void {
     while (this._activeCount < this._maxConcurrent && this._queue.length > 0) {
       const item = this._queue.shift()
-      if (!item) {
-        return
-      }
+      if (!item) return
 
       const hostCooldown = this.getHostCooldown(item.url)
       const now = Date.now()

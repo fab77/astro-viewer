@@ -1,4 +1,5 @@
-import type { WMTSLayerConfig, XYZLayerConfig, XYZTileCoord } from '../types.js';
+import type { WMTSLayerConfig, XYZLayerConfig } from './XYZConfig.js';
+import type { XYZTileCoord } from './XYZTypes.js';
 export declare class WMTSAdapter {
     private _config;
     constructor(config: WMTSLayerConfig);

@@ -9,8 +9,8 @@ import Camera from './Camera.js';
 import { ReadonlyMat4 } from 'gl-matrix';
 import { ColorMap, ColorMapName } from './model/ColorMaps.js';
 import { HiPS } from './model/hips/HiPS.js';
-import { XYZLayer } from './model/earth/XYZLayer.js';
-import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth2/XYZConfig.js';
+import { XYZMap } from './model/earth2/XYZMap.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 export declare class AstroViewer {
@@ -60,7 +60,7 @@ export declare class AstroViewer {
     changeColorMap(colorMapName: ColorMapName): void;
     changeCustomColorMap(colorMap: ColorMap): void;
     getActiveHiPS(): HiPS | null;
-    getActiveXYZ(): XYZLayer | null;
+    getActiveXYZ(): XYZMap | null;
     setCamera(camera: Camera): void;
     setCameraPosition(pos: [number, number, number]): void;
     setCameraMatrix(viewMatrix: Float32Array): void;

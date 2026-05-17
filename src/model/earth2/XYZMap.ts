@@ -9,7 +9,7 @@ import { XYZTileBuffer } from "./XYZTileBuffer.js";
 import { XYZAnchestorTile } from "./XYZAnchestorTile.js";
 import { XYZMeshBuilder } from "./XYZMeshBuilder.js";
 import { SphereFoV } from "../SphereFoV.js";
-import type { XYZLayerDebugStats } from "../earth/types.js";
+import type { XYZLayerDebugStats } from "./XYZConfig.js";
 import type { XYZTileCoord } from "./XYZTypes.js";
 
 export class XYZMap extends AbstractSkyEntity {

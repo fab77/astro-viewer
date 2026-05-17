@@ -17,7 +17,9 @@ declare class XYZRayPickingUtils {
     static lonLatToTile(lonDeg: number, latDeg: number, z: number): XYZTileCoord;
     static getNeighborTiles(tile: XYZTileCoord, ring?: number): XYZTileCoord[];
     static deduplicateTiles(tiles: XYZTileCoord[]): XYZTileCoord[];
+    private static fillSmallTileGaps;
     private static latToTileY;
+    private static isMercatorLatitude;
     private static wrapTileX;
     private static clampTileY;
     private static mat4MultiplyVec4;

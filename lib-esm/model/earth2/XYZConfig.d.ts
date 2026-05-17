@@ -1,5 +1,7 @@
+import type { XYZTileCoord } from './XYZTypes.js';
 export type XYZLayerConfig = {
     urlTemplate: string;
+    name?: string;
     minZoom?: number;
     maxZoom?: number;
     segmentsPerSide?: number;
@@ -45,23 +47,6 @@ export type XYZDebugStats = {
     activeBaseLayer: 'hips' | 'xyz' | null;
     layer: XYZLayerDebugStats | null;
     requests: XYZRequestSchedulerDebugStats;
-};
-export type XYZTileCoord = {
-    z: number;
-    x: number;
-    y: number;
-};
-export type XYZTileMesh = {
-    positions: Float32Array;
-    uvs: Float32Array;
-    indices: Uint16Array | Uint32Array;
-};
-export type XYZTileGpuMesh = {
-    positionBuffer: WebGLBuffer | null;
-    uvBuffer: WebGLBuffer | null;
-    indexBuffer: WebGLBuffer | null;
-    indexCount: number;
-    indexType: number;
 };
 export type WMTSRequestEncoding = 'kvp' | 'rest';
 export type WMTSLayerConfig = {

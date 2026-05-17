@@ -9,9 +9,9 @@ import { FootprintSetGL, HoveredFootprintDetail } from './model/footprints/Footp
 import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { ColorMap } from './model/ColorMaps.js';
-import { XYZLayer } from './model/earth/XYZLayer.js';
-import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/types.js';
+import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth2/XYZConfig.js';
 import { XYZMapDescriptor } from './model/earth2/XYZMapDescriptor.js';
+import { XYZMap } from './model/earth2/XYZMap.js';
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -57,7 +57,6 @@ declare class AstroSphere {
     private pointerDownY;
     private pointerDownAt;
     private _activeHiPS;
-    private _activeXYZ;
     private _activeXYZ2;
     private _activeBaseLayer;
     private startup;
@@ -129,7 +128,7 @@ declare class AstroSphere {
     private prevCentralRaDeg;
     private prevCentralDecDeg;
     get activeHiPS(): HiPS | null;
-    get activeXYZ(): XYZLayer | null;
+    get activeXYZ(): XYZMap | null;
     isLonLatGridVisible(): boolean;
     toggleLonLatGrid(): boolean;
     setEastWestRotationLocked(locked: boolean): void;
