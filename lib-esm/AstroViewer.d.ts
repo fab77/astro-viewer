@@ -67,6 +67,7 @@ export declare class AstroViewer {
     restoreAstroViewerState(detail: CameraChangedDetail, applyColorMap: boolean): void;
     getCurrentAstroViewerStatus(): CameraChangedDetail | null;
     goTo(raDeg: number, decDeg: number): void;
+    getActiveCoordinateMode(): 'equatorial' | 'galactic' | 'lonlat';
     getCenterCoordinates(): PointCoordinates | undefined;
     getCoordinatesFromMouse(): PointCoordinates | undefined;
     setModelMatrix(modelMatrix: ReadonlyMat4): void;

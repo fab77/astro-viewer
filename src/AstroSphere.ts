@@ -854,6 +854,18 @@ class AstroSphere {
     this._camera.goTo(raDeg, decDeg)
   }
 
+  getActiveCoordinateMode(): 'equatorial' | 'galactic' | 'lonlat' {
+    if (this._activeBaseLayer === 'xyz') {
+      return 'lonlat'
+    }
+
+    if (this._activeBaseLayer === 'hips' && this._activeHiPS?.isGalacticHips) {
+      return 'galactic'
+    }
+
+    return 'equatorial'
+  }
+
   resetAxesOrientation(): void {
     const center = this.updateCentralPoint()
     if (!center) return

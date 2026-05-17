@@ -573,6 +573,15 @@ class AstroSphere {
     goTo(raDeg, decDeg) {
         this._camera.goTo(raDeg, decDeg);
     }
+    getActiveCoordinateMode() {
+        if (this._activeBaseLayer === 'xyz') {
+            return 'lonlat';
+        }
+        if (this._activeBaseLayer === 'hips' && this._activeHiPS?.isGalacticHips) {
+            return 'galactic';
+        }
+        return 'equatorial';
+    }
     resetAxesOrientation() {
         const center = this.updateCentralPoint();
         if (!center)

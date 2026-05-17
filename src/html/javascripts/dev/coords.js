@@ -3,6 +3,23 @@ import { el, setStatus } from './ui.js';
 import { state } from './state.js';
 
 const fmt = (ra, dec) => `RA=${Number(ra).toFixed(5)}°, Dec=${Number(dec).toFixed(5)}°`;
+const fmtLonLat = (lon, lat) => `Lon=${Number(lon).toFixed(5)}°, Lat=${Number(lat).toFixed(5)}°`;
+
+function getMode() {
+    return state.AstroAPI?.getActiveCoordinateMode?.() ?? 'equatorial';
+}
+
+function formatCoords(coords) {
+    const mode = getMode();
+    if (mode === 'lonlat') {
+        const lon = coords.sphericalDeg?.phi > 180 ? coords.sphericalDeg.phi - 360 : coords.sphericalDeg?.phi;
+        const lat = 90 - coords.sphericalDeg?.theta;
+        return fmtLonLat(lon, lat);
+    }
+
+    const suffix = mode === 'galactic' ? ' (galactic HiPS view)' : '';
+    return `${fmt(coords.astroDeg.ra, coords.astroDeg.dec)}${suffix}`;
+}
 
 export function wireCoords() {
     const centerEl = el('centerCoords');
@@ -40,8 +57,7 @@ export function wireCoords() {
                     if (hoverEl) hoverEl.value = "Hover: —";
                     return;
                 }
-                const [ra, dec] = [coords.astroDeg.ra, coords.astroDeg.dec]
-                if (hoverEl) hoverEl.value = `Hover: ${fmt(ra, dec)}`;
+                if (hoverEl) hoverEl.value = `Hover: ${formatCoords(coords)}`;
             } catch (e) {
                 // keep it silent to avoid spam
             }
@@ -77,8 +93,7 @@ export function refreshCenter() {
             if (centerEl) centerEl.value = "Center: —";
             return;
         }
-        const [ra, dec] = [coords.astroDeg.ra , coords.astroDeg.dec] ;
-        if (centerEl) centerEl.value = `Center: ${fmt(ra, dec)}`;
+        if (centerEl) centerEl.value = `Center: ${formatCoords(coords)}`;
     } catch (e) {
         if (centerEl) centerEl.value = "Center: —";
     }

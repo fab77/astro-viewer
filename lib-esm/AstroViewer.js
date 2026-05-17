@@ -179,6 +179,9 @@ export class AstroViewer {
         // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
         this.astroSphere.goTo(raDeg, decDeg);
     }
+    getActiveCoordinateMode() {
+        return this.astroSphere.getActiveCoordinateMode();
+    }
     getCenterCoordinates() {
         return this.astroSphere.getCentralPointCoordinates();
     }

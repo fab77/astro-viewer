@@ -279,6 +279,11 @@ createFootprintSet(footprintSetName: string,
     // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
     this.astroSphere.goTo(raDeg, decDeg)
   }
+
+  getActiveCoordinateMode(): 'equatorial' | 'galactic' | 'lonlat' {
+    return this.astroSphere.getActiveCoordinateMode()
+  }
+
   getCenterCoordinates(): PointCoordinates | undefined {
     return this.astroSphere.getCentralPointCoordinates()
   }

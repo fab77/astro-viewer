@@ -2884,6 +2884,9 @@ class AstroViewer {
         // console.log(`AstroViewer.goTo goto(${raDeg}, ${decDeg})`)
         this.astroSphere.goTo(raDeg, decDeg);
     }
+    getActiveCoordinateMode() {
+        return this.astroSphere.getActiveCoordinateMode();
+    }
     getCenterCoordinates() {
         return this.astroSphere.getCentralPointCoordinates();
     }
@@ -17202,6 +17205,15 @@ class AstroSphere {
     // End Footprint section
     goTo(raDeg, decDeg) {
         this._camera.goTo(raDeg, decDeg);
+    }
+    getActiveCoordinateMode() {
+        if (this._activeBaseLayer === 'xyz') {
+            return 'lonlat';
+        }
+        if (this._activeBaseLayer === 'hips' && this._activeHiPS?.isGalacticHips) {
+            return 'galactic';
+        }
+        return 'equatorial';
     }
     resetAxesOrientation() {
         const center = this.updateCentralPoint();
