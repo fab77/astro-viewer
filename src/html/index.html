@@ -204,10 +204,51 @@
             </div>
         </div>
 
-        <div id="status"></div>
+                <div id="status"></div>
 
-        <!-- Datasets -->
-        <details id="datasetsPanel" open style="display:none;">
+                <!-- Importer controls (always visible) -->
+                <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
+                        <label>Import catalogue / footprint</label>
+                        <div class="row">
+                                <input id="importFile" type="file" accept=".json,.csv,application/json,text/csv" />
+                                <select id="importType">
+                                        <option value="catalogue">Catalogue (points table)</option>
+                                        <option value="footprint">Footprint set</option>
+                                </select>
+                                <button id="btnImport" class="secondary">Import</button>
+                                <button id="btnClearImports" class="secondary">Clear imports</button>
+                        </div>
+                        <div style="margin-top:8px; display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
+                                <div>
+                                    <label for="importMapRa">RA column</label>
+                                    <select id="importMapRa"><option value="">— auto —</option></select>
+                                </div>
+                                <div>
+                                    <label for="importMapDec">Dec column</label>
+                                    <select id="importMapDec"><option value="">— auto —</option></select>
+                                </div>
+                                <div>
+                                    <label for="importMapName">Name column</label>
+                                    <select id="importMapName"><option value="">— auto —</option></select>
+                                </div>
+                                <div>
+                                    <label for="importMapSize">Size column</label>
+                                    <select id="importMapSize"><option value="">— none —</option></select>
+                                </div>
+                                <div>
+                                    <label for="importMapHue">Hue column</label>
+                                    <select id="importMapHue"><option value="">— none —</option></select>
+                                </div>
+                                <div>
+                                    <label for="importMapOutline">Footprint / STCS column</label>
+                                    <select id="importMapOutline"><option value="">— none —</option></select>
+                                </div>
+                        </div>
+                        <div class="hint">You can import a JSON array or a CSV with headers. For footprints, use STCS format (e.g., <code>POLYGON lon1 lat1 lon2 lat2 ...</code>). Choose mappings then click Import.</div>
+                </div>
+
+                <!-- Datasets -->
+                <details id="datasetsPanel" open style="display:none;">
             <summary>Datasets</summary>
             <div class="stack">
                 <label>Catalogues</label>
@@ -264,20 +305,7 @@
                     <button id="btnHideFp" class="secondary">Hide</button>
                 </div>
                 <div class="hint">Tip: per-row colour, visibility, and delete are available in the table above.</div>
-                <!-- Importer controls -->
-                <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
-                    <label>Import catalogue / footprint</label>
-                    <div class="row">
-                        <input id="importFile" type="file" accept=".json,.csv,application/json,text/csv" />
-                        <select id="importType">
-                            <option value="catalogue">Catalogue (points table)</option>
-                            <option value="footprint">Footprint set</option>
-                        </select>
-                        <button id="btnImport" class="secondary">Import</button>
-                        <button id="btnClearImports" class="secondary">Clear imports</button>
-                    </div>
-                    <div class="hint">You can import a JSON array or a CSV with headers. Imported items appear in the lists above.</div>
-                </div>
+                
             </div>
         </details>
 
