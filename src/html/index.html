@@ -264,6 +264,20 @@
                     <button id="btnHideFp" class="secondary">Hide</button>
                 </div>
                 <div class="hint">Tip: per-row colour, visibility, and delete are available in the table above.</div>
+                <!-- Importer controls -->
+                <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
+                    <label>Import catalogue / footprint</label>
+                    <div class="row">
+                        <input id="importFile" type="file" accept=".json,.csv,application/json,text/csv" />
+                        <select id="importType">
+                            <option value="catalogue">Catalogue (points table)</option>
+                            <option value="footprint">Footprint set</option>
+                        </select>
+                        <button id="btnImport" class="secondary">Import</button>
+                        <button id="btnClearImports" class="secondary">Clear imports</button>
+                    </div>
+                    <div class="hint">You can import a JSON array or a CSV with headers. Imported items appear in the lists above.</div>
+                </div>
             </div>
         </details>
 

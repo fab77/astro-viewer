@@ -22,6 +22,7 @@ import { wireGoto } from './goto.js';
 import { wireCoords } from './coords.js';
 import { wireXYZDiagnostics } from './xyzDiagnostics.js';
 import { applyWMTSPreset, loadWMTSCapabilities, WMTS_PRESETS } from './wmtsCapabilities.js';
+import { wireImporterControls } from './importer.js';
 
 (function applyFixedProxy() {
   const FIXED_PROXY_BASE = ""; // set if needed
@@ -147,6 +148,7 @@ async function bootstrap() {
     wireUI();
     renderCatalogueManager();
     wireCatalogueManagerControls();
+    wireImporterControls();
     wireGoto();
     wireCoords();
     wireHoveredFootprints();
