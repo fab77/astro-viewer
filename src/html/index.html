@@ -71,7 +71,7 @@
 
         <!-- HiPS controls -->
         <details id="astroPanel" style="margin-top:8px;">
-            <summary>Astronomy - HiPS diagnostics</summary>
+            <summary>Astronomy - HiPS maps</summary>
             <div class="stack" style="margin-top:8px;">
                 <label for="hipsUrl">HiPS URL</label>
                 <div class="row">
@@ -80,11 +80,22 @@
                     <button id="btnLoadHiPS">Load HiPS</button>
                 </div>
             </div>
+
+            <details id="xyzDiagnosticsPanel" open style="margin-top:8px; padding-left: 20px;">
+                <summary>HiPS diagnostics</summary>
+                <div class="stack">
+                    <!-- <input id="hipsDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
+                    <div id="hipsDiagSummary" class="div-text-wrapper">Mode: —</div>
+                    <div id="hipsDiagCache" class="div-text-wrapper" >Cache: —</div>
+                    <div id="hipsDiagRequests" class="div-text-wrapper" >Requests: —</div>
+                    <div id="hipsDiagBackoff" class="hint">Backoff: none</div>
+                </div>
+            </details>
         </details>
 
 
         <details id="earthPanel" style="margin-top:8px;">
-            <summary>Earth - XYZ / WMTS diagnostics</summary>
+            <summary>Earth - XYZ / WMTS maps</summary>
             
             <details id="xyzPanel" style="margin-top:8px; padding-left: 20px;">
                 <summary>XYZ maps</summary>
