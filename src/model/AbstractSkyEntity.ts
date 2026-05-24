@@ -40,6 +40,7 @@ export interface SkyEntityDrawInput {
     phi: number
     theta: number
   }>
+  cameraMoving?: boolean
 }
 
 export abstract class AbstractSkyEntity {

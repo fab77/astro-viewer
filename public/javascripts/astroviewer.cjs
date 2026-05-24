@@ -333,7 +333,40 @@ exports.XYZShaderProgram = XYZShaderProgram;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fovHelper = void 0;
 class FoVHelper {
-    getHiPSNorder(fov) {
+    static LEVEL_HYSTERESIS = 0.12;
+    static HIPS_ORDER_MIN_FOV = {
+        0: 179,
+        1: 90,
+        2: 30,
+        3: 20,
+        4: 6,
+        5: 3.2,
+        6: 1.6,
+        7: 0.85,
+        8: 0.42,
+        9: 0.21,
+        10: 0.12,
+        11: 0.06,
+        12: 0.015,
+        13: 0,
+    };
+    getHiPSNorder(fov, currentOrder) {
+        const rawOrder = this.getRawHiPSNorder(fov);
+        if (currentOrder === undefined || currentOrder === rawOrder)
+            return rawOrder;
+        if (rawOrder > currentOrder) {
+            const boundary = FoVHelper.HIPS_ORDER_MIN_FOV[currentOrder];
+            if (boundary > 0 && fov > boundary * (1 - FoVHelper.LEVEL_HYSTERESIS))
+                return currentOrder;
+        }
+        else {
+            const boundary = FoVHelper.HIPS_ORDER_MIN_FOV[rawOrder];
+            if (boundary > 0 && fov < boundary * (1 + FoVHelper.LEVEL_HYSTERESIS))
+                return currentOrder;
+        }
+        return rawOrder;
+    }
+    getRawHiPSNorder(fov) {
         if (fov >= 179)
             return 0;
         if (fov >= 90)
@@ -362,10 +395,14 @@ class FoVHelper {
             return 12;
         return 13;
     }
-    getRADegSteps(fov) {
+    getRADegSteps(fov, coarse = false) {
         let raStep;
         let decStep;
-        if (fov >= 179) {
+        if (coarse && fov < 0.21) {
+            raStep = 10;
+            decStep = 10;
+        }
+        else if (fov >= 179) {
             raStep = 10;
             decStep = 10;
         }
@@ -15324,10 +15361,12 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             loadingTileCount: tileBuffer.loadingTileCount,
         };
     }
-    refresh() {
-        // const fov = healpixGridSingleton.getMinFoV()
-        const fov = this._healpixGrid.getMinFoV();
-        this._visibleorder = Math.min(FoVHelper_js_1.fovHelper.getHiPSNorder(fov), this._maxorder);
+    refresh(input) {
+        // const fov = this._healpixGrid.getMinFoV()
+        // this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder)
+        const rawFov = input.fovDeg ?? this._healpixGrid.getMinFoV();
+        const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6;
+        this._visibleorder = Math.min(FoVHelper_js_1.fovHelper.getHiPSNorder(fov, this._visibleorder), this._maxorder);
     }
     draw(input) {
         const vMatrix = input.camera.getCameraMatrix();
@@ -15336,7 +15375,7 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const pMatrix = input.pMatrix;
         if (!pMatrix)
             return;
-        this.refresh();
+        this.refresh(input);
         const mMatrix = this.getModelMatrix();
         super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
         if (this._allSky && this._allSkyTile) {
@@ -16110,7 +16149,7 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         // (global as any).hipsFoV = fov;
         // global.order = fovHelper.getHiPSNorder(fov);
         // this._visibleorder = global.order;
-        this._visibleorder = FoVHelper_js_1.fovHelper.getHiPSNorder(fov);
+        this._visibleorder = FoVHelper_js_1.fovHelper.getHiPSNorder(fov, this._visibleorder);
     }
     enableShader(in_mMatrix, pMatrix, vMatrix) {
         const gl = super.webgl;
@@ -16154,7 +16193,10 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const pMatrix = input.pMatrix;
         if (!pMatrix)
             return;
-        this.refresh(camera, pMatrix);
+        // this.refresh(camera, pMatrix);
+        const rawFov = input.fovDeg ?? this.getMinFoV();
+        const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6;
+        this._visibleorder = FoVHelper_js_1.fovHelper.getHiPSNorder(fov, this._visibleorder);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();
@@ -16471,6 +16513,8 @@ class AstroSphere {
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
+    lastCameraChangedAt = 0;
+    lastCameraMotionAt = 0;
     lastHoveredSource = null;
     lastHoveredCatalogue = null;
     zoomSensitivity = 1.0;
@@ -16478,12 +16522,12 @@ class AstroSphere {
     lockedNorthSouthDecDeg = null;
     keepCameraNorthUp = false;
     constructor(canvas, webgl) {
-        console.log('[AstroSphere] new instance for canvas', canvas.id);
+        console.log("[AstroSphere] new instance for canvas", canvas.id);
         // Keep global GL context (as in original JS)
         this._webgl = webgl;
         this.mouseHelper = new MouseHelper_js_1.default();
         this.canvas = canvas;
-        const nativeColorMap = 'native';
+        const nativeColorMap = "native";
         this._selectedColorMap = ColorMaps_js_1.default[nativeColorMap];
         Global_js_1.default.insideSphere = Config_js_1.bootSetup.insideSphere;
         this.initCamera();
@@ -16531,20 +16575,26 @@ class AstroSphere {
             astroDeg: astroCoords,
             sphericalDeg: sphericalCoords,
             raHMS: raHMS,
-            decDMS: decDMS
+            decDMS: decDMS,
         };
         return this.centralPoinCoords;
     }
     updateLastMousePoint() {
-        const sphericalCoords = { phi: this.mouseHelper.phi, theta: this.mouseHelper.theta };
-        const astroCoords = { ra: this.mouseHelper.ra, dec: this.mouseHelper.dec };
+        const sphericalCoords = {
+            phi: this.mouseHelper.phi,
+            theta: this.mouseHelper.theta,
+        };
+        const astroCoords = {
+            ra: this.mouseHelper.ra,
+            dec: this.mouseHelper.dec,
+        };
         const raHMS = this.mouseHelper.raHMS;
         const decDMS = this.mouseHelper.decDMS;
         this.mousePointCoords = {
             astroDeg: astroCoords,
             sphericalDeg: sphericalCoords,
             raHMS: raHMS,
-            decDMS: decDMS
+            decDMS: decDMS,
         };
         return this.mousePointCoords;
     }
@@ -16564,9 +16614,6 @@ class AstroSphere {
     computeZoomStep(currentFov, deltaY) {
         const direction = deltaY < 0 ? -1 : 1;
         const wheelScale = this.clamp(Math.abs(deltaY) / 120, AstroSphere.MIN_WHEEL_SCALE, AstroSphere.MAX_WHEEL_SCALE);
-        // Continuous wheel response:
-        // - broad FoV stays responsive without large jumps
-        // - narrow FoV keeps a usable floor to avoid the 0.1 -> 0.02 deg stall
         const baseMagnitude = this.clamp(0.0012 + 0.0025 * Math.sqrt(Math.max(currentFov, 0)), 0.0012, 0.04);
         return direction * baseMagnitude * wheelScale * this.zoomSensitivity;
     }
@@ -16656,7 +16703,8 @@ class AstroSphere {
         };
     }
     enforceAstronomicalRotationLocks() {
-        if (this.lockedEastWestRaDeg == null && this.lockedNorthSouthDecDeg == null) {
+        if (this.lockedEastWestRaDeg == null &&
+            this.lockedNorthSouthDecDeg == null) {
             return false;
         }
         const center = this.updateCentralPoint();
@@ -16699,7 +16747,7 @@ class AstroSphere {
             return;
         // optional debug
         // console.log('[AstroSphere] emit camera-changed:', reason);
-        this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
+        this.canvas.dispatchEvent(new CustomEvent("camera-changed", {
             detail,
             bubbles: true,
             composed: true,
@@ -16707,7 +16755,7 @@ class AstroSphere {
     }
     addEventListeners(canvas) {
         if (Global_js_1.default.debug) {
-            console.log('[AstroSphere::addEventListeners]');
+            console.log("[AstroSphere::addEventListeners]");
         }
         const CLICK_MAX_DISTANCE_PX = 4;
         const CLICK_MAX_DURATION_MS = 250;
@@ -16737,7 +16785,7 @@ class AstroSphere {
         const handleMouseUp = (event) => {
             canvas.releasePointerCapture(event.pointerId);
             this.mouseDown = false;
-            document.body.style.cursor = 'auto';
+            document.body.style.cursor = "auto";
             if (event.button !== 0) {
                 event.preventDefault();
                 return false;
@@ -16759,7 +16807,7 @@ class AstroSphere {
                         const clickResult = cat.selectPrimarySourceFromClick(this.mouseHelper);
                         if (!clickResult?.sources.length)
                             continue;
-                        this._webgl.canvas.dispatchEvent(new CustomEvent('source-clicked', {
+                        this._webgl.canvas.dispatchEvent(new CustomEvent("source-clicked", {
                             detail: {
                                 source: clickResult.sources,
                                 selectionState: clickResult.selectionState,
@@ -16773,7 +16821,7 @@ class AstroSphere {
                         const clickResult = fset.selectPrimaryFootprintFromClick(this.mouseHelper);
                         if (!clickResult?.footprints.length)
                             continue;
-                        this._webgl.canvas.dispatchEvent(new CustomEvent('footprint-clicked', {
+                        this._webgl.canvas.dispatchEvent(new CustomEvent("footprint-clicked", {
                             detail: {
                                 footprint: clickResult.footprints,
                                 selectionState: clickResult.selectionState,
@@ -16800,8 +16848,7 @@ class AstroSphere {
             if (!this._healpixGrid)
                 return;
             if (this.mouseDown) {
-                document.body.style.cursor = 'grab';
-                // Rotation deltas – either use client-space or local-space, but be consistent
+                document.body.style.cursor = "grab";
                 const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
                 const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
                 const filteredDelta = this.filterRotationDeltaByAstroLocks(deltaX, deltaY);
@@ -16838,10 +16885,11 @@ class AstroSphere {
             // direction feels responsive instead of "buffered".
             this.zoomInertia = 0;
             this._camera.zoom(zoomStep);
+            this.lastCameraMotionAt = performance.now();
             this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
             this._camera.refreshFoV(this.fov.minFoV);
             this._cameraStatusChanged = true;
-            this.emitCameraChanged('wheel');
+            this.emitCameraChanged("wheel");
             event.preventDefault();
         };
         const handleContextMenu = (event) => {
@@ -16859,7 +16907,7 @@ class AstroSphere {
                 const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
                 if (!pickResult?.sources.length)
                     continue;
-                this._webgl.canvas.dispatchEvent(new CustomEvent('source-contextmenu', {
+                this._webgl.canvas.dispatchEvent(new CustomEvent("source-contextmenu", {
                     detail: {
                         source: pickResult.sources,
                         catalogue: cat,
@@ -16875,7 +16923,7 @@ class AstroSphere {
                 const pickResult = fset.getFootprintsFromPointer(this.mouseHelper);
                 if (!pickResult?.footprints.length)
                     continue;
-                this._webgl.canvas.dispatchEvent(new CustomEvent('footprint-contextmenu', {
+                this._webgl.canvas.dispatchEvent(new CustomEvent("footprint-contextmenu", {
                     detail: {
                         footprint: pickResult.footprints,
                         footprintSet: fset,
@@ -16895,40 +16943,40 @@ class AstroSphere {
             }
             // console.log('[AstroSphere::onKeyDown] key=', evt.key)
             switch (evt.key) {
-                case '1':
+                case "1":
                     // Free camera
                     this._camera.clearRotationLock();
                     break;
-                case '2':
+                case "2":
                     // Lock X axis rotation
                     this._camera.setRotationLock({ x: true, y: false, z: false });
                     break;
-                case '3':
+                case "3":
                     // Lock Y axis rotation
                     this._camera.setRotationLock({ x: false, y: true, z: false });
                     break;
-                case '4':
+                case "4":
                     // Lock Z axis rotation
                     this._camera.setRotationLock({ x: false, y: false, z: true });
                     break;
             }
         };
-        console.log('[AstroSphere] registering pointer and wheel listeners on canvas');
+        console.log("[AstroSphere] registering pointer and wheel listeners on canvas");
         canvas.onpointerdown = handleMouseDown;
         canvas.onpointerup = handleMouseUp;
         canvas.onpointermove = handleMouseMove;
         canvas.onpointerleave = () => {
             this.clearLastMousePoint();
             this._cameraStatusChanged = true;
-            this.emitCameraChanged('pointerleave');
+            this.emitCameraChanged("pointerleave");
         };
-        console.log('[AstroSphere] adding wheel event listener with passive: false');
-        canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
-        canvas.addEventListener('contextmenu', handleContextMenu);
-        console.log('[AstroSphere] registering global keydown listener on document');
-        document.addEventListener('keydown', onKeyDown, { capture: true });
+        console.log("[AstroSphere] adding wheel event listener with passive: false");
+        canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
+        canvas.addEventListener("contextmenu", handleContextMenu);
+        console.log("[AstroSphere] registering global keydown listener on document");
+        document.addEventListener("keydown", onKeyDown, { capture: true });
     }
-    // REVIEW THIS METHOD AND MOVE IT 
+    // REVIEW THIS METHOD AND MOVE IT
     getPhiThetaDeg(canvas) {
         const rect = canvas.getBoundingClientRect();
         const maxX = rect.width;
@@ -16955,21 +17003,21 @@ class AstroSphere {
     }
     activateHiPS(hipsDescriptor) {
         this._activeHiPS = new HiPS_js_1.HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
-        this._activeBaseLayer = 'hips';
+        this._activeBaseLayer = "hips";
     }
     activateXYZ(config) {
-        this.activateXYZ2(new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384, 8, config.urlResolver));
-        this._activeBaseLayer = 'xyz';
+        this.activateXYZ2(new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? "XYZ Earth2 Layer", config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384, 8, config.urlResolver));
+        this._activeBaseLayer = "xyz";
     }
     activateXYZ2(config) {
         this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
-        this._activeBaseLayer = 'xyz';
+        this._activeBaseLayer = "xyz";
     }
     activateWMTS(config) {
         const adapter = new WMTSAdapter_js_1.WMTSAdapter(config);
         const xyzConfig = adapter.toXYZLayerConfig();
-        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor_js_1.XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : 'WMTS Earth2 Layer', xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
-        this._activeBaseLayer = 'xyz';
+        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor_js_1.XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : "WMTS Earth2 Layer", xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
+        this._activeBaseLayer = "xyz";
     }
     // Catalogue section
     async showCatalogue(cat) {
@@ -16979,7 +17027,7 @@ class AstroSphere {
         return cat;
     }
     deleteCatalogue(catalogue) {
-        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
+        this.activeCatalogues = this.activeCatalogues.filter((c) => c !== catalogue);
     }
     // End Catalogue section
     // Footprint section
@@ -16990,11 +17038,11 @@ class AstroSphere {
         return fset;
     }
     deleteFootprintSet(footprintSet) {
-        this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
+        this.activeFootprintSets = this.activeFootprintSets.filter((fst) => fst !== footprintSet);
     }
     getHoveredFootprints() {
         let footprintsHovered = [];
-        this.activeFootprintSets.forEach(fset => {
+        this.activeFootprintSets.forEach((fset) => {
             footprintsHovered.push(fset.hoveredFootprints);
         });
         return footprintsHovered;
@@ -17004,13 +17052,13 @@ class AstroSphere {
         this._camera.goTo(raDeg, decDeg);
     }
     getActiveCoordinateMode() {
-        if (this._activeBaseLayer === 'xyz') {
-            return 'lonlat';
+        if (this._activeBaseLayer === "xyz") {
+            return "lonlat";
         }
-        if (this._activeBaseLayer === 'hips' && this._activeHiPS?.isGalacticHips) {
-            return 'galactic';
+        if (this._activeBaseLayer === "hips" && this._activeHiPS?.isGalacticHips) {
+            return "galactic";
         }
-        return 'equatorial';
+        return "equatorial";
     }
     resetAxesOrientation() {
         const center = this.updateCentralPoint();
@@ -17033,7 +17081,7 @@ class AstroSphere {
         return this.keepCameraNorthUp;
     }
     getFoV() {
-        if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
+        if (this._activeBaseLayer === "xyz" && this._activeXYZ2) {
             return this._activeXYZ2.getFoV();
         }
         return this.fov;
@@ -17050,11 +17098,15 @@ class AstroSphere {
         this._camera.refreshFoV(this.fov.minFoV);
     }
     changeFoV2(deg) {
-        const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
+        const newCameraPos = this._healpixGrid
+            .getFoV()
+            .computeCameraPositionForFoV(deg);
         this._camera.setCameraPosition(newCameraPos);
     }
     changeFoV3(deg) {
-        const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
+        const newPos = this._healpixGrid
+            .getFoV()
+            .computeCameraPositionForAngularDiameter(deg);
         this._camera.setCameraPosition(newPos);
         // Recompute projection after moving the camera
         this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, false);
@@ -17114,7 +17166,7 @@ class AstroSphere {
             centralPoint: new Point_js_1.Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType_js_1.CoordsType.ASTRO),
             mouseHoverPoint: this.mousePointCoords,
             colorMap: this._selectedColorMap,
-            getFoVPolygon: this.getFoVPolygon(),
+            getFoVPolygon: [],
         };
         return detail;
         // }
@@ -17146,7 +17198,9 @@ class AstroSphere {
         this._camera.setRotationLock({ y: locked });
         if (locked)
             this.inertiaX = 0;
-        this.lockedEastWestRaDeg = locked ? this.updateCentralPoint()?.astroDeg.ra ?? null : null;
+        this.lockedEastWestRaDeg = locked
+            ? (this.updateCentralPoint()?.astroDeg.ra ?? null)
+            : null;
     }
     isEastWestRotationLocked() {
         return this._camera.isRotationLockedY();
@@ -17155,7 +17209,9 @@ class AstroSphere {
         this._camera.setRotationLock({ x: locked });
         if (locked)
             this.inertiaY = 0;
-        this.lockedNorthSouthDecDeg = locked ? this.updateCentralPoint()?.astroDeg.dec ?? null : null;
+        this.lockedNorthSouthDecDeg = locked
+            ? (this.updateCentralPoint()?.astroDeg.dec ?? null)
+            : null;
     }
     isNorthSouthRotationLocked() {
         return this._camera.isRotationLockedX();
@@ -17197,6 +17253,7 @@ class AstroSphere {
             if (Math.abs(this.zoomInertia) > 0.0001) {
                 this._camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
+                this.lastCameraMotionAt = performance.now();
                 this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
                 this._camera.refreshFoV(this.fov.minFoV);
                 if (this.prevFov !== this.fov.minFoV) {
@@ -17212,7 +17269,9 @@ class AstroSphere {
             this._cameraStatusChanged = true;
         }
         // Rotation inertia
-        if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
+        if (this.mouseDown ||
+            Math.abs(this.inertiaX) > 0.02 ||
+            Math.abs(this.inertiaY) > 0.02) {
             cameraRotated = true;
             const filteredInertia = this.filterRotationDeltaByAstroLocks(this.inertiaX, this.inertiaY);
             PHI = filteredInertia.deltaX;
@@ -17220,6 +17279,7 @@ class AstroSphere {
             this.inertiaX = filteredInertia.deltaX * 0.95;
             this.inertiaY = filteredInertia.deltaY * 0.95;
             this._camera.rotate(PHI, THETA);
+            this.lastCameraMotionAt = performance.now();
             this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
             const lockCorrected = this.enforceAstronomicalRotationLocks();
             if (!lockCorrected) {
@@ -17229,6 +17289,12 @@ class AstroSphere {
         else {
             this.inertiaY = 0;
             this.inertiaX = 0;
+        }
+        const nextFoV = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        if (Number.isFinite(nextFoV.minFoV) && nextFoV.minFoV > 0) {
+            this.fov = nextFoV;
+            this._camera.refreshFoV(this.fov.minFoV);
+            this.prevFov = this.fov.minFoV;
         }
         // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
         if (cameraRotated) {
@@ -17247,16 +17313,20 @@ class AstroSphere {
             }
         }
         if (this._cameraStatusChanged) {
-            const detail = this.getCurrentStatus();
+            const now = performance.now();
+            const shouldEmitCameraChanged = !this.mouseDown || now - this.lastCameraChangedAt > 100;
+            const detail = shouldEmitCameraChanged ? this.getCurrentStatus() : null;
             if (detail) {
                 // console.log('[AstroSphere::draw] emitting camera-changed event due to camera status change', detail)
                 // console.log('[AstroSphere::draw] inertia', this.zoomInertia, this.inertiaX, this.inertiaY)
-                this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
+                this.canvas.dispatchEvent(new CustomEvent("camera-changed", {
                     detail,
-                    bubbles: true, composed: true,
+                    bubbles: true,
+                    composed: true,
                 }));
+                this.lastCameraChangedAt = now;
             }
-            if (!this.startup) {
+            if (!this.startup && shouldEmitCameraChanged) {
                 this._cameraStatusChanged = false;
             }
         }
@@ -17266,23 +17336,39 @@ class AstroSphere {
         this._webgl.enable(this._webgl.CULL_FACE);
         this._webgl.cullFace(Global_js_1.default.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
         this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
+        if (this._activeBaseLayer === "hips" && this._activeHiPS) {
             const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
         // DRAW HiPS
+        const stableFovDeg = this.fov?.minFoV ?? this._healpixGrid.getMinFoV();
+        const nowForGrid = performance.now();
+        const cameraMovingForGrid = this.mouseDown ||
+            Math.abs(this.zoomInertia) > 0.0001 ||
+            Math.abs(this.inertiaX) > 0.02 ||
+            Math.abs(this.inertiaY) > 0.02 ||
+            nowForGrid - this.lastCameraMotionAt < 220;
+        // const skyEntityDrawInput: SkyEntityDrawInput = {
+        // fovDeg: this._healpixGrid.getMinFoV(),
+        //   camera: this._camera,
+        //   pMatrix: this._perspectiveMatrixManager.pMatrix,
+        //   centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
+        //   fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
+        //   viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(7) : undefined,
+        // }
         const skyEntityDrawInput = {
-            fovDeg: this._healpixGrid.getMinFoV(),
+            fovDeg: stableFovDeg,
             camera: this._camera,
             pMatrix: this._perspectiveMatrixManager.pMatrix,
             centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
-            fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
-            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(7) : undefined,
+            fovPolygon: undefined,
+            viewportSphericalSamples: undefined,
+            cameraMoving: cameraMovingForGrid,
         };
-        if (this._activeBaseLayer === 'hips') {
+        if (this._activeBaseLayer === "hips") {
             this._activeHiPS?.draw(skyEntityDrawInput);
         }
-        if (this._activeBaseLayer === 'xyz') {
+        if (this._activeBaseLayer === "xyz") {
             this._activeXYZ2?.draw(skyEntityDrawInput);
         }
         this._healpixGrid.draw(skyEntityDrawInput);
@@ -17295,24 +17381,27 @@ class AstroSphere {
             const raDecDeg = (0, Utils_js_1.sphericalToAstroDeg)(phiTheta.phi, phiTheta.theta);
             const raHMS = (0, Utils_js_1.raDegToHMS)(raDecDeg.ra);
             const decDMS = (0, Utils_js_1.decDegToDMS)(raDecDeg.dec);
-            this.prevFov = this._healpixGrid.getMinFoV();
+            // this.prevFov = this._healpixGrid.getMinFoV();
+            this.prevFov = this.fov?.minFoV ?? this._healpixGrid.getMinFoV();
             this._cameraStatusChanged = true;
-            console.log('(startup coords)', {
+            console.log("(startup coords)", {
                 raDeg: raDecDeg.ra,
                 decDeg: raDecDeg.dec,
                 raHMS,
                 decDMS,
             });
         }
-        this.activeCatalogues.forEach(cat => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
+        this.activeCatalogues.forEach((cat) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.emitHoveredSourceIfChanged();
-        this.activeFootprintSets.forEach(fst => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
+        this.activeFootprintSets.forEach((fst) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
@@ -17329,13 +17418,13 @@ class AstroSphere {
             nextHoveredCatalogue = cat;
             break;
         }
-        const unchanged = nextHoveredSource === this.lastHoveredSource
-            && nextHoveredCatalogue === this.lastHoveredCatalogue;
+        const unchanged = nextHoveredSource === this.lastHoveredSource &&
+            nextHoveredCatalogue === this.lastHoveredCatalogue;
         if (unchanged)
             return;
         this.lastHoveredSource = nextHoveredSource;
         this.lastHoveredCatalogue = nextHoveredCatalogue;
-        this._webgl.canvas.dispatchEvent(new CustomEvent('source-hovered', {
+        this._webgl.canvas.dispatchEvent(new CustomEvent("source-hovered", {
             detail: { source: nextHoveredSource, catalogue: nextHoveredCatalogue },
             bubbles: true,
             composed: true,
@@ -18254,8 +18343,9 @@ class SphereFoV {
         const aNorm = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), a);
         const bNorm = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), b);
         const dot = gl_matrix_1.vec3.dot(aNorm, bNorm);
-        const clamped = Math.min(1, Math.max(-1, dot));
-        return (0, Utils_js_1.radToDeg)(Math.acos(clamped));
+        const cross = gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), aNorm, bNorm);
+        const angleRad = Math.atan2(gl_matrix_1.vec3.length(cross), Math.min(1, Math.max(-1, dot)));
+        return (0, Utils_js_1.radToDeg)(angleRad);
     }
     getIntersectionPointWithModel(mouseX, mouseY, model, camera, pMatrix) {
         const rayWorld = this.getRayFromMouse(mouseX, mouseY, pMatrix, camera.getCameraMatrix());
@@ -19127,6 +19217,10 @@ class Camera {
             const normalizedDistance = Math.min(1, distanceFromSurface / 0.3);
             const zoomScale = 0.015 + 0.985 * Math.pow(normalizedDistance, 1.2);
             this.move[2] *= zoomScale;
+            const minResponsiveMove = Math.min(distanceFromSurface * Math.abs(inertia) * 4.0, 50);
+            if (Math.abs(this.move[2]) < minResponsiveMove) {
+                this.move[2] = Math.sign(this.move[2] || inertia) * minResponsiveMove;
+            }
             if (this.cam_pos[2] + this.move[2] <= 1.000001 && inertia < 0) {
                 this.cam_pos[2] = 1.000001;
             }
@@ -20032,6 +20126,7 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _showGrid = true;
     _lonArray = [];
     _latArray = [];
+    _bufferKey = '';
     defaultColor = '#41d4d4';
     gridText = new GridTextHelper_js_1.default('lonlat');
     constructor(radius, position, xrad, yrad, name, webgl) {
@@ -20078,27 +20173,66 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         }
         gl.useProgram(this._shaderProgram);
     }
-    initBuffers(fovDeg) {
-        const steps = XYZFoVHelper_js_1.xyzFovHelper.getLonLatSteps(fovDeg);
+    initBuffers(fovDeg, centerSphericalDeg, coarse = false) {
+        const steps = XYZFoVHelper_js_1.xyzFovHelper.getLonLatSteps(fovDeg, coarse);
         this._lonStep = steps.lonStep;
         this._latStep = steps.latStep;
         this._segmentStep = Math.max(Math.min(this._lonStep, this._latStep), 0.25);
         this._lonArray = [];
         this._latArray = [];
-        for (let lon = -180; lon < 180; lon += this._lonStep) {
+        const center = centerSphericalDeg
+            ? {
+                lon: this.normalizeLon(centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi),
+                lat: 90 - centerSphericalDeg.theta,
+            }
+            : null;
+        const localGrid = !!center && !coarse && fovDeg < 2;
+        const lonValues = localGrid
+            ? this.buildLonRange(center.lon, Math.max(fovDeg * 4, this._lonStep * 3), this._lonStep)
+            : this.buildLonRange(0, 180, this._lonStep);
+        const latValues = localGrid
+            ? this.buildLatRange(center.lat, Math.max(fovDeg * 4, this._latStep * 3), this._latStep)
+            : this.buildLatRange(0, 90, this._latStep);
+        const latSegmentRange = localGrid && center
+            ? this.buildLatRange(center.lat, Math.max(fovDeg * 4, this._latStep * 3), this._segmentStep)
+            : this.buildLatRange(0, 90, this._segmentStep);
+        const lonSegmentRange = localGrid && center
+            ? this.buildLonRange(center.lon, Math.max(fovDeg * 4, this._lonStep * 3), this._segmentStep)
+            : this.buildLonRange(0, 180, this._segmentStep);
+        for (const lon of lonValues) {
             const vertices = [];
-            for (let lat = -90; lat <= 90; lat += this._segmentStep) {
+            for (const lat of latSegmentRange) {
                 vertices.push(...this.lonLatToCartesian(lon, Math.min(lat, 90)));
             }
             this._lonArray.push(new Float32Array(vertices));
         }
-        for (let lat = -90 + this._latStep; lat < 90; lat += this._latStep) {
+        for (const lat of latValues) {
             const vertices = [];
-            for (let lon = -180; lon <= 180; lon += this._segmentStep) {
+            if (lat <= -90 || lat >= 90)
+                continue;
+            for (const lon of lonSegmentRange) {
                 vertices.push(...this.lonLatToCartesian(Math.min(lon, 180), lat));
             }
             this._latArray.push(new Float32Array(vertices));
         }
+    }
+    buildLonRange(centerLon, halfSpan, step) {
+        const values = [];
+        const start = Math.floor((centerLon - halfSpan) / step) * step;
+        const end = Math.ceil((centerLon + halfSpan) / step) * step;
+        for (let lon = start; lon <= end; lon += step) {
+            values.push(this.normalizeLon(lon));
+        }
+        return values;
+    }
+    buildLatRange(centerLat, halfSpan, step) {
+        const values = [];
+        const start = Math.max(-90, Math.floor((centerLat - halfSpan) / step) * step);
+        const end = Math.min(90, Math.ceil((centerLat + halfSpan) / step) * step);
+        for (let lat = start; lat <= end; lat += step) {
+            values.push(lat);
+        }
+        return values;
     }
     lonLatToCartesian(lonDeg, latDeg) {
         const lonRad = (0, Utils_js_1.degToRad)(lonDeg);
@@ -20110,17 +20244,28 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             Math.sin(latRad),
         ];
     }
-    refresh(fovDeg) {
-        if (Math.abs(this._fovDeg - fovDeg) > 1e-6) {
+    refresh(fovDeg, input) {
+        const coarse = !!input.cameraMoving;
+        const steps = XYZFoVHelper_js_1.xyzFovHelper.getLonLatSteps(fovDeg, coarse);
+        const center = input.centerSphericalDeg;
+        const localGrid = !!center && !coarse && fovDeg < 2;
+        const centerLon = center ? this.normalizeLon(center.phi > 180 ? center.phi - 360 : center.phi) : 0;
+        const centerLat = center ? 90 - center.theta : 0;
+        const centerKey = localGrid
+            ? `${this.roundToStep(centerLon, Math.max(steps.lonStep, fovDeg))}:${this.roundToStep(centerLat, Math.max(steps.latStep, fovDeg))}`
+            : 'global';
+        const bufferKey = `${coarse ? 'coarse' : 'settled'}:${steps.lonStep}:${steps.latStep}:${centerKey}`;
+        if (this._bufferKey !== bufferKey) {
             this._fovDeg = fovDeg;
-            this.initBuffers(this._fovDeg);
+            this._bufferKey = bufferKey;
+            this.initBuffers(this._fovDeg, input.centerSphericalDeg, coarse);
         }
     }
     refreshFoV(input) {
         if (!input.camera || !input.pMatrix)
             return this._fovDeg;
         this._fovObj.getFoV(Global_js_1.default.insideSphere, this, input.camera, input.pMatrix);
-        this.refresh(this._fovObj.minFoV);
+        this.refresh(this._fovObj.minFoV, input);
         return this._fovObj.minFoV;
     }
     getMinFoVDeg() {
@@ -20691,7 +20836,40 @@ exports["default"] = Tile;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.xyzFovHelper = void 0;
 class XYZFoVHelper {
-    getZoom(fov) {
+    static LEVEL_HYSTERESIS = 0.12;
+    static ZOOM_MIN_FOV = {
+        2: 179,
+        3: 90,
+        4: 30,
+        5: 20,
+        6: 6,
+        7: 3.2,
+        8: 1.6,
+        9: 0.85,
+        10: 0.42,
+        11: 0.21,
+        12: 0.12,
+        13: 0.06,
+        14: 0.015,
+        15: 0,
+    };
+    getZoom(fov, currentZoom) {
+        const rawZoom = this.getRawZoom(fov);
+        if (currentZoom === undefined || currentZoom === rawZoom)
+            return rawZoom;
+        if (rawZoom > currentZoom) {
+            const boundary = XYZFoVHelper.ZOOM_MIN_FOV[currentZoom];
+            if (boundary > 0 && fov > boundary * (1 - XYZFoVHelper.LEVEL_HYSTERESIS))
+                return currentZoom;
+        }
+        else {
+            const boundary = XYZFoVHelper.ZOOM_MIN_FOV[rawZoom];
+            if (boundary > 0 && fov < boundary * (1 + XYZFoVHelper.LEVEL_HYSTERESIS))
+                return currentZoom;
+        }
+        return rawZoom;
+    }
+    getRawZoom(fov) {
         if (fov >= 179)
             return 2;
         if (fov >= 90)
@@ -20721,10 +20899,14 @@ class XYZFoVHelper {
         return 15;
     }
     // used in grid drawing
-    getLonLatSteps(fov) {
+    getLonLatSteps(fov, coarse = false) {
         let lonStep;
         let latStep;
-        if (fov >= 179) {
+        if (coarse && fov < 0.21) {
+            lonStep = 10;
+            latStep = 10;
+        }
+        else if (fov >= 179) {
             lonStep = 10;
             latStep = 10;
         }
@@ -21532,6 +21714,7 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _thetaStepRad = 0;
     _phiArray = [];
     _thetaArray = [];
+    _bufferKey = '';
     // For placing text labels near current view center:
     //  - _dec4Labels: key = RA(deg), value = points along that RA ring (for Dec labels)
     //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
@@ -21592,9 +21775,9 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         super.webgl.useProgram(this._shaderProgram);
     }
     /** Build RA/Dec line vertex arrays based on FoV step helper */
-    initBuffers(fovDeg) {
+    initBuffers(fovDeg, coarse = false) {
         const R = 1.0;
-        const steps = FoVHelper_js_1.fovHelper.getRADegSteps(fovDeg);
+        const steps = FoVHelper_js_1.fovHelper.getRADegSteps(fovDeg, coarse);
         const phiStep = steps.raStep; // RA step (deg)
         const thetaStep = steps.decStep; // Dec step (deg)
         this._phiStep = phiStep;
@@ -21646,11 +21829,14 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         }
     }
     /** Update buffers when FoV (in degrees) changes */
-    refresh(fovDeg) {
+    refresh(fovDeg, coarse = false) {
         // const fovDeg = healpixGridSingleton.getMinFoV()
-        if (this._fov !== fovDeg) {
+        const steps = FoVHelper_js_1.fovHelper.getRADegSteps(fovDeg, coarse);
+        const bufferKey = `${coarse ? 'coarse' : 'settled'}:${steps.raStep}:${steps.decStep}`;
+        if (this._bufferKey !== bufferKey) {
             this._fov = fovDeg;
-            this.initBuffers(this._fov);
+            this._bufferKey = bufferKey;
+            this.initBuffers(this._fov, coarse);
         }
     }
     vectorDistance(p1, p2) {
@@ -21710,7 +21896,7 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             return;
         if (this._thetaArray.length === 0)
             return;
-        this.refresh(fovDeg);
+        this.refresh(fovDeg, !!input.cameraMoving);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();

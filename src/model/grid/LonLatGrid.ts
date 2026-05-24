@@ -46,6 +46,7 @@ export class LatLonGrid extends AbstractSkyEntity {
   private _showGrid = true;
   private _lonArray: Float32Array[] = [];
   private _latArray: Float32Array[] = [];
+  private _bufferKey = '';
   private defaultColor = '#41d4d4';
   private gridText: GridTextHelper = new GridTextHelper('lonlat');
 
@@ -112,29 +113,74 @@ export class LatLonGrid extends AbstractSkyEntity {
     gl.useProgram(this._shaderProgram);
   }
 
-  private initBuffers(fovDeg: number): void {
-    const steps = xyzFovHelper.getLonLatSteps(fovDeg);
+  private initBuffers(
+    fovDeg: number,
+    centerSphericalDeg?: SkyEntityDrawInput['centerSphericalDeg'],
+    coarse = false,
+  ): void {
+    const steps = xyzFovHelper.getLonLatSteps(fovDeg, coarse);
     this._lonStep = steps.lonStep;
     this._latStep = steps.latStep;
     this._segmentStep = Math.max(Math.min(this._lonStep, this._latStep), 0.25);
     this._lonArray = [];
     this._latArray = [];
 
-    for (let lon = -180; lon < 180; lon += this._lonStep) {
+    const center = centerSphericalDeg
+      ? {
+          lon: this.normalizeLon(centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi),
+          lat: 90 - centerSphericalDeg.theta,
+        }
+      : null;
+    const localGrid = !!center && !coarse && fovDeg < 2;
+    const lonValues = localGrid
+      ? this.buildLonRange(center.lon, Math.max(fovDeg * 4, this._lonStep * 3), this._lonStep)
+      : this.buildLonRange(0, 180, this._lonStep);
+    const latValues = localGrid
+      ? this.buildLatRange(center.lat, Math.max(fovDeg * 4, this._latStep * 3), this._latStep)
+      : this.buildLatRange(0, 90, this._latStep);
+    const latSegmentRange = localGrid && center
+      ? this.buildLatRange(center.lat, Math.max(fovDeg * 4, this._latStep * 3), this._segmentStep)
+      : this.buildLatRange(0, 90, this._segmentStep);
+    const lonSegmentRange = localGrid && center
+      ? this.buildLonRange(center.lon, Math.max(fovDeg * 4, this._lonStep * 3), this._segmentStep)
+      : this.buildLonRange(0, 180, this._segmentStep);
+
+    for (const lon of lonValues) {
       const vertices: number[] = [];
-      for (let lat = -90; lat <= 90; lat += this._segmentStep) {
+      for (const lat of latSegmentRange) {
         vertices.push(...this.lonLatToCartesian(lon, Math.min(lat, 90)));
       }
       this._lonArray.push(new Float32Array(vertices));
     }
 
-    for (let lat = -90 + this._latStep; lat < 90; lat += this._latStep) {
+    for (const lat of latValues) {
       const vertices: number[] = [];
-      for (let lon = -180; lon <= 180; lon += this._segmentStep) {
+      if (lat <= -90 || lat >= 90) continue;
+      for (const lon of lonSegmentRange) {
         vertices.push(...this.lonLatToCartesian(Math.min(lon, 180), lat));
       }
       this._latArray.push(new Float32Array(vertices));
     }
+  }
+
+  private buildLonRange(centerLon: number, halfSpan: number, step: number): number[] {
+    const values: number[] = [];
+    const start = Math.floor((centerLon - halfSpan) / step) * step;
+    const end = Math.ceil((centerLon + halfSpan) / step) * step;
+    for (let lon = start; lon <= end; lon += step) {
+      values.push(this.normalizeLon(lon));
+    }
+    return values;
+  }
+
+  private buildLatRange(centerLat: number, halfSpan: number, step: number): number[] {
+    const values: number[] = [];
+    const start = Math.max(-90, Math.floor((centerLat - halfSpan) / step) * step);
+    const end = Math.min(90, Math.ceil((centerLat + halfSpan) / step) * step);
+    for (let lat = start; lat <= end; lat += step) {
+      values.push(lat);
+    }
+    return values;
   }
 
   private lonLatToCartesian(lonDeg: number, latDeg: number): [number, number, number] {
@@ -149,10 +195,22 @@ export class LatLonGrid extends AbstractSkyEntity {
     ];
   }
 
-  private refresh(fovDeg: number): void {
-    if (Math.abs(this._fovDeg - fovDeg) > 1e-6) {
+  private refresh(fovDeg: number, input: SkyEntityDrawInput): void {
+    const coarse = !!input.cameraMoving;
+    const steps = xyzFovHelper.getLonLatSteps(fovDeg, coarse);
+    const center = input.centerSphericalDeg;
+    const localGrid = !!center && !coarse && fovDeg < 2;
+    const centerLon = center ? this.normalizeLon(center.phi > 180 ? center.phi - 360 : center.phi) : 0;
+    const centerLat = center ? 90 - center.theta : 0;
+    const centerKey = localGrid
+      ? `${this.roundToStep(centerLon, Math.max(steps.lonStep, fovDeg))}:${this.roundToStep(centerLat, Math.max(steps.latStep, fovDeg))}`
+      : 'global';
+    const bufferKey = `${coarse ? 'coarse' : 'settled'}:${steps.lonStep}:${steps.latStep}:${centerKey}`;
+
+    if (this._bufferKey !== bufferKey) {
       this._fovDeg = fovDeg;
-      this.initBuffers(this._fovDeg);
+      this._bufferKey = bufferKey;
+      this.initBuffers(this._fovDeg, input.centerSphericalDeg, coarse);
     }
   }
 
@@ -160,7 +218,7 @@ export class LatLonGrid extends AbstractSkyEntity {
     if (!input.camera || !input.pMatrix) return this._fovDeg;
 
     this._fovObj.getFoV(global.insideSphere, this, input.camera, input.pMatrix);
-    this.refresh(this._fovObj.minFoV);
+    this.refresh(this._fovObj.minFoV, input);
     return this._fovObj.minFoV;
   }
 

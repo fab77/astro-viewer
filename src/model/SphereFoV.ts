@@ -173,8 +173,9 @@ export class SphereFoV {
     const aNorm = vec3.normalize(vec3.create(), a);
     const bNorm = vec3.normalize(vec3.create(), b);
     const dot = vec3.dot(aNorm, bNorm);
-    const clamped = Math.min(1, Math.max(-1, dot));
-    return radToDeg(Math.acos(clamped));
+    const cross = vec3.cross(vec3.create(), aNorm, bNorm);
+    const angleRad = Math.atan2(vec3.length(cross), Math.min(1, Math.max(-1, dot)));
+    return radToDeg(angleRad);
   }
 
   private getIntersectionPointWithModel(

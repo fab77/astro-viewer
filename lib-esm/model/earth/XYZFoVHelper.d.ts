@@ -1,6 +1,9 @@
 declare class XYZFoVHelper {
-    getZoom(fov: number): number;
-    getLonLatSteps(fov: number): {
+    private static readonly LEVEL_HYSTERESIS;
+    private static readonly ZOOM_MIN_FOV;
+    getZoom(fov: number, currentZoom?: number): number;
+    private getRawZoom;
+    getLonLatSteps(fov: number, coarse?: boolean): {
         lonStep: number;
         latStep: number;
     };

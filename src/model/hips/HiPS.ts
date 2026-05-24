@@ -233,10 +233,12 @@ export class HiPS extends AbstractSkyEntity {
     }
   }
 
-  private refresh(): void {
-    // const fov = healpixGridSingleton.getMinFoV()
-    const fov = this._healpixGrid.getMinFoV()
-    this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder)
+  private refresh(input: SkyEntityDrawInput): void {
+    // const fov = this._healpixGrid.getMinFoV()
+    // this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder)
+    const rawFov = input.fovDeg ?? this._healpixGrid.getMinFoV()
+    const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6
+    this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov, this._visibleorder), this._maxorder)
   }
 
   draw(input: SkyEntityDrawInput): void {
@@ -247,7 +249,7 @@ export class HiPS extends AbstractSkyEntity {
     const pMatrix = input.pMatrix
     if (!pMatrix) return
 
-    this.refresh()
+    this.refresh(input)
         
     const mMatrix = this.getModelMatrix() as Float32Array
     super.hipsShaderProgram.setRuntimeColorMap(this.colorMap)

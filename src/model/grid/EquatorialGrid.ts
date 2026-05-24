@@ -66,6 +66,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
 
 	private _phiArray: Float32Array[] = [];
 	private _thetaArray: Float32Array[] = [];
+	private _bufferKey = '';
 
 	// For placing text labels near current view center:
 	//  - _dec4Labels: key = RA(deg), value = points along that RA ring (for Dec labels)
@@ -140,10 +141,10 @@ export class EquatorialGrid extends AbstractSkyEntity {
 	}
 
 	/** Build RA/Dec line vertex arrays based on FoV step helper */
-	private initBuffers(fovDeg: number): void {
+	private initBuffers(fovDeg: number, coarse = false): void {
 		const R = 1.0;
 
-		const steps = fovHelper.getRADegSteps(fovDeg);
+		const steps = fovHelper.getRADegSteps(fovDeg, coarse);
 		const phiStep = steps.raStep as number;   // RA step (deg)
 		const thetaStep = steps.decStep as number; // Dec step (deg)
 
@@ -206,11 +207,14 @@ export class EquatorialGrid extends AbstractSkyEntity {
 	}
 
 	/** Update buffers when FoV (in degrees) changes */
-	refresh(fovDeg: number): void {
+	refresh(fovDeg: number, coarse = false): void {
 		// const fovDeg = healpixGridSingleton.getMinFoV()
-		if (this._fov !== fovDeg) {
+		const steps = fovHelper.getRADegSteps(fovDeg, coarse);
+		const bufferKey = `${coarse ? 'coarse' : 'settled'}:${steps.raStep}:${steps.decStep}`;
+		if (this._bufferKey !== bufferKey) {
 			this._fov = fovDeg;
-			this.initBuffers(this._fov);
+			this._bufferKey = bufferKey;
+			this.initBuffers(this._fov, coarse);
 		}
 	}
 
@@ -278,7 +282,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
 		if (!vMatrix) return
 		if (this._thetaArray.length === 0) return;
 
-		this.refresh(fovDeg);
+		this.refresh(fovDeg, !!input.cameraMoving);
 
 		if (!this.showGrid) {
 			// gridTextHelper.resetDivSets();

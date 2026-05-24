@@ -20,6 +20,7 @@ export declare class EquatorialGrid extends AbstractSkyEntity {
     private _thetaStepRad;
     private _phiArray;
     private _thetaArray;
+    private _bufferKey;
     private _dec4Labels;
     private _ra4Labels;
     private _healpixGrid;
@@ -34,7 +35,7 @@ export declare class EquatorialGrid extends AbstractSkyEntity {
     /** Build RA/Dec line vertex arrays based on FoV step helper */
     private initBuffers;
     /** Update buffers when FoV (in degrees) changes */
-    refresh(fovDeg: number): void;
+    refresh(fovDeg: number, coarse?: boolean): void;
     private vectorDistance;
     private enableShader;
     isVisible(): boolean;

@@ -292,7 +292,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     // (global as any).hipsFoV = fov;
     // global.order = fovHelper.getHiPSNorder(fov);
     // this._visibleorder = global.order;
-    this._visibleorder = fovHelper.getHiPSNorder(fov);
+    this._visibleorder = fovHelper.getHiPSNorder(fov, this._visibleorder);
   }
 
   private enableShader(in_mMatrix: ReadonlyMat4, pMatrix: ReadonlyMat4, vMatrix: ReadonlyMat4): void {
@@ -345,7 +345,11 @@ export class HealpixGrid extends AbstractSkyEntity {
     const pMatrix = input.pMatrix
     if (!pMatrix ) return
     
-    this.refresh(camera, pMatrix);
+    // this.refresh(camera, pMatrix);
+
+    const rawFov = input.fovDeg ?? this.getMinFoV()
+    const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6
+    this._visibleorder = fovHelper.getHiPSNorder(fov, this._visibleorder);
 
     if (!this.showGrid) {
 
