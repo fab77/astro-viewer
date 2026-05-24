@@ -45,6 +45,7 @@ import { SkyEntityDrawInput } from './model/AbstractSkyEntity.js'
 import { CoordsType } from './utils/CoordsType.js'
 import ColorMaps, { ColorMapName, ColorMap } from './model/ColorMaps.js'
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/XYZConfig.js'
+import type { HiPSDebugStats } from './model/hips/HiPSConfig.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
 import { WMTSAdapter } from './model/earth/WMTSAdapter.js'
 import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js'
@@ -1113,6 +1114,11 @@ class AstroSphere {
       layer: this._activeXYZ2?.getDebugStats() ?? null,
       requests: xyzTileRequestScheduler.getDebugStats(),
     }
+  }
+
+  getHiPSDebugStats(): HiPSDebugStats | null {
+    if (!this._activeHiPS) return null
+    return this._activeHiPS.getDebugStats()
   }
 
   draw(canvas: HTMLCanvasElement) {

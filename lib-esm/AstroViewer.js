@@ -145,6 +145,9 @@ export class AstroViewer {
     getXYZDebugStats() {
         return this.astroSphere.getXYZDebugStats();
     }
+    getHiPSDebugStats() {
+        return this.astroSphere.getHiPSDebugStats();
+    }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
         const resp = await fetch(hipsUrl + 'properties');

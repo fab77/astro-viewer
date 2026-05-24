@@ -26,6 +26,7 @@ import { ReadonlyMat4 } from 'gl-matrix'
 import ColorMaps, { ColorMap, ColorMapName } from './model/ColorMaps.js'
 import {HiPS} from './model/hips/HiPS.js'
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/XYZConfig.js'
+import type { HiPSDebugStats } from './model/hips/HiPSConfig.js'
 import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.js'
 import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js'
 import { XYZMap } from './model/earth/XYZMap.js'
@@ -235,6 +236,10 @@ createFootprintSet(footprintSetName: string,
 
   getXYZDebugStats(): XYZDebugStats {
     return this.astroSphere.getXYZDebugStats()
+  }
+
+  getHiPSDebugStats(): HiPSDebugStats | null {
+    return this.astroSphere.getHiPSDebugStats()
   }
 
   async loadHiPS(baseUrl: string): Promise<string> {

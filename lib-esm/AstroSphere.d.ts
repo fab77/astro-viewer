@@ -10,6 +10,7 @@ import { EquatorialGrid } from './model/grid/EquatorialGrid.js';
 import { HealpixGrid } from './model/grid/HealpixGrid.js';
 import { ColorMap } from './model/ColorMaps.js';
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/XYZConfig.js';
+import type { HiPSDebugStats } from './model/hips/HiPSConfig.js';
 import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js';
 import { XYZMap } from './model/earth/XYZMap.js';
 export type PointCoordinates = {
@@ -136,6 +137,7 @@ declare class AstroSphere {
     setNorthSouthRotationLocked(locked: boolean): void;
     isNorthSouthRotationLocked(): boolean;
     getXYZDebugStats(): XYZDebugStats;
+    getHiPSDebugStats(): HiPSDebugStats | null;
     draw(canvas: HTMLCanvasElement): void;
     private emitHoveredSourceIfChanged;
 }

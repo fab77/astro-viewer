@@ -65,6 +65,9 @@ export default class Tile {
     getReadyState() {
         return this._ready;
     }
+    isLoading() {
+        return !this._ready && !this._abort;
+    }
     get cacheTime0() {
         return this._cacheTime0;
     }
