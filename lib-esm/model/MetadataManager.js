@@ -110,6 +110,9 @@ export class MetadataManager {
     set selectedDecColumn(columnName) {
         this._selectedDecColumn = this._decColumnList.find(c => c.name === columnName) || this._selectedDecColumn;
     }
+    set selectedOutlineColumn(columnName) {
+        this._selectedOutlineColumn = this._outlineColumnList.find(c => c.name === columnName) || this._selectedOutlineColumn;
+    }
     set selectedHueColumn(columnName) {
         this._selectedHueColumn = this._hueColumnList.find(c => c.name === columnName);
     }
@@ -117,7 +120,7 @@ export class MetadataManager {
         this._selectedShapeColumn = this._shapeColumnList.find(c => c.name === columnName);
     }
     set selectedNameColumn(columnName) {
-        this._selectedNameColumn = this._shapeColumnList.find(c => c.name === columnName);
+        this._selectedNameColumn = this._columns.find(c => c.name === columnName);
     }
     resetShapeColumn() {
         this._selectedShapeColumn = undefined;

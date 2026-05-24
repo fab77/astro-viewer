@@ -288,6 +288,25 @@ export class FootprintSetGL {
     }
 
     this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
+
+    this._webgl.bindBuffer(
+      this._webgl.ARRAY_BUFFER,
+      this.vertexCataloguePositionBuffer,
+    );
+    this._webgl.bufferData(
+      this._webgl.ARRAY_BUFFER,
+      this.vertexCataloguePosition,
+      this._webgl.STATIC_DRAW,
+    );
+
+    this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+    this._webgl.bufferData(
+      this._webgl.ELEMENT_ARRAY_BUFFER,
+      this.indexes,
+      this._webgl.STATIC_DRAW,
+    );
+
+    this._bufferInitialised = true;
     console.log("Buffer initialized");
   }
 
@@ -859,11 +878,6 @@ export class FootprintSetGL {
       this._webgl.ARRAY_BUFFER,
       this.vertexCataloguePositionBuffer,
     );
-    this._webgl.bufferData(
-      this._webgl.ARRAY_BUFFER,
-      this.vertexCataloguePosition,
-      this._webgl.STATIC_DRAW,
-    );
 
     this._webgl.vertexAttribPointer(
       this._footprintShaderProgram.locations.position as number,
@@ -878,11 +892,6 @@ export class FootprintSetGL {
     );
 
     this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-    this._webgl.bufferData(
-      this._webgl.ELEMENT_ARRAY_BUFFER,
-      this.indexes,
-      this._webgl.STATIC_DRAW,
-    );
 
     // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
     const shapeColor = [...colorHex2RGB(this._shapeColor), 1.0] as [

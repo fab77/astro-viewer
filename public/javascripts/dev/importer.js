@@ -50,7 +50,7 @@ function guessColumnType(name, sampleValues) {
   const n = String(name || '').toLowerCase();
   if (/\bra\b|^ra$|radeg/.test(n)) return (window.astroviewer && window.astroviewer.ColumnType) ? window.astroviewer.ColumnType.GEOM_RA : 'GEOM_RA';
   if (/\bdec\b|^dec$|decdeg/.test(n)) return (window.astroviewer && window.astroviewer.ColumnType) ? window.astroviewer.ColumnType.GEOM_DEC : 'GEOM_DEC';
-  if (/footprint|poly|wkt|stc|shape|outline/i.test(n)) return (window.astroviewer && window.astroviewer.ColumnType) ? window.astroviewer.ColumnType.GEOM_FOOTPRINT : 'GEOM_FOOTPRINT';
+  if (/^stcs?$|footprint|wkt|shape|outline|geometry|^geom$|polygon$/i.test(n)) return (window.astroviewer && window.astroviewer.ColumnType) ? window.astroviewer.ColumnType.GEOM_FOOTPRINT : 'GEOM_FOOTPRINT';
   // numeric?
   if (Array.isArray(sampleValues) && sampleValues.length) {
     const ok = sampleValues.every(v => v === null || v === '' || !Number.isNaN(Number(v)));
@@ -60,6 +60,39 @@ function guessColumnType(name, sampleValues) {
 }
 
 let lastParsed = null; // { filename, columns, objects }
+
+function findColumn(columns, patterns) {
+  return columns.find(c => patterns.some(pattern => pattern.test(String(c || '')))) || '';
+}
+
+function setSelectValue(id, value) {
+  const sel = el(id);
+  if (sel && value) sel.value = value;
+}
+
+function findDefaultMapping(columns) {
+  return {
+    ra: findColumn(columns, [/^ra$/i, /ra_?deg/i, /right_?ascension/i, /^lon$/i, /longitude/i]),
+    dec: findColumn(columns, [/^dec$/i, /dec_?deg/i, /^lat$/i, /latitude/i]),
+    name: findColumn(columns, [/^name$/i, /nome/i, /denominazione/i, /label/i, /title/i]),
+    outline: findColumn(columns, [/^stcs?$/i, /footprint/i, /outline/i, /geometry/i, /^geom$/i, /^polygon$/i, /wkt/i, /shape/i]),
+  };
+}
+
+function applyDefaultMappings(columns) {
+  const mapping = findDefaultMapping(columns);
+  setSelectValue('importMapRa', mapping.ra);
+  setSelectValue('importMapDec', mapping.dec);
+  setSelectValue('importMapName', mapping.name);
+  setSelectValue('importMapOutline', mapping.outline);
+
+  const typeEl = el('importType');
+  if (typeEl && mapping.outline) {
+    typeEl.value = 'footprint';
+  }
+
+  return mapping;
+}
 
 function populateMappingSelects(columns) {
   const ids = ['importMapRa','importMapDec','importMapName','importMapSize','importMapHue','importMapOutline'];
@@ -75,6 +108,25 @@ function populateMappingSelects(columns) {
       const o = document.createElement('option'); o.value = c; o.textContent = c; sel.appendChild(o);
     });
   });
+}
+
+function firstFootprintCoordinate(objects, columns, outlineColumn) {
+  const column = outlineColumn || findDefaultMapping(columns).outline;
+  if (!column) return null;
+
+  for (const obj of objects) {
+    const stcs = String(obj[column] || '');
+    const match = stcs.match(/POLYGON\s+(?:ICRS|J2000)?\s*(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/i);
+    if (!match) continue;
+
+    const raDeg = Number(match[1]);
+    const decDeg = Number(match[2]);
+    if (Number.isFinite(raDeg) && Number.isFinite(decDeg)) {
+      return { raDeg, decDeg };
+    }
+  }
+
+  return null;
 }
 
 function tryCreateLiveCatalogue(name, desc, columns, objects, mapping = {}) {
@@ -120,6 +172,7 @@ function tryCreateLiveCatalogue(name, desc, columns, objects, mapping = {}) {
     try { state.AstroAPI.showCatalogue(catGL); } catch { }
     return catGL;
   } catch (e) {
+    console.error('[importer] live catalogue import failed', e);
     return null;
   }
 }
@@ -178,6 +231,7 @@ function tryCreateLiveFootprintSet(name, desc, columns, objects, mapping = {}) {
     try { state.AstroAPI.showFootprintSet(fpSetGL); } catch { }
     return fpSetGL;
   } catch (e) {
+    console.error('[importer] live footprint import failed', e);
     return null;
   }
 }
@@ -209,7 +263,9 @@ export function wireImporterControls() {
       if (!objects || !objects.length) return setStatus('Parsed file but no rows found.');
       lastParsed = { filename: f.name || '', columns, objects };
       populateMappingSelects(columns);
-      setStatus(`File parsed: ${f.name} (${objects.length} rows). Choose mappings then click Import.`);
+      const defaults = applyDefaultMappings(columns);
+      const detected = defaults.outline ? ' Detected STCS footprint column.' : '';
+      setStatus(`File parsed: ${f.name} (${objects.length} rows).${detected} Choose mappings then click Import.`);
     };
     reader.onerror = () => setStatus('File read error.');
     reader.readAsText(f);
@@ -269,6 +325,10 @@ export function wireImporterControls() {
           }
           renderFootprintManager();
           persistBasic();
+          const center = firstFootprintCoordinate(arr, columns, mapping.outline);
+          if (center && typeof state.AstroAPI?.goTo === 'function') {
+            state.AstroAPI.goTo(center.raDeg, center.decDeg);
+          }
           setStatus(`Imported footprints and loaded: ${fName} (${arr.length} items)`);
         } else {
           // fallback: create descriptor only
