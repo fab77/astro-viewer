@@ -11,6 +11,8 @@
  * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
  */
 import { FootprintSetGL } from '../footprints/FootprintSetGL.js';
+import { CoordsType } from '../../utils/CoordsType.js';
 export class TerraFootprintSetGL extends FootprintSetGL {
     _kind = 'TerraFootprintSetGL';
+    _coordsType = CoordsType.GEOGRAPHIC;
 }

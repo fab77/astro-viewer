@@ -9,11 +9,15 @@ export type AstroOpts = {
     raDeg: number;
     decDeg: number;
 };
+export type GeographicOpts = {
+    lonDeg: number;
+    latDeg: number;
+};
 export type SphericalOpts = {
     phiDeg: number;
     thetaDeg: number;
 };
-export type PointInitOpts = CartesianOpts | AstroOpts | SphericalOpts;
+export type PointInitOpts = CartesianOpts | AstroOpts | GeographicOpts | SphericalOpts;
 export declare class Point {
     private _x;
     private _y;
@@ -24,6 +28,7 @@ export declare class Point {
     private _raRad;
     private _decRad;
     private _raDecDeg;
+    private _lonLatDeg?;
     constructor(in_options: PointInitOpts, in_type: CoordsType);
     private computeAstroCoords;
     private computeCartesianCoords;
@@ -47,6 +52,9 @@ export declare class Point {
     get raDeg(): number;
     get decDeg(): number;
     get raDecDeg(): [number, number];
+    get lonDeg(): number;
+    get latDeg(): number;
+    get lonLatDeg(): [number, number];
     toADQL(): string;
     toString(): string;
 }

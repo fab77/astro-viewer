@@ -12,7 +12,9 @@
  */
 
 import { FootprintSetGL } from '../footprints/FootprintSetGL.js'
+import { CoordsType } from '../../utils/CoordsType.js'
 
 export class TerraFootprintSetGL extends FootprintSetGL {
   _kind: string = 'TerraFootprintSetGL'
+  protected _coordsType: CoordsType.GEOGRAPHIC = CoordsType.GEOGRAPHIC
 }

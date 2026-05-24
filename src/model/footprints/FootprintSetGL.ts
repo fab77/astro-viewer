@@ -101,6 +101,7 @@ export class FootprintSetGL {
   totSelectedPoints!: number;
   nSlectedPrimitiveFlags: number = 0;
   _shapeColor = "#00fff2ff";
+  protected _coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC = CoordsType.ASTRO;
 
   private _bufferInitialised = false;
   private _webgl: WebGL2RenderingContext;
@@ -219,7 +220,12 @@ export class FootprintSetGL {
 
     for (let j = 0; j < in_data.length; j++) {
       if (in_data[j][geomDataIndex] !== null) {
-        const footprint = new Footprint(in_data[j][geomDataIndex], in_data[j]);
+        const footprint = new Footprint(
+          in_data[j][geomDataIndex],
+          in_data[j],
+          undefined,
+          this._coordsType,
+        );
         if ((footprint as any)._valid) {
           this.addFootprint(footprint);
           this.totPoints += footprint.totPoints;

@@ -214,7 +214,15 @@ function tryCreateLiveFootprintSet(name, desc, columns, objects, mapping = {}) {
     try { if (mapping.outline) mm.selectedOutlineColumn = mapping.outline; } catch { }
     try { if (mapping.name) mm.selectedNameColumn = mapping.name; } catch { }
 
-    const fpSetGL = state.AstroAPI.createFootprintSet(name || desc, '', '', mm);
+    const isGeographic = state.AstroAPI.getActiveCoordinateMode?.() === 'lonlat';
+    const createFootprintSet = isGeographic && typeof state.AstroAPI.createTerraFootprintSet === 'function'
+      ? state.AstroAPI.createTerraFootprintSet.bind(state.AstroAPI)
+      : state.AstroAPI.createFootprintSet.bind(state.AstroAPI);
+    const showFootprintSet = isGeographic && typeof state.AstroAPI.showTerraFootprintSet === 'function'
+      ? state.AstroAPI.showTerraFootprintSet.bind(state.AstroAPI)
+      : state.AstroAPI.showFootprintSet.bind(state.AstroAPI);
+
+    const fpSetGL = createFootprintSet(name || desc, '', '', mm);
     
     // prepare rows as arrays
     const rows = objects.map(o => columns.map(k => {
@@ -228,7 +236,7 @@ function tryCreateLiveFootprintSet(name, desc, columns, objects, mapping = {}) {
       fpSetGL.addFootprints(rows, colsMeta);
     }
     // show and return
-    try { state.AstroAPI.showFootprintSet(fpSetGL); } catch { }
+    try { showFootprintSet(fpSetGL); } catch { }
     return fpSetGL;
   } catch (e) {
     console.error('[importer] live footprint import failed', e);

@@ -23,16 +23,20 @@ export interface STCSParseResult {
   polygons: Point[][];
 }
 
+export interface STCSParseOptions {
+  coordsType?: CoordsType.ASTRO | CoordsType.GEOGRAPHIC;
+}
+
 class STCSParser {
-  static parseSTCS(stcs: string): STCSParseResult {
+  static parseSTCS(stcs: string, options: STCSParseOptions = {}): STCSParseResult {
     const stcsParsed = STCSParser.cleanStcs(stcs);
     let totPoints = 0;
     const polygons: Point[][] = [];
 
     if (stcsParsed.includes("POLYGON")) {
-      return STCSParser.parsePolygon(stcsParsed);
+      return STCSParser.parsePolygon(stcsParsed, options);
     } else if (stcsParsed.includes("CIRCLE")) {
-      return STCSParser.parseCircle(stcsParsed);
+      return STCSParser.parseCircle(stcsParsed, options);
     } else {
       console.warn("STCS not recognised");
     }
@@ -61,11 +65,12 @@ class STCSParser {
     return s;
   }
 
-  static parsePolygon(stcs: string): STCSParseResult {
+  static parsePolygon(stcs: string, options: STCSParseOptions = {}): STCSParseResult {
     let totPoints = 0;
     const polygons: Point[][] = [];
 
     const MAX_DECIMALS: number = global.MAX_DECIMALS ?? 12;
+    const coordsType = options.coordsType ?? CoordsType.ASTRO;
 
     const polys = stcs.split("POLYGON ");
 
@@ -85,10 +90,12 @@ class STCSParser {
 
       if (points.length > 2) {
         for (let p = 0; p < points.length - 1; p += 2) {
-          const raDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
-          const decDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
+          const xDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
+          const yDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
 
-          const point = new Point({ raDeg, decDeg }, CoordsType.ASTRO);
+          const point = coordsType === CoordsType.GEOGRAPHIC
+            ? new Point({ lonDeg: xDeg, latDeg: yDeg }, CoordsType.GEOGRAPHIC)
+            : new Point({ raDeg: xDeg, decDeg: yDeg }, CoordsType.ASTRO);
           currPoly.push(point);
           totPoints += 1;
         }
@@ -100,9 +107,10 @@ class STCSParser {
   }
 
   // Example format: "CIRCLE ICRS 8.739685 4.38147 0.027833"
-  static parseCircle(stcs: string): STCSParseResult {
+  static parseCircle(stcs: string, options: STCSParseOptions = {}): STCSParseResult {
     let totPoints = 0;
     const polygons: Point[][] = [];
+    const coordsType = options.coordsType ?? CoordsType.ASTRO;
 
     const polys = stcs.split("CIRCLE ");
 
@@ -124,7 +132,9 @@ class STCSParser {
         const curra = radius * Math.cos(p * alpha) + ra;
         const curdec = radius * Math.sin(p * alpha) + dec;
 
-        const point = new Point({ raDeg: curra, decDeg: curdec }, CoordsType.ASTRO);
+        const point = coordsType === CoordsType.GEOGRAPHIC
+          ? new Point({ lonDeg: curra, latDeg: curdec }, CoordsType.GEOGRAPHIC)
+          : new Point({ raDeg: curra, decDeg: curdec }, CoordsType.ASTRO);
         currPoly.push(point);
         totPoints += 1;
       }

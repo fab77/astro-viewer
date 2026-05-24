@@ -22,6 +22,7 @@ import GeomUtils, { SelectionObj } from '../../utils/GeomUtils.js';
 // import global from '../../Global.js';
 import STCSParser, { STCSParseResult } from '../../utils/STCSParser.js';
 import {Point} from '../Point.js';
+import { CoordsType } from '../../utils/CoordsType.js';
 
 export interface FootprintDetail {
   key: string;
@@ -45,6 +46,7 @@ export class Footprint {
   private _totConvexPoints = 0;
   private _npix256?: number[];
   private _footprintsPointsOrder?: 1 | -1;
+  private _coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC;
   private _selectionObj: SelectionObj | undefined;
 
   private _identifier?: string;
@@ -58,8 +60,10 @@ export class Footprint {
   constructor(
     in_stcs?: string,
     in_details: FootprintDetail[] = [],
-    footprintsPointsOrder?: 1 | -1
+    footprintsPointsOrder?: 1 | -1,
+    coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC = CoordsType.ASTRO,
   ) {
+    this._coordsType = coordsType;
     if (in_stcs) {
       this._stcs = in_stcs.toUpperCase();
       this._details = in_details;
@@ -103,7 +107,9 @@ export class Footprint {
   // }
 
   private computePoints(): void {
-    const res: STCSParseResult = STCSParser.parseSTCS(this._stcs!);
+    const res: STCSParseResult = STCSParser.parseSTCS(this._stcs!, {
+      coordsType: this._coordsType,
+    });
     this._polygons = res.polygons;
     this._totPoints = res.totpoints;
   }

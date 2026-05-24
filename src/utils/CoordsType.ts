@@ -19,6 +19,7 @@ export enum CoordsType {
   CARTESIAN = "cartesian",
   SPHERICAL = "spherical",
   ASTRO = "astro",
+  GEOGRAPHIC = "geographic",
 }
 
 // export default CoordsType;

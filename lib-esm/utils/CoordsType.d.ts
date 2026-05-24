@@ -5,5 +5,6 @@
 export declare enum CoordsType {
     CARTESIAN = "cartesian",
     SPHERICAL = "spherical",
-    ASTRO = "astro"
+    ASTRO = "astro",
+    GEOGRAPHIC = "geographic"
 }

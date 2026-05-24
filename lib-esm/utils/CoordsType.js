@@ -19,5 +19,6 @@ export var CoordsType;
     CoordsType["CARTESIAN"] = "cartesian";
     CoordsType["SPHERICAL"] = "spherical";
     CoordsType["ASTRO"] = "astro";
+    CoordsType["GEOGRAPHIC"] = "geographic";
 })(CoordsType || (CoordsType = {}));
 // export default CoordsType;

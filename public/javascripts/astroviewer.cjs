@@ -509,6 +509,7 @@ class FootprintSetGL {
     totSelectedPoints;
     nSlectedPrimitiveFlags = 0;
     _shapeColor = "#00fff2ff";
+    _coordsType = CoordsType_js_1.CoordsType.ASTRO;
     _bufferInitialised = false;
     _webgl;
     _isVisible = true;
@@ -590,7 +591,7 @@ class FootprintSetGL {
         }
         for (let j = 0; j < in_data.length; j++) {
             if (in_data[j][geomDataIndex] !== null) {
-                const footprint = new Footprint_js_1.Footprint(in_data[j][geomDataIndex], in_data[j]);
+                const footprint = new Footprint_js_1.Footprint(in_data[j][geomDataIndex], in_data[j], undefined, this._coordsType);
                 if (footprint._valid) {
                     this.addFootprint(footprint);
                     this.totPoints += footprint.totPoints;
@@ -13945,6 +13946,7 @@ exports.Footprint = void 0;
 const GeomUtils_js_1 = __importDefault(__webpack_require__(2930));
 // import global from '../../Global.js';
 const STCSParser_js_1 = __importDefault(__webpack_require__(9665));
+const CoordsType_js_1 = __webpack_require__(8145);
 // export interface ParsedSTCS {
 //   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
 //   totpoints: number;
@@ -13959,6 +13961,7 @@ class Footprint {
     _totConvexPoints = 0;
     _npix256;
     _footprintsPointsOrder;
+    _coordsType;
     _selectionObj;
     _identifier;
     _center; // could be typed if you have a Point type
@@ -13967,7 +13970,8 @@ class Footprint {
      * @param in_details optional metadata
      * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
      */
-    constructor(in_stcs, in_details = [], footprintsPointsOrder) {
+    constructor(in_stcs, in_details = [], footprintsPointsOrder, coordsType = CoordsType_js_1.CoordsType.ASTRO) {
+        this._coordsType = coordsType;
         if (in_stcs) {
             this._stcs = in_stcs.toUpperCase();
             this._details = in_details;
@@ -14004,7 +14008,9 @@ class Footprint {
     //   return Array.from(rangeSet.r);
     // }
     computePoints() {
-        const res = STCSParser_js_1.default.parseSTCS(this._stcs);
+        const res = STCSParser_js_1.default.parseSTCS(this._stcs, {
+            coordsType: this._coordsType,
+        });
         this._polygons = res.polygons;
         this._totPoints = res.totpoints;
     }
@@ -18640,6 +18646,7 @@ class Point {
     _raRad;
     _decRad;
     _raDecDeg;
+    _lonLatDeg;
     constructor(in_options, in_type) {
         this._xyz = [0, 0, 0];
         this._raDecDeg = [0, 0];
@@ -18662,6 +18669,20 @@ class Point {
             const { raDeg, decDeg } = in_options;
             this._raDeg = Number(raDeg);
             this._decDeg = Number(decDeg);
+            this._raDecDeg = [this._raDeg, this._decDeg];
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            const [x, y, z] = this.computeCartesianCoords();
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+        }
+        else if (in_type === CoordsType_js_1.CoordsType.GEOGRAPHIC) {
+            const { lonDeg, latDeg } = in_options;
+            this._lonLatDeg = [Number(lonDeg), Number(latDeg)];
+            this._raDeg = this._lonLatDeg[0];
+            this._decDeg = this._lonLatDeg[1];
             this._raDecDeg = [this._raDeg, this._decDeg];
             this._raRad = (this._raDeg * Math.PI) / 180;
             this._decRad = (this._decDeg * Math.PI) / 180;
@@ -18747,6 +18768,9 @@ class Point {
     get raDeg() { return this._raDeg; }
     get decDeg() { return this._decDeg; }
     get raDecDeg() { return this._raDecDeg; }
+    get lonDeg() { return this._lonLatDeg?.[0] ?? this._raDeg; }
+    get latDeg() { return this._lonLatDeg?.[1] ?? this._decDeg; }
+    get lonLatDeg() { return this._lonLatDeg ?? [this._raDeg, this._decDeg]; }
     toADQL() {
         return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
     }
@@ -20173,6 +20197,7 @@ var CoordsType;
     CoordsType["CARTESIAN"] = "cartesian";
     CoordsType["SPHERICAL"] = "spherical";
     CoordsType["ASTRO"] = "astro";
+    CoordsType["GEOGRAPHIC"] = "geographic";
 })(CoordsType || (exports.CoordsType = CoordsType = {}));
 // export default CoordsType;
 
@@ -21008,8 +21033,10 @@ exports.FootprintShaderProgram = FootprintShaderProgram;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TerraFootprintSetGL = void 0;
 const FootprintSetGL_js_1 = __webpack_require__(592);
+const CoordsType_js_1 = __webpack_require__(8145);
 class TerraFootprintSetGL extends FootprintSetGL_js_1.FootprintSetGL {
     _kind = 'TerraFootprintSetGL';
+    _coordsType = CoordsType_js_1.CoordsType.GEOGRAPHIC;
 }
 exports.TerraFootprintSetGL = TerraFootprintSetGL;
 
@@ -21043,15 +21070,15 @@ const Point_js_1 = __webpack_require__(6553);
 const CoordsType_js_1 = __webpack_require__(8145);
 const Global_js_1 = __importDefault(__webpack_require__(4382));
 class STCSParser {
-    static parseSTCS(stcs) {
+    static parseSTCS(stcs, options = {}) {
         const stcsParsed = STCSParser.cleanStcs(stcs);
         let totPoints = 0;
         const polygons = [];
         if (stcsParsed.includes("POLYGON")) {
-            return STCSParser.parsePolygon(stcsParsed);
+            return STCSParser.parsePolygon(stcsParsed, options);
         }
         else if (stcsParsed.includes("CIRCLE")) {
-            return STCSParser.parseCircle(stcsParsed);
+            return STCSParser.parseCircle(stcsParsed, options);
         }
         else {
             console.warn("STCS not recognised");
@@ -21074,10 +21101,11 @@ class STCSParser {
         s = s.replace(/ {2,}/g, ' ').trim();
         return s;
     }
-    static parsePolygon(stcs) {
+    static parsePolygon(stcs, options = {}) {
         let totPoints = 0;
         const polygons = [];
         const MAX_DECIMALS = Global_js_1.default.MAX_DECIMALS ?? 12;
+        const coordsType = options.coordsType ?? CoordsType_js_1.CoordsType.ASTRO;
         const polys = stcs.split("POLYGON ");
         for (let i = 1; i < polys.length; i++) {
             const currPoly = [];
@@ -21092,9 +21120,11 @@ class STCSParser {
             }
             if (points.length > 2) {
                 for (let p = 0; p < points.length - 1; p += 2) {
-                    const raDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
-                    const decDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
-                    const point = new Point_js_1.Point({ raDeg, decDeg }, CoordsType_js_1.CoordsType.ASTRO);
+                    const xDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
+                    const yDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
+                    const point = coordsType === CoordsType_js_1.CoordsType.GEOGRAPHIC
+                        ? new Point_js_1.Point({ lonDeg: xDeg, latDeg: yDeg }, CoordsType_js_1.CoordsType.GEOGRAPHIC)
+                        : new Point_js_1.Point({ raDeg: xDeg, decDeg: yDeg }, CoordsType_js_1.CoordsType.ASTRO);
                     currPoly.push(point);
                     totPoints += 1;
                 }
@@ -21104,9 +21134,10 @@ class STCSParser {
         return { totpoints: totPoints, polygons };
     }
     // Example format: "CIRCLE ICRS 8.739685 4.38147 0.027833"
-    static parseCircle(stcs) {
+    static parseCircle(stcs, options = {}) {
         let totPoints = 0;
         const polygons = [];
+        const coordsType = options.coordsType ?? CoordsType_js_1.CoordsType.ASTRO;
         const polys = stcs.split("CIRCLE ");
         for (let i = 1; i < polys.length; i++) {
             const currPoly = [];
@@ -21121,7 +21152,9 @@ class STCSParser {
             for (let p = npoints; p > 0; p--) {
                 const curra = radius * Math.cos(p * alpha) + ra;
                 const curdec = radius * Math.sin(p * alpha) + dec;
-                const point = new Point_js_1.Point({ raDeg: curra, decDeg: curdec }, CoordsType_js_1.CoordsType.ASTRO);
+                const point = coordsType === CoordsType_js_1.CoordsType.GEOGRAPHIC
+                    ? new Point_js_1.Point({ lonDeg: curra, latDeg: curdec }, CoordsType_js_1.CoordsType.GEOGRAPHIC)
+                    : new Point_js_1.Point({ raDeg: curra, decDeg: curdec }, CoordsType_js_1.CoordsType.ASTRO);
                 currPoly.push(point);
                 totPoints += 1;
             }
