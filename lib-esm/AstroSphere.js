@@ -758,6 +758,11 @@ class AstroSphere {
             requests: xyzTileRequestScheduler.getDebugStats(),
         };
     }
+    getHiPSDebugStats() {
+        if (!this._activeHiPS)
+            return null;
+        return this._activeHiPS.getDebugStats();
+    }
     draw(canvas) {
         if (this._refreshingStatus)
             return;

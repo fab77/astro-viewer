@@ -35,4 +35,9 @@ export declare class TileBuffer {
     private key;
     /** Optional: call to stop internal timers if you dispose this buffer. */
     dispose(): void;
+    get size(): number;
+    get activeTileCount(): number;
+    get cachedTileCount(): number;
+    get readyTileCount(): number;
+    get loadingTileCount(): number;
 }

@@ -29,6 +29,10 @@ export type XYZLayerDebugStats = {
     coarseTileCount: number;
     hasPendingSelection: boolean;
     pendingSelectionKey: string | null;
+    hipsName?: string;
+    hipsUrl?: string;
+    isGalactic?: boolean;
+    currentOrder?: number | null;
 };
 export type XYZRequestBackoffDebugEntry = {
     host: string;

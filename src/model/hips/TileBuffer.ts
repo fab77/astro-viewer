@@ -182,6 +182,52 @@ export class TileBuffer {
   dispose(): void {
     window.clearInterval(this._cleanerId)
   }
+
+  get size(): number {
+    return this._tiles.size + this._cachedTiles.size + this._galTiles.size + this._galCachedTiles.size
+  }
+
+  get activeTileCount(): number {
+    return this._tiles.size + this._galTiles.size
+  }
+
+  get cachedTileCount(): number {
+    return this._cachedTiles.size + this._galCachedTiles.size
+  }
+
+  get readyTileCount(): number {
+    let count = 0
+    for (const tile of this._tiles.values()) {
+      if (tile.getReadyState()) count++
+    }
+    for (const tile of this._galTiles.values()) {
+      if (tile.getReadyState()) count++
+    }
+    for (const tile of this._cachedTiles.values()) {
+      if (tile.getReadyState()) count++
+    }
+    for (const tile of this._galCachedTiles.values()) {
+      if (tile.getReadyState()) count++
+    }
+    return count
+  }
+
+  get loadingTileCount(): number {
+    let count = 0
+    for (const tile of this._tiles.values()) {
+      if (tile.isLoading()) count++
+    }
+    for (const tile of this._galTiles.values()) {
+      if (tile.isLoading()) count++
+    }
+    for (const tile of this._cachedTiles.values()) {
+      if (tile.isLoading()) count++
+    }
+    for (const tile of this._galCachedTiles.values()) {
+      if (tile.isLoading()) count++
+    }
+    return count
+  }
 }
 
 // Singleton (kept for compatibility with your original export)

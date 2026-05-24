@@ -180,6 +180,25 @@ export class HiPS extends AbstractSkyEntity {
     getCurrentHealpixOrder() {
         return this._visibleorder;
     }
+    getDebugStats() {
+        const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+        const visibleTiles = this.isGalacticHips
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder;
+        return {
+            activeBaseLayer: 'hips',
+            hipsName: this._descriptor.surveyName,
+            hipsUrl: this._baseurl,
+            isGalactic: this.isGalacticHips,
+            currentOrder: visibleTiles.order,
+            visibleTileCount: visibleTiles.pixels.length,
+            activeTileCount: tileBuffer.activeTileCount,
+            cachedTileCount: tileBuffer.cachedTileCount,
+            cacheSize: tileBuffer.size,
+            readyTileCount: tileBuffer.readyTileCount,
+            loadingTileCount: tileBuffer.loadingTileCount,
+        };
+    }
     refresh() {
         // const fov = healpixGridSingleton.getMinFoV()
         const fov = this._healpixGrid.getMinFoV();

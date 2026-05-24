@@ -32,6 +32,7 @@ export default class Tile {
     constructor(tileno: number, order: number, hips: HiPS, tileBuffer: TileBuffer, webgl: WebGL2RenderingContext, visibleTileManager: VisibleTilesManager);
     destroyIntervals(): void;
     getReadyState(): boolean;
+    isLoading(): boolean;
     get cacheTime0(): number | undefined;
     resetCacheTime0(): void;
     setCacheTime0(): void;

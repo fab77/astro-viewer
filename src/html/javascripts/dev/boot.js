@@ -20,7 +20,7 @@ import { loadTapRepo, showFootprint, hideFootprints } from './tap.js';
 import { renderCatalogueManager, wireCatalogueManagerControls } from './catalogueManager.js';
 import { wireGoto } from './goto.js';
 import { wireCoords } from './coords.js';
-import { wireXYZDiagnostics } from './xyzDiagnostics.js';
+import { wireXYZDiagnostics, wireHiPSDiagnostics } from './xyzDiagnostics.js';
 import { applyWMTSPreset, loadWMTSCapabilities, WMTS_PRESETS } from './wmtsCapabilities.js';
 import { wireImporterControls } from './importer.js';
 
@@ -153,6 +153,7 @@ async function bootstrap() {
     wireCoords();
     wireHoveredFootprints();
     wireXYZDiagnostics();
+    wireHiPSDiagnostics();
 
     setStatus("App Ready - Panel loaded ✅");
   } catch (e) {

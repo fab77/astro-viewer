@@ -108,6 +108,10 @@ export default class Tile {
     return this._ready
   }
 
+  isLoading(): boolean {
+    return !this._ready && !this._abort
+  }
+
   get cacheTime0(): number | undefined {
     return this._cacheTime0
   }

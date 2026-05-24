@@ -2523,6 +2523,9 @@ class AstroViewer {
     getXYZDebugStats() {
         return this.astroSphere.getXYZDebugStats();
     }
+    getHiPSDebugStats() {
+        return this.astroSphere.getHiPSDebugStats();
+    }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
         const resp = await fetch(hipsUrl + 'properties');
@@ -15208,6 +15211,25 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     getCurrentHealpixOrder() {
         return this._visibleorder;
     }
+    getDebugStats() {
+        const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+        const visibleTiles = this.isGalacticHips
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder;
+        return {
+            activeBaseLayer: 'hips',
+            hipsName: this._descriptor.surveyName,
+            hipsUrl: this._baseurl,
+            isGalactic: this.isGalacticHips,
+            currentOrder: visibleTiles.order,
+            visibleTileCount: visibleTiles.pixels.length,
+            activeTileCount: tileBuffer.activeTileCount,
+            cachedTileCount: tileBuffer.cachedTileCount,
+            cacheSize: tileBuffer.size,
+            readyTileCount: tileBuffer.readyTileCount,
+            loadingTileCount: tileBuffer.loadingTileCount,
+        };
+    }
     refresh() {
         // const fov = healpixGridSingleton.getMinFoV()
         const fov = this._healpixGrid.getMinFoV();
@@ -15527,6 +15549,55 @@ class TileBuffer {
     /** Optional: call to stop internal timers if you dispose this buffer. */
     dispose() {
         window.clearInterval(this._cleanerId);
+    }
+    get size() {
+        return this._tiles.size + this._cachedTiles.size + this._galTiles.size + this._galCachedTiles.size;
+    }
+    get activeTileCount() {
+        return this._tiles.size + this._galTiles.size;
+    }
+    get cachedTileCount() {
+        return this._cachedTiles.size + this._galCachedTiles.size;
+    }
+    get readyTileCount() {
+        let count = 0;
+        for (const tile of this._tiles.values()) {
+            if (tile.getReadyState())
+                count++;
+        }
+        for (const tile of this._galTiles.values()) {
+            if (tile.getReadyState())
+                count++;
+        }
+        for (const tile of this._cachedTiles.values()) {
+            if (tile.getReadyState())
+                count++;
+        }
+        for (const tile of this._galCachedTiles.values()) {
+            if (tile.getReadyState())
+                count++;
+        }
+        return count;
+    }
+    get loadingTileCount() {
+        let count = 0;
+        for (const tile of this._tiles.values()) {
+            if (tile.isLoading())
+                count++;
+        }
+        for (const tile of this._galTiles.values()) {
+            if (tile.isLoading())
+                count++;
+        }
+        for (const tile of this._cachedTiles.values()) {
+            if (tile.isLoading())
+                count++;
+        }
+        for (const tile of this._galCachedTiles.values()) {
+            if (tile.isLoading())
+                count++;
+        }
+        return count;
     }
 }
 exports.TileBuffer = TileBuffer;
@@ -17001,6 +17072,11 @@ class AstroSphere {
             layer: this._activeXYZ2?.getDebugStats() ?? null,
             requests: XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getDebugStats(),
         };
+    }
+    getHiPSDebugStats() {
+        if (!this._activeHiPS)
+            return null;
+        return this._activeHiPS.getDebugStats();
     }
     draw(canvas) {
         if (this._refreshingStatus)
@@ -20171,6 +20247,9 @@ class Tile {
     }
     getReadyState() {
         return this._ready;
+    }
+    isLoading() {
+        return !this._ready && !this._abort;
     }
     get cacheTime0() {
         return this._cacheTime0;
