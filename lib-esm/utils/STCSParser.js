@@ -42,8 +42,8 @@ class STCSParser {
             .replace(/\bJ2000\b/g, '')
             .replace(/\bUNION\b/g, '')
             .replace(/\bTOPOCENTER\b/g, '');
-        // Remove parentheses and commas (to support WKT format)
-        s = s.replace(/[(),]/g, '');
+        // Remove parentheses
+        s = s.replace(/[()]/g, '');
         // Collapse extra spaces and trim
         s = s.replace(/ {2,}/g, ' ').trim();
         return s;

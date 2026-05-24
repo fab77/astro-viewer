@@ -154,7 +154,7 @@ async function bootstrap() {
     wireHoveredFootprints();
     wireXYZDiagnostics();
 
-    setStatus("Ready ✅ Load a TAP to begin.");
+    setStatus("App Ready - Panel loaded ✅");
   } catch (e) {
     console.error(e);
     setStatus("Init error: " + (e.message || e));
@@ -321,24 +321,6 @@ function wireUI() {
       setStatus(`${isVisible ? "👁️ Visible" : "🙈 Hidden"} → ${cat.name || cat.id || cat.table}`);
     } catch (e) { setStatus("Visibility error: " + (e.message || e)); }
   });
-
-  el('btnDeleteCat')?.addEventListener('click', () => {
-    const selVal = el('catalogues').value;
-    const cat = state.CAT_LIST.find(c => (c.name === selVal) || (String(c.id) === selVal) || (c.table === selVal));
-    if (!cat) return setStatus("Select a catalogue.");
-    const key = (c => c?.name || String(c?.id) || c?.table || JSON.stringify(c))(cat);
-    try {
-      state.AstroAPI?.deleteCatalogue?.(cat);
-      state.CAT_VIS.set(key, false);
-      renderCatalogueManager();
-      persistBasic();
-      setStatus(`🗑️ Catalogue removed from engine: ${cat.name || cat.id || cat.table}`);
-    } catch (e) { setStatus("Delete error: " + (e.message || e)); }
-  });
-
-  // footprints
-  el('btnShowFp')?.addEventListener('click', () => showFootprint(el('footprints').value));
-  el('btnHideFp')?.addEventListener('click', hideFootprints);
 
   // camera + minimise
   el('btnCamInfo')?.addEventListener('click', () => {
