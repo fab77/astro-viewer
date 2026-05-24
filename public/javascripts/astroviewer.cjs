@@ -669,9 +669,8 @@ class FootprintSetGL {
                 const details = [...footprint.details];
                 // const geomDataIndex = this.footprintsetProps.geomColumn?.index
                 const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
-                if (geomDataIndex < 0)
-                    continue;
-                details.splice(geomDataIndex, 1);
+                if (geomDataIndex >= 0)
+                    details.splice(geomDataIndex, 1);
                 this._hoveredFootprints.push(footprint);
                 this.totHoveredPoints += footprint.totPoints;
             }
@@ -4377,6 +4376,81 @@ class Healpix {
 
 
 //# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ 1229:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+var AstroViewer_js_1 = __webpack_require__(772);
+Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
+var HiPSDescriptor_js_1 = __webpack_require__(5087);
+Object.defineProperty(exports, "HiPSDescriptor", ({ enumerable: true, get: function () { return HiPSDescriptor_js_1.HiPSDescriptor; } }));
+var SphereFoV_js_1 = __webpack_require__(5803);
+Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return SphereFoV_js_1.SphereFoV; } }));
+var SphereFoV_js_2 = __webpack_require__(5803);
+Object.defineProperty(exports, "SphereFoV", ({ enumerable: true, get: function () { return SphereFoV_js_2.SphereFoV; } }));
+var FootprintSetGL_js_1 = __webpack_require__(592);
+Object.defineProperty(exports, "HoveredFootprintDetail", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.HoveredFootprintDetail; } }));
+Object.defineProperty(exports, "FootprintSetGL", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.FootprintSetGL; } }));
+var CatalogueGL_js_1 = __webpack_require__(1232);
+Object.defineProperty(exports, "CatalogueGL", ({ enumerable: true, get: function () { return CatalogueGL_js_1.CatalogueGL; } }));
+var TerraPointSetGL_js_1 = __webpack_require__(5781);
+Object.defineProperty(exports, "TerraPointSetGL", ({ enumerable: true, get: function () { return TerraPointSetGL_js_1.TerraPointSetGL; } }));
+var TerraFootprintSetGL_js_1 = __webpack_require__(9022);
+Object.defineProperty(exports, "TerraFootprintSetGL", ({ enumerable: true, get: function () { return TerraFootprintSetGL_js_1.TerraFootprintSetGL; } }));
+var MetadataManager_js_1 = __webpack_require__(5403);
+Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
+var MetadataColumn_js_1 = __webpack_require__(1072);
+Object.defineProperty(exports, "MetadataColumn", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataColumn; } }));
+Object.defineProperty(exports, "MetadataInit", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataInit; } }));
+Object.defineProperty(exports, "ColumnType", ({ enumerable: true, get: function () { return MetadataColumn_js_1.ColumnType; } }));
+var Point_js_1 = __webpack_require__(6553);
+Object.defineProperty(exports, "Point", ({ enumerable: true, get: function () { return Point_js_1.Point; } }));
+Object.defineProperty(exports, "SphericalOpts", ({ enumerable: true, get: function () { return Point_js_1.SphericalOpts; } }));
+Object.defineProperty(exports, "AstroOpts", ({ enumerable: true, get: function () { return Point_js_1.AstroOpts; } }));
+Object.defineProperty(exports, "PointInitOpts", ({ enumerable: true, get: function () { return Point_js_1.PointInitOpts; } }));
+Object.defineProperty(exports, "CartesianOpts", ({ enumerable: true, get: function () { return Point_js_1.CartesianOpts; } }));
+var FoVUtils_js_1 = __webpack_require__(8083);
+Object.defineProperty(exports, "FoVUtils", ({ enumerable: true, get: function () { return FoVUtils_js_1.FoVUtils; } }));
+var CoordsType_js_1 = __webpack_require__(8145);
+Object.defineProperty(exports, "CoordsType", ({ enumerable: true, get: function () { return CoordsType_js_1.CoordsType; } }));
+var GeoJSONParser_js_1 = __webpack_require__(8755);
+Object.defineProperty(exports, "GeoJSONParser", ({ enumerable: true, get: function () { return __importDefault(GeoJSONParser_js_1).default; } }));
+var ColorMaps_js_1 = __webpack_require__(619);
+Object.defineProperty(exports, "ColorMaps", ({ enumerable: true, get: function () { return ColorMaps_js_1.ColorMaps; } }));
+Object.defineProperty(exports, "COLOR_MAP_SAMPLE_COUNT", ({ enumerable: true, get: function () { return ColorMaps_js_1.COLOR_MAP_SAMPLE_COUNT; } }));
+Object.defineProperty(exports, "createColorMapFromSamples", ({ enumerable: true, get: function () { return ColorMaps_js_1.createColorMapFromSamples; } }));
+var HiPS_js_1 = __webpack_require__(3726);
+Object.defineProperty(exports, "HiPS", ({ enumerable: true, get: function () { return HiPS_js_1.HiPS; } }));
+var XYZMap_js_1 = __webpack_require__(1741);
+Object.defineProperty(exports, "XYZMap", ({ enumerable: true, get: function () { return XYZMap_js_1.XYZMap; } }));
+var WMTSAdapter_js_1 = __webpack_require__(3956);
+Object.defineProperty(exports, "WMTSAdapter", ({ enumerable: true, get: function () { return WMTSAdapter_js_1.WMTSAdapter; } }));
+var Source_js_1 = __webpack_require__(146);
+Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));
+var Footprint_js_1 = __webpack_require__(2475);
+Object.defineProperty(exports, "Footprint", ({ enumerable: true, get: function () { return Footprint_js_1.Footprint; } }));
+console.log('astroviewer UMD loaded');
+
 
 /***/ }),
 
@@ -13986,6 +14060,17 @@ class Footprint {
             this._details = [];
         }
     }
+    static fromPolygons(polygons, details = [], coordsType = CoordsType_js_1.CoordsType.ASTRO) {
+        const footprint = new Footprint(undefined, [], undefined, coordsType);
+        footprint._polygons = polygons;
+        footprint._details = details;
+        footprint._totPoints = polygons.reduce((total, polygon) => total + polygon.length, 0);
+        footprint._totConvexPoints = 0;
+        footprint._coordsType = coordsType;
+        footprint._selectionObj = footprint.computeSelectionObject();
+        footprint._valid = footprint._totPoints > 0;
+        return footprint;
+    }
     computeSelectionObject() {
         return GeomUtils_js_1.default.computeSelectionObject(this._polygons);
     }
@@ -20696,6 +20781,127 @@ exports["default"] = XYZFoVHelper;
 
 /***/ }),
 
+/***/ 8755:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const CoordsType_js_1 = __webpack_require__(8145);
+const Point_js_1 = __webpack_require__(6553);
+class GeoJSONParser {
+    static isGeoJSON(value) {
+        if (!value || typeof value !== 'object')
+            return false;
+        const type = value.type;
+        return type === 'FeatureCollection'
+            || type === 'Feature'
+            || type === 'Polygon'
+            || type === 'MultiPolygon'
+            || type === 'GeometryCollection';
+    }
+    static parseGeoJSON(value) {
+        if (!value || typeof value !== 'object') {
+            throw new Error('GeoJSON root must be an object');
+        }
+        const obj = value;
+        if (obj.type === 'FeatureCollection') {
+            if (!Array.isArray(obj.features))
+                throw new Error('GeoJSON FeatureCollection has no features array');
+            return obj.features.flatMap((feature) => GeoJSONParser.parseFeature(feature));
+        }
+        if (obj.type === 'Feature')
+            return GeoJSONParser.parseFeature(obj);
+        if (obj.type === 'Polygon' || obj.type === 'MultiPolygon' || obj.type === 'GeometryCollection') {
+            return GeoJSONParser.parseGeometry(obj, {});
+        }
+        throw new Error(`Unsupported GeoJSON type: ${obj.type ?? 'unknown'}`);
+    }
+    static parseFeature(value) {
+        if (!value || typeof value !== 'object')
+            throw new Error('GeoJSON feature must be an object');
+        const feature = value;
+        if (feature.type !== 'Feature')
+            throw new Error('GeoJSON feature has invalid type');
+        if (!feature.geometry)
+            return [];
+        return GeoJSONParser.parseGeometry(feature.geometry, feature.properties ?? {}, feature.id);
+    }
+    static parseGeometry(geometry, properties, id) {
+        if (geometry.type === 'Polygon') {
+            return [{
+                    id,
+                    geometryType: 'Polygon',
+                    properties,
+                    polygons: GeoJSONParser.parsePolygonCoordinates(geometry.coordinates),
+                }];
+        }
+        if (geometry.type === 'MultiPolygon') {
+            return [{
+                    id,
+                    geometryType: 'MultiPolygon',
+                    properties,
+                    polygons: GeoJSONParser.parseMultiPolygonCoordinates(geometry.coordinates),
+                }];
+        }
+        if (geometry.type === 'GeometryCollection') {
+            if (!Array.isArray(geometry.geometries))
+                return [];
+            return geometry.geometries.flatMap((child) => GeoJSONParser.parseGeometry(child, properties, id));
+        }
+        return [];
+    }
+    static parseMultiPolygonCoordinates(coordinates) {
+        if (!Array.isArray(coordinates))
+            throw new Error('GeoJSON MultiPolygon coordinates must be an array');
+        return coordinates.flatMap((polygonCoordinates) => GeoJSONParser.parsePolygonCoordinates(polygonCoordinates));
+    }
+    static parsePolygonCoordinates(coordinates) {
+        if (!Array.isArray(coordinates))
+            throw new Error('GeoJSON Polygon coordinates must be an array');
+        return coordinates
+            .map((ring) => GeoJSONParser.parseLinearRing(ring))
+            .filter((ring) => ring.length >= 3);
+    }
+    static parseLinearRing(ring) {
+        if (!Array.isArray(ring))
+            throw new Error('GeoJSON linear ring must be an array');
+        const points = ring.map((position) => GeoJSONParser.parsePosition(position));
+        if (points.length > 1) {
+            const first = points[0];
+            const last = points[points.length - 1];
+            if (first.lonDeg === last.lonDeg && first.latDeg === last.latDeg)
+                points.pop();
+        }
+        return points;
+    }
+    static parsePosition(position) {
+        if (!Array.isArray(position) || position.length < 2) {
+            throw new Error('GeoJSON position must be [longitude, latitude]');
+        }
+        const [lonDeg, latDeg] = position;
+        if (!Number.isFinite(lonDeg) || !Number.isFinite(latDeg)) {
+            throw new Error('GeoJSON position contains non-finite longitude/latitude');
+        }
+        return new Point_js_1.Point({ lonDeg, latDeg }, CoordsType_js_1.CoordsType.GEOGRAPHIC);
+    }
+}
+exports["default"] = GeoJSONParser;
+
+
+/***/ }),
+
 /***/ 8819:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -21034,9 +21240,49 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TerraFootprintSetGL = void 0;
 const FootprintSetGL_js_1 = __webpack_require__(592);
 const CoordsType_js_1 = __webpack_require__(8145);
+const Footprint_js_1 = __webpack_require__(2475);
+const MetadataColumn_js_1 = __webpack_require__(1072);
+const MetadataManager_js_1 = __webpack_require__(5403);
+const MetadataColumn_js_2 = __webpack_require__(1072);
 class TerraFootprintSetGL extends FootprintSetGL_js_1.FootprintSetGL {
     _kind = 'TerraFootprintSetGL';
     _coordsType = CoordsType_js_1.CoordsType.GEOGRAPHIC;
+    addGeoJSONFeatures(features) {
+        this._ready = false;
+        this.clearFootprints();
+        this._metadataManager = new MetadataManager_js_1.MetadataManager(this.createGeoJSONMetadataColumns(features));
+        for (const feature of features) {
+            const footprint = Footprint_js_1.Footprint.fromPolygons(feature.polygons, this.createGeoJSONDetails(feature), CoordsType_js_1.CoordsType.GEOGRAPHIC);
+            if (footprint.valid) {
+                this.addFootprint(footprint);
+                this.totPoints += footprint.totPoints;
+                this.totConvexPoints += footprint.totConvexPoints;
+            }
+        }
+        this._ready = true;
+        this._bufferInitialised = false;
+    }
+    createGeoJSONMetadataColumns(features) {
+        const names = new Set();
+        features.forEach(feature => Object.keys(feature.properties).forEach(name => names.add(name)));
+        return Array.from(names).map((name, index) => {
+            const values = features.map(feature => feature.properties[name]).filter(value => value !== null && value !== undefined && value !== '');
+            const isNumber = values.length > 0 && values.every(value => typeof value === 'number' || !Number.isNaN(Number(value)));
+            const isName = /^name$|nome|denominazione|label|title/i.test(name);
+            return new MetadataColumn_js_1.MetadataColumn({
+                index,
+                name,
+                columnType: isName ? MetadataColumn_js_2.ColumnType.MAIN_NAME : (isNumber ? MetadataColumn_js_2.ColumnType.NUMBER : MetadataColumn_js_2.ColumnType.STRING),
+                unit: '',
+            });
+        });
+    }
+    createGeoJSONDetails(feature) {
+        return Object.entries(feature.properties).map(([key, value]) => ({
+            key,
+            value: typeof value === 'number' ? value : String(value ?? ''),
+        }));
+    }
 }
 exports.TerraFootprintSetGL = TerraFootprintSetGL;
 
@@ -21612,76 +21858,12 @@ exports.EquatorialGrid = EquatorialGrid;
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry needs to be wrapped in an IIFE because it uses a non-standard name for the exports (exports).
-(() => {
-var exports = __webpack_exports__;
-
-/*
- * AstroViewer
- * Copyright (C) Fabrizio Giordano
- * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
- *
- * This file is part of AstroViewer.
- * AstroViewer is distributed under a dual-license model.
- * Commercial use requires a separate commercial license.
- * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
- *
- * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
-var AstroViewer_js_1 = __webpack_require__(772);
-Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
-var HiPSDescriptor_js_1 = __webpack_require__(5087);
-Object.defineProperty(exports, "HiPSDescriptor", ({ enumerable: true, get: function () { return HiPSDescriptor_js_1.HiPSDescriptor; } }));
-var SphereFoV_js_1 = __webpack_require__(5803);
-Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return SphereFoV_js_1.SphereFoV; } }));
-var SphereFoV_js_2 = __webpack_require__(5803);
-Object.defineProperty(exports, "SphereFoV", ({ enumerable: true, get: function () { return SphereFoV_js_2.SphereFoV; } }));
-var FootprintSetGL_js_1 = __webpack_require__(592);
-Object.defineProperty(exports, "HoveredFootprintDetail", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.HoveredFootprintDetail; } }));
-Object.defineProperty(exports, "FootprintSetGL", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.FootprintSetGL; } }));
-var CatalogueGL_js_1 = __webpack_require__(1232);
-Object.defineProperty(exports, "CatalogueGL", ({ enumerable: true, get: function () { return CatalogueGL_js_1.CatalogueGL; } }));
-var TerraPointSetGL_js_1 = __webpack_require__(5781);
-Object.defineProperty(exports, "TerraPointSetGL", ({ enumerable: true, get: function () { return TerraPointSetGL_js_1.TerraPointSetGL; } }));
-var TerraFootprintSetGL_js_1 = __webpack_require__(9022);
-Object.defineProperty(exports, "TerraFootprintSetGL", ({ enumerable: true, get: function () { return TerraFootprintSetGL_js_1.TerraFootprintSetGL; } }));
-var MetadataManager_js_1 = __webpack_require__(5403);
-Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
-var MetadataColumn_js_1 = __webpack_require__(1072);
-Object.defineProperty(exports, "MetadataColumn", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataColumn; } }));
-Object.defineProperty(exports, "MetadataInit", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataInit; } }));
-Object.defineProperty(exports, "ColumnType", ({ enumerable: true, get: function () { return MetadataColumn_js_1.ColumnType; } }));
-var Point_js_1 = __webpack_require__(6553);
-Object.defineProperty(exports, "Point", ({ enumerable: true, get: function () { return Point_js_1.Point; } }));
-Object.defineProperty(exports, "SphericalOpts", ({ enumerable: true, get: function () { return Point_js_1.SphericalOpts; } }));
-Object.defineProperty(exports, "AstroOpts", ({ enumerable: true, get: function () { return Point_js_1.AstroOpts; } }));
-Object.defineProperty(exports, "PointInitOpts", ({ enumerable: true, get: function () { return Point_js_1.PointInitOpts; } }));
-Object.defineProperty(exports, "CartesianOpts", ({ enumerable: true, get: function () { return Point_js_1.CartesianOpts; } }));
-var FoVUtils_js_1 = __webpack_require__(8083);
-Object.defineProperty(exports, "FoVUtils", ({ enumerable: true, get: function () { return FoVUtils_js_1.FoVUtils; } }));
-var CoordsType_js_1 = __webpack_require__(8145);
-Object.defineProperty(exports, "CoordsType", ({ enumerable: true, get: function () { return CoordsType_js_1.CoordsType; } }));
-var ColorMaps_js_1 = __webpack_require__(619);
-Object.defineProperty(exports, "ColorMaps", ({ enumerable: true, get: function () { return ColorMaps_js_1.ColorMaps; } }));
-Object.defineProperty(exports, "COLOR_MAP_SAMPLE_COUNT", ({ enumerable: true, get: function () { return ColorMaps_js_1.COLOR_MAP_SAMPLE_COUNT; } }));
-Object.defineProperty(exports, "createColorMapFromSamples", ({ enumerable: true, get: function () { return ColorMaps_js_1.createColorMapFromSamples; } }));
-var HiPS_js_1 = __webpack_require__(3726);
-Object.defineProperty(exports, "HiPS", ({ enumerable: true, get: function () { return HiPS_js_1.HiPS; } }));
-var XYZMap_js_1 = __webpack_require__(1741);
-Object.defineProperty(exports, "XYZMap", ({ enumerable: true, get: function () { return XYZMap_js_1.XYZMap; } }));
-var WMTSAdapter_js_1 = __webpack_require__(3956);
-Object.defineProperty(exports, "WMTSAdapter", ({ enumerable: true, get: function () { return WMTSAdapter_js_1.WMTSAdapter; } }));
-var Source_js_1 = __webpack_require__(146);
-Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));
-var Footprint_js_1 = __webpack_require__(2475);
-Object.defineProperty(exports, "Footprint", ({ enumerable: true, get: function () { return Footprint_js_1.Footprint; } }));
-console.log('astroviewer UMD loaded');
-
-})();
-
-module.exports = __webpack_exports__;
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __webpack_require__(1229);
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
 /******/ })()
 ;

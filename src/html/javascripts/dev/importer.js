@@ -61,6 +61,26 @@ function guessColumnType(name, sampleValues) {
 
 let lastParsed = null; // { filename, columns, objects }
 
+function isGeoJSON(value) {
+  return Boolean(window.astroviewer?.GeoJSONParser?.isGeoJSON?.(value))
+    || Boolean(value && typeof value === 'object' && ['FeatureCollection', 'Feature', 'Polygon', 'MultiPolygon', 'GeometryCollection'].includes(value.type));
+}
+
+function geoJSONPropertyColumns(geojson) {
+  const features = geojson?.type === 'FeatureCollection' ? geojson.features : [geojson];
+  const columns = new Set();
+  for (const feature of features || []) {
+    const properties = feature?.type === 'Feature' ? feature.properties : {};
+    Object.keys(properties || {}).forEach(key => columns.add(key));
+  }
+  return Array.from(columns);
+}
+
+function geoJSONFeatureCount(geojson) {
+  if (geojson?.type === 'FeatureCollection') return geojson.features?.length || 0;
+  return isGeoJSON(geojson) ? 1 : 0;
+}
+
 function findColumn(columns, patterns) {
   return columns.find(c => patterns.some(pattern => pattern.test(String(c || '')))) || '';
 }
@@ -126,6 +146,18 @@ function firstFootprintCoordinate(objects, columns, outlineColumn) {
     }
   }
 
+  return null;
+}
+
+function firstGeoJSONCoordinate(features) {
+  for (const feature of features || []) {
+    for (const polygon of feature.polygons || []) {
+      const point = polygon[0];
+      if (point && Number.isFinite(point.lonDeg) && Number.isFinite(point.latDeg)) {
+        return { lonDeg: point.lonDeg, latDeg: point.latDeg };
+      }
+    }
+  }
   return null;
 }
 
@@ -244,6 +276,32 @@ function tryCreateLiveFootprintSet(name, desc, columns, objects, mapping = {}) {
   }
 }
 
+function tryCreateLiveGeoJSONFootprintSet(name, geojson) {
+  try {
+    if (!state.AstroAPI || !window.astroviewer?.GeoJSONParser || !window.astroviewer.MetadataManager) return null;
+    if (typeof state.AstroAPI.createTerraFootprintSet !== 'function') return null;
+
+    const MetadataManager = window.astroviewer.MetadataManager;
+    const features = window.astroviewer.GeoJSONParser.parseGeoJSON(geojson);
+    const fpSetGL = state.AstroAPI.createTerraFootprintSet(name, '', '', new MetadataManager([]));
+
+    if (typeof fpSetGL.addGeoJSONFeatures !== 'function') return null;
+    fpSetGL.addGeoJSONFeatures(features);
+
+    try { state.AstroAPI.showTerraFootprintSet(fpSetGL); } catch { }
+
+    const center = firstGeoJSONCoordinate(features);
+    if (center && typeof state.AstroAPI.goTo === 'function') {
+      state.AstroAPI.goTo(center.lonDeg, center.latDeg);
+    }
+
+    return fpSetGL;
+  } catch (e) {
+    console.error('[importer] live GeoJSON footprint import failed', e);
+    return null;
+  }
+}
+
 export function wireImporterControls() {
   const fileEl = el('importFile');
   const typeEl = el('importType');
@@ -264,16 +322,23 @@ export function wireImporterControls() {
         const csv = parseCSV(text);
         objects = csv.rows;
         columns = csv.columns;
+      } else if (isGeoJSON(parsed)) {
+        objects = [];
+        columns = geoJSONPropertyColumns(parsed);
       } else {
         objects = Array.isArray(parsed) ? parsed : [parsed];
         columns = objects.length ? Object.keys(objects[0]) : [];
       }
-      if (!objects || !objects.length) return setStatus('Parsed file but no rows found.');
-      lastParsed = { filename: f.name || '', columns, objects };
+      if (!isGeoJSON(parsed) && (!objects || !objects.length)) return setStatus('Parsed file but no rows found.');
+      lastParsed = { filename: f.name || '', columns, objects, geojson: isGeoJSON(parsed) ? parsed : null };
       populateMappingSelects(columns);
       const defaults = applyDefaultMappings(columns);
-      const detected = defaults.outline ? ' Detected STCS footprint column.' : '';
-      setStatus(`File parsed: ${f.name} (${objects.length} rows).${detected} Choose mappings then click Import.`);
+      const typeEl = el('importType');
+      const isGeo = isGeoJSON(parsed);
+      if (typeEl && isGeo) typeEl.value = 'geojson';
+      const detected = isGeo ? ' Detected GeoJSON footprint data.' : (defaults.outline ? ' Detected STCS footprint column.' : '');
+      const itemCount = isGeo ? `${geoJSONFeatureCount(parsed)} GeoJSON features` : `${objects.length} rows`;
+      setStatus(`File parsed: ${f.name} (${itemCount}).${detected} Choose mappings then click Import.`);
     };
     reader.onerror = () => setStatus('File read error.');
     reader.readAsText(f);
@@ -293,7 +358,25 @@ export function wireImporterControls() {
     };
 
     try {
-      if (type === 'catalogue') {
+      if (type === 'geojson') {
+        if (!lastParsed.geojson) return setStatus('Selected import type is GeoJSON, but parsed file is not GeoJSON.');
+        const live = tryCreateLiveGeoJSONFootprintSet(fName, lastParsed.geojson);
+        if (live) {
+          state.FP_LIST.push(live);
+          const sel = el('footprints');
+          if (sel) {
+            const opt = document.createElement('option');
+            opt.value = live.name || live._name || live.id || `#${state.FP_LIST.length-1}`;
+            opt.textContent = live.name || live._name || opt.value;
+            sel.appendChild(opt);
+          }
+          renderFootprintManager();
+          persistBasic();
+          setStatus(`Imported GeoJSON footprints and loaded: ${fName} (${live.footprintPolygons?.length || 0} features)`);
+        } else {
+          setStatus(`GeoJSON import failed: ${fName}`);
+        }
+      } else if (type === 'catalogue') {
         const arr = lastParsed.objects;
         const columns = lastParsed.columns;
         const live = tryCreateLiveCatalogue(fName, fName, columns, arr, mapping);

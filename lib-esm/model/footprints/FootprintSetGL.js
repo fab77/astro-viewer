@@ -218,9 +218,8 @@ export class FootprintSetGL {
                 const details = [...footprint.details];
                 // const geomDataIndex = this.footprintsetProps.geomColumn?.index
                 const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
-                if (geomDataIndex < 0)
-                    continue;
-                details.splice(geomDataIndex, 1);
+                if (geomDataIndex >= 0)
+                    details.splice(geomDataIndex, 1);
                 this._hoveredFootprints.push(footprint);
                 this.totHoveredPoints += footprint.totPoints;
             }

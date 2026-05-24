@@ -23,6 +23,7 @@ export { MetadataColumn, ColumnType } from './model/MetadataColumn.js';
 export { Point } from './model/Point.js';
 export { FoVUtils } from './utils/FoVUtils.js';
 export { CoordsType } from './utils/CoordsType.js';
+export { default as GeoJSONParser } from './utils/GeoJSONParser.js';
 export { ColorMaps, COLOR_MAP_SAMPLE_COUNT, createColorMapFromSamples } from './model/ColorMaps.js';
 export { HiPS } from './model/hips/HiPS.js';
 export { XYZMap } from './model/earth/XYZMap.js';

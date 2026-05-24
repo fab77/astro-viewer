@@ -103,11 +103,11 @@ export class FootprintSetGL {
   _shapeColor = "#00fff2ff";
   protected _coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC = CoordsType.ASTRO;
 
-  private _bufferInitialised = false;
+  protected _bufferInitialised = false;
   private _webgl: WebGL2RenderingContext;
 
   _isVisible: boolean = true;
-  private _metadataManager: MetadataManager;
+  protected _metadataManager: MetadataManager;
 
   _providerUrl: string;
   private _footprintShaderProgram: FootprintShaderProgram;
@@ -342,9 +342,7 @@ export class FootprintSetGL {
         const geomDataIndex =
           this._metadataManager.selectedOutlineColumn?.index ?? -1;
 
-        if (geomDataIndex < 0) continue;
-
-        details.splice(geomDataIndex, 1);
+        if (geomDataIndex >= 0) details.splice(geomDataIndex, 1);
         this._hoveredFootprints.push(footprint);
         this.totHoveredPoints += footprint.totPoints;
       }

@@ -80,6 +80,22 @@ export class Footprint {
     }
   }
 
+  static fromPolygons(
+    polygons: Point[][],
+    details: FootprintDetail[] = [],
+    coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC = CoordsType.ASTRO,
+  ): Footprint {
+    const footprint = new Footprint(undefined, [], undefined, coordsType);
+    footprint._polygons = polygons;
+    footprint._details = details;
+    footprint._totPoints = polygons.reduce((total, polygon) => total + polygon.length, 0);
+    footprint._totConvexPoints = 0;
+    footprint._coordsType = coordsType;
+    footprint._selectionObj = footprint.computeSelectionObject();
+    footprint._valid = footprint._totPoints > 0;
+    return footprint;
+  }
+
   private computeSelectionObject(): SelectionObj {
     return GeomUtils.computeSelectionObject(this._polygons);
   }

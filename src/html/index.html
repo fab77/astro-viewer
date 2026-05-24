@@ -257,10 +257,11 @@
             <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                 <label>Import catalogue / footprint</label>
                 <div class="row">
-                    <input id="importFile" type="file" accept=".json,.csv,application/json,text/csv" />
+                    <input id="importFile" type="file" accept=".json,.geojson,.csv,application/json,application/geo+json,text/csv" />
                     <select id="importType">
                         <option value="catalogue">Catalogue (points table)</option>
                         <option value="footprint">Footprint set</option>
+                        <option value="geojson">GeoJSON footprint set</option>
                     </select>
                     <button id="btnImport" class="secondary">Import</button>
                     <button id="btnClearImports" class="secondary">Clear imports</button>
@@ -303,7 +304,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="hint">You can import a JSON array or a CSV with headers. For footprints, use STCS format
+                <div class="hint">You can import a JSON array, CSV with headers, or GeoJSON FeatureCollection. For STCS footprints, use
                     (e.g.,
                     <code>POLYGON lon1 lat1 lon2 lat2 ...</code>). Choose mappings then click Import.
                 </div>

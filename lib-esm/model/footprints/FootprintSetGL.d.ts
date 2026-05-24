@@ -60,10 +60,10 @@ export declare class FootprintSetGL {
     nSlectedPrimitiveFlags: number;
     _shapeColor: string;
     protected _coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC;
-    private _bufferInitialised;
+    protected _bufferInitialised: boolean;
     private _webgl;
     _isVisible: boolean;
-    private _metadataManager;
+    protected _metadataManager: MetadataManager;
     _providerUrl: string;
     private _footprintShaderProgram;
     private _visibleTilesManager;
