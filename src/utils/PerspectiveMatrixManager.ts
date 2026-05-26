@@ -13,6 +13,7 @@
 
 import { mat4, ReadonlyMat4 } from "gl-matrix";
 import Camera from "../Camera.js";
+import { bootSetup } from "../Config.js";
 
 export class PerspectiveMatrixManager {
   private _pMatrix: ReadonlyMat4
@@ -60,7 +61,16 @@ export class PerspectiveMatrixManager {
       farPlane = cf > 0 ? cf : r;
     }
 
-    mat4.perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
+    const effectiveFovDeg = insideSphere ? bootSetup.inside_camera_fov_deg : fovDeg;
+    const effectiveNearPlane = insideSphere ? Math.max(nearPlane, 0.001) : nearPlane;
+
+    mat4.perspective(
+      p,
+      (effectiveFovDeg * Math.PI) / 180,
+      this._aspectRatio,
+      effectiveNearPlane,
+      farPlane,
+    );
     this._pMatrix = p;
     return p;
   }

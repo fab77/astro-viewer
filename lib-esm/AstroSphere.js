@@ -398,8 +398,12 @@ class AstroSphere {
                 return;
             if (this.mouseDown) {
                 document.body.style.cursor = "grab";
-                const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
-                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
+                const dragDirection = global.insideSphere ? -1 : 1;
+                const dragSpeed = global.insideSphere ? 10.0 : 1;
+                const deltaX = (dragDirection * dragSpeed * (newX - (this.lastMouseX ?? newX)) * Math.PI) /
+                    canvas.width;
+                const deltaY = (dragDirection * dragSpeed * (newY - (this.lastMouseY ?? newY)) * Math.PI) /
+                    canvas.height;
                 const filteredDelta = this.filterRotationDeltaByAstroLocks(deltaX, deltaY);
                 this.inertiaX += 0.1 * filteredDelta.deltaX;
                 this.inertiaY += 0.1 * filteredDelta.deltaY;
@@ -664,9 +668,22 @@ class AstroSphere {
         return global.insideSphere;
     }
     toggleInsideSphere() {
+        const centerBeforeToggle = this.updateCentralPoint();
+        this.inertiaX = 0;
+        this.inertiaY = 0;
+        this.zoomInertia = 0;
         global.insideSphere = !global.insideSphere;
         // console.log(global.insideSphere)
         this._camera.toggleInsideSphere();
+        this._camera.goTo(centerBeforeToggle.astroDeg.ra, centerBeforeToggle.astroDeg.dec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, global.insideSphere);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this._camera.refreshFoV(this.fov.minFoV);
+        this.updateCentralPoint();
+        this.lastCameraMotionAt = performance.now();
+        this._cameraStatusChanged = true;
+        this.emitCameraChanged("inside-sphere-toggle");
+        requestAnimationFrame(() => this.draw(this.canvas));
     }
     // imposta posizione camera
     setCameraPosition(pos) {

@@ -115,7 +115,7 @@ export class SphereFoV {
         }
         const angleDeg = 2 * this.computeAngularDistanceDeg(centerHit.point, edgeHit.point);
         return {
-            angleDeg: insideSphere ? 360 - angleDeg : angleDeg,
+            angleDeg,
             distance: edgeHit.distance,
         };
     }

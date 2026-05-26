@@ -14629,6 +14629,8 @@ exports.bootSetup = {
     defaultHips: "",
     camera_fov_deg: 34,
     camera_fov_rad: 34 * Math.PI / 180.0,
+    inside_camera_fov_deg: 60,
+    inside_camera_fov_rad: 60 * Math.PI / 180.0,
     camera_near_plane: 0.00001,
     camera_far_plane: 2.5,
     corsProxyUrl: "http://localhost:4000/",
@@ -16849,8 +16851,12 @@ class AstroSphere {
                 return;
             if (this.mouseDown) {
                 document.body.style.cursor = "grab";
-                const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
-                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
+                const dragDirection = Global_js_1.default.insideSphere ? -1 : 1;
+                const dragSpeed = Global_js_1.default.insideSphere ? 10.0 : 1;
+                const deltaX = (dragDirection * dragSpeed * (newX - (this.lastMouseX ?? newX)) * Math.PI) /
+                    canvas.width;
+                const deltaY = (dragDirection * dragSpeed * (newY - (this.lastMouseY ?? newY)) * Math.PI) /
+                    canvas.height;
                 const filteredDelta = this.filterRotationDeltaByAstroLocks(deltaX, deltaY);
                 this.inertiaX += 0.1 * filteredDelta.deltaX;
                 this.inertiaY += 0.1 * filteredDelta.deltaY;
@@ -17115,9 +17121,22 @@ class AstroSphere {
         return Global_js_1.default.insideSphere;
     }
     toggleInsideSphere() {
+        const centerBeforeToggle = this.updateCentralPoint();
+        this.inertiaX = 0;
+        this.inertiaY = 0;
+        this.zoomInertia = 0;
         Global_js_1.default.insideSphere = !Global_js_1.default.insideSphere;
         // console.log(global.insideSphere)
         this._camera.toggleInsideSphere();
+        this._camera.goTo(centerBeforeToggle.astroDeg.ra, centerBeforeToggle.astroDeg.dec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this._camera.refreshFoV(this.fov.minFoV);
+        this.updateCentralPoint();
+        this.lastCameraMotionAt = performance.now();
+        this._cameraStatusChanged = true;
+        this.emitCameraChanged("inside-sphere-toggle");
+        requestAnimationFrame(() => this.draw(this.canvas));
     }
     // imposta posizione camera
     setCameraPosition(pos) {
@@ -18335,7 +18354,7 @@ class SphereFoV {
         }
         const angleDeg = 2 * this.computeAngularDistanceDeg(centerHit.point, edgeHit.point);
         return {
-            angleDeg: insideSphere ? 360 - angleDeg : angleDeg,
+            angleDeg,
             distance: edgeHit.distance,
         };
     }
@@ -19179,13 +19198,11 @@ class Camera {
     toggleInsideSphere() {
         // if (inside !== global.insideSphere) {
         //   global.insideSphere = inside;
+        this.insideSphere = Global_js_1.default.insideSphere;
         if (Global_js_1.default.insideSphere) {
-            if (this.cam_pos[2] <= 2) {
-                this.cam_pos[2] = -2 + this.cam_pos[2];
-            }
-            else {
-                this.cam_pos[2] = -0.005;
-            }
+            this.cam_pos[0] = 0;
+            this.cam_pos[1] = 0;
+            this.cam_pos[2] = -0.005;
         }
         else {
             this.cam_pos[2] = 2.0 + this.cam_pos[2];
@@ -21615,6 +21632,7 @@ exports["default"] = STCSParser;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PerspectiveMatrixManager = void 0;
 const gl_matrix_1 = __webpack_require__(1961);
+const Config_js_1 = __webpack_require__(2919);
 class PerspectiveMatrixManager {
     _pMatrix;
     _aspectRatio = 1;
@@ -21645,7 +21663,9 @@ class PerspectiveMatrixManager {
             const cf = c2 * Math.sin(beta);
             farPlane = cf > 0 ? cf : r;
         }
-        gl_matrix_1.mat4.perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
+        const effectiveFovDeg = insideSphere ? Config_js_1.bootSetup.inside_camera_fov_deg : fovDeg;
+        const effectiveNearPlane = insideSphere ? Math.max(nearPlane, 0.001) : nearPlane;
+        gl_matrix_1.mat4.perspective(p, (effectiveFovDeg * Math.PI) / 180, this._aspectRatio, effectiveNearPlane, farPlane);
         this._pMatrix = p;
         return p;
     }
