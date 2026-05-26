@@ -54,6 +54,7 @@ async function bootstrap() {
       const lockEastWestChk = el('lockEastWestRotationChk');
       const lockNorthSouthChk = el('lockNorthSouthRotationChk');
       const keepNorthUpChk = el('keepCameraNorthUpChk');
+      const viewfinderChk = el('viewfinderChk');
       const xyzConcurrentInput = el('xyzMaxConcurrentRequests');
       if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
         healpixChk.checked = !!AC.isHealpixGridVisible();
@@ -72,6 +73,9 @@ async function bootstrap() {
       }
       if (keepNorthUpChk && typeof AC.isKeepCameraNorthUp === "function") {
         keepNorthUpChk.checked = !!AC.isKeepCameraNorthUp();
+      }
+      if (viewfinderChk && typeof AC.isViewfinderVisible === "function") {
+        viewfinderChk.checked = !!AC.isViewfinderVisible();
       }
       if (xyzConcurrentInput && typeof AC.getXYZMaxConcurrentRequests === "function") {
         xyzConcurrentInput.value = String(AC.getXYZMaxConcurrentRequests());
@@ -339,6 +343,15 @@ function wireUI() {
     } finally {
       // store preference regardless of API success
       persistBasic();
+    }
+  });
+
+  el('viewfinderChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.setViewfinderVisible?.(!!ev.target.checked);
+      ev.target.checked = !!state.AstroAPI?.isViewfinderVisible?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
     }
   });
 

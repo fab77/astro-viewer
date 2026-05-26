@@ -14641,7 +14641,7 @@ exports.bootSetup = {
     version: "Astrobrowser v1.0.0",
     debug: false,
     insideView: false,
-    showViewfinder: false,
+    showViewfinder: true,
 };
 
 
