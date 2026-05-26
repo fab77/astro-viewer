@@ -160,10 +160,6 @@ class Camera implements CameraLike {
       const normalizedDistance = Math.min(1, distanceFromSurface / 0.3);
       const zoomScale = 0.015 + 0.985 * Math.pow(normalizedDistance, 1.2);
       this.move[2] *= zoomScale;
-      const minResponsiveMove = Math.min(distanceFromSurface * Math.abs(inertia) * 4.0, 50);
-      if (Math.abs(this.move[2]) < minResponsiveMove) {
-        this.move[2] = Math.sign(this.move[2] || inertia) * minResponsiveMove;
-      }
 
       if (this.cam_pos[2] + this.move[2] <= 1.000001 && inertia < 0) {
         this.cam_pos[2] = 1.000001;
