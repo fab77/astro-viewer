@@ -130,7 +130,7 @@ class AstroSphere {
   private zoomSensitivity = 1.0;
   private lockedEastWestRaDeg: number | null = null;
   private lockedNorthSouthDecDeg: number | null = null;
-  private keepCameraNorthUp = false;
+  private keepCameraNorthUp = true;
 
   constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
     console.log("[AstroSphere] new instance for canvas", canvas.id);

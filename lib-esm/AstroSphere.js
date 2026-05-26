@@ -69,7 +69,7 @@ class AstroSphere {
     zoomSensitivity = 1.0;
     lockedEastWestRaDeg = null;
     lockedNorthSouthDecDeg = null;
-    keepCameraNorthUp = false;
+    keepCameraNorthUp = true;
     constructor(canvas, webgl) {
         console.log("[AstroSphere] new instance for canvas", canvas.id);
         // Keep global GL context (as in original JS)
