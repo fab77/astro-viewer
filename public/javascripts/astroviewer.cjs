@@ -16849,8 +16849,12 @@ class AstroSphere {
                 return;
             if (this.mouseDown) {
                 document.body.style.cursor = "grab";
-                const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
-                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
+                const dragDirection = Global_js_1.default.insideSphere ? -1 : 1;
+                const dragSpeed = Global_js_1.default.insideSphere ? 10.0 : 1;
+                const deltaX = (dragDirection * dragSpeed * (newX - (this.lastMouseX ?? newX)) * Math.PI) /
+                    canvas.width;
+                const deltaY = (dragDirection * dragSpeed * (newY - (this.lastMouseY ?? newY)) * Math.PI) /
+                    canvas.height;
                 const filteredDelta = this.filterRotationDeltaByAstroLocks(deltaX, deltaY);
                 this.inertiaX += 0.1 * filteredDelta.deltaX;
                 this.inertiaY += 0.1 * filteredDelta.deltaY;
@@ -17115,9 +17119,22 @@ class AstroSphere {
         return Global_js_1.default.insideSphere;
     }
     toggleInsideSphere() {
+        const centerBeforeToggle = this.updateCentralPoint();
+        this.inertiaX = 0;
+        this.inertiaY = 0;
+        this.zoomInertia = 0;
         Global_js_1.default.insideSphere = !Global_js_1.default.insideSphere;
         // console.log(global.insideSphere)
         this._camera.toggleInsideSphere();
+        this._camera.goTo(centerBeforeToggle.astroDeg.ra, centerBeforeToggle.astroDeg.dec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this._camera.refreshFoV(this.fov.minFoV);
+        this.updateCentralPoint();
+        this.lastCameraMotionAt = performance.now();
+        this._cameraStatusChanged = true;
+        this.emitCameraChanged("inside-sphere-toggle");
+        requestAnimationFrame(() => this.draw(this.canvas));
     }
     // imposta posizione camera
     setCameraPosition(pos) {
@@ -19179,13 +19196,11 @@ class Camera {
     toggleInsideSphere() {
         // if (inside !== global.insideSphere) {
         //   global.insideSphere = inside;
+        this.insideSphere = Global_js_1.default.insideSphere;
         if (Global_js_1.default.insideSphere) {
-            if (this.cam_pos[2] <= 2) {
-                this.cam_pos[2] = -2 + this.cam_pos[2];
-            }
-            else {
-                this.cam_pos[2] = -0.005;
-            }
+            this.cam_pos[0] = 0;
+            this.cam_pos[1] = 0;
+            this.cam_pos[2] = -0.005;
         }
         else {
             this.cam_pos[2] = 2.0 + this.cam_pos[2];

@@ -52,8 +52,7 @@ export function loadPersisted() {
     const tap = localStorage.getItem(LS_KEYS.tapUrl);
     if (hips && hipsEl) hipsEl.value = hips;
     if (tap && tapEl) tapEl.value = tap;
-    const inside = localStorage.getItem(LS_KEYS.insideSphere);
-    if (insideEl && (inside === '1' || inside === '0')) insideEl.checked = (inside === '1');
+    if (insideEl) insideEl.checked = false;
 
 
     const vis = JSON.parse(localStorage.getItem(LS_KEYS.catVis) || '{}');
@@ -83,7 +82,7 @@ export function persistBasic() {
     const insideEl = document.getElementById('insideSphereChk');
     if (hipsEl) localStorage.setItem(LS_KEYS.hipsUrl, hipsEl.value.trim());
     if (tapEl) localStorage.setItem(LS_KEYS.tapUrl, tapEl.value.trim());
-    if (insideEl) localStorage.setItem(LS_KEYS.insideSphere, insideEl.checked ? '1' : '0');
+    localStorage.removeItem(LS_KEYS.insideSphere);
     localStorage.setItem(LS_KEYS.catVis, JSON.stringify(Object.fromEntries(state.CAT_VIS)));
     localStorage.setItem(LS_KEYS.catSizeBy, JSON.stringify(Object.fromEntries(state.CAT_SIZEBY)));
     localStorage.setItem(LS_KEYS.catHueBy, JSON.stringify(Object.fromEntries(state.CAT_HUEBY)));
