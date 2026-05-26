@@ -5,6 +5,8 @@ export interface BootSetup {
     defaultHips: string;
     camera_fov_deg: number;
     camera_fov_rad: number;
+    inside_camera_fov_deg: number;
+    inside_camera_fov_rad: number;
     camera_near_plane: number;
     camera_far_plane: number;
     corsProxyUrl: string;

@@ -14629,6 +14629,8 @@ exports.bootSetup = {
     defaultHips: "",
     camera_fov_deg: 34,
     camera_fov_rad: 34 * Math.PI / 180.0,
+    inside_camera_fov_deg: 60,
+    inside_camera_fov_rad: 60 * Math.PI / 180.0,
     camera_near_plane: 0.00001,
     camera_far_plane: 2.5,
     corsProxyUrl: "http://localhost:4000/",
@@ -18352,7 +18354,7 @@ class SphereFoV {
         }
         const angleDeg = 2 * this.computeAngularDistanceDeg(centerHit.point, edgeHit.point);
         return {
-            angleDeg: insideSphere ? 360 - angleDeg : angleDeg,
+            angleDeg,
             distance: edgeHit.distance,
         };
     }
@@ -21630,6 +21632,7 @@ exports["default"] = STCSParser;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PerspectiveMatrixManager = void 0;
 const gl_matrix_1 = __webpack_require__(1961);
+const Config_js_1 = __webpack_require__(2919);
 class PerspectiveMatrixManager {
     _pMatrix;
     _aspectRatio = 1;
@@ -21660,7 +21663,9 @@ class PerspectiveMatrixManager {
             const cf = c2 * Math.sin(beta);
             farPlane = cf > 0 ? cf : r;
         }
-        gl_matrix_1.mat4.perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
+        const effectiveFovDeg = insideSphere ? Config_js_1.bootSetup.inside_camera_fov_deg : fovDeg;
+        const effectiveNearPlane = insideSphere ? Math.max(nearPlane, 0.001) : nearPlane;
+        gl_matrix_1.mat4.perspective(p, (effectiveFovDeg * Math.PI) / 180, this._aspectRatio, effectiveNearPlane, farPlane);
         this._pMatrix = p;
         return p;
     }
