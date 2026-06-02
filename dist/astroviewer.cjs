@@ -17171,6 +17171,13 @@ class AstroSphere {
         if (centralradeg == null || centraldecdeg == null) {
             return null;
         }
+        let fovPolygon = [];
+        try {
+            fovPolygon = this.getFoVPolygon();
+        }
+        catch (error) {
+            console.warn("[AstroSphere] getCurrentStatus: FoV polygon is not available.", error);
+        }
         // if (this._rotating && centraldecdeg && centralradeg) {
         const detail = {
             fovDeg: this.fov.minFoV,
@@ -17185,7 +17192,7 @@ class AstroSphere {
             centralPoint: new Point_js_1.Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType_js_1.CoordsType.ASTRO),
             mouseHoverPoint: this.mousePointCoords,
             colorMap: this._selectedColorMap,
-            getFoVPolygon: [],
+            getFoVPolygon: fovPolygon,
         };
         return detail;
         // }
