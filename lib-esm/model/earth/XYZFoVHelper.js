@@ -13,7 +13,40 @@
 // FoVHelper.ts
 'use strict';
 class XYZFoVHelper {
-    getZoom(fov) {
+    static LEVEL_HYSTERESIS = 0.12;
+    static ZOOM_MIN_FOV = {
+        2: 179,
+        3: 90,
+        4: 30,
+        5: 20,
+        6: 6,
+        7: 3.2,
+        8: 1.6,
+        9: 0.85,
+        10: 0.42,
+        11: 0.21,
+        12: 0.12,
+        13: 0.06,
+        14: 0.015,
+        15: 0,
+    };
+    getZoom(fov, currentZoom) {
+        const rawZoom = this.getRawZoom(fov);
+        if (currentZoom === undefined || currentZoom === rawZoom)
+            return rawZoom;
+        if (rawZoom > currentZoom) {
+            const boundary = XYZFoVHelper.ZOOM_MIN_FOV[currentZoom];
+            if (boundary > 0 && fov > boundary * (1 - XYZFoVHelper.LEVEL_HYSTERESIS))
+                return currentZoom;
+        }
+        else {
+            const boundary = XYZFoVHelper.ZOOM_MIN_FOV[rawZoom];
+            if (boundary > 0 && fov < boundary * (1 + XYZFoVHelper.LEVEL_HYSTERESIS))
+                return currentZoom;
+        }
+        return rawZoom;
+    }
+    getRawZoom(fov) {
         if (fov >= 179)
             return 2;
         if (fov >= 90)
@@ -43,10 +76,14 @@ class XYZFoVHelper {
         return 15;
     }
     // used in grid drawing
-    getLonLatSteps(fov) {
+    getLonLatSteps(fov, coarse = false) {
         let lonStep;
         let latStep;
-        if (fov >= 179) {
+        if (coarse && fov < 0.21) {
+            lonStep = 10;
+            latStep = 10;
+        }
+        else if (fov >= 179) {
             lonStep = 10;
             latStep = 10;
         }

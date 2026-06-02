@@ -20,8 +20,9 @@ import { loadTapRepo, showFootprint, hideFootprints } from './tap.js';
 import { renderCatalogueManager, wireCatalogueManagerControls } from './catalogueManager.js';
 import { wireGoto } from './goto.js';
 import { wireCoords } from './coords.js';
-import { wireXYZDiagnostics } from './xyzDiagnostics.js';
+import { wireXYZDiagnostics, wireHiPSDiagnostics } from './xyzDiagnostics.js';
 import { applyWMTSPreset, loadWMTSCapabilities, WMTS_PRESETS } from './wmtsCapabilities.js';
+import { wireImporterControls } from './importer.js';
 
 (function applyFixedProxy() {
   const FIXED_PROXY_BASE = ""; // set if needed
@@ -53,6 +54,7 @@ async function bootstrap() {
       const lockEastWestChk = el('lockEastWestRotationChk');
       const lockNorthSouthChk = el('lockNorthSouthRotationChk');
       const keepNorthUpChk = el('keepCameraNorthUpChk');
+      const viewfinderChk = el('viewfinderChk');
       const xyzConcurrentInput = el('xyzMaxConcurrentRequests');
       if (healpixChk && typeof AC.isHealpixGridVisible === "function") {
         healpixChk.checked = !!AC.isHealpixGridVisible();
@@ -71,6 +73,9 @@ async function bootstrap() {
       }
       if (keepNorthUpChk && typeof AC.isKeepCameraNorthUp === "function") {
         keepNorthUpChk.checked = !!AC.isKeepCameraNorthUp();
+      }
+      if (viewfinderChk && typeof AC.isViewfinderVisible === "function") {
+        viewfinderChk.checked = !!AC.isViewfinderVisible();
       }
       if (xyzConcurrentInput && typeof AC.getXYZMaxConcurrentRequests === "function") {
         xyzConcurrentInput.value = String(AC.getXYZMaxConcurrentRequests());
@@ -147,12 +152,14 @@ async function bootstrap() {
     wireUI();
     renderCatalogueManager();
     wireCatalogueManagerControls();
+    wireImporterControls();
     wireGoto();
     wireCoords();
     wireHoveredFootprints();
     wireXYZDiagnostics();
+    wireHiPSDiagnostics();
 
-    setStatus("Ready ✅ Load a TAP to begin.");
+    setStatus("App Ready - Panel loaded ✅");
   } catch (e) {
     console.error(e);
     setStatus("Init error: " + (e.message || e));
@@ -320,24 +327,6 @@ function wireUI() {
     } catch (e) { setStatus("Visibility error: " + (e.message || e)); }
   });
 
-  el('btnDeleteCat')?.addEventListener('click', () => {
-    const selVal = el('catalogues').value;
-    const cat = state.CAT_LIST.find(c => (c.name === selVal) || (String(c.id) === selVal) || (c.table === selVal));
-    if (!cat) return setStatus("Select a catalogue.");
-    const key = (c => c?.name || String(c?.id) || c?.table || JSON.stringify(c))(cat);
-    try {
-      state.AstroAPI?.deleteCatalogue?.(cat);
-      state.CAT_VIS.set(key, false);
-      renderCatalogueManager();
-      persistBasic();
-      setStatus(`🗑️ Catalogue removed from engine: ${cat.name || cat.id || cat.table}`);
-    } catch (e) { setStatus("Delete error: " + (e.message || e)); }
-  });
-
-  // footprints
-  el('btnShowFp')?.addEventListener('click', () => showFootprint(el('footprints').value));
-  el('btnHideFp')?.addEventListener('click', hideFootprints);
-
   // camera + minimise
   el('btnCamInfo')?.addEventListener('click', () => {
     const p = state.AstroAPI?.camera?.getCameraPosition?.();
@@ -354,6 +343,15 @@ function wireUI() {
     } finally {
       // store preference regardless of API success
       persistBasic();
+    }
+  });
+
+  el('viewfinderChk')?.addEventListener('change', (ev) => {
+    try {
+      state.AstroAPI?.setViewfinderVisible?.(!!ev.target.checked);
+      ev.target.checked = !!state.AstroAPI?.isViewfinderVisible?.();
+    } catch (e) {
+      ev.target.checked = !ev.target.checked;
     }
   });
 

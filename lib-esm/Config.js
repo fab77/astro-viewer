@@ -29,6 +29,8 @@ export const bootSetup = {
     defaultHips: "",
     camera_fov_deg: 34,
     camera_fov_rad: 34 * Math.PI / 180.0,
+    inside_camera_fov_deg: 60,
+    inside_camera_fov_rad: 60 * Math.PI / 180.0,
     camera_near_plane: 0.00001,
     camera_far_plane: 2.5,
     corsProxyUrl: "http://localhost:4000/",
@@ -39,5 +41,5 @@ export const bootSetup = {
     version: "Astrobrowser v1.0.0",
     debug: false,
     insideView: false,
-    showViewfinder: false,
+    showViewfinder: true,
 };

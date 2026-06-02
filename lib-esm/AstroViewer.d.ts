@@ -10,6 +10,7 @@ import { ReadonlyMat4 } from 'gl-matrix';
 import { ColorMap, ColorMapName } from './model/ColorMaps.js';
 import { HiPS } from './model/hips/HiPS.js';
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from './model/earth/XYZConfig.js';
+import type { HiPSDebugStats } from './model/hips/HiPSConfig.js';
 import { XYZMap } from './model/earth/XYZMap.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
@@ -56,6 +57,7 @@ export declare class AstroViewer {
     setXYZMaxConcurrentRequests(value: number): void;
     getXYZMaxConcurrentRequests(): number;
     getXYZDebugStats(): XYZDebugStats;
+    getHiPSDebugStats(): HiPSDebugStats | null;
     loadHiPS(baseUrl: string): Promise<string>;
     changeColorMap(colorMapName: ColorMapName): void;
     changeCustomColorMap(colorMap: ColorMap): void;

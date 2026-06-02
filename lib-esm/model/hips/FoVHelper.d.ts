@@ -1,6 +1,9 @@
 declare class FoVHelper {
-    getHiPSNorder(fov: number): number;
-    getRADegSteps(fov: number): {
+    private static readonly LEVEL_HYSTERESIS;
+    private static readonly HIPS_ORDER_MIN_FOV;
+    getHiPSNorder(fov: number, currentOrder?: number): number;
+    private getRawHiPSNorder;
+    getRADegSteps(fov: number, coarse?: boolean): {
         raStep: number;
         decStep: number;
     };

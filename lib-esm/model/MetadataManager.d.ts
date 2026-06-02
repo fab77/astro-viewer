@@ -34,6 +34,7 @@ export declare class MetadataManager {
     get shapeColumnList(): MetadataColumn[];
     set selectedRaColumn(columnName: string);
     set selectedDecColumn(columnName: string);
+    set selectedOutlineColumn(columnName: string);
     set selectedHueColumn(columnName: string);
     set selectedShapeColumn(columnName: string);
     set selectedNameColumn(columnName: string);

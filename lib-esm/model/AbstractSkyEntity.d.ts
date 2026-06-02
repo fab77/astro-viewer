@@ -19,6 +19,7 @@ export interface SkyEntityDrawInput {
         phi: number;
         theta: number;
     }>;
+    cameraMoving?: boolean;
 }
 export declare abstract class AbstractSkyEntity {
     refreshMe: boolean;

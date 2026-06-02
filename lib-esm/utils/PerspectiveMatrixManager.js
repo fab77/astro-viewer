@@ -11,6 +11,7 @@
  * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
  */
 import { mat4 } from "gl-matrix";
+import { bootSetup } from "../Config.js";
 export class PerspectiveMatrixManager {
     _pMatrix;
     _aspectRatio = 1;
@@ -41,7 +42,9 @@ export class PerspectiveMatrixManager {
             const cf = c2 * Math.sin(beta);
             farPlane = cf > 0 ? cf : r;
         }
-        mat4.perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
+        const effectiveFovDeg = insideSphere ? bootSetup.inside_camera_fov_deg : fovDeg;
+        const effectiveNearPlane = insideSphere ? Math.max(nearPlane, 0.001) : nearPlane;
+        mat4.perspective(p, (effectiveFovDeg * Math.PI) / 180, this._aspectRatio, effectiveNearPlane, farPlane);
         this._pMatrix = p;
         return p;
     }

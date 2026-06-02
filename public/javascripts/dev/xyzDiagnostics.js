@@ -48,9 +48,9 @@ export function wireXYZDiagnostics() {
     }
 
     if (!stats) {
-      summaryEl.value = 'Mode: —';
-      cacheEl.value = 'Cache: —';
-      requestsEl.value = 'Requests: —';
+      summaryEl.textContent = 'Mode: —';
+      cacheEl.textContent = 'Cache: —';
+      requestsEl.textContent = 'Requests: —';
       backoffEl.textContent = 'Backoff: none';
       return;
     }
@@ -59,10 +59,42 @@ export function wireXYZDiagnostics() {
     const layer = stats.layer;
     const requests = stats.requests;
 
-    summaryEl.value = `Mode: ${mode} · Zoom: ${layer?.currentZoom ?? '—'} · Visible: ${layer?.visibleTileCount ?? 0} · Core/Coverage: ${layer?.coreTileCount ?? 0}/${layer?.coverageTileCount ?? 0} · Fallback: ${layer?.fallbackTileCount ?? 0} · Settling: ${layer?.isSettling ? 'yes' : 'no'} · Pending: ${layer?.hasPendingSelection ? 'yes' : 'no'}`;
-    cacheEl.value = `Cache: ${layer?.cacheSize ?? 0} · Ready: ${layer?.readyTileCount ?? 0} · Loading: ${layer?.loadingTileCount ?? 0} · Cooldown: ${layer?.coolingDownTileCount ?? 0}`;
-    requestsEl.value = `Requests: active ${requests.activeRequests}/${requests.maxConcurrentRequests} · queue ${requests.queuedRequests} · inflight ${requests.inflightRequests} · top prio ${requests.highestQueuedPriority ?? '—'}`;
+    
+    summaryEl.textContent = `Mode: ${mode} · Zoom: ${layer?.currentZoom ?? '—'} · Visible: ${layer?.visibleTileCount ?? 0} · Core/Coverage: ${layer?.coreTileCount ?? 0}/${layer?.coverageTileCount ?? 0} · Fallback: ${layer?.fallbackTileCount ?? 0} · Settling: ${layer?.isSettling ? 'yes' : 'no'} · Pending: ${layer?.hasPendingSelection ? 'yes' : 'no'}`;
+    cacheEl.textContent = `Cache: ${layer?.cacheSize ?? 0} · Ready: ${layer?.readyTileCount ?? 0} · Loading: ${layer?.loadingTileCount ?? 0} · Cooldown: ${layer?.coolingDownTileCount ?? 0}`;
+    requestsEl.textContent = `Requests: active ${requests.activeRequests}/${requests.maxConcurrentRequests} · queue ${requests.queuedRequests} · inflight ${requests.inflightRequests} · top prio ${requests.highestQueuedPriority ?? '—'}`;
     backoffEl.textContent = formatBackoffEntries(requests.hostsInBackoff);
+  };
+
+  update();
+  window.setInterval(update, 750);
+}
+
+export function wireHiPSDiagnostics() {
+  const update = () => {
+    const stats = state.AstroAPI?.getHiPSDebugStats?.();
+    const summaryEl = el('hipsDiagSummary');
+    const cacheEl = el('hipsDiagCache');
+    const requestsEl = el('hipsDiagRequests');
+    const backoffEl = el('hipsDiagBackoff');
+
+    if (!summaryEl || !cacheEl || !requestsEl || !backoffEl) {
+      return;
+    }
+
+    if (!stats) {
+      summaryEl.textContent = 'Mode: —';
+      cacheEl.textContent = 'Cache: —';
+      requestsEl.textContent = 'Requests: —';
+      backoffEl.textContent = 'Backoff: none';
+      return;
+    }
+
+    const frameType = stats.isGalactic ? 'galactic' : 'equatorial';
+    summaryEl.textContent = `Mode: hips · ${stats.hipsName ?? 'HiPS'} · ${frameType} · Order: ${stats.currentOrder ?? '—'} · Visible: ${stats.visibleTileCount ?? 0}`;
+    cacheEl.textContent = `Cache: size ${stats.cacheSize ?? 0} · active ${stats.activeTileCount ?? 0} · cached ${stats.cachedTileCount ?? 0} · ready ${stats.readyTileCount ?? 0} · loading ${stats.loadingTileCount ?? 0}`;
+    requestsEl.textContent = 'Requests: not tracked';
+    backoffEl.textContent = 'Backoff: none';
   };
 
   update();

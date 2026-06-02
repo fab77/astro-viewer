@@ -333,7 +333,40 @@ exports.XYZShaderProgram = XYZShaderProgram;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.fovHelper = void 0;
 class FoVHelper {
-    getHiPSNorder(fov) {
+    static LEVEL_HYSTERESIS = 0.12;
+    static HIPS_ORDER_MIN_FOV = {
+        0: 179,
+        1: 90,
+        2: 30,
+        3: 20,
+        4: 6,
+        5: 3.2,
+        6: 1.6,
+        7: 0.85,
+        8: 0.42,
+        9: 0.21,
+        10: 0.12,
+        11: 0.06,
+        12: 0.015,
+        13: 0,
+    };
+    getHiPSNorder(fov, currentOrder) {
+        const rawOrder = this.getRawHiPSNorder(fov);
+        if (currentOrder === undefined || currentOrder === rawOrder)
+            return rawOrder;
+        if (rawOrder > currentOrder) {
+            const boundary = FoVHelper.HIPS_ORDER_MIN_FOV[currentOrder];
+            if (boundary > 0 && fov > boundary * (1 - FoVHelper.LEVEL_HYSTERESIS))
+                return currentOrder;
+        }
+        else {
+            const boundary = FoVHelper.HIPS_ORDER_MIN_FOV[rawOrder];
+            if (boundary > 0 && fov < boundary * (1 + FoVHelper.LEVEL_HYSTERESIS))
+                return currentOrder;
+        }
+        return rawOrder;
+    }
+    getRawHiPSNorder(fov) {
         if (fov >= 179)
             return 0;
         if (fov >= 90)
@@ -362,10 +395,14 @@ class FoVHelper {
             return 12;
         return 13;
     }
-    getRADegSteps(fov) {
+    getRADegSteps(fov, coarse = false) {
         let raStep;
         let decStep;
-        if (fov >= 179) {
+        if (coarse && fov < 0.21) {
+            raStep = 10;
+            decStep = 10;
+        }
+        else if (fov >= 179) {
             raStep = 10;
             decStep = 10;
         }
@@ -509,6 +546,7 @@ class FootprintSetGL {
     totSelectedPoints;
     nSlectedPrimitiveFlags = 0;
     _shapeColor = "#00fff2ff";
+    _coordsType = CoordsType_js_1.CoordsType.ASTRO;
     _bufferInitialised = false;
     _webgl;
     _isVisible = true;
@@ -590,7 +628,7 @@ class FootprintSetGL {
         }
         for (let j = 0; j < in_data.length; j++) {
             if (in_data[j][geomDataIndex] !== null) {
-                const footprint = new Footprint_js_1.Footprint(in_data[j][geomDataIndex], in_data[j]);
+                const footprint = new Footprint_js_1.Footprint(in_data[j][geomDataIndex], in_data[j], undefined, this._coordsType);
                 if (footprint._valid) {
                     this.addFootprint(footprint);
                     this.totPoints += footprint.totPoints;
@@ -644,6 +682,11 @@ class FootprintSetGL {
             }
         }
         this.indexes[this.indexes.length - 1] = MAX_UNSIGNED_INT;
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+        this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexes, this._webgl.STATIC_DRAW);
+        this._bufferInitialised = true;
         console.log("Buffer initialized");
     }
     checkSelection(mouseHelper) {
@@ -663,9 +706,8 @@ class FootprintSetGL {
                 const details = [...footprint.details];
                 // const geomDataIndex = this.footprintsetProps.geomColumn?.index
                 const geomDataIndex = this._metadataManager.selectedOutlineColumn?.index ?? -1;
-                if (geomDataIndex < 0)
-                    continue;
-                details.splice(geomDataIndex, 1);
+                if (geomDataIndex >= 0)
+                    details.splice(geomDataIndex, 1);
                 this._hoveredFootprints.push(footprint);
                 this.totHoveredPoints += footprint.totPoints;
             }
@@ -1037,11 +1079,9 @@ class FootprintSetGL {
             this._webgl.drawElements(this._webgl.LINE_LOOP, this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags, this._webgl.UNSIGNED_INT, 0);
         }
         this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexCataloguePositionBuffer);
-        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, this.vertexCataloguePosition, this._webgl.STATIC_DRAW);
         this._webgl.vertexAttribPointer(this._footprintShaderProgram.locations.position, FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false, FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
         this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
         this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        this._webgl.bufferData(this._webgl.ELEMENT_ARRAY_BUFFER, this.indexes, this._webgl.STATIC_DRAW);
         // const shapeColor = [...colorHex2RGB(this.footprintsetProps.shapeColor), 1.0] as [number, number, number, number]
         const shapeColor = [...(0, Utils_js_1.colorHex2RGB)(this._shapeColor), 1.0];
         this._webgl.uniform4f(this._footprintShaderProgram.locations.color, ...shapeColor);
@@ -2522,6 +2562,9 @@ class AstroViewer {
     }
     getXYZDebugStats() {
         return this.astroSphere.getXYZDebugStats();
+    }
+    getHiPSDebugStats() {
+        return this.astroSphere.getHiPSDebugStats();
     }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
@@ -4370,6 +4413,81 @@ class Healpix {
 
 
 //# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ 1229:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+var AstroViewer_js_1 = __webpack_require__(772);
+Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
+var HiPSDescriptor_js_1 = __webpack_require__(5087);
+Object.defineProperty(exports, "HiPSDescriptor", ({ enumerable: true, get: function () { return HiPSDescriptor_js_1.HiPSDescriptor; } }));
+var SphereFoV_js_1 = __webpack_require__(5803);
+Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return SphereFoV_js_1.SphereFoV; } }));
+var SphereFoV_js_2 = __webpack_require__(5803);
+Object.defineProperty(exports, "SphereFoV", ({ enumerable: true, get: function () { return SphereFoV_js_2.SphereFoV; } }));
+var FootprintSetGL_js_1 = __webpack_require__(592);
+Object.defineProperty(exports, "HoveredFootprintDetail", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.HoveredFootprintDetail; } }));
+Object.defineProperty(exports, "FootprintSetGL", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.FootprintSetGL; } }));
+var CatalogueGL_js_1 = __webpack_require__(1232);
+Object.defineProperty(exports, "CatalogueGL", ({ enumerable: true, get: function () { return CatalogueGL_js_1.CatalogueGL; } }));
+var TerraPointSetGL_js_1 = __webpack_require__(5781);
+Object.defineProperty(exports, "TerraPointSetGL", ({ enumerable: true, get: function () { return TerraPointSetGL_js_1.TerraPointSetGL; } }));
+var TerraFootprintSetGL_js_1 = __webpack_require__(9022);
+Object.defineProperty(exports, "TerraFootprintSetGL", ({ enumerable: true, get: function () { return TerraFootprintSetGL_js_1.TerraFootprintSetGL; } }));
+var MetadataManager_js_1 = __webpack_require__(5403);
+Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
+var MetadataColumn_js_1 = __webpack_require__(1072);
+Object.defineProperty(exports, "MetadataColumn", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataColumn; } }));
+Object.defineProperty(exports, "MetadataInit", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataInit; } }));
+Object.defineProperty(exports, "ColumnType", ({ enumerable: true, get: function () { return MetadataColumn_js_1.ColumnType; } }));
+var Point_js_1 = __webpack_require__(6553);
+Object.defineProperty(exports, "Point", ({ enumerable: true, get: function () { return Point_js_1.Point; } }));
+Object.defineProperty(exports, "SphericalOpts", ({ enumerable: true, get: function () { return Point_js_1.SphericalOpts; } }));
+Object.defineProperty(exports, "AstroOpts", ({ enumerable: true, get: function () { return Point_js_1.AstroOpts; } }));
+Object.defineProperty(exports, "PointInitOpts", ({ enumerable: true, get: function () { return Point_js_1.PointInitOpts; } }));
+Object.defineProperty(exports, "CartesianOpts", ({ enumerable: true, get: function () { return Point_js_1.CartesianOpts; } }));
+var FoVUtils_js_1 = __webpack_require__(8083);
+Object.defineProperty(exports, "FoVUtils", ({ enumerable: true, get: function () { return FoVUtils_js_1.FoVUtils; } }));
+var CoordsType_js_1 = __webpack_require__(8145);
+Object.defineProperty(exports, "CoordsType", ({ enumerable: true, get: function () { return CoordsType_js_1.CoordsType; } }));
+var GeoJSONParser_js_1 = __webpack_require__(8755);
+Object.defineProperty(exports, "GeoJSONParser", ({ enumerable: true, get: function () { return __importDefault(GeoJSONParser_js_1).default; } }));
+var ColorMaps_js_1 = __webpack_require__(619);
+Object.defineProperty(exports, "ColorMaps", ({ enumerable: true, get: function () { return ColorMaps_js_1.ColorMaps; } }));
+Object.defineProperty(exports, "COLOR_MAP_SAMPLE_COUNT", ({ enumerable: true, get: function () { return ColorMaps_js_1.COLOR_MAP_SAMPLE_COUNT; } }));
+Object.defineProperty(exports, "createColorMapFromSamples", ({ enumerable: true, get: function () { return ColorMaps_js_1.createColorMapFromSamples; } }));
+var HiPS_js_1 = __webpack_require__(3726);
+Object.defineProperty(exports, "HiPS", ({ enumerable: true, get: function () { return HiPS_js_1.HiPS; } }));
+var XYZMap_js_1 = __webpack_require__(1741);
+Object.defineProperty(exports, "XYZMap", ({ enumerable: true, get: function () { return XYZMap_js_1.XYZMap; } }));
+var WMTSAdapter_js_1 = __webpack_require__(3956);
+Object.defineProperty(exports, "WMTSAdapter", ({ enumerable: true, get: function () { return WMTSAdapter_js_1.WMTSAdapter; } }));
+var Source_js_1 = __webpack_require__(146);
+Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));
+var Footprint_js_1 = __webpack_require__(2475);
+Object.defineProperty(exports, "Footprint", ({ enumerable: true, get: function () { return Footprint_js_1.Footprint; } }));
+console.log('astroviewer UMD loaded');
+
 
 /***/ }),
 
@@ -13939,6 +14057,7 @@ exports.Footprint = void 0;
 const GeomUtils_js_1 = __importDefault(__webpack_require__(2930));
 // import global from '../../Global.js';
 const STCSParser_js_1 = __importDefault(__webpack_require__(9665));
+const CoordsType_js_1 = __webpack_require__(8145);
 // export interface ParsedSTCS {
 //   polygons: Point[][]; // array of polygons (each polygon is array of Point objects)
 //   totpoints: number;
@@ -13953,6 +14072,7 @@ class Footprint {
     _totConvexPoints = 0;
     _npix256;
     _footprintsPointsOrder;
+    _coordsType;
     _selectionObj;
     _identifier;
     _center; // could be typed if you have a Point type
@@ -13961,7 +14081,8 @@ class Footprint {
      * @param in_details optional metadata
      * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
      */
-    constructor(in_stcs, in_details = [], footprintsPointsOrder) {
+    constructor(in_stcs, in_details = [], footprintsPointsOrder, coordsType = CoordsType_js_1.CoordsType.ASTRO) {
+        this._coordsType = coordsType;
         if (in_stcs) {
             this._stcs = in_stcs.toUpperCase();
             this._details = in_details;
@@ -13975,6 +14096,17 @@ class Footprint {
         else {
             this._details = [];
         }
+    }
+    static fromPolygons(polygons, details = [], coordsType = CoordsType_js_1.CoordsType.ASTRO) {
+        const footprint = new Footprint(undefined, [], undefined, coordsType);
+        footprint._polygons = polygons;
+        footprint._details = details;
+        footprint._totPoints = polygons.reduce((total, polygon) => total + polygon.length, 0);
+        footprint._totConvexPoints = 0;
+        footprint._coordsType = coordsType;
+        footprint._selectionObj = footprint.computeSelectionObject();
+        footprint._valid = footprint._totPoints > 0;
+        return footprint;
     }
     computeSelectionObject() {
         return GeomUtils_js_1.default.computeSelectionObject(this._polygons);
@@ -13998,7 +14130,9 @@ class Footprint {
     //   return Array.from(rangeSet.r);
     // }
     computePoints() {
-        const res = STCSParser_js_1.default.parseSTCS(this._stcs);
+        const res = STCSParser_js_1.default.parseSTCS(this._stcs, {
+            coordsType: this._coordsType,
+        });
         this._polygons = res.polygons;
         this._totPoints = res.totpoints;
     }
@@ -14495,6 +14629,8 @@ exports.bootSetup = {
     defaultHips: "",
     camera_fov_deg: 34,
     camera_fov_rad: 34 * Math.PI / 180.0,
+    inside_camera_fov_deg: 60,
+    inside_camera_fov_rad: 60 * Math.PI / 180.0,
     camera_near_plane: 0.00001,
     camera_far_plane: 2.5,
     corsProxyUrl: "http://localhost:4000/",
@@ -14505,7 +14641,7 @@ exports.bootSetup = {
     version: "Astrobrowser v1.0.0",
     debug: false,
     insideView: false,
-    showViewfinder: false,
+    showViewfinder: true,
 };
 
 
@@ -15208,10 +15344,31 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     getCurrentHealpixOrder() {
         return this._visibleorder;
     }
-    refresh() {
-        // const fov = healpixGridSingleton.getMinFoV()
-        const fov = this._healpixGrid.getMinFoV();
-        this._visibleorder = Math.min(FoVHelper_js_1.fovHelper.getHiPSNorder(fov), this._maxorder);
+    getDebugStats() {
+        const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+        const visibleTiles = this.isGalacticHips
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder;
+        return {
+            activeBaseLayer: 'hips',
+            hipsName: this._descriptor.surveyName,
+            hipsUrl: this._baseurl,
+            isGalactic: this.isGalacticHips,
+            currentOrder: visibleTiles.order,
+            visibleTileCount: visibleTiles.pixels.length,
+            activeTileCount: tileBuffer.activeTileCount,
+            cachedTileCount: tileBuffer.cachedTileCount,
+            cacheSize: tileBuffer.size,
+            readyTileCount: tileBuffer.readyTileCount,
+            loadingTileCount: tileBuffer.loadingTileCount,
+        };
+    }
+    refresh(input) {
+        // const fov = this._healpixGrid.getMinFoV()
+        // this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder)
+        const rawFov = input.fovDeg ?? this._healpixGrid.getMinFoV();
+        const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6;
+        this._visibleorder = Math.min(FoVHelper_js_1.fovHelper.getHiPSNorder(fov, this._visibleorder), this._maxorder);
     }
     draw(input) {
         const vMatrix = input.camera.getCameraMatrix();
@@ -15220,7 +15377,7 @@ class HiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const pMatrix = input.pMatrix;
         if (!pMatrix)
             return;
-        this.refresh();
+        this.refresh(input);
         const mMatrix = this.getModelMatrix();
         super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
         if (this._allSky && this._allSkyTile) {
@@ -15527,6 +15684,55 @@ class TileBuffer {
     /** Optional: call to stop internal timers if you dispose this buffer. */
     dispose() {
         window.clearInterval(this._cleanerId);
+    }
+    get size() {
+        return this._tiles.size + this._cachedTiles.size + this._galTiles.size + this._galCachedTiles.size;
+    }
+    get activeTileCount() {
+        return this._tiles.size + this._galTiles.size;
+    }
+    get cachedTileCount() {
+        return this._cachedTiles.size + this._galCachedTiles.size;
+    }
+    get readyTileCount() {
+        let count = 0;
+        for (const tile of this._tiles.values()) {
+            if (tile.getReadyState())
+                count++;
+        }
+        for (const tile of this._galTiles.values()) {
+            if (tile.getReadyState())
+                count++;
+        }
+        for (const tile of this._cachedTiles.values()) {
+            if (tile.getReadyState())
+                count++;
+        }
+        for (const tile of this._galCachedTiles.values()) {
+            if (tile.getReadyState())
+                count++;
+        }
+        return count;
+    }
+    get loadingTileCount() {
+        let count = 0;
+        for (const tile of this._tiles.values()) {
+            if (tile.isLoading())
+                count++;
+        }
+        for (const tile of this._galTiles.values()) {
+            if (tile.isLoading())
+                count++;
+        }
+        for (const tile of this._cachedTiles.values()) {
+            if (tile.isLoading())
+                count++;
+        }
+        for (const tile of this._galCachedTiles.values()) {
+            if (tile.isLoading())
+                count++;
+        }
+        return count;
     }
 }
 exports.TileBuffer = TileBuffer;
@@ -15945,7 +16151,7 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         // (global as any).hipsFoV = fov;
         // global.order = fovHelper.getHiPSNorder(fov);
         // this._visibleorder = global.order;
-        this._visibleorder = FoVHelper_js_1.fovHelper.getHiPSNorder(fov);
+        this._visibleorder = FoVHelper_js_1.fovHelper.getHiPSNorder(fov, this._visibleorder);
     }
     enableShader(in_mMatrix, pMatrix, vMatrix) {
         const gl = super.webgl;
@@ -15989,7 +16195,10 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const pMatrix = input.pMatrix;
         if (!pMatrix)
             return;
-        this.refresh(camera, pMatrix);
+        // this.refresh(camera, pMatrix);
+        const rawFov = input.fovDeg ?? this.getMinFoV();
+        const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6;
+        this._visibleorder = FoVHelper_js_1.fovHelper.getHiPSNorder(fov, this._visibleorder);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();
@@ -16306,19 +16515,21 @@ class AstroSphere {
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
+    lastCameraChangedAt = 0;
+    lastCameraMotionAt = 0;
     lastHoveredSource = null;
     lastHoveredCatalogue = null;
     zoomSensitivity = 1.0;
     lockedEastWestRaDeg = null;
     lockedNorthSouthDecDeg = null;
-    keepCameraNorthUp = false;
+    keepCameraNorthUp = true;
     constructor(canvas, webgl) {
-        console.log('[AstroSphere] new instance for canvas', canvas.id);
+        console.log("[AstroSphere] new instance for canvas", canvas.id);
         // Keep global GL context (as in original JS)
         this._webgl = webgl;
         this.mouseHelper = new MouseHelper_js_1.default();
         this.canvas = canvas;
-        const nativeColorMap = 'native';
+        const nativeColorMap = "native";
         this._selectedColorMap = ColorMaps_js_1.default[nativeColorMap];
         Global_js_1.default.insideSphere = Config_js_1.bootSetup.insideSphere;
         this.initCamera();
@@ -16366,20 +16577,26 @@ class AstroSphere {
             astroDeg: astroCoords,
             sphericalDeg: sphericalCoords,
             raHMS: raHMS,
-            decDMS: decDMS
+            decDMS: decDMS,
         };
         return this.centralPoinCoords;
     }
     updateLastMousePoint() {
-        const sphericalCoords = { phi: this.mouseHelper.phi, theta: this.mouseHelper.theta };
-        const astroCoords = { ra: this.mouseHelper.ra, dec: this.mouseHelper.dec };
+        const sphericalCoords = {
+            phi: this.mouseHelper.phi,
+            theta: this.mouseHelper.theta,
+        };
+        const astroCoords = {
+            ra: this.mouseHelper.ra,
+            dec: this.mouseHelper.dec,
+        };
         const raHMS = this.mouseHelper.raHMS;
         const decDMS = this.mouseHelper.decDMS;
         this.mousePointCoords = {
             astroDeg: astroCoords,
             sphericalDeg: sphericalCoords,
             raHMS: raHMS,
-            decDMS: decDMS
+            decDMS: decDMS,
         };
         return this.mousePointCoords;
     }
@@ -16399,9 +16616,6 @@ class AstroSphere {
     computeZoomStep(currentFov, deltaY) {
         const direction = deltaY < 0 ? -1 : 1;
         const wheelScale = this.clamp(Math.abs(deltaY) / 120, AstroSphere.MIN_WHEEL_SCALE, AstroSphere.MAX_WHEEL_SCALE);
-        // Continuous wheel response:
-        // - broad FoV stays responsive without large jumps
-        // - narrow FoV keeps a usable floor to avoid the 0.1 -> 0.02 deg stall
         const baseMagnitude = this.clamp(0.0012 + 0.0025 * Math.sqrt(Math.max(currentFov, 0)), 0.0012, 0.04);
         return direction * baseMagnitude * wheelScale * this.zoomSensitivity;
     }
@@ -16491,7 +16705,8 @@ class AstroSphere {
         };
     }
     enforceAstronomicalRotationLocks() {
-        if (this.lockedEastWestRaDeg == null && this.lockedNorthSouthDecDeg == null) {
+        if (this.lockedEastWestRaDeg == null &&
+            this.lockedNorthSouthDecDeg == null) {
             return false;
         }
         const center = this.updateCentralPoint();
@@ -16534,7 +16749,7 @@ class AstroSphere {
             return;
         // optional debug
         // console.log('[AstroSphere] emit camera-changed:', reason);
-        this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
+        this.canvas.dispatchEvent(new CustomEvent("camera-changed", {
             detail,
             bubbles: true,
             composed: true,
@@ -16542,7 +16757,7 @@ class AstroSphere {
     }
     addEventListeners(canvas) {
         if (Global_js_1.default.debug) {
-            console.log('[AstroSphere::addEventListeners]');
+            console.log("[AstroSphere::addEventListeners]");
         }
         const CLICK_MAX_DISTANCE_PX = 4;
         const CLICK_MAX_DURATION_MS = 250;
@@ -16572,7 +16787,7 @@ class AstroSphere {
         const handleMouseUp = (event) => {
             canvas.releasePointerCapture(event.pointerId);
             this.mouseDown = false;
-            document.body.style.cursor = 'auto';
+            document.body.style.cursor = "auto";
             if (event.button !== 0) {
                 event.preventDefault();
                 return false;
@@ -16594,7 +16809,7 @@ class AstroSphere {
                         const clickResult = cat.selectPrimarySourceFromClick(this.mouseHelper);
                         if (!clickResult?.sources.length)
                             continue;
-                        this._webgl.canvas.dispatchEvent(new CustomEvent('source-clicked', {
+                        this._webgl.canvas.dispatchEvent(new CustomEvent("source-clicked", {
                             detail: {
                                 source: clickResult.sources,
                                 selectionState: clickResult.selectionState,
@@ -16608,7 +16823,7 @@ class AstroSphere {
                         const clickResult = fset.selectPrimaryFootprintFromClick(this.mouseHelper);
                         if (!clickResult?.footprints.length)
                             continue;
-                        this._webgl.canvas.dispatchEvent(new CustomEvent('footprint-clicked', {
+                        this._webgl.canvas.dispatchEvent(new CustomEvent("footprint-clicked", {
                             detail: {
                                 footprint: clickResult.footprints,
                                 selectionState: clickResult.selectionState,
@@ -16635,10 +16850,13 @@ class AstroSphere {
             if (!this._healpixGrid)
                 return;
             if (this.mouseDown) {
-                document.body.style.cursor = 'grab';
-                // Rotation deltas – either use client-space or local-space, but be consistent
-                const deltaX = ((newX - (this.lastMouseX ?? newX)) * Math.PI) / canvas.width;
-                const deltaY = ((newY - (this.lastMouseY ?? newY)) * Math.PI) / canvas.height;
+                document.body.style.cursor = "grab";
+                const dragDirection = Global_js_1.default.insideSphere ? -1 : 1;
+                const dragSpeed = Global_js_1.default.insideSphere ? 10.0 : 1;
+                const deltaX = (dragDirection * dragSpeed * (newX - (this.lastMouseX ?? newX)) * Math.PI) /
+                    canvas.width;
+                const deltaY = (dragDirection * dragSpeed * (newY - (this.lastMouseY ?? newY)) * Math.PI) /
+                    canvas.height;
                 const filteredDelta = this.filterRotationDeltaByAstroLocks(deltaX, deltaY);
                 this.inertiaX += 0.1 * filteredDelta.deltaX;
                 this.inertiaY += 0.1 * filteredDelta.deltaY;
@@ -16673,10 +16891,11 @@ class AstroSphere {
             // direction feels responsive instead of "buffered".
             this.zoomInertia = 0;
             this._camera.zoom(zoomStep);
+            this.lastCameraMotionAt = performance.now();
             this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
             this._camera.refreshFoV(this.fov.minFoV);
             this._cameraStatusChanged = true;
-            this.emitCameraChanged('wheel');
+            this.emitCameraChanged("wheel");
             event.preventDefault();
         };
         const handleContextMenu = (event) => {
@@ -16694,7 +16913,7 @@ class AstroSphere {
                 const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
                 if (!pickResult?.sources.length)
                     continue;
-                this._webgl.canvas.dispatchEvent(new CustomEvent('source-contextmenu', {
+                this._webgl.canvas.dispatchEvent(new CustomEvent("source-contextmenu", {
                     detail: {
                         source: pickResult.sources,
                         catalogue: cat,
@@ -16710,7 +16929,7 @@ class AstroSphere {
                 const pickResult = fset.getFootprintsFromPointer(this.mouseHelper);
                 if (!pickResult?.footprints.length)
                     continue;
-                this._webgl.canvas.dispatchEvent(new CustomEvent('footprint-contextmenu', {
+                this._webgl.canvas.dispatchEvent(new CustomEvent("footprint-contextmenu", {
                     detail: {
                         footprint: pickResult.footprints,
                         footprintSet: fset,
@@ -16730,40 +16949,40 @@ class AstroSphere {
             }
             // console.log('[AstroSphere::onKeyDown] key=', evt.key)
             switch (evt.key) {
-                case '1':
+                case "1":
                     // Free camera
                     this._camera.clearRotationLock();
                     break;
-                case '2':
+                case "2":
                     // Lock X axis rotation
                     this._camera.setRotationLock({ x: true, y: false, z: false });
                     break;
-                case '3':
+                case "3":
                     // Lock Y axis rotation
                     this._camera.setRotationLock({ x: false, y: true, z: false });
                     break;
-                case '4':
+                case "4":
                     // Lock Z axis rotation
                     this._camera.setRotationLock({ x: false, y: false, z: true });
                     break;
             }
         };
-        console.log('[AstroSphere] registering pointer and wheel listeners on canvas');
+        console.log("[AstroSphere] registering pointer and wheel listeners on canvas");
         canvas.onpointerdown = handleMouseDown;
         canvas.onpointerup = handleMouseUp;
         canvas.onpointermove = handleMouseMove;
         canvas.onpointerleave = () => {
             this.clearLastMousePoint();
             this._cameraStatusChanged = true;
-            this.emitCameraChanged('pointerleave');
+            this.emitCameraChanged("pointerleave");
         };
-        console.log('[AstroSphere] adding wheel event listener with passive: false');
-        canvas.addEventListener('wheel', handleMouseWheel, { passive: false });
-        canvas.addEventListener('contextmenu', handleContextMenu);
-        console.log('[AstroSphere] registering global keydown listener on document');
-        document.addEventListener('keydown', onKeyDown, { capture: true });
+        console.log("[AstroSphere] adding wheel event listener with passive: false");
+        canvas.addEventListener("wheel", handleMouseWheel, { passive: false });
+        canvas.addEventListener("contextmenu", handleContextMenu);
+        console.log("[AstroSphere] registering global keydown listener on document");
+        document.addEventListener("keydown", onKeyDown, { capture: true });
     }
-    // REVIEW THIS METHOD AND MOVE IT 
+    // REVIEW THIS METHOD AND MOVE IT
     getPhiThetaDeg(canvas) {
         const rect = canvas.getBoundingClientRect();
         const maxX = rect.width;
@@ -16790,21 +17009,21 @@ class AstroSphere {
     }
     activateHiPS(hipsDescriptor) {
         this._activeHiPS = new HiPS_js_1.HiPS(1, [0.0, 0.0, 0.0], 0, 0, hipsDescriptor, this._webgl, this._healpixGrid);
-        this._activeBaseLayer = 'hips';
+        this._activeBaseLayer = "hips";
     }
     activateXYZ(config) {
-        this.activateXYZ2(new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? 'XYZ Earth2 Layer', config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384, 8, config.urlResolver));
-        this._activeBaseLayer = 'xyz';
+        this.activateXYZ2(new XYZMapDescriptor_js_1.XYZMapDescriptor(config.name ?? "XYZ Earth2 Layer", config.urlTemplate, config.minZoom ?? 0, config.maxZoom ?? 8, config.segmentsPerSide ?? 48, config.maxCachedTiles ?? 384, 8, config.urlResolver));
+        this._activeBaseLayer = "xyz";
     }
     activateXYZ2(config) {
         this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
-        this._activeBaseLayer = 'xyz';
+        this._activeBaseLayer = "xyz";
     }
     activateWMTS(config) {
         const adapter = new WMTSAdapter_js_1.WMTSAdapter(config);
         const xyzConfig = adapter.toXYZLayerConfig();
-        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor_js_1.XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : 'WMTS Earth2 Layer', xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
-        this._activeBaseLayer = 'xyz';
+        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor_js_1.XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : "WMTS Earth2 Layer", xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
+        this._activeBaseLayer = "xyz";
     }
     // Catalogue section
     async showCatalogue(cat) {
@@ -16814,7 +17033,7 @@ class AstroSphere {
         return cat;
     }
     deleteCatalogue(catalogue) {
-        this.activeCatalogues = this.activeCatalogues.filter(c => c !== catalogue);
+        this.activeCatalogues = this.activeCatalogues.filter((c) => c !== catalogue);
     }
     // End Catalogue section
     // Footprint section
@@ -16825,11 +17044,11 @@ class AstroSphere {
         return fset;
     }
     deleteFootprintSet(footprintSet) {
-        this.activeFootprintSets = this.activeFootprintSets.filter(fst => fst !== footprintSet);
+        this.activeFootprintSets = this.activeFootprintSets.filter((fst) => fst !== footprintSet);
     }
     getHoveredFootprints() {
         let footprintsHovered = [];
-        this.activeFootprintSets.forEach(fset => {
+        this.activeFootprintSets.forEach((fset) => {
             footprintsHovered.push(fset.hoveredFootprints);
         });
         return footprintsHovered;
@@ -16839,13 +17058,13 @@ class AstroSphere {
         this._camera.goTo(raDeg, decDeg);
     }
     getActiveCoordinateMode() {
-        if (this._activeBaseLayer === 'xyz') {
-            return 'lonlat';
+        if (this._activeBaseLayer === "xyz") {
+            return "lonlat";
         }
-        if (this._activeBaseLayer === 'hips' && this._activeHiPS?.isGalacticHips) {
-            return 'galactic';
+        if (this._activeBaseLayer === "hips" && this._activeHiPS?.isGalacticHips) {
+            return "galactic";
         }
-        return 'equatorial';
+        return "equatorial";
     }
     resetAxesOrientation() {
         const center = this.updateCentralPoint();
@@ -16868,7 +17087,7 @@ class AstroSphere {
         return this.keepCameraNorthUp;
     }
     getFoV() {
-        if (this._activeBaseLayer === 'xyz' && this._activeXYZ2) {
+        if (this._activeBaseLayer === "xyz" && this._activeXYZ2) {
             return this._activeXYZ2.getFoV();
         }
         return this.fov;
@@ -16885,11 +17104,15 @@ class AstroSphere {
         this._camera.refreshFoV(this.fov.minFoV);
     }
     changeFoV2(deg) {
-        const newCameraPos = this._healpixGrid.getFoV().computeCameraPositionForFoV(deg);
+        const newCameraPos = this._healpixGrid
+            .getFoV()
+            .computeCameraPositionForFoV(deg);
         this._camera.setCameraPosition(newCameraPos);
     }
     changeFoV3(deg) {
-        const newPos = this._healpixGrid.getFoV().computeCameraPositionForAngularDiameter(deg);
+        const newPos = this._healpixGrid
+            .getFoV()
+            .computeCameraPositionForAngularDiameter(deg);
         this._camera.setCameraPosition(newPos);
         // Recompute projection after moving the camera
         this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, false);
@@ -16898,9 +17121,22 @@ class AstroSphere {
         return Global_js_1.default.insideSphere;
     }
     toggleInsideSphere() {
+        const centerBeforeToggle = this.updateCentralPoint();
+        this.inertiaX = 0;
+        this.inertiaY = 0;
+        this.zoomInertia = 0;
         Global_js_1.default.insideSphere = !Global_js_1.default.insideSphere;
         // console.log(global.insideSphere)
         this._camera.toggleInsideSphere();
+        this._camera.goTo(centerBeforeToggle.astroDeg.ra, centerBeforeToggle.astroDeg.dec);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(this.canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
+        this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        this._camera.refreshFoV(this.fov.minFoV);
+        this.updateCentralPoint();
+        this.lastCameraMotionAt = performance.now();
+        this._cameraStatusChanged = true;
+        this.emitCameraChanged("inside-sphere-toggle");
+        requestAnimationFrame(() => this.draw(this.canvas));
     }
     // imposta posizione camera
     setCameraPosition(pos) {
@@ -16949,7 +17185,7 @@ class AstroSphere {
             centralPoint: new Point_js_1.Point({ raDeg: centralradeg, decDeg: centraldecdeg }, CoordsType_js_1.CoordsType.ASTRO),
             mouseHoverPoint: this.mousePointCoords,
             colorMap: this._selectedColorMap,
-            getFoVPolygon: this.getFoVPolygon(),
+            getFoVPolygon: [],
         };
         return detail;
         // }
@@ -16981,7 +17217,9 @@ class AstroSphere {
         this._camera.setRotationLock({ y: locked });
         if (locked)
             this.inertiaX = 0;
-        this.lockedEastWestRaDeg = locked ? this.updateCentralPoint()?.astroDeg.ra ?? null : null;
+        this.lockedEastWestRaDeg = locked
+            ? (this.updateCentralPoint()?.astroDeg.ra ?? null)
+            : null;
     }
     isEastWestRotationLocked() {
         return this._camera.isRotationLockedY();
@@ -16990,7 +17228,9 @@ class AstroSphere {
         this._camera.setRotationLock({ x: locked });
         if (locked)
             this.inertiaY = 0;
-        this.lockedNorthSouthDecDeg = locked ? this.updateCentralPoint()?.astroDeg.dec ?? null : null;
+        this.lockedNorthSouthDecDeg = locked
+            ? (this.updateCentralPoint()?.astroDeg.dec ?? null)
+            : null;
     }
     isNorthSouthRotationLocked() {
         return this._camera.isRotationLockedX();
@@ -17001,6 +17241,11 @@ class AstroSphere {
             layer: this._activeXYZ2?.getDebugStats() ?? null,
             requests: XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.getDebugStats(),
         };
+    }
+    getHiPSDebugStats() {
+        if (!this._activeHiPS)
+            return null;
+        return this._activeHiPS.getDebugStats();
     }
     draw(canvas) {
         if (this._refreshingStatus)
@@ -17027,6 +17272,7 @@ class AstroSphere {
             if (Math.abs(this.zoomInertia) > 0.0001) {
                 this._camera.zoom(this.zoomInertia);
                 this.zoomInertia *= 0.95;
+                this.lastCameraMotionAt = performance.now();
                 this.fov = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
                 this._camera.refreshFoV(this.fov.minFoV);
                 if (this.prevFov !== this.fov.minFoV) {
@@ -17042,7 +17288,9 @@ class AstroSphere {
             this._cameraStatusChanged = true;
         }
         // Rotation inertia
-        if (this.mouseDown || Math.abs(this.inertiaX) > 0.02 || Math.abs(this.inertiaY) > 0.02) {
+        if (this.mouseDown ||
+            Math.abs(this.inertiaX) > 0.02 ||
+            Math.abs(this.inertiaY) > 0.02) {
             cameraRotated = true;
             const filteredInertia = this.filterRotationDeltaByAstroLocks(this.inertiaX, this.inertiaY);
             PHI = filteredInertia.deltaX;
@@ -17050,6 +17298,7 @@ class AstroSphere {
             this.inertiaX = filteredInertia.deltaX * 0.95;
             this.inertiaY = filteredInertia.deltaY * 0.95;
             this._camera.rotate(PHI, THETA);
+            this.lastCameraMotionAt = performance.now();
             this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Global_js_1.default.insideSphere);
             const lockCorrected = this.enforceAstronomicalRotationLocks();
             if (!lockCorrected) {
@@ -17059,6 +17308,12 @@ class AstroSphere {
         else {
             this.inertiaY = 0;
             this.inertiaX = 0;
+        }
+        const nextFoV = this._healpixGrid.refreshFoV(this._camera, this._perspectiveMatrixManager.pMatrix);
+        if (Number.isFinite(nextFoV.minFoV) && nextFoV.minFoV > 0) {
+            this.fov = nextFoV;
+            this._camera.refreshFoV(this.fov.minFoV);
+            this.prevFov = this.fov.minFoV;
         }
         // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
         if (cameraRotated) {
@@ -17077,16 +17332,20 @@ class AstroSphere {
             }
         }
         if (this._cameraStatusChanged) {
-            const detail = this.getCurrentStatus();
+            const now = performance.now();
+            const shouldEmitCameraChanged = !this.mouseDown || now - this.lastCameraChangedAt > 100;
+            const detail = shouldEmitCameraChanged ? this.getCurrentStatus() : null;
             if (detail) {
                 // console.log('[AstroSphere::draw] emitting camera-changed event due to camera status change', detail)
                 // console.log('[AstroSphere::draw] inertia', this.zoomInertia, this.inertiaX, this.inertiaY)
-                this.canvas.dispatchEvent(new CustomEvent('camera-changed', {
+                this.canvas.dispatchEvent(new CustomEvent("camera-changed", {
                     detail,
-                    bubbles: true, composed: true,
+                    bubbles: true,
+                    composed: true,
                 }));
+                this.lastCameraChangedAt = now;
             }
-            if (!this.startup) {
+            if (!this.startup && shouldEmitCameraChanged) {
                 this._cameraStatusChanged = false;
             }
         }
@@ -17096,23 +17355,39 @@ class AstroSphere {
         this._webgl.enable(this._webgl.CULL_FACE);
         this._webgl.cullFace(Global_js_1.default.insideSphere ? this._webgl.FRONT : this._webgl.BACK);
         this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA);
-        if (this._activeBaseLayer === 'hips' && this._activeHiPS) {
+        if (this._activeBaseLayer === "hips" && this._activeHiPS) {
             const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
         // DRAW HiPS
+        const stableFovDeg = this.fov?.minFoV ?? this._healpixGrid.getMinFoV();
+        const nowForGrid = performance.now();
+        const cameraMovingForGrid = this.mouseDown ||
+            Math.abs(this.zoomInertia) > 0.0001 ||
+            Math.abs(this.inertiaX) > 0.02 ||
+            Math.abs(this.inertiaY) > 0.02 ||
+            nowForGrid - this.lastCameraMotionAt < 220;
+        // const skyEntityDrawInput: SkyEntityDrawInput = {
+        // fovDeg: this._healpixGrid.getMinFoV(),
+        //   camera: this._camera,
+        //   pMatrix: this._perspectiveMatrixManager.pMatrix,
+        //   centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
+        //   fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
+        //   viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(7) : undefined,
+        // }
         const skyEntityDrawInput = {
-            fovDeg: this._healpixGrid.getMinFoV(),
+            fovDeg: stableFovDeg,
             camera: this._camera,
             pMatrix: this._perspectiveMatrixManager.pMatrix,
             centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
-            fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
-            viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(7) : undefined,
+            fovPolygon: undefined,
+            viewportSphericalSamples: undefined,
+            cameraMoving: cameraMovingForGrid,
         };
-        if (this._activeBaseLayer === 'hips') {
+        if (this._activeBaseLayer === "hips") {
             this._activeHiPS?.draw(skyEntityDrawInput);
         }
-        if (this._activeBaseLayer === 'xyz') {
+        if (this._activeBaseLayer === "xyz") {
             this._activeXYZ2?.draw(skyEntityDrawInput);
         }
         this._healpixGrid.draw(skyEntityDrawInput);
@@ -17125,24 +17400,27 @@ class AstroSphere {
             const raDecDeg = (0, Utils_js_1.sphericalToAstroDeg)(phiTheta.phi, phiTheta.theta);
             const raHMS = (0, Utils_js_1.raDegToHMS)(raDecDeg.ra);
             const decDMS = (0, Utils_js_1.decDegToDMS)(raDecDeg.dec);
-            this.prevFov = this._healpixGrid.getMinFoV();
+            // this.prevFov = this._healpixGrid.getMinFoV();
+            this.prevFov = this.fov?.minFoV ?? this._healpixGrid.getMinFoV();
             this._cameraStatusChanged = true;
-            console.log('(startup coords)', {
+            console.log("(startup coords)", {
                 raDeg: raDecDeg.ra,
                 decDeg: raDecDeg.dec,
                 raHMS,
                 decDMS,
             });
         }
-        this.activeCatalogues.forEach(cat => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
+        this.activeCatalogues.forEach((cat) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
         this.emitHoveredSourceIfChanged();
-        this.activeFootprintSets.forEach(fst => {
-            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ?? this._activeXYZ2?.getModelMatrix();
+        this.activeFootprintSets.forEach((fst) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
@@ -17159,13 +17437,13 @@ class AstroSphere {
             nextHoveredCatalogue = cat;
             break;
         }
-        const unchanged = nextHoveredSource === this.lastHoveredSource
-            && nextHoveredCatalogue === this.lastHoveredCatalogue;
+        const unchanged = nextHoveredSource === this.lastHoveredSource &&
+            nextHoveredCatalogue === this.lastHoveredCatalogue;
         if (unchanged)
             return;
         this.lastHoveredSource = nextHoveredSource;
         this.lastHoveredCatalogue = nextHoveredCatalogue;
-        this._webgl.canvas.dispatchEvent(new CustomEvent('source-hovered', {
+        this._webgl.canvas.dispatchEvent(new CustomEvent("source-hovered", {
             detail: { source: nextHoveredSource, catalogue: nextHoveredCatalogue },
             bubbles: true,
             composed: true,
@@ -17718,6 +17996,9 @@ class MetadataManager {
     set selectedDecColumn(columnName) {
         this._selectedDecColumn = this._decColumnList.find(c => c.name === columnName) || this._selectedDecColumn;
     }
+    set selectedOutlineColumn(columnName) {
+        this._selectedOutlineColumn = this._outlineColumnList.find(c => c.name === columnName) || this._selectedOutlineColumn;
+    }
     set selectedHueColumn(columnName) {
         this._selectedHueColumn = this._hueColumnList.find(c => c.name === columnName);
     }
@@ -17725,7 +18006,7 @@ class MetadataManager {
         this._selectedShapeColumn = this._shapeColumnList.find(c => c.name === columnName);
     }
     set selectedNameColumn(columnName) {
-        this._selectedNameColumn = this._shapeColumnList.find(c => c.name === columnName);
+        this._selectedNameColumn = this._columns.find(c => c.name === columnName);
     }
     resetShapeColumn() {
         this._selectedShapeColumn = undefined;
@@ -18073,7 +18354,7 @@ class SphereFoV {
         }
         const angleDeg = 2 * this.computeAngularDistanceDeg(centerHit.point, edgeHit.point);
         return {
-            angleDeg: insideSphere ? 360 - angleDeg : angleDeg,
+            angleDeg,
             distance: edgeHit.distance,
         };
     }
@@ -18081,8 +18362,9 @@ class SphereFoV {
         const aNorm = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), a);
         const bNorm = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), b);
         const dot = gl_matrix_1.vec3.dot(aNorm, bNorm);
-        const clamped = Math.min(1, Math.max(-1, dot));
-        return (0, Utils_js_1.radToDeg)(Math.acos(clamped));
+        const cross = gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), aNorm, bNorm);
+        const angleRad = Math.atan2(gl_matrix_1.vec3.length(cross), Math.min(1, Math.max(-1, dot)));
+        return (0, Utils_js_1.radToDeg)(angleRad);
     }
     getIntersectionPointWithModel(mouseX, mouseY, model, camera, pMatrix) {
         const rayWorld = this.getRayFromMouse(mouseX, mouseY, pMatrix, camera.getCameraMatrix());
@@ -18558,6 +18840,7 @@ class Point {
     _raRad;
     _decRad;
     _raDecDeg;
+    _lonLatDeg;
     constructor(in_options, in_type) {
         this._xyz = [0, 0, 0];
         this._raDecDeg = [0, 0];
@@ -18580,6 +18863,20 @@ class Point {
             const { raDeg, decDeg } = in_options;
             this._raDeg = Number(raDeg);
             this._decDeg = Number(decDeg);
+            this._raDecDeg = [this._raDeg, this._decDeg];
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            const [x, y, z] = this.computeCartesianCoords();
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+        }
+        else if (in_type === CoordsType_js_1.CoordsType.GEOGRAPHIC) {
+            const { lonDeg, latDeg } = in_options;
+            this._lonLatDeg = [Number(lonDeg), Number(latDeg)];
+            this._raDeg = this._lonLatDeg[0];
+            this._decDeg = this._lonLatDeg[1];
             this._raDecDeg = [this._raDeg, this._decDeg];
             this._raRad = (this._raDeg * Math.PI) / 180;
             this._decRad = (this._decDeg * Math.PI) / 180;
@@ -18665,6 +18962,9 @@ class Point {
     get raDeg() { return this._raDeg; }
     get decDeg() { return this._decDeg; }
     get raDecDeg() { return this._raDecDeg; }
+    get lonDeg() { return this._lonLatDeg?.[0] ?? this._raDeg; }
+    get latDeg() { return this._lonLatDeg?.[1] ?? this._decDeg; }
+    get lonLatDeg() { return this._lonLatDeg ?? [this._raDeg, this._decDeg]; }
     toADQL() {
         return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
     }
@@ -18898,13 +19198,11 @@ class Camera {
     toggleInsideSphere() {
         // if (inside !== global.insideSphere) {
         //   global.insideSphere = inside;
+        this.insideSphere = Global_js_1.default.insideSphere;
         if (Global_js_1.default.insideSphere) {
-            if (this.cam_pos[2] <= 2) {
-                this.cam_pos[2] = -2 + this.cam_pos[2];
-            }
-            else {
-                this.cam_pos[2] = -0.005;
-            }
+            this.cam_pos[0] = 0;
+            this.cam_pos[1] = 0;
+            this.cam_pos[2] = -0.005;
         }
         else {
             this.cam_pos[2] = 2.0 + this.cam_pos[2];
@@ -19841,6 +20139,7 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _showGrid = true;
     _lonArray = [];
     _latArray = [];
+    _bufferKey = '';
     defaultColor = '#41d4d4';
     gridText = new GridTextHelper_js_1.default('lonlat');
     constructor(radius, position, xrad, yrad, name, webgl) {
@@ -19887,27 +20186,66 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         }
         gl.useProgram(this._shaderProgram);
     }
-    initBuffers(fovDeg) {
-        const steps = XYZFoVHelper_js_1.xyzFovHelper.getLonLatSteps(fovDeg);
+    initBuffers(fovDeg, centerSphericalDeg, coarse = false) {
+        const steps = XYZFoVHelper_js_1.xyzFovHelper.getLonLatSteps(fovDeg, coarse);
         this._lonStep = steps.lonStep;
         this._latStep = steps.latStep;
         this._segmentStep = Math.max(Math.min(this._lonStep, this._latStep), 0.25);
         this._lonArray = [];
         this._latArray = [];
-        for (let lon = -180; lon < 180; lon += this._lonStep) {
+        const center = centerSphericalDeg
+            ? {
+                lon: this.normalizeLon(centerSphericalDeg.phi > 180 ? centerSphericalDeg.phi - 360 : centerSphericalDeg.phi),
+                lat: 90 - centerSphericalDeg.theta,
+            }
+            : null;
+        const localGrid = !!center && !coarse && fovDeg < 2;
+        const lonValues = localGrid
+            ? this.buildLonRange(center.lon, Math.max(fovDeg * 4, this._lonStep * 3), this._lonStep)
+            : this.buildLonRange(0, 180, this._lonStep);
+        const latValues = localGrid
+            ? this.buildLatRange(center.lat, Math.max(fovDeg * 4, this._latStep * 3), this._latStep)
+            : this.buildLatRange(0, 90, this._latStep);
+        const latSegmentRange = localGrid && center
+            ? this.buildLatRange(center.lat, Math.max(fovDeg * 4, this._latStep * 3), this._segmentStep)
+            : this.buildLatRange(0, 90, this._segmentStep);
+        const lonSegmentRange = localGrid && center
+            ? this.buildLonRange(center.lon, Math.max(fovDeg * 4, this._lonStep * 3), this._segmentStep)
+            : this.buildLonRange(0, 180, this._segmentStep);
+        for (const lon of lonValues) {
             const vertices = [];
-            for (let lat = -90; lat <= 90; lat += this._segmentStep) {
+            for (const lat of latSegmentRange) {
                 vertices.push(...this.lonLatToCartesian(lon, Math.min(lat, 90)));
             }
             this._lonArray.push(new Float32Array(vertices));
         }
-        for (let lat = -90 + this._latStep; lat < 90; lat += this._latStep) {
+        for (const lat of latValues) {
             const vertices = [];
-            for (let lon = -180; lon <= 180; lon += this._segmentStep) {
+            if (lat <= -90 || lat >= 90)
+                continue;
+            for (const lon of lonSegmentRange) {
                 vertices.push(...this.lonLatToCartesian(Math.min(lon, 180), lat));
             }
             this._latArray.push(new Float32Array(vertices));
         }
+    }
+    buildLonRange(centerLon, halfSpan, step) {
+        const values = [];
+        const start = Math.floor((centerLon - halfSpan) / step) * step;
+        const end = Math.ceil((centerLon + halfSpan) / step) * step;
+        for (let lon = start; lon <= end; lon += step) {
+            values.push(this.normalizeLon(lon));
+        }
+        return values;
+    }
+    buildLatRange(centerLat, halfSpan, step) {
+        const values = [];
+        const start = Math.max(-90, Math.floor((centerLat - halfSpan) / step) * step);
+        const end = Math.min(90, Math.ceil((centerLat + halfSpan) / step) * step);
+        for (let lat = start; lat <= end; lat += step) {
+            values.push(lat);
+        }
+        return values;
     }
     lonLatToCartesian(lonDeg, latDeg) {
         const lonRad = (0, Utils_js_1.degToRad)(lonDeg);
@@ -19919,17 +20257,28 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             Math.sin(latRad),
         ];
     }
-    refresh(fovDeg) {
-        if (Math.abs(this._fovDeg - fovDeg) > 1e-6) {
+    refresh(fovDeg, input) {
+        const coarse = !!input.cameraMoving;
+        const steps = XYZFoVHelper_js_1.xyzFovHelper.getLonLatSteps(fovDeg, coarse);
+        const center = input.centerSphericalDeg;
+        const localGrid = !!center && !coarse && fovDeg < 2;
+        const centerLon = center ? this.normalizeLon(center.phi > 180 ? center.phi - 360 : center.phi) : 0;
+        const centerLat = center ? 90 - center.theta : 0;
+        const centerKey = localGrid
+            ? `${this.roundToStep(centerLon, Math.max(steps.lonStep, fovDeg))}:${this.roundToStep(centerLat, Math.max(steps.latStep, fovDeg))}`
+            : 'global';
+        const bufferKey = `${coarse ? 'coarse' : 'settled'}:${steps.lonStep}:${steps.latStep}:${centerKey}`;
+        if (this._bufferKey !== bufferKey) {
             this._fovDeg = fovDeg;
-            this.initBuffers(this._fovDeg);
+            this._bufferKey = bufferKey;
+            this.initBuffers(this._fovDeg, input.centerSphericalDeg, coarse);
         }
     }
     refreshFoV(input) {
         if (!input.camera || !input.pMatrix)
             return this._fovDeg;
         this._fovObj.getFoV(Global_js_1.default.insideSphere, this, input.camera, input.pMatrix);
-        this.refresh(this._fovObj.minFoV);
+        this.refresh(this._fovObj.minFoV, input);
         return this._fovObj.minFoV;
     }
     getMinFoVDeg() {
@@ -20091,6 +20440,7 @@ var CoordsType;
     CoordsType["CARTESIAN"] = "cartesian";
     CoordsType["SPHERICAL"] = "spherical";
     CoordsType["ASTRO"] = "astro";
+    CoordsType["GEOGRAPHIC"] = "geographic";
 })(CoordsType || (exports.CoordsType = CoordsType = {}));
 // export default CoordsType;
 
@@ -20171,6 +20521,9 @@ class Tile {
     }
     getReadyState() {
         return this._ready;
+    }
+    isLoading() {
+        return !this._ready && !this._abort;
     }
     get cacheTime0() {
         return this._cacheTime0;
@@ -20496,7 +20849,40 @@ exports["default"] = Tile;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.xyzFovHelper = void 0;
 class XYZFoVHelper {
-    getZoom(fov) {
+    static LEVEL_HYSTERESIS = 0.12;
+    static ZOOM_MIN_FOV = {
+        2: 179,
+        3: 90,
+        4: 30,
+        5: 20,
+        6: 6,
+        7: 3.2,
+        8: 1.6,
+        9: 0.85,
+        10: 0.42,
+        11: 0.21,
+        12: 0.12,
+        13: 0.06,
+        14: 0.015,
+        15: 0,
+    };
+    getZoom(fov, currentZoom) {
+        const rawZoom = this.getRawZoom(fov);
+        if (currentZoom === undefined || currentZoom === rawZoom)
+            return rawZoom;
+        if (rawZoom > currentZoom) {
+            const boundary = XYZFoVHelper.ZOOM_MIN_FOV[currentZoom];
+            if (boundary > 0 && fov > boundary * (1 - XYZFoVHelper.LEVEL_HYSTERESIS))
+                return currentZoom;
+        }
+        else {
+            const boundary = XYZFoVHelper.ZOOM_MIN_FOV[rawZoom];
+            if (boundary > 0 && fov < boundary * (1 + XYZFoVHelper.LEVEL_HYSTERESIS))
+                return currentZoom;
+        }
+        return rawZoom;
+    }
+    getRawZoom(fov) {
         if (fov >= 179)
             return 2;
         if (fov >= 90)
@@ -20526,10 +20912,14 @@ class XYZFoVHelper {
         return 15;
     }
     // used in grid drawing
-    getLonLatSteps(fov) {
+    getLonLatSteps(fov, coarse = false) {
         let lonStep;
         let latStep;
-        if (fov >= 179) {
+        if (coarse && fov < 0.21) {
+            lonStep = 10;
+            latStep = 10;
+        }
+        else if (fov >= 179) {
             lonStep = 10;
             latStep = 10;
         }
@@ -20582,6 +20972,127 @@ class XYZFoVHelper {
 }
 exports.xyzFovHelper = new XYZFoVHelper();
 exports["default"] = XYZFoVHelper;
+
+
+/***/ }),
+
+/***/ 8755:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+const CoordsType_js_1 = __webpack_require__(8145);
+const Point_js_1 = __webpack_require__(6553);
+class GeoJSONParser {
+    static isGeoJSON(value) {
+        if (!value || typeof value !== 'object')
+            return false;
+        const type = value.type;
+        return type === 'FeatureCollection'
+            || type === 'Feature'
+            || type === 'Polygon'
+            || type === 'MultiPolygon'
+            || type === 'GeometryCollection';
+    }
+    static parseGeoJSON(value) {
+        if (!value || typeof value !== 'object') {
+            throw new Error('GeoJSON root must be an object');
+        }
+        const obj = value;
+        if (obj.type === 'FeatureCollection') {
+            if (!Array.isArray(obj.features))
+                throw new Error('GeoJSON FeatureCollection has no features array');
+            return obj.features.flatMap((feature) => GeoJSONParser.parseFeature(feature));
+        }
+        if (obj.type === 'Feature')
+            return GeoJSONParser.parseFeature(obj);
+        if (obj.type === 'Polygon' || obj.type === 'MultiPolygon' || obj.type === 'GeometryCollection') {
+            return GeoJSONParser.parseGeometry(obj, {});
+        }
+        throw new Error(`Unsupported GeoJSON type: ${obj.type ?? 'unknown'}`);
+    }
+    static parseFeature(value) {
+        if (!value || typeof value !== 'object')
+            throw new Error('GeoJSON feature must be an object');
+        const feature = value;
+        if (feature.type !== 'Feature')
+            throw new Error('GeoJSON feature has invalid type');
+        if (!feature.geometry)
+            return [];
+        return GeoJSONParser.parseGeometry(feature.geometry, feature.properties ?? {}, feature.id);
+    }
+    static parseGeometry(geometry, properties, id) {
+        if (geometry.type === 'Polygon') {
+            return [{
+                    id,
+                    geometryType: 'Polygon',
+                    properties,
+                    polygons: GeoJSONParser.parsePolygonCoordinates(geometry.coordinates),
+                }];
+        }
+        if (geometry.type === 'MultiPolygon') {
+            return [{
+                    id,
+                    geometryType: 'MultiPolygon',
+                    properties,
+                    polygons: GeoJSONParser.parseMultiPolygonCoordinates(geometry.coordinates),
+                }];
+        }
+        if (geometry.type === 'GeometryCollection') {
+            if (!Array.isArray(geometry.geometries))
+                return [];
+            return geometry.geometries.flatMap((child) => GeoJSONParser.parseGeometry(child, properties, id));
+        }
+        return [];
+    }
+    static parseMultiPolygonCoordinates(coordinates) {
+        if (!Array.isArray(coordinates))
+            throw new Error('GeoJSON MultiPolygon coordinates must be an array');
+        return coordinates.flatMap((polygonCoordinates) => GeoJSONParser.parsePolygonCoordinates(polygonCoordinates));
+    }
+    static parsePolygonCoordinates(coordinates) {
+        if (!Array.isArray(coordinates))
+            throw new Error('GeoJSON Polygon coordinates must be an array');
+        return coordinates
+            .map((ring) => GeoJSONParser.parseLinearRing(ring))
+            .filter((ring) => ring.length >= 3);
+    }
+    static parseLinearRing(ring) {
+        if (!Array.isArray(ring))
+            throw new Error('GeoJSON linear ring must be an array');
+        const points = ring.map((position) => GeoJSONParser.parsePosition(position));
+        if (points.length > 1) {
+            const first = points[0];
+            const last = points[points.length - 1];
+            if (first.lonDeg === last.lonDeg && first.latDeg === last.latDeg)
+                points.pop();
+        }
+        return points;
+    }
+    static parsePosition(position) {
+        if (!Array.isArray(position) || position.length < 2) {
+            throw new Error('GeoJSON position must be [longitude, latitude]');
+        }
+        const [lonDeg, latDeg] = position;
+        if (!Number.isFinite(lonDeg) || !Number.isFinite(latDeg)) {
+            throw new Error('GeoJSON position contains non-finite longitude/latitude');
+        }
+        return new Point_js_1.Point({ lonDeg, latDeg }, CoordsType_js_1.CoordsType.GEOGRAPHIC);
+    }
+}
+exports["default"] = GeoJSONParser;
 
 
 /***/ }),
@@ -20923,8 +21434,50 @@ exports.FootprintShaderProgram = FootprintShaderProgram;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.TerraFootprintSetGL = void 0;
 const FootprintSetGL_js_1 = __webpack_require__(592);
+const CoordsType_js_1 = __webpack_require__(8145);
+const Footprint_js_1 = __webpack_require__(2475);
+const MetadataColumn_js_1 = __webpack_require__(1072);
+const MetadataManager_js_1 = __webpack_require__(5403);
+const MetadataColumn_js_2 = __webpack_require__(1072);
 class TerraFootprintSetGL extends FootprintSetGL_js_1.FootprintSetGL {
     _kind = 'TerraFootprintSetGL';
+    _coordsType = CoordsType_js_1.CoordsType.GEOGRAPHIC;
+    addGeoJSONFeatures(features) {
+        this._ready = false;
+        this.clearFootprints();
+        this._metadataManager = new MetadataManager_js_1.MetadataManager(this.createGeoJSONMetadataColumns(features));
+        for (const feature of features) {
+            const footprint = Footprint_js_1.Footprint.fromPolygons(feature.polygons, this.createGeoJSONDetails(feature), CoordsType_js_1.CoordsType.GEOGRAPHIC);
+            if (footprint.valid) {
+                this.addFootprint(footprint);
+                this.totPoints += footprint.totPoints;
+                this.totConvexPoints += footprint.totConvexPoints;
+            }
+        }
+        this._ready = true;
+        this._bufferInitialised = false;
+    }
+    createGeoJSONMetadataColumns(features) {
+        const names = new Set();
+        features.forEach(feature => Object.keys(feature.properties).forEach(name => names.add(name)));
+        return Array.from(names).map((name, index) => {
+            const values = features.map(feature => feature.properties[name]).filter(value => value !== null && value !== undefined && value !== '');
+            const isNumber = values.length > 0 && values.every(value => typeof value === 'number' || !Number.isNaN(Number(value)));
+            const isName = /^name$|nome|denominazione|label|title/i.test(name);
+            return new MetadataColumn_js_1.MetadataColumn({
+                index,
+                name,
+                columnType: isName ? MetadataColumn_js_2.ColumnType.MAIN_NAME : (isNumber ? MetadataColumn_js_2.ColumnType.NUMBER : MetadataColumn_js_2.ColumnType.STRING),
+                unit: '',
+            });
+        });
+    }
+    createGeoJSONDetails(feature) {
+        return Object.entries(feature.properties).map(([key, value]) => ({
+            key,
+            value: typeof value === 'number' ? value : String(value ?? ''),
+        }));
+    }
 }
 exports.TerraFootprintSetGL = TerraFootprintSetGL;
 
@@ -20958,15 +21511,15 @@ const Point_js_1 = __webpack_require__(6553);
 const CoordsType_js_1 = __webpack_require__(8145);
 const Global_js_1 = __importDefault(__webpack_require__(4382));
 class STCSParser {
-    static parseSTCS(stcs) {
+    static parseSTCS(stcs, options = {}) {
         const stcsParsed = STCSParser.cleanStcs(stcs);
         let totPoints = 0;
         const polygons = [];
         if (stcsParsed.includes("POLYGON")) {
-            return STCSParser.parsePolygon(stcsParsed);
+            return STCSParser.parsePolygon(stcsParsed, options);
         }
         else if (stcsParsed.includes("CIRCLE")) {
-            return STCSParser.parseCircle(stcsParsed);
+            return STCSParser.parseCircle(stcsParsed, options);
         }
         else {
             console.warn("STCS not recognised");
@@ -20989,10 +21542,11 @@ class STCSParser {
         s = s.replace(/ {2,}/g, ' ').trim();
         return s;
     }
-    static parsePolygon(stcs) {
+    static parsePolygon(stcs, options = {}) {
         let totPoints = 0;
         const polygons = [];
         const MAX_DECIMALS = Global_js_1.default.MAX_DECIMALS ?? 12;
+        const coordsType = options.coordsType ?? CoordsType_js_1.CoordsType.ASTRO;
         const polys = stcs.split("POLYGON ");
         for (let i = 1; i < polys.length; i++) {
             const currPoly = [];
@@ -21007,9 +21561,11 @@ class STCSParser {
             }
             if (points.length > 2) {
                 for (let p = 0; p < points.length - 1; p += 2) {
-                    const raDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
-                    const decDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
-                    const point = new Point_js_1.Point({ raDeg, decDeg }, CoordsType_js_1.CoordsType.ASTRO);
+                    const xDeg = Number(parseFloat(points[p]).toFixed(MAX_DECIMALS));
+                    const yDeg = Number(parseFloat(points[p + 1]).toFixed(MAX_DECIMALS));
+                    const point = coordsType === CoordsType_js_1.CoordsType.GEOGRAPHIC
+                        ? new Point_js_1.Point({ lonDeg: xDeg, latDeg: yDeg }, CoordsType_js_1.CoordsType.GEOGRAPHIC)
+                        : new Point_js_1.Point({ raDeg: xDeg, decDeg: yDeg }, CoordsType_js_1.CoordsType.ASTRO);
                     currPoly.push(point);
                     totPoints += 1;
                 }
@@ -21019,9 +21575,10 @@ class STCSParser {
         return { totpoints: totPoints, polygons };
     }
     // Example format: "CIRCLE ICRS 8.739685 4.38147 0.027833"
-    static parseCircle(stcs) {
+    static parseCircle(stcs, options = {}) {
         let totPoints = 0;
         const polygons = [];
+        const coordsType = options.coordsType ?? CoordsType_js_1.CoordsType.ASTRO;
         const polys = stcs.split("CIRCLE ");
         for (let i = 1; i < polys.length; i++) {
             const currPoly = [];
@@ -21036,7 +21593,9 @@ class STCSParser {
             for (let p = npoints; p > 0; p--) {
                 const curra = radius * Math.cos(p * alpha) + ra;
                 const curdec = radius * Math.sin(p * alpha) + dec;
-                const point = new Point_js_1.Point({ raDeg: curra, decDeg: curdec }, CoordsType_js_1.CoordsType.ASTRO);
+                const point = coordsType === CoordsType_js_1.CoordsType.GEOGRAPHIC
+                    ? new Point_js_1.Point({ lonDeg: curra, latDeg: curdec }, CoordsType_js_1.CoordsType.GEOGRAPHIC)
+                    : new Point_js_1.Point({ raDeg: curra, decDeg: curdec }, CoordsType_js_1.CoordsType.ASTRO);
                 currPoly.push(point);
                 totPoints += 1;
             }
@@ -21069,6 +21628,7 @@ exports["default"] = STCSParser;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.PerspectiveMatrixManager = void 0;
 const gl_matrix_1 = __webpack_require__(1961);
+const Config_js_1 = __webpack_require__(2919);
 class PerspectiveMatrixManager {
     _pMatrix;
     _aspectRatio = 1;
@@ -21099,7 +21659,9 @@ class PerspectiveMatrixManager {
             const cf = c2 * Math.sin(beta);
             farPlane = cf > 0 ? cf : r;
         }
-        gl_matrix_1.mat4.perspective(p, (fovDeg * Math.PI) / 180, this._aspectRatio, nearPlane, farPlane);
+        const effectiveFovDeg = insideSphere ? Config_js_1.bootSetup.inside_camera_fov_deg : fovDeg;
+        const effectiveNearPlane = insideSphere ? Math.max(nearPlane, 0.001) : nearPlane;
+        gl_matrix_1.mat4.perspective(p, (effectiveFovDeg * Math.PI) / 180, this._aspectRatio, effectiveNearPlane, farPlane);
         this._pMatrix = p;
         return p;
     }
@@ -21168,6 +21730,7 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _thetaStepRad = 0;
     _phiArray = [];
     _thetaArray = [];
+    _bufferKey = '';
     // For placing text labels near current view center:
     //  - _dec4Labels: key = RA(deg), value = points along that RA ring (for Dec labels)
     //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
@@ -21228,9 +21791,9 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         super.webgl.useProgram(this._shaderProgram);
     }
     /** Build RA/Dec line vertex arrays based on FoV step helper */
-    initBuffers(fovDeg) {
+    initBuffers(fovDeg, coarse = false) {
         const R = 1.0;
-        const steps = FoVHelper_js_1.fovHelper.getRADegSteps(fovDeg);
+        const steps = FoVHelper_js_1.fovHelper.getRADegSteps(fovDeg, coarse);
         const phiStep = steps.raStep; // RA step (deg)
         const thetaStep = steps.decStep; // Dec step (deg)
         this._phiStep = phiStep;
@@ -21282,11 +21845,14 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         }
     }
     /** Update buffers when FoV (in degrees) changes */
-    refresh(fovDeg) {
+    refresh(fovDeg, coarse = false) {
         // const fovDeg = healpixGridSingleton.getMinFoV()
-        if (this._fov !== fovDeg) {
+        const steps = FoVHelper_js_1.fovHelper.getRADegSteps(fovDeg, coarse);
+        const bufferKey = `${coarse ? 'coarse' : 'settled'}:${steps.raStep}:${steps.decStep}`;
+        if (this._bufferKey !== bufferKey) {
             this._fov = fovDeg;
-            this.initBuffers(this._fov);
+            this._bufferKey = bufferKey;
+            this.initBuffers(this._fov, coarse);
         }
     }
     vectorDistance(p1, p2) {
@@ -21346,7 +21912,7 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             return;
         if (this._thetaArray.length === 0)
             return;
-        this.refresh(fovDeg);
+        this.refresh(fovDeg, !!input.cameraMoving);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();
@@ -21494,76 +22060,12 @@ exports.EquatorialGrid = EquatorialGrid;
 /******/ 	})();
 /******/ 	
 /************************************************************************/
-var __webpack_exports__ = {};
-// This entry needs to be wrapped in an IIFE because it uses a non-standard name for the exports (exports).
-(() => {
-var exports = __webpack_exports__;
-
-/*
- * AstroViewer
- * Copyright (C) Fabrizio Giordano
- * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
- *
- * This file is part of AstroViewer.
- * AstroViewer is distributed under a dual-license model.
- * Commercial use requires a separate commercial license.
- * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
- *
- * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
- */
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
-var AstroViewer_js_1 = __webpack_require__(772);
-Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
-var HiPSDescriptor_js_1 = __webpack_require__(5087);
-Object.defineProperty(exports, "HiPSDescriptor", ({ enumerable: true, get: function () { return HiPSDescriptor_js_1.HiPSDescriptor; } }));
-var SphereFoV_js_1 = __webpack_require__(5803);
-Object.defineProperty(exports, "FoV", ({ enumerable: true, get: function () { return SphereFoV_js_1.SphereFoV; } }));
-var SphereFoV_js_2 = __webpack_require__(5803);
-Object.defineProperty(exports, "SphereFoV", ({ enumerable: true, get: function () { return SphereFoV_js_2.SphereFoV; } }));
-var FootprintSetGL_js_1 = __webpack_require__(592);
-Object.defineProperty(exports, "HoveredFootprintDetail", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.HoveredFootprintDetail; } }));
-Object.defineProperty(exports, "FootprintSetGL", ({ enumerable: true, get: function () { return FootprintSetGL_js_1.FootprintSetGL; } }));
-var CatalogueGL_js_1 = __webpack_require__(1232);
-Object.defineProperty(exports, "CatalogueGL", ({ enumerable: true, get: function () { return CatalogueGL_js_1.CatalogueGL; } }));
-var TerraPointSetGL_js_1 = __webpack_require__(5781);
-Object.defineProperty(exports, "TerraPointSetGL", ({ enumerable: true, get: function () { return TerraPointSetGL_js_1.TerraPointSetGL; } }));
-var TerraFootprintSetGL_js_1 = __webpack_require__(9022);
-Object.defineProperty(exports, "TerraFootprintSetGL", ({ enumerable: true, get: function () { return TerraFootprintSetGL_js_1.TerraFootprintSetGL; } }));
-var MetadataManager_js_1 = __webpack_require__(5403);
-Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
-var MetadataColumn_js_1 = __webpack_require__(1072);
-Object.defineProperty(exports, "MetadataColumn", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataColumn; } }));
-Object.defineProperty(exports, "MetadataInit", ({ enumerable: true, get: function () { return MetadataColumn_js_1.MetadataInit; } }));
-Object.defineProperty(exports, "ColumnType", ({ enumerable: true, get: function () { return MetadataColumn_js_1.ColumnType; } }));
-var Point_js_1 = __webpack_require__(6553);
-Object.defineProperty(exports, "Point", ({ enumerable: true, get: function () { return Point_js_1.Point; } }));
-Object.defineProperty(exports, "SphericalOpts", ({ enumerable: true, get: function () { return Point_js_1.SphericalOpts; } }));
-Object.defineProperty(exports, "AstroOpts", ({ enumerable: true, get: function () { return Point_js_1.AstroOpts; } }));
-Object.defineProperty(exports, "PointInitOpts", ({ enumerable: true, get: function () { return Point_js_1.PointInitOpts; } }));
-Object.defineProperty(exports, "CartesianOpts", ({ enumerable: true, get: function () { return Point_js_1.CartesianOpts; } }));
-var FoVUtils_js_1 = __webpack_require__(8083);
-Object.defineProperty(exports, "FoVUtils", ({ enumerable: true, get: function () { return FoVUtils_js_1.FoVUtils; } }));
-var CoordsType_js_1 = __webpack_require__(8145);
-Object.defineProperty(exports, "CoordsType", ({ enumerable: true, get: function () { return CoordsType_js_1.CoordsType; } }));
-var ColorMaps_js_1 = __webpack_require__(619);
-Object.defineProperty(exports, "ColorMaps", ({ enumerable: true, get: function () { return ColorMaps_js_1.ColorMaps; } }));
-Object.defineProperty(exports, "COLOR_MAP_SAMPLE_COUNT", ({ enumerable: true, get: function () { return ColorMaps_js_1.COLOR_MAP_SAMPLE_COUNT; } }));
-Object.defineProperty(exports, "createColorMapFromSamples", ({ enumerable: true, get: function () { return ColorMaps_js_1.createColorMapFromSamples; } }));
-var HiPS_js_1 = __webpack_require__(3726);
-Object.defineProperty(exports, "HiPS", ({ enumerable: true, get: function () { return HiPS_js_1.HiPS; } }));
-var XYZMap_js_1 = __webpack_require__(1741);
-Object.defineProperty(exports, "XYZMap", ({ enumerable: true, get: function () { return XYZMap_js_1.XYZMap; } }));
-var WMTSAdapter_js_1 = __webpack_require__(3956);
-Object.defineProperty(exports, "WMTSAdapter", ({ enumerable: true, get: function () { return WMTSAdapter_js_1.WMTSAdapter; } }));
-var Source_js_1 = __webpack_require__(146);
-Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));
-var Footprint_js_1 = __webpack_require__(2475);
-Object.defineProperty(exports, "Footprint", ({ enumerable: true, get: function () { return Footprint_js_1.Footprint; } }));
-console.log('astroviewer UMD loaded');
-
-})();
-
-module.exports = __webpack_exports__;
+/******/ 	
+/******/ 	// startup
+/******/ 	// Load entry module and return exports
+/******/ 	// This entry module is referenced by other modules so it can't be inlined
+/******/ 	var __webpack_exports__ = __webpack_require__(1229);
+/******/ 	module.exports = __webpack_exports__;
+/******/ 	
 /******/ })()
 ;

@@ -3,6 +3,7 @@
  */
 import { SelectionObj } from '../../utils/GeomUtils.js';
 import { Point } from '../Point.js';
+import { CoordsType } from '../../utils/CoordsType.js';
 export interface FootprintDetail {
     key: string;
     value: string | number;
@@ -19,6 +20,7 @@ export declare class Footprint {
     private _totConvexPoints;
     private _npix256?;
     private _footprintsPointsOrder?;
+    private _coordsType;
     private _selectionObj;
     private _identifier?;
     private _center?;
@@ -27,7 +29,8 @@ export declare class Footprint {
      * @param in_details optional metadata
      * @param footprintsPointsOrder 1-> clockwise, -1 counter clockwise
      */
-    constructor(in_stcs?: string, in_details?: FootprintDetail[], footprintsPointsOrder?: 1 | -1);
+    constructor(in_stcs?: string, in_details?: FootprintDetail[], footprintsPointsOrder?: 1 | -1, coordsType?: CoordsType.ASTRO | CoordsType.GEOGRAPHIC);
+    static fromPolygons(polygons: Point[][], details?: FootprintDetail[], coordsType?: CoordsType.ASTRO | CoordsType.GEOGRAPHIC): Footprint;
     private computeSelectionObject;
     private computePoints;
     get valid(): boolean;

@@ -1,5 +1,6 @@
 import { Footprint } from "./Footprint.js";
 import MouseHelper from "../../utils/MouseHelper.js";
+import { CoordsType } from "../../utils/CoordsType.js";
 import { MetadataManager } from "../MetadataManager.js";
 import { MetadataColumn } from "../MetadataColumn.js";
 import { VisibleTilesManager } from "../hips/VisibleTilesManager.js";
@@ -58,10 +59,11 @@ export declare class FootprintSetGL {
     totSelectedPoints: number;
     nSlectedPrimitiveFlags: number;
     _shapeColor: string;
-    private _bufferInitialised;
+    protected _coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC;
+    protected _bufferInitialised: boolean;
     private _webgl;
     _isVisible: boolean;
-    private _metadataManager;
+    protected _metadataManager: MetadataManager;
     _providerUrl: string;
     private _footprintShaderProgram;
     private _visibleTilesManager;

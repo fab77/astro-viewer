@@ -13,7 +13,40 @@
 // FoVHelper.ts
 'use strict';
 class FoVHelper {
-    getHiPSNorder(fov) {
+    static LEVEL_HYSTERESIS = 0.12;
+    static HIPS_ORDER_MIN_FOV = {
+        0: 179,
+        1: 90,
+        2: 30,
+        3: 20,
+        4: 6,
+        5: 3.2,
+        6: 1.6,
+        7: 0.85,
+        8: 0.42,
+        9: 0.21,
+        10: 0.12,
+        11: 0.06,
+        12: 0.015,
+        13: 0,
+    };
+    getHiPSNorder(fov, currentOrder) {
+        const rawOrder = this.getRawHiPSNorder(fov);
+        if (currentOrder === undefined || currentOrder === rawOrder)
+            return rawOrder;
+        if (rawOrder > currentOrder) {
+            const boundary = FoVHelper.HIPS_ORDER_MIN_FOV[currentOrder];
+            if (boundary > 0 && fov > boundary * (1 - FoVHelper.LEVEL_HYSTERESIS))
+                return currentOrder;
+        }
+        else {
+            const boundary = FoVHelper.HIPS_ORDER_MIN_FOV[rawOrder];
+            if (boundary > 0 && fov < boundary * (1 + FoVHelper.LEVEL_HYSTERESIS))
+                return currentOrder;
+        }
+        return rawOrder;
+    }
+    getRawHiPSNorder(fov) {
         if (fov >= 179)
             return 0;
         if (fov >= 90)
@@ -42,10 +75,14 @@ class FoVHelper {
             return 12;
         return 13;
     }
-    getRADegSteps(fov) {
+    getRADegSteps(fov, coarse = false) {
         let raStep;
         let decStep;
-        if (fov >= 179) {
+        if (coarse && fov < 0.21) {
+            raStep = 10;
+            decStep = 10;
+        }
+        else if (fov >= 179) {
             raStep = 10;
             decStep = 10;
         }

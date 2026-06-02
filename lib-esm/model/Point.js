@@ -28,6 +28,7 @@ export class Point {
     _raRad;
     _decRad;
     _raDecDeg;
+    _lonLatDeg;
     constructor(in_options, in_type) {
         this._xyz = [0, 0, 0];
         this._raDecDeg = [0, 0];
@@ -50,6 +51,20 @@ export class Point {
             const { raDeg, decDeg } = in_options;
             this._raDeg = Number(raDeg);
             this._decDeg = Number(decDeg);
+            this._raDecDeg = [this._raDeg, this._decDeg];
+            this._raRad = (this._raDeg * Math.PI) / 180;
+            this._decRad = (this._decDeg * Math.PI) / 180;
+            const [x, y, z] = this.computeCartesianCoords();
+            this._x = Number(x.toFixed(MAX_DECIMALS));
+            this._y = Number(y.toFixed(MAX_DECIMALS));
+            this._z = Number(z.toFixed(MAX_DECIMALS));
+            this._xyz = [this._x, this._y, this._z];
+        }
+        else if (in_type === CoordsType.GEOGRAPHIC) {
+            const { lonDeg, latDeg } = in_options;
+            this._lonLatDeg = [Number(lonDeg), Number(latDeg)];
+            this._raDeg = this._lonLatDeg[0];
+            this._decDeg = this._lonLatDeg[1];
             this._raDecDeg = [this._raDeg, this._decDeg];
             this._raRad = (this._raDeg * Math.PI) / 180;
             this._decRad = (this._decDeg * Math.PI) / 180;
@@ -135,6 +150,9 @@ export class Point {
     get raDeg() { return this._raDeg; }
     get decDeg() { return this._decDeg; }
     get raDecDeg() { return this._raDecDeg; }
+    get lonDeg() { return this._lonLatDeg?.[0] ?? this._raDeg; }
+    get latDeg() { return this._lonLatDeg?.[1] ?? this._decDeg; }
+    get lonLatDeg() { return this._lonLatDeg ?? [this._raDeg, this._decDeg]; }
     toADQL() {
         return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
     }

@@ -180,10 +180,31 @@ export class HiPS extends AbstractSkyEntity {
     getCurrentHealpixOrder() {
         return this._visibleorder;
     }
-    refresh() {
-        // const fov = healpixGridSingleton.getMinFoV()
-        const fov = this._healpixGrid.getMinFoV();
-        this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder);
+    getDebugStats() {
+        const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+        const visibleTiles = this.isGalacticHips
+            ? this._healpixGrid.visibleTilesManager.galVisibleTilesByOrder
+            : this._healpixGrid.visibleTilesManager.visibleTilesByOrder;
+        return {
+            activeBaseLayer: 'hips',
+            hipsName: this._descriptor.surveyName,
+            hipsUrl: this._baseurl,
+            isGalactic: this.isGalacticHips,
+            currentOrder: visibleTiles.order,
+            visibleTileCount: visibleTiles.pixels.length,
+            activeTileCount: tileBuffer.activeTileCount,
+            cachedTileCount: tileBuffer.cachedTileCount,
+            cacheSize: tileBuffer.size,
+            readyTileCount: tileBuffer.readyTileCount,
+            loadingTileCount: tileBuffer.loadingTileCount,
+        };
+    }
+    refresh(input) {
+        // const fov = this._healpixGrid.getMinFoV()
+        // this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov), this._maxorder)
+        const rawFov = input.fovDeg ?? this._healpixGrid.getMinFoV();
+        const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6;
+        this._visibleorder = Math.min(fovHelper.getHiPSNorder(fov, this._visibleorder), this._maxorder);
     }
     draw(input) {
         const vMatrix = input.camera.getCameraMatrix();
@@ -192,7 +213,7 @@ export class HiPS extends AbstractSkyEntity {
         const pMatrix = input.pMatrix;
         if (!pMatrix)
             return;
-        this.refresh();
+        this.refresh(input);
         const mMatrix = this.getModelMatrix();
         super.hipsShaderProgram.setRuntimeColorMap(this.colorMap);
         if (this._allSky && this._allSkyTile) {

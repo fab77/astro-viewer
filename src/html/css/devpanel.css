@@ -141,6 +141,17 @@ label {
     min-height: 1.2em;
 }
 
+.div-text-wrapper {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    border-radius: 7px;
+    border: 1px solid #5d6063;
+    padding-top: 4px;
+    padding-left: 12px;
+    background: #131313;
+    padding-bottom: 4px;
+    padding-right: 6px;
+}
+
 details {
     margin-top: 10px;
     border-top: 1px solid #343;

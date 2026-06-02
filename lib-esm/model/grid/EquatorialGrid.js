@@ -48,6 +48,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
     _thetaStepRad = 0;
     _phiArray = [];
     _thetaArray = [];
+    _bufferKey = '';
     // For placing text labels near current view center:
     //  - _dec4Labels: key = RA(deg), value = points along that RA ring (for Dec labels)
     //  - _ra4Labels : key = Dec(deg), value = points along that Dec ring (for RA labels)
@@ -108,9 +109,9 @@ export class EquatorialGrid extends AbstractSkyEntity {
         super.webgl.useProgram(this._shaderProgram);
     }
     /** Build RA/Dec line vertex arrays based on FoV step helper */
-    initBuffers(fovDeg) {
+    initBuffers(fovDeg, coarse = false) {
         const R = 1.0;
-        const steps = fovHelper.getRADegSteps(fovDeg);
+        const steps = fovHelper.getRADegSteps(fovDeg, coarse);
         const phiStep = steps.raStep; // RA step (deg)
         const thetaStep = steps.decStep; // Dec step (deg)
         this._phiStep = phiStep;
@@ -162,11 +163,14 @@ export class EquatorialGrid extends AbstractSkyEntity {
         }
     }
     /** Update buffers when FoV (in degrees) changes */
-    refresh(fovDeg) {
+    refresh(fovDeg, coarse = false) {
         // const fovDeg = healpixGridSingleton.getMinFoV()
-        if (this._fov !== fovDeg) {
+        const steps = fovHelper.getRADegSteps(fovDeg, coarse);
+        const bufferKey = `${coarse ? 'coarse' : 'settled'}:${steps.raStep}:${steps.decStep}`;
+        if (this._bufferKey !== bufferKey) {
             this._fov = fovDeg;
-            this.initBuffers(this._fov);
+            this._bufferKey = bufferKey;
+            this.initBuffers(this._fov, coarse);
         }
     }
     vectorDistance(p1, p2) {
@@ -226,7 +230,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
             return;
         if (this._thetaArray.length === 0)
             return;
-        this.refresh(fovDeg);
+        this.refresh(fovDeg, !!input.cameraMoving);
         if (!this.showGrid) {
             // gridTextHelper.resetDivSets();
             this.gridText.resetDivSets();

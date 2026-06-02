@@ -84,13 +84,11 @@ class Camera {
     toggleInsideSphere() {
         // if (inside !== global.insideSphere) {
         //   global.insideSphere = inside;
+        this.insideSphere = global.insideSphere;
         if (global.insideSphere) {
-            if (this.cam_pos[2] <= 2) {
-                this.cam_pos[2] = -2 + this.cam_pos[2];
-            }
-            else {
-                this.cam_pos[2] = -0.005;
-            }
+            this.cam_pos[0] = 0;
+            this.cam_pos[1] = 0;
+            this.cam_pos[2] = -0.005;
         }
         else {
             this.cam_pos[2] = 2.0 + this.cam_pos[2];

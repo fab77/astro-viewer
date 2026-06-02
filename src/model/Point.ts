@@ -29,8 +29,9 @@ import global from '../Global.js';
 
 export type CartesianOpts = { x: number; y: number; z: number };
 export type AstroOpts = { raDeg: number; decDeg: number };
+export type GeographicOpts = { lonDeg: number; latDeg: number };
 export type SphericalOpts = { phiDeg: number; thetaDeg: number };
-export type PointInitOpts = CartesianOpts | AstroOpts | SphericalOpts;
+export type PointInitOpts = CartesianOpts | AstroOpts | GeographicOpts | SphericalOpts;
 
 export class Point {
   private _x!: number;
@@ -43,6 +44,7 @@ export class Point {
   private _raRad!: number;
   private _decRad!: number;
   private _raDecDeg!: [number, number];
+  private _lonLatDeg?: [number, number];
 
   constructor(in_options: PointInitOpts, in_type: CoordsType) {
     this._xyz = [0, 0, 0];
@@ -69,6 +71,20 @@ export class Point {
       const { raDeg, decDeg } = in_options as AstroOpts;
       this._raDeg = Number(raDeg);
       this._decDeg = Number(decDeg);
+      this._raDecDeg = [this._raDeg, this._decDeg];
+      this._raRad = (this._raDeg * Math.PI) / 180;
+      this._decRad = (this._decDeg * Math.PI) / 180;
+
+      const [x, y, z] = this.computeCartesianCoords();
+      this._x = Number(x.toFixed(MAX_DECIMALS));
+      this._y = Number(y.toFixed(MAX_DECIMALS));
+      this._z = Number(z.toFixed(MAX_DECIMALS));
+      this._xyz = [this._x, this._y, this._z];
+    } else if (in_type === CoordsType.GEOGRAPHIC) {
+      const { lonDeg, latDeg } = in_options as GeographicOpts;
+      this._lonLatDeg = [Number(lonDeg), Number(latDeg)];
+      this._raDeg = this._lonLatDeg[0];
+      this._decDeg = this._lonLatDeg[1];
       this._raDecDeg = [this._raDeg, this._decDeg];
       this._raRad = (this._raDeg * Math.PI) / 180;
       this._decRad = (this._decDeg * Math.PI) / 180;
@@ -169,6 +185,9 @@ export class Point {
   get raDeg(): number { return this._raDeg; }
   get decDeg(): number { return this._decDeg; }
   get raDecDeg(): [number, number] { return this._raDecDeg; }
+  get lonDeg(): number { return this._lonLatDeg?.[0] ?? this._raDeg; }
+  get latDeg(): number { return this._lonLatDeg?.[1] ?? this._decDeg; }
+  get lonLatDeg(): [number, number] { return this._lonLatDeg ?? [this._raDeg, this._decDeg]; }
 
   toADQL(): string {
     return `${this._raDecDeg[0]},${this._raDecDeg[1]}`;
@@ -178,4 +197,3 @@ export class Point {
     return `(raDeg, decDeg) => (${this._raDecDeg[0]},${this._raDecDeg[1]}) (x, y,z) => (${this._xyz[0]},${this._xyz[1]},${this._xyz[2]})`;
   }
 }
-

@@ -4,6 +4,7 @@
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import { ColorMap } from '../ColorMaps.js';
 import { HiPSDescriptor } from './HiPSDescriptor.js';
+import type { HiPSDebugStats } from './HiPSConfig.js';
 import { HealpixGrid } from '../grid/HealpixGrid.js';
 export declare class HiPS extends AbstractSkyEntity {
     private _ancestorTiles;
@@ -41,6 +42,7 @@ export declare class HiPS extends AbstractSkyEntity {
     changeColorMap(colorMap: ColorMap): void;
     private initShaders;
     getCurrentHealpixOrder(): number;
+    getDebugStats(): HiPSDebugStats;
     private refresh;
     draw(input: SkyEntityDrawInput): void;
 }
