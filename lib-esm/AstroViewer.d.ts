@@ -14,6 +14,7 @@ import type { HiPSDebugStats } from './model/hips/HiPSConfig.js';
 import { XYZMap } from './model/earth/XYZMap.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
+import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js';
 export declare class AstroViewer {
     private astroSphere;
     private canvas;
@@ -54,11 +55,14 @@ export declare class AstroViewer {
         name?: string;
     }): void;
     activateWMTS(config: WMTSLayerConfig): void;
+    activateMeshHiPS(config: MeshHiPSConfig): void;
     setXYZMaxConcurrentRequests(value: number): void;
     getXYZMaxConcurrentRequests(): number;
     getXYZDebugStats(): XYZDebugStats;
     getHiPSDebugStats(): HiPSDebugStats | null;
+    getMeshHiPSDebugStats(): MeshHiPSDebugStats | null;
     loadHiPS(baseUrl: string): Promise<string>;
+    loadMeshHiPS(baseUrl: string, config?: Omit<MeshHiPSConfig, 'baseUrl'>): Promise<string>;
     changeColorMap(colorMapName: ColorMapName): void;
     changeCustomColorMap(colorMap: ColorMap): void;
     getActiveHiPS(): HiPS | null;

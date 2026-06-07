@@ -34,8 +34,11 @@ export type { ColorMap, ColorMapName } from './model/ColorMaps.js';
 export { HiPS } from './model/hips/HiPS.js'
 export { XYZMap } from './model/earth/XYZMap.js'
 export { WMTSAdapter } from './model/earth/WMTSAdapter.js'
+export { MeshHiPS } from './model/meships/MeshHiPS.js'
+export { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js'
 export type { XYZLayerConfig, WMTSLayerConfig, WMTSRequestEncoding } from './model/earth/XYZConfig.js'
 export type { XYZTileCoord, XYZTileMesh } from './model/earth/XYZTypes.js'
+export type { MeshHiPSConfig, MeshHiPSDebugStats, MeshHiPSTileCoord } from './model/meships/MeshHiPSTypes.js'
 
 export {Source} from './model/Source.js'
 export {Footprint} from './model/footprints/Footprint.js'

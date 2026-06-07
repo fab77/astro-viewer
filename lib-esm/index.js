@@ -28,6 +28,8 @@ export { ColorMaps, COLOR_MAP_SAMPLE_COUNT, createColorMapFromSamples } from './
 export { HiPS } from './model/hips/HiPS.js';
 export { XYZMap } from './model/earth/XYZMap.js';
 export { WMTSAdapter } from './model/earth/WMTSAdapter.js';
+export { MeshHiPS } from './model/meships/MeshHiPS.js';
+export { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js';
 export { Source } from './model/Source.js';
 export { Footprint } from './model/footprints/Footprint.js';
 console.log('astroviewer UMD loaded');

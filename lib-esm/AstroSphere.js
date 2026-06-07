@@ -28,6 +28,7 @@ import { xyzTileRequestScheduler } from "./model/earth/XYZTileRequestScheduler.j
 import { WMTSAdapter } from "./model/earth/WMTSAdapter.js";
 import { XYZMapDescriptor } from "./model/earth/XYZMapDescriptor.js";
 import { XYZMap } from "./model/earth/XYZMap.js";
+import { MeshHiPS } from "./model/meships/MeshHiPS.js";
 import { mat4, vec3, vec4 } from "gl-matrix";
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -54,6 +55,7 @@ class AstroSphere {
     pointerDownAt = 0;
     _activeHiPS = null;
     _activeXYZ2 = null;
+    _activeMeshHiPS = null;
     _activeBaseLayer = null;
     startup = true;
     fov;
@@ -287,7 +289,7 @@ class AstroSphere {
     }
     emitCameraChanged(reason) {
         // avoid dispatch before scene is ready
-        if (!this._activeHiPS)
+        if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS)
             return;
         if (!this._healpixGrid?.fovObj)
             return;
@@ -566,6 +568,10 @@ class AstroSphere {
         this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
         this._activeBaseLayer = "xyz";
     }
+    activateMeshHiPS(descriptor) {
+        this._activeMeshHiPS = new MeshHiPS(1, [0.0, 0.0, 0.0], 0, 0, descriptor, this._webgl, this._healpixGrid);
+        this._activeBaseLayer = "meships";
+    }
     activateWMTS(config) {
         const adapter = new WMTSAdapter(config);
         const xyzConfig = adapter.toXYZLayerConfig();
@@ -746,7 +752,7 @@ class AstroSphere {
         // return null
     }
     changeColorMap(cm) {
-        if (!this._activeHiPS && !this._activeXYZ2)
+        if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS)
             return;
         this._selectedColorMap = cm;
         this._activeHiPS?.changeColorMap(cm);
@@ -760,6 +766,9 @@ class AstroSphere {
     }
     get activeXYZ() {
         return this._activeXYZ2;
+    }
+    get activeMeshHiPS() {
+        return this._activeMeshHiPS;
     }
     isLonLatGridVisible() {
         return this._activeXYZ2?.isLonLatGridVisible() ?? false;
@@ -801,12 +810,17 @@ class AstroSphere {
             return null;
         return this._activeHiPS.getDebugStats();
     }
+    getMeshHiPSDebugStats() {
+        if (!this._activeMeshHiPS)
+            return null;
+        return this._activeMeshHiPS.getDebugStats();
+    }
     draw(canvas) {
         if (this._refreshingStatus)
             return;
         if (!this._webgl)
             return;
-        if (!this._activeHiPS && !this._activeXYZ2)
+        if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -913,6 +927,10 @@ class AstroSphere {
             const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
+        if (this._activeBaseLayer === "meships" && this._activeMeshHiPS) {
+            const visibleOrder = Math.min(Math.max(this._healpixGrid.visibleorder, this._activeMeshHiPS.minOrder), this._activeMeshHiPS.maxOrder);
+            this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        }
         // DRAW HiPS
         const stableFovDeg = this.fov?.minFoV ?? this._healpixGrid.getMinFoV();
         const nowForGrid = performance.now();
@@ -944,6 +962,9 @@ class AstroSphere {
         if (this._activeBaseLayer === "xyz") {
             this._activeXYZ2?.draw(skyEntityDrawInput);
         }
+        if (this._activeBaseLayer === "meships") {
+            this._activeMeshHiPS?.draw(skyEntityDrawInput);
+        }
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
         this._webgl.enable(this._webgl.DEPTH_TEST);
@@ -966,7 +987,8 @@ class AstroSphere {
         }
         this.activeCatalogues.forEach((cat) => {
             const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
-                this._activeXYZ2?.getModelMatrix();
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
@@ -974,7 +996,8 @@ class AstroSphere {
         this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach((fst) => {
             const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
-                this._activeXYZ2?.getModelMatrix();
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }

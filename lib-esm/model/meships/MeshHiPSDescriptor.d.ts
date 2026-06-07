@@ -1,0 +1,30 @@
+import type { MeshHiPSConfig } from './MeshHiPSTypes.js';
+export declare class MeshHiPSDescriptor {
+    private _name;
+    private _baseUrl;
+    private _minOrder;
+    private _maxOrder;
+    private _selectedOrder;
+    private _maxCachedTiles;
+    private _color;
+    private _wireframe;
+    private _propertiesRawText;
+    private _propertiesMap;
+    constructor(config: MeshHiPSConfig, propertiesText?: string);
+    get name(): string;
+    get baseUrl(): string;
+    get minOrder(): number;
+    get maxOrder(): number;
+    get selectedOrder(): number;
+    get maxCachedTiles(): number;
+    get color(): [number, number, number, number];
+    get wireframe(): boolean;
+    get propertiesRawText(): string;
+    get properties(): ReadonlyMap<string, string>;
+    getProperty(key: string): string | undefined;
+    getTileUrl(order: number, ipix: number): string;
+    private parseProperties;
+    private readNumber;
+    private clampOrder;
+    private normalizeBaseUrl;
+}

@@ -13,6 +13,9 @@ import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from "./model/ear
 import type { HiPSDebugStats } from "./model/hips/HiPSConfig.js";
 import { XYZMapDescriptor } from "./model/earth/XYZMapDescriptor.js";
 import { XYZMap } from "./model/earth/XYZMap.js";
+import { MeshHiPS } from "./model/meships/MeshHiPS.js";
+import { MeshHiPSDescriptor } from "./model/meships/MeshHiPSDescriptor.js";
+import type { MeshHiPSDebugStats } from "./model/meships/MeshHiPSTypes.js";
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -59,6 +62,7 @@ declare class AstroSphere {
     private pointerDownAt;
     private _activeHiPS;
     private _activeXYZ2;
+    private _activeMeshHiPS;
     private _activeBaseLayer;
     private startup;
     private fov;
@@ -103,6 +107,7 @@ declare class AstroSphere {
     activateHiPS(hipsDescriptor: HiPSDescriptor): void;
     activateXYZ(config: XYZLayerConfig): void;
     activateXYZ2(config: XYZMapDescriptor): void;
+    activateMeshHiPS(descriptor: MeshHiPSDescriptor): void;
     activateWMTS(config: WMTSLayerConfig): void;
     showCatalogue(cat: CatalogueGL): Promise<CatalogueGL>;
     deleteCatalogue(catalogue: CatalogueGL): void;
@@ -132,6 +137,7 @@ declare class AstroSphere {
     private prevCentralDecDeg;
     get activeHiPS(): HiPS | null;
     get activeXYZ(): XYZMap | null;
+    get activeMeshHiPS(): MeshHiPS | null;
     isLonLatGridVisible(): boolean;
     toggleLonLatGrid(): boolean;
     setEastWestRotationLocked(locked: boolean): void;
@@ -140,6 +146,7 @@ declare class AstroSphere {
     isNorthSouthRotationLocked(): boolean;
     getXYZDebugStats(): XYZDebugStats;
     getHiPSDebugStats(): HiPSDebugStats | null;
+    getMeshHiPSDebugStats(): MeshHiPSDebugStats | null;
     draw(canvas: HTMLCanvasElement): void;
     private emitHoveredSourceIfChanged;
 }
