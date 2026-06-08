@@ -1,0 +1,30 @@
+import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
+import { HealpixGrid } from '../grid/HealpixGrid.js';
+import { MeshHiPSDescriptor } from './MeshHiPSDescriptor.js';
+import type { MeshHiPSDebugStats } from './MeshHiPSTypes.js';
+export declare class MeshHiPS extends AbstractSkyEntity {
+    private _descriptor;
+    private _healpixGrid;
+    private _shaderProgram;
+    private _tiles;
+    private _currentOrder;
+    private _visibleTiles;
+    private _coverageTiles;
+    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, _descriptor: MeshHiPSDescriptor, webgl: WebGL2RenderingContext, _healpixGrid: HealpixGrid);
+    get currentOrder(): number;
+    get maxOrder(): number;
+    get minOrder(): number;
+    get baseURL(): string;
+    get propertiesRawText(): string;
+    get properties(): ReadonlyMap<string, string>;
+    getProperty(key: string): string | undefined;
+    refreshOrder(fovDeg: number | undefined): number;
+    draw(input: SkyEntityDrawInput): void;
+    getDebugStats(): MeshHiPSDebugStats;
+    private resolveVisibleTiles;
+    private resolveCoverageTiles;
+    private groupTilesByOrder;
+    private ensureTiles;
+    private evictCached;
+    private tileKey;
+}

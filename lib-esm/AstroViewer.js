@@ -21,6 +21,7 @@ import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.j
 import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
+import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js';
 // & {
 //   viewportWidth: number
 //   viewportHeight: number
@@ -136,6 +137,9 @@ export class AstroViewer {
     activateWMTS(config) {
         this.astroSphere.activateWMTS(config);
     }
+    activateMeshHiPS(config) {
+        this.astroSphere.activateMeshHiPS(new MeshHiPSDescriptor(config));
+    }
     setXYZMaxConcurrentRequests(value) {
         xyzTileRequestScheduler.setMaxConcurrent(value);
     }
@@ -148,6 +152,9 @@ export class AstroViewer {
     getHiPSDebugStats() {
         return this.astroSphere.getHiPSDebugStats();
     }
+    getMeshHiPSDebugStats() {
+        return this.astroSphere.getMeshHiPSDebugStats();
+    }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
         const resp = await fetch(hipsUrl + 'properties');
@@ -158,6 +165,26 @@ export class AstroViewer {
         this.astroSphere.activateHiPS(desc);
         return desc.surveyName;
         // this.activateHiPS(desc);
+    }
+    async loadMeshHiPS(baseUrl, config = {}) {
+        const meshHiPSUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+        let propsText = '';
+        const resp = await fetch(meshHiPSUrl + 'properties');
+        if (resp.ok) {
+            propsText = await resp.text();
+        }
+        else {
+            const jsonResp = await fetch(meshHiPSUrl + 'properties.json');
+            if (!jsonResp.ok)
+                throw new Error(`HTTP ${jsonResp.status} fetching MeshHiPS properties`);
+            const json = await jsonResp.json();
+            propsText = Object.entries(json)
+                .map(([key, value]) => `${key}=${String(value)}`)
+                .join('\n');
+        }
+        const desc = new MeshHiPSDescriptor({ ...config, baseUrl: meshHiPSUrl }, propsText);
+        this.astroSphere.activateMeshHiPS(desc);
+        return desc.name;
     }
     // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
     changeColorMap(colorMapName) {

@@ -15,6 +15,7 @@ import { wireHoveredFootprints } from './hoveredFootprints.js';
 import { el, setStatus, minimisePanel, restorePanel } from './ui.js';
 import { state, loadPersisted, persistBasic } from './state.js';
 import { loadHiPS } from './hips.js';
+import { loadMeshHiPS } from './meships.js';
 import { loadWMTS, loadXYZ } from './xyz.js';
 import { loadTapRepo, showFootprint, hideFootprints } from './tap.js';
 import { renderCatalogueManager, wireCatalogueManagerControls } from './catalogueManager.js';
@@ -172,6 +173,25 @@ function wireUI() {
     if (!url) return setStatus("Insert a HiPS URL.");
     try { await loadHiPS(url); persistBasic(); }
     catch (e) { setStatus("HiPS load error: " + (e.message || e)); }
+  });
+
+  el('btnLoadMeshHiPS')?.addEventListener('click', async () => {
+    const url = el('meshHipsUrl').value.trim();
+    const orderRaw = el('meshHipsOrder').value.trim();
+    const maxCachedTiles = Number(el('meshHipsMaxCachedTiles').value);
+    const color = parseHexColor(el('meshHipsColor').value);
+    const wireframe = !!el('meshHipsWireframe').checked;
+    const order = orderRaw === '' ? undefined : Number(orderRaw);
+
+    if (!url) return setStatus("Insert a MeshHiPS URL.");
+    if (order !== undefined && (!Number.isInteger(order) || order < 0)) return setStatus("Insert a valid MeshHiPS order.");
+    if (!Number.isFinite(maxCachedTiles) || maxCachedTiles < 12) return setStatus("Insert a valid MeshHiPS cache size.");
+
+    try {
+      await loadMeshHiPS(url, { order, maxCachedTiles, color, wireframe });
+    } catch (e) {
+      setStatus("MeshHiPS load error: " + (e.message || e));
+    }
   });
 
   el('btnLoadXYZ')?.addEventListener('click', () => {
@@ -417,4 +437,16 @@ function wireUI() {
       ev.target.checked = !ev.target.checked;
     }
   });
+}
+
+function parseHexColor(hex) {
+  const normalized = String(hex || '#b8dbff').trim().replace(/^#/, '');
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) return [0.72, 0.86, 1.0, 1.0];
+  const value = Number.parseInt(normalized, 16);
+  return [
+    ((value >> 16) & 255) / 255,
+    ((value >> 8) & 255) / 255,
+    (value & 255) / 255,
+    1.0,
+  ];
 }

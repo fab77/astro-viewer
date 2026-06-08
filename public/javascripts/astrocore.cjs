@@ -6837,6 +6837,7 @@ class ShaderManager {
     }
     static hipsVS() {
         return `#version 300 es
+    precision mediump float;
     in vec3 aVertexPosition;
     in vec2 aTextureCoord;
 

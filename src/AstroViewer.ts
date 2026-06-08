@@ -32,6 +32,8 @@ import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js'
 import { XYZMap } from './model/earth/XYZMap.js'
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
+import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js'
+import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext 
@@ -226,6 +228,10 @@ createFootprintSet(footprintSetName: string,
     this.astroSphere.activateWMTS(config)
   }
 
+  activateMeshHiPS(config: MeshHiPSConfig): void {
+    this.astroSphere.activateMeshHiPS(new MeshHiPSDescriptor(config))
+  }
+
   setXYZMaxConcurrentRequests(value: number): void {
     xyzTileRequestScheduler.setMaxConcurrent(value)
   }
@@ -242,6 +248,10 @@ createFootprintSet(footprintSetName: string,
     return this.astroSphere.getHiPSDebugStats()
   }
 
+  getMeshHiPSDebugStats(): MeshHiPSDebugStats | null {
+    return this.astroSphere.getMeshHiPSDebugStats()
+  }
+
   async loadHiPS(baseUrl: string): Promise<string> {
     const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
     const resp = await fetch(hipsUrl + 'properties');
@@ -251,6 +261,25 @@ createFootprintSet(footprintSetName: string,
     this.astroSphere.activateHiPS(desc)
     return desc.surveyName
     // this.activateHiPS(desc);
+  }
+
+  async loadMeshHiPS(baseUrl: string, config: Omit<MeshHiPSConfig, 'baseUrl'> = {}): Promise<string> {
+    const meshHiPSUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/'
+    let propsText = ''
+    const resp = await fetch(meshHiPSUrl + 'properties')
+    if (resp.ok) {
+      propsText = await resp.text()
+    } else {
+      const jsonResp = await fetch(meshHiPSUrl + 'properties.json')
+      if (!jsonResp.ok) throw new Error(`HTTP ${jsonResp.status} fetching MeshHiPS properties`)
+      const json = await jsonResp.json()
+      propsText = Object.entries(json)
+        .map(([key, value]) => `${key}=${String(value)}`)
+        .join('\n')
+    }
+    const desc = new MeshHiPSDescriptor({ ...config, baseUrl: meshHiPSUrl }, propsText)
+    this.astroSphere.activateMeshHiPS(desc)
+    return desc.name
   }
 
   // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {

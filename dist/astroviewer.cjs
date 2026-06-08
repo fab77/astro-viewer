@@ -2439,6 +2439,7 @@ const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
 const XYZMapDescriptor_js_1 = __webpack_require__(8868);
 const TerraPointSetGL_js_1 = __webpack_require__(5781);
 const TerraFootprintSetGL_js_1 = __webpack_require__(9022);
+const MeshHiPSDescriptor_js_1 = __webpack_require__(847);
 // & {
 //   viewportWidth: number
 //   viewportHeight: number
@@ -2554,6 +2555,9 @@ class AstroViewer {
     activateWMTS(config) {
         this.astroSphere.activateWMTS(config);
     }
+    activateMeshHiPS(config) {
+        this.astroSphere.activateMeshHiPS(new MeshHiPSDescriptor_js_1.MeshHiPSDescriptor(config));
+    }
     setXYZMaxConcurrentRequests(value) {
         XYZTileRequestScheduler_js_1.xyzTileRequestScheduler.setMaxConcurrent(value);
     }
@@ -2566,6 +2570,9 @@ class AstroViewer {
     getHiPSDebugStats() {
         return this.astroSphere.getHiPSDebugStats();
     }
+    getMeshHiPSDebugStats() {
+        return this.astroSphere.getMeshHiPSDebugStats();
+    }
     async loadHiPS(baseUrl) {
         const hipsUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
         const resp = await fetch(hipsUrl + 'properties');
@@ -2576,6 +2583,26 @@ class AstroViewer {
         this.astroSphere.activateHiPS(desc);
         return desc.surveyName;
         // this.activateHiPS(desc);
+    }
+    async loadMeshHiPS(baseUrl, config = {}) {
+        const meshHiPSUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+        let propsText = '';
+        const resp = await fetch(meshHiPSUrl + 'properties');
+        if (resp.ok) {
+            propsText = await resp.text();
+        }
+        else {
+            const jsonResp = await fetch(meshHiPSUrl + 'properties.json');
+            if (!jsonResp.ok)
+                throw new Error(`HTTP ${jsonResp.status} fetching MeshHiPS properties`);
+            const json = await jsonResp.json();
+            propsText = Object.entries(json)
+                .map(([key, value]) => `${key}=${String(value)}`)
+                .join('\n');
+        }
+        const desc = new MeshHiPSDescriptor_js_1.MeshHiPSDescriptor({ ...config, baseUrl: meshHiPSUrl }, propsText);
+        this.astroSphere.activateMeshHiPS(desc);
+        return desc.name;
     }
     // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
     changeColorMap(colorMapName) {
@@ -2860,6 +2887,149 @@ class AstroViewer {
     }
 }
 exports.AstroViewer = AstroViewer;
+
+
+/***/ }),
+
+/***/ 847:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MeshHiPSDescriptor = void 0;
+class MeshHiPSDescriptor {
+    _name = 'MeshHiPS';
+    _baseUrl;
+    _minOrder = 0;
+    _maxOrder = 0;
+    _selectedOrder;
+    _fixedOrder = false;
+    _maxCachedTiles = 384;
+    // default neutral color (contrasts with page background)
+    _color = [0.32, 0.34, 0.36, 1.0];
+    _wireframe = false;
+    _propertiesRawText = '';
+    _propertiesMap = new Map();
+    _meshRadius = null;
+    constructor(config, propertiesText = '') {
+        this._baseUrl = this.normalizeBaseUrl(config.baseUrl);
+        this._propertiesRawText = propertiesText;
+        this.parseProperties(propertiesText);
+        this._name = config.name ?? this._propertiesMap.get('obs_collection') ?? this._propertiesMap.get('label') ?? this._name;
+        this._minOrder = config.minOrder ?? this.readNumber('hips_order_min', this._minOrder);
+        this._maxOrder = config.maxOrder ?? this.readNumber('hips_order', this.readNumber('hips_order_max', this._maxOrder));
+        this._fixedOrder = config.order !== undefined;
+        this._selectedOrder = config.order ?? this._minOrder;
+        this._maxCachedTiles = config.maxCachedTiles ?? this._maxCachedTiles;
+        // color: prefer explicit config, then properties.mesh_color, then default
+        if (config.color) {
+            this._color = config.color;
+        }
+        else if (this._propertiesMap.has('mesh_color')) {
+            const raw = this._propertiesMap.get('mesh_color') || '';
+            const parts = raw.split(/[,\s]+/).map((v) => Number(v)).filter(Number.isFinite);
+            if (parts.length >= 3) {
+                let [r, g, b, a] = parts;
+                if (r > 1 || g > 1 || b > 1) {
+                    // assume 0-255 range
+                    r = r / 255;
+                    g = g / 255;
+                    b = b / 255;
+                }
+                if (!Number.isFinite(a))
+                    a = 1;
+                this._color = [r, g, b, a];
+            }
+        }
+        else {
+            this._color = this._color;
+        }
+        this._wireframe = config.wireframe ?? this._wireframe;
+        this._selectedOrder = this.clampOrder(this._selectedOrder);
+        // mesh radius: prefer explicit value from config, otherwise read mandatory property
+        if (Number.isFinite(config.meshRadius)) {
+            this._meshRadius = config.meshRadius;
+        }
+        else {
+            const radiusFromProps = this.readNumber('mesh_radius', NaN);
+            if (!Number.isFinite(radiusFromProps)) {
+                throw new Error('Missing mandatory property "mesh_radius" in MeshHiPS properties');
+            }
+            this._meshRadius = radiusFromProps;
+        }
+    }
+    get name() {
+        return this._name;
+    }
+    get baseUrl() {
+        return this._baseUrl;
+    }
+    get minOrder() {
+        return this._minOrder;
+    }
+    get maxOrder() {
+        return this._maxOrder;
+    }
+    get selectedOrder() {
+        return this._selectedOrder;
+    }
+    get fixedOrder() {
+        return this._fixedOrder;
+    }
+    get maxCachedTiles() {
+        return this._maxCachedTiles;
+    }
+    get color() {
+        return this._color;
+    }
+    get wireframe() {
+        return this._wireframe;
+    }
+    get propertiesRawText() {
+        return this._propertiesRawText;
+    }
+    get properties() {
+        return new Map(this._propertiesMap);
+    }
+    get meshRadius() {
+        return this._meshRadius;
+    }
+    getProperty(key) {
+        return this._propertiesMap.get(key);
+    }
+    getTileUrl(order, ipix) {
+        const dir = Math.floor(ipix / 10_000) * 10_000;
+        return `${this._baseUrl}Norder${order}/Dir${dir}/Npix${ipix}.obj`;
+    }
+    parseProperties(propertiesText) {
+        const lines = propertiesText.split(/\r\n|\n/);
+        for (const raw of lines) {
+            const line = raw.trim();
+            if (!line || line.startsWith('#'))
+                continue;
+            const idx = line.indexOf('=');
+            if (idx < 0)
+                continue;
+            this._propertiesMap.set(line.slice(0, idx).trim(), line.slice(idx + 1).trim());
+        }
+    }
+    readNumber(key, fallback) {
+        const parsed = Number(this._propertiesMap.get(key));
+        return Number.isFinite(parsed) ? parsed : fallback;
+    }
+    clampOrder(order) {
+        return Math.max(this._minOrder, Math.min(this._maxOrder, order));
+    }
+    normalizeBaseUrl(baseUrl) {
+        return baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
+    }
+}
+exports.MeshHiPSDescriptor = MeshHiPSDescriptor;
 
 
 /***/ }),
@@ -4436,7 +4606,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(5087);
@@ -4482,6 +4652,10 @@ var XYZMap_js_1 = __webpack_require__(1741);
 Object.defineProperty(exports, "XYZMap", ({ enumerable: true, get: function () { return XYZMap_js_1.XYZMap; } }));
 var WMTSAdapter_js_1 = __webpack_require__(3956);
 Object.defineProperty(exports, "WMTSAdapter", ({ enumerable: true, get: function () { return WMTSAdapter_js_1.WMTSAdapter; } }));
+var MeshHiPS_js_1 = __webpack_require__(6878);
+Object.defineProperty(exports, "MeshHiPS", ({ enumerable: true, get: function () { return MeshHiPS_js_1.MeshHiPS; } }));
+var MeshHiPSDescriptor_js_1 = __webpack_require__(847);
+Object.defineProperty(exports, "MeshHiPSDescriptor", ({ enumerable: true, get: function () { return MeshHiPSDescriptor_js_1.MeshHiPSDescriptor; } }));
 var Source_js_1 = __webpack_require__(146);
 Object.defineProperty(exports, "Source", ({ enumerable: true, get: function () { return Source_js_1.Source; } }));
 var Footprint_js_1 = __webpack_require__(2475);
@@ -13773,6 +13947,115 @@ exports["default"] = XYZRayPickingUtils;
 
 /***/ }),
 
+/***/ 2257:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MeshHiPSShaderProgram = void 0;
+class MeshHiPSShaderProgram {
+    _webgl;
+    locations;
+    _shaderProgram;
+    constructor(_webgl) {
+        this._webgl = _webgl;
+        this.locations = {
+            pMatrix: null,
+            mMatrix: null,
+            vMatrix: null,
+            color: null,
+            vertexPositionAttribute: -1,
+            vertexNormalAttribute: -1,
+        };
+    }
+    get shaderProgram() {
+        const gl = this._webgl;
+        if (!this._shaderProgram) {
+            const program = gl.createProgram();
+            if (!program)
+                throw new Error('Could not create MeshHiPS shader program');
+            this._shaderProgram = program;
+            this.initShaders();
+        }
+        gl.useProgram(this._shaderProgram);
+        return this._shaderProgram;
+    }
+    enableProgram() {
+        this._webgl.useProgram(this.shaderProgram);
+    }
+    enableShaders(pMatrix, vMatrix, mMatrix, color) {
+        const gl = this._webgl;
+        const program = this.shaderProgram;
+        gl.useProgram(program);
+        this.locations.pMatrix = gl.getUniformLocation(program, 'uPMatrix');
+        this.locations.vMatrix = gl.getUniformLocation(program, 'uVMatrix');
+        this.locations.mMatrix = gl.getUniformLocation(program, 'uMMatrix');
+        this.locations.color = gl.getUniformLocation(program, 'uColor');
+        this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
+        this.locations.vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
+        gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
+        gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
+        gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
+        gl.uniform4fv(this.locations.color, color);
+    }
+    initShaders() {
+        const gl = this._webgl;
+        const vertexShader = this.compileShader(gl.VERTEX_SHADER, `#version 300 es
+      precision mediump float;
+      in vec3 aVertexPosition;
+      in vec3 aVertexNormal;
+      uniform mat4 uPMatrix;
+      uniform mat4 uVMatrix;
+      uniform mat4 uMMatrix;
+      out vec3 vNormal;
+      void main(void) {
+        vec3 worldPos = (uMMatrix * vec4(aVertexPosition, 1.0)).xyz;
+        vNormal = normalize((uMMatrix * vec4(aVertexNormal, 0.0)).xyz);
+        gl_Position = uPMatrix * uVMatrix * vec4(worldPos, 1.0);
+      }`);
+        const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, `#version 300 es
+      precision mediump float;
+      in vec3 vNormal;
+      uniform vec4 uColor;
+      out vec4 outColor;
+      void main(void) {
+        vec3 normal = normalize(vNormal);
+        vec3 lightDir = normalize(vec3(0.45, 0.8, 0.35));
+        float diffuse = max(dot(normal, lightDir), 0.0);
+        float rim = pow(1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
+        vec3 color = uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim;
+        outColor = vec4(color, uColor.a);
+      }`);
+        gl.attachShader(this._shaderProgram, vertexShader);
+        gl.attachShader(this._shaderProgram, fragmentShader);
+        gl.linkProgram(this._shaderProgram);
+        if (!gl.getProgramParameter(this._shaderProgram, gl.LINK_STATUS)) {
+            throw new Error(gl.getProgramInfoLog(this._shaderProgram) || 'Could not initialise MeshHiPS shaders');
+        }
+    }
+    compileShader(type, source) {
+        const gl = this._webgl;
+        const shader = gl.createShader(type);
+        if (!shader)
+            throw new Error('Could not create MeshHiPS shader');
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            throw new Error(gl.getShaderInfoLog(shader) || 'MeshHiPS shader compile error');
+        }
+        return shader;
+    }
+}
+exports.MeshHiPSShaderProgram = MeshHiPSShaderProgram;
+
+
+/***/ }),
+
 /***/ 2368:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -15742,6 +16025,109 @@ exports.TileBuffer = TileBuffer;
 
 /***/ }),
 
+/***/ 4322:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.OBJMeshParser = void 0;
+class OBJMeshParser {
+    static parse(text) {
+        const vertices = [];
+        const indices = [];
+        const normals = [];
+        const lines = text.split(/\r\n|\n/);
+        for (const raw of lines) {
+            const line = raw.trim();
+            if (!line || line.startsWith('#'))
+                continue;
+            if (line.startsWith('v ')) {
+                const parts = line.split(/\s+/);
+                if (parts.length < 4)
+                    continue;
+                vertices.push(Number(parts[1]), Number(parts[2]), Number(parts[3]));
+                normals.push(0, 0, 0);
+                continue;
+            }
+            if (line.startsWith('f ')) {
+                const face = line
+                    .slice(2)
+                    .trim()
+                    .split(/\s+/)
+                    .map((part) => Number(part.split('/')[0]))
+                    .filter((idx) => Number.isInteger(idx) && idx !== 0);
+                if (face.length < 3)
+                    continue;
+                const first = OBJMeshParser.resolveIndex(face[0], vertices.length / 3);
+                for (let i = 1; i < face.length - 1; i++) {
+                    indices.push(first, OBJMeshParser.resolveIndex(face[i], vertices.length / 3), OBJMeshParser.resolveIndex(face[i + 1], vertices.length / 3));
+                }
+            }
+        }
+        OBJMeshParser.computeVertexNormals(vertices, indices, normals);
+        return {
+            positions: new Float32Array(vertices),
+            normals: new Float32Array(normals),
+            indices: new Uint32Array(indices),
+        };
+    }
+    static computeVertexNormals(vertices, indices, normals) {
+        for (let i = 0; i < indices.length; i += 3) {
+            const ia = indices[i];
+            const ib = indices[i + 1];
+            const ic = indices[i + 2];
+            const ax = vertices[ia * 3];
+            const ay = vertices[ia * 3 + 1];
+            const az = vertices[ia * 3 + 2];
+            const bx = vertices[ib * 3];
+            const by = vertices[ib * 3 + 1];
+            const bz = vertices[ib * 3 + 2];
+            const cx = vertices[ic * 3];
+            const cy = vertices[ic * 3 + 1];
+            const cz = vertices[ic * 3 + 2];
+            const abx = bx - ax;
+            const aby = by - ay;
+            const abz = bz - az;
+            const acx = cx - ax;
+            const acy = cy - ay;
+            const acz = cz - az;
+            const nx = aby * acz - abz * acy;
+            const ny = abz * acx - abx * acz;
+            const nz = abx * acy - aby * acx;
+            normals[ia * 3] += nx;
+            normals[ia * 3 + 1] += ny;
+            normals[ia * 3 + 2] += nz;
+            normals[ib * 3] += nx;
+            normals[ib * 3 + 1] += ny;
+            normals[ib * 3 + 2] += nz;
+            normals[ic * 3] += nx;
+            normals[ic * 3 + 1] += ny;
+            normals[ic * 3 + 2] += nz;
+        }
+        for (let i = 0; i < normals.length; i += 3) {
+            const nx = normals[i];
+            const ny = normals[i + 1];
+            const nz = normals[i + 2];
+            const len = Math.hypot(nx, ny, nz) || 1;
+            normals[i] = nx / len;
+            normals[i + 1] = ny / len;
+            normals[i + 2] = nz / len;
+        }
+    }
+    static resolveIndex(objIndex, vertexCount) {
+        return objIndex > 0 ? objIndex - 1 : vertexCount + objIndex;
+    }
+}
+exports.OBJMeshParser = OBJMeshParser;
+
+
+/***/ }),
+
 /***/ 4382:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -16481,6 +16867,7 @@ const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
 const WMTSAdapter_js_1 = __webpack_require__(3956);
 const XYZMapDescriptor_js_1 = __webpack_require__(8868);
 const XYZMap_js_1 = __webpack_require__(1741);
+const MeshHiPS_js_1 = __webpack_require__(6878);
 const gl_matrix_1 = __webpack_require__(1961);
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -16507,6 +16894,7 @@ class AstroSphere {
     pointerDownAt = 0;
     _activeHiPS = null;
     _activeXYZ2 = null;
+    _activeMeshHiPS = null;
     _activeBaseLayer = null;
     startup = true;
     fov;
@@ -16740,7 +17128,7 @@ class AstroSphere {
     }
     emitCameraChanged(reason) {
         // avoid dispatch before scene is ready
-        if (!this._activeHiPS)
+        if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS)
             return;
         if (!this._healpixGrid?.fovObj)
             return;
@@ -17019,6 +17407,10 @@ class AstroSphere {
         this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
         this._activeBaseLayer = "xyz";
     }
+    activateMeshHiPS(descriptor) {
+        this._activeMeshHiPS = new MeshHiPS_js_1.MeshHiPS(descriptor.meshRadius, [0.0, 0.0, 0.0], 0, 0, descriptor, this._webgl, this._healpixGrid);
+        this._activeBaseLayer = "meships";
+    }
     activateWMTS(config) {
         const adapter = new WMTSAdapter_js_1.WMTSAdapter(config);
         const xyzConfig = adapter.toXYZLayerConfig();
@@ -17199,7 +17591,7 @@ class AstroSphere {
         // return null
     }
     changeColorMap(cm) {
-        if (!this._activeHiPS && !this._activeXYZ2)
+        if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS)
             return;
         this._selectedColorMap = cm;
         this._activeHiPS?.changeColorMap(cm);
@@ -17213,6 +17605,9 @@ class AstroSphere {
     }
     get activeXYZ() {
         return this._activeXYZ2;
+    }
+    get activeMeshHiPS() {
+        return this._activeMeshHiPS;
     }
     isLonLatGridVisible() {
         return this._activeXYZ2?.isLonLatGridVisible() ?? false;
@@ -17254,12 +17649,17 @@ class AstroSphere {
             return null;
         return this._activeHiPS.getDebugStats();
     }
+    getMeshHiPSDebugStats() {
+        if (!this._activeMeshHiPS)
+            return null;
+        return this._activeMeshHiPS.getDebugStats();
+    }
     draw(canvas) {
         if (this._refreshingStatus)
             return;
         if (!this._webgl)
             return;
-        if (!this._activeHiPS && !this._activeXYZ2)
+        if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS)
             return;
         if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
             return;
@@ -17366,6 +17766,10 @@ class AstroSphere {
             const visibleOrder = Math.min(this._healpixGrid.visibleorder, this._activeHiPS.maxOrder);
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
+        if (this._activeBaseLayer === "meships" && this._activeMeshHiPS) {
+            const visibleOrder = this._activeMeshHiPS.refreshOrder(this.fov?.minFoV ?? this._healpixGrid.getMinFoV());
+            this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
+        }
         // DRAW HiPS
         const stableFovDeg = this.fov?.minFoV ?? this._healpixGrid.getMinFoV();
         const nowForGrid = performance.now();
@@ -17397,6 +17801,9 @@ class AstroSphere {
         if (this._activeBaseLayer === "xyz") {
             this._activeXYZ2?.draw(skyEntityDrawInput);
         }
+        if (this._activeBaseLayer === "meships") {
+            this._activeMeshHiPS?.draw(skyEntityDrawInput);
+        }
         this._healpixGrid.draw(skyEntityDrawInput);
         this._equatorialGrid.draw(skyEntityDrawInput);
         this._webgl.enable(this._webgl.DEPTH_TEST);
@@ -17419,7 +17826,8 @@ class AstroSphere {
         }
         this.activeCatalogues.forEach((cat) => {
             const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
-                this._activeXYZ2?.getModelMatrix();
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 cat.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
@@ -17427,7 +17835,8 @@ class AstroSphere {
         this.emitHoveredSourceIfChanged();
         this.activeFootprintSets.forEach((fst) => {
             const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
-                this._activeXYZ2?.getModelMatrix();
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
@@ -18984,6 +19393,199 @@ exports.Point = Point;
 
 /***/ }),
 
+/***/ 6878:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MeshHiPS = void 0;
+const AbstractSkyEntity_js_1 = __webpack_require__(4735);
+const FoVHelper_js_1 = __webpack_require__(229);
+const MeshHiPSShaderProgram_js_1 = __webpack_require__(2257);
+const MeshHiPSTile_js_1 = __webpack_require__(8170);
+class MeshHiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
+    _descriptor;
+    _healpixGrid;
+    _shaderProgram;
+    _tiles = new Map();
+    _currentOrder;
+    _visibleTiles = [];
+    _coverageTiles = [];
+    constructor(radius, position, xrad, yrad, _descriptor, webgl, _healpixGrid) {
+        super(radius, position, xrad, yrad, _descriptor.name, webgl, false);
+        this._descriptor = _descriptor;
+        this._healpixGrid = _healpixGrid;
+        this.initGL(webgl);
+        this._shaderProgram = new MeshHiPSShaderProgram_js_1.MeshHiPSShaderProgram(webgl);
+        this._shaderProgram.enableProgram();
+        this._currentOrder = _descriptor.selectedOrder;
+    }
+    get currentOrder() {
+        return this._currentOrder;
+    }
+    get maxOrder() {
+        return this._descriptor.maxOrder;
+    }
+    get minOrder() {
+        return this._descriptor.minOrder;
+    }
+    get baseURL() {
+        return this._descriptor.baseUrl;
+    }
+    get propertiesRawText() {
+        return this._descriptor.propertiesRawText;
+    }
+    get properties() {
+        return this._descriptor.properties;
+    }
+    getProperty(key) {
+        return this._descriptor.getProperty(key);
+    }
+    refreshOrder(fovDeg) {
+        if (this._descriptor.fixedOrder) {
+            this._currentOrder = this._descriptor.selectedOrder;
+            return this._currentOrder;
+        }
+        const fov = Number.isFinite(fovDeg) && fovDeg > 0
+            ? fovDeg
+            : this._healpixGrid.getMinFoV();
+        const safeFov = Number.isFinite(fov) && fov > 0 ? fov : 1e-6;
+        const order = FoVHelper_js_1.fovHelper.getHiPSNorder(safeFov, this._currentOrder);
+        this._currentOrder = Math.max(this._descriptor.minOrder, Math.min(this._descriptor.maxOrder, order));
+        return this._currentOrder;
+    }
+    draw(input) {
+        const vMatrix = input.camera.getCameraMatrix();
+        if (!vMatrix || !input.pMatrix)
+            return;
+        this.refreshOrder(input.fovDeg);
+        this._visibleTiles = this.resolveVisibleTiles();
+        this._coverageTiles = this.resolveCoverageTiles(this._visibleTiles);
+        this.ensureTiles(this._coverageTiles);
+        this.evictCached();
+        const gl = this._webgl;
+        const pMatrix = input.pMatrix;
+        const mMatrix = this.getModelMatrix();
+        const wasCullFace = gl.isEnabled(gl.CULL_FACE);
+        const wasDepthTest = gl.isEnabled(gl.DEPTH_TEST);
+        const wasDepthMask = gl.getParameter(gl.DEPTH_WRITEMASK);
+        const previousDepthFunc = gl.getParameter(gl.DEPTH_FUNC);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+        gl.depthFunc(gl.LEQUAL);
+        gl.disable(gl.CULL_FACE);
+        const byOrder = this.groupTilesByOrder(this._coverageTiles);
+        const orders = Array.from(byOrder.keys()).sort((a, b) => a - b);
+        for (const order of orders) {
+            for (const coord of byOrder.get(order) ?? []) {
+                this._tiles.get(this.tileKey(coord))?.draw(pMatrix, vMatrix, mMatrix, this._descriptor.color, this._descriptor.wireframe);
+            }
+        }
+        if (wasCullFace)
+            gl.enable(gl.CULL_FACE);
+        if (!wasDepthTest)
+            gl.disable(gl.DEPTH_TEST);
+        gl.depthFunc(previousDepthFunc);
+        gl.depthMask(wasDepthMask);
+    }
+    getDebugStats() {
+        const tiles = Array.from(this._tiles.values());
+        return {
+            activeBaseLayer: 'meships',
+            meshHiPSName: this._descriptor.name,
+            meshHiPSUrl: this._descriptor.baseUrl,
+            currentOrder: this._currentOrder,
+            visibleTileCount: this._visibleTiles.length,
+            coverageTileCount: this._coverageTiles.length,
+            cacheSize: this._tiles.size,
+            readyTileCount: tiles.filter((tile) => tile.ready).length,
+            loadingTileCount: tiles.filter((tile) => tile.loading).length,
+            failedTileCount: tiles.filter((tile) => tile.failed).length,
+        };
+    }
+    resolveVisibleTiles() {
+        const manager = this._healpixGrid.visibleTilesManager;
+        const byOrder = manager?.visibleTilesByOrder;
+        const pixels = byOrder?.order === this._currentOrder && Array.isArray(byOrder.pixels)
+            ? byOrder.pixels
+            : [];
+        if (pixels.length > 0) {
+            return pixels.map((ipix) => ({ order: this._currentOrder, ipix }));
+        }
+        const tileCount = 12 * 4 ** this._currentOrder;
+        return Array.from({ length: tileCount }, (_, ipix) => ({ order: this._currentOrder, ipix }));
+    }
+    resolveCoverageTiles(visibleTiles) {
+        const tiles = new Map();
+        const add = (coord) => {
+            if (coord.order < this._descriptor.minOrder || coord.order > this._descriptor.maxOrder)
+                return;
+            tiles.set(this.tileKey(coord), coord);
+        };
+        for (const coord of visibleTiles) {
+            add(coord);
+            for (let order = coord.order - 1; order >= this._descriptor.minOrder; order--) {
+                const shift = 2 * (coord.order - order);
+                add({ order, ipix: coord.ipix >> shift });
+            }
+        }
+        const manager = this._healpixGrid.visibleTilesManager;
+        const ancestorsMap = manager?.ancestorsMap;
+        if (ancestorsMap) {
+            for (const [order, ipixes] of ancestorsMap) {
+                if (order < this._descriptor.minOrder || order > this._descriptor.maxOrder)
+                    continue;
+                for (const ipix of ipixes)
+                    add({ order, ipix });
+            }
+        }
+        return Array.from(tiles.values());
+    }
+    groupTilesByOrder(coords) {
+        const byOrder = new Map();
+        for (const coord of coords) {
+            const list = byOrder.get(coord.order) ?? [];
+            list.push(coord);
+            byOrder.set(coord.order, list);
+        }
+        return byOrder;
+    }
+    ensureTiles(coords) {
+        for (const coord of coords) {
+            const key = this.tileKey(coord);
+            if (this._tiles.has(key))
+                continue;
+            this._tiles.set(key, new MeshHiPSTile_js_1.MeshHiPSTile(coord, this._descriptor.getTileUrl(coord.order, coord.ipix), this._webgl, this._shaderProgram));
+        }
+    }
+    evictCached() {
+        const maxCached = this._descriptor.maxCachedTiles;
+        if (this._tiles.size <= maxCached)
+            return;
+        const visibleKeys = new Set(this._coverageTiles.map((coord) => this.tileKey(coord)));
+        const evictable = Array.from(this._tiles.entries())
+            .filter(([key]) => !visibleKeys.has(key))
+            .sort((a, b) => a[1].lastUsedAt - b[1].lastUsedAt);
+        while (this._tiles.size > maxCached && evictable.length > 0) {
+            const [key, tile] = evictable.shift();
+            tile.dispose();
+            this._tiles.delete(key);
+        }
+    }
+    tileKey(coord) {
+        return `${coord.order}/${coord.ipix}`;
+    }
+}
+exports.MeshHiPS = MeshHiPS;
+
+
+/***/ }),
+
 /***/ 6937:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -20450,6 +21052,165 @@ var CoordsType;
     CoordsType["GEOGRAPHIC"] = "geographic";
 })(CoordsType || (exports.CoordsType = CoordsType = {}));
 // export default CoordsType;
+
+
+/***/ }),
+
+/***/ 8170:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.MeshHiPSTile = void 0;
+const OBJMeshParser_js_1 = __webpack_require__(4322);
+class MeshHiPSTile {
+    coord;
+    _url;
+    _webgl;
+    _shaderProgram;
+    _gpuMesh = null;
+    _ready = false;
+    _loading = false;
+    _failed = false;
+    _lastUsedAt = 0;
+    _createdAt = Date.now();
+    constructor(coord, _url, _webgl, _shaderProgram) {
+        this.coord = coord;
+        this._url = _url;
+        this._webgl = _webgl;
+        this._shaderProgram = _shaderProgram;
+        void this.load();
+    }
+    get ready() {
+        return this._ready;
+    }
+    get loading() {
+        return this._loading;
+    }
+    get failed() {
+        return this._failed;
+    }
+    get lastUsedAt() {
+        return this._lastUsedAt;
+    }
+    get createdAt() {
+        return this._createdAt;
+    }
+    touch() {
+        this._lastUsedAt = Date.now();
+    }
+    draw(pMatrix, vMatrix, mMatrix, color, wireframe) {
+        this.touch();
+        if (!this._ready || !this._gpuMesh)
+            return false;
+        const gl = this._webgl;
+        this._shaderProgram.enableShaders(pMatrix, vMatrix, mMatrix, color);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.positionBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.normalBuffer);
+            gl.vertexAttribPointer(this._shaderProgram.locations.vertexNormalAttribute, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute);
+        }
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wireframe ? this._gpuMesh.lineIndexBuffer : this._gpuMesh.indexBuffer);
+        gl.drawElements(wireframe ? gl.LINES : gl.TRIANGLES, wireframe ? this._gpuMesh.lineIndexCount : this._gpuMesh.indexCount, this._gpuMesh.indexType, 0);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+            gl.disableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute);
+        }
+        return true;
+    }
+    dispose() {
+        const gl = this._webgl;
+        if (this._gpuMesh?.positionBuffer)
+            gl.deleteBuffer(this._gpuMesh.positionBuffer);
+        if (this._gpuMesh?.normalBuffer)
+            gl.deleteBuffer(this._gpuMesh.normalBuffer);
+        if (this._gpuMesh?.indexBuffer)
+            gl.deleteBuffer(this._gpuMesh.indexBuffer);
+        if (this._gpuMesh?.lineIndexBuffer)
+            gl.deleteBuffer(this._gpuMesh.lineIndexBuffer);
+        this._gpuMesh = null;
+        this._ready = false;
+        this._loading = false;
+    }
+    async load() {
+        if (this._loading || this._ready)
+            return;
+        this._loading = true;
+        try {
+            const resp = await fetch(this._url);
+            if (!resp.ok)
+                throw new Error(`HTTP ${resp.status} fetching ${this._url}`);
+            const mesh = OBJMeshParser_js_1.OBJMeshParser.parse(await resp.text());
+            this._gpuMesh = this.uploadMesh(mesh);
+            this._ready = true;
+            this._failed = false;
+        }
+        catch (error) {
+            console.warn('[MeshHiPSTile] load failed', this._url, error);
+            this._failed = true;
+            this._ready = false;
+        }
+        finally {
+            this._loading = false;
+        }
+    }
+    uploadMesh(mesh) {
+        const gl = this._webgl;
+        const positionBuffer = gl.createBuffer();
+        const normalBuffer = gl.createBuffer();
+        const indexBuffer = gl.createBuffer();
+        const lineIndexBuffer = gl.createBuffer();
+        if (!positionBuffer || !normalBuffer || !indexBuffer || !lineIndexBuffer) {
+            throw new Error(`Could not create MeshHiPS buffers for ${this.key}`);
+        }
+        const lineIndices = this.buildLineIndices(mesh.indices);
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.normals, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lineIndexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, lineIndices, gl.STATIC_DRAW);
+        return {
+            positionBuffer,
+            normalBuffer,
+            indexBuffer,
+            lineIndexBuffer,
+            indexCount: mesh.indices.length,
+            lineIndexCount: lineIndices.length,
+            indexType: gl.UNSIGNED_INT,
+        };
+    }
+    buildLineIndices(indices) {
+        const lines = new Uint32Array(indices.length * 2);
+        let out = 0;
+        for (let i = 0; i < indices.length; i += 3) {
+            const a = indices[i];
+            const b = indices[i + 1];
+            const c = indices[i + 2];
+            lines[out++] = a;
+            lines[out++] = b;
+            lines[out++] = b;
+            lines[out++] = c;
+            lines[out++] = c;
+            lines[out++] = a;
+        }
+        return lines;
+    }
+    get key() {
+        return `${this.coord.order}/${this.coord.ipix}`;
+    }
+}
+exports.MeshHiPSTile = MeshHiPSTile;
 
 
 /***/ }),
