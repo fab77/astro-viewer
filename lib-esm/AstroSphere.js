@@ -569,7 +569,7 @@ class AstroSphere {
         this._activeBaseLayer = "xyz";
     }
     activateMeshHiPS(descriptor) {
-        this._activeMeshHiPS = new MeshHiPS(1, [0.0, 0.0, 0.0], 0, 0, descriptor, this._webgl, this._healpixGrid);
+        this._activeMeshHiPS = new MeshHiPS(descriptor.meshRadius, [0.0, 0.0, 0.0], 0, 0, descriptor, this._webgl, this._healpixGrid);
         this._activeBaseLayer = "meships";
     }
     activateWMTS(config) {
@@ -928,7 +928,7 @@ class AstroSphere {
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
         if (this._activeBaseLayer === "meships" && this._activeMeshHiPS) {
-            const visibleOrder = Math.min(Math.max(this._healpixGrid.visibleorder, this._activeMeshHiPS.minOrder), this._activeMeshHiPS.maxOrder);
+            const visibleOrder = this._activeMeshHiPS.refreshOrder(this.fov?.minFoV ?? this._healpixGrid.getMinFoV());
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
         // DRAW HiPS

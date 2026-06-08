@@ -9,6 +9,7 @@ export declare class MeshHiPS extends AbstractSkyEntity {
     private _tiles;
     private _currentOrder;
     private _visibleTiles;
+    private _coverageTiles;
     constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, _descriptor: MeshHiPSDescriptor, webgl: WebGL2RenderingContext, _healpixGrid: HealpixGrid);
     get currentOrder(): number;
     get maxOrder(): number;
@@ -17,10 +18,12 @@ export declare class MeshHiPS extends AbstractSkyEntity {
     get propertiesRawText(): string;
     get properties(): ReadonlyMap<string, string>;
     getProperty(key: string): string | undefined;
+    refreshOrder(fovDeg: number | undefined): number;
     draw(input: SkyEntityDrawInput): void;
     getDebugStats(): MeshHiPSDebugStats;
-    private refresh;
     private resolveVisibleTiles;
+    private resolveCoverageTiles;
+    private groupTilesByOrder;
     private ensureTiles;
     private evictCached;
     private tileKey;

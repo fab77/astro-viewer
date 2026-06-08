@@ -910,7 +910,7 @@ class AstroSphere {
 
   activateMeshHiPS(descriptor: MeshHiPSDescriptor) {
     this._activeMeshHiPS = new MeshHiPS(
-      1,
+      descriptor.meshRadius,
       [0.0, 0.0, 0.0],
       0,
       0,
@@ -1441,9 +1441,8 @@ class AstroSphere {
       );
     }
     if (this._activeBaseLayer === "meships" && this._activeMeshHiPS) {
-      const visibleOrder = Math.min(
-        Math.max(this._healpixGrid.visibleorder, this._activeMeshHiPS.minOrder),
-        this._activeMeshHiPS.maxOrder,
+      const visibleOrder = this._activeMeshHiPS.refreshOrder(
+        this.fov?.minFoV ?? this._healpixGrid.getMinFoV(),
       );
       this._healpixGrid.visibleTilesManager.computeVisiblePixels(
         visibleOrder,

@@ -4,6 +4,7 @@ type MeshHiPSLocations = {
     vMatrix: WebGLUniformLocation | null;
     color: WebGLUniformLocation | null;
     vertexPositionAttribute: number;
+    vertexNormalAttribute: number;
 };
 export declare class MeshHiPSShaderProgram {
     private _webgl;

@@ -15,6 +15,7 @@ export class MeshHiPSShaderProgram {
             vMatrix: null,
             color: null,
             vertexPositionAttribute: -1,
+            vertexNormalAttribute: -1,
         };
     }
     get shaderProgram() {
@@ -41,6 +42,7 @@ export class MeshHiPSShaderProgram {
         this.locations.mMatrix = gl.getUniformLocation(program, 'uMMatrix');
         this.locations.color = gl.getUniformLocation(program, 'uColor');
         this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
+        this.locations.vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
         gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
         gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
         gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
@@ -49,19 +51,30 @@ export class MeshHiPSShaderProgram {
     initShaders() {
         const gl = this._webgl;
         const vertexShader = this.compileShader(gl.VERTEX_SHADER, `#version 300 es
+      precision mediump float;
       in vec3 aVertexPosition;
+      in vec3 aVertexNormal;
       uniform mat4 uPMatrix;
       uniform mat4 uVMatrix;
       uniform mat4 uMMatrix;
+      out vec3 vNormal;
       void main(void) {
-        gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
+        vec3 worldPos = (uMMatrix * vec4(aVertexPosition, 1.0)).xyz;
+        vNormal = normalize((uMMatrix * vec4(aVertexNormal, 0.0)).xyz);
+        gl_Position = uPMatrix * uVMatrix * vec4(worldPos, 1.0);
       }`);
         const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, `#version 300 es
       precision mediump float;
+      in vec3 vNormal;
       uniform vec4 uColor;
       out vec4 outColor;
       void main(void) {
-        outColor = uColor;
+        vec3 normal = normalize(vNormal);
+        vec3 lightDir = normalize(vec3(0.45, 0.8, 0.35));
+        float diffuse = max(dot(normal, lightDir), 0.0);
+        float rim = pow(1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
+        vec3 color = uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim;
+        outColor = vec4(color, uColor.a);
       }`);
         gl.attachShader(this._shaderProgram, vertexShader);
         gl.attachShader(this._shaderProgram, fragmentShader);

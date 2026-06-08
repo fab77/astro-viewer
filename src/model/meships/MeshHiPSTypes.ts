@@ -12,6 +12,7 @@ export type MeshHiPSTileCoord = {
 export type MeshHiPSConfig = {
   baseUrl: string
   name?: string
+  meshRadius?: number
   order?: number
   minOrder?: number
   maxOrder?: number
@@ -26,6 +27,7 @@ export type MeshHiPSDebugStats = {
   meshHiPSUrl: string
   currentOrder: number
   visibleTileCount: number
+  coverageTileCount: number
   cacheSize: number
   readyTileCount: number
   loadingTileCount: number
@@ -34,11 +36,13 @@ export type MeshHiPSDebugStats = {
 
 export type MeshHiPSMesh = {
   positions: Float32Array
+  normals: Float32Array
   indices: Uint32Array
 }
 
 export type MeshHiPSGpuMesh = {
   positionBuffer: WebGLBuffer | null
+  normalBuffer: WebGLBuffer | null
   indexBuffer: WebGLBuffer | null
   lineIndexBuffer: WebGLBuffer | null
   indexCount: number

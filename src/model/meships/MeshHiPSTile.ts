@@ -75,6 +75,19 @@ export class MeshHiPSTile {
     )
     gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute)
 
+    if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+      gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.normalBuffer)
+      gl.vertexAttribPointer(
+        this._shaderProgram.locations.vertexNormalAttribute,
+        3,
+        gl.FLOAT,
+        false,
+        0,
+        0,
+      )
+      gl.enableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute)
+    }
+
     gl.bindBuffer(
       gl.ELEMENT_ARRAY_BUFFER,
       wireframe ? this._gpuMesh.lineIndexBuffer : this._gpuMesh.indexBuffer,
@@ -87,12 +100,16 @@ export class MeshHiPSTile {
     )
 
     gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute)
+    if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+      gl.disableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute)
+    }
     return true
   }
 
   dispose(): void {
     const gl = this._webgl
     if (this._gpuMesh?.positionBuffer) gl.deleteBuffer(this._gpuMesh.positionBuffer)
+    if (this._gpuMesh?.normalBuffer) gl.deleteBuffer(this._gpuMesh.normalBuffer)
     if (this._gpuMesh?.indexBuffer) gl.deleteBuffer(this._gpuMesh.indexBuffer)
     if (this._gpuMesh?.lineIndexBuffer) gl.deleteBuffer(this._gpuMesh.lineIndexBuffer)
     this._gpuMesh = null
@@ -123,16 +140,20 @@ export class MeshHiPSTile {
   private uploadMesh(mesh: MeshHiPSMesh): MeshHiPSGpuMesh {
     const gl = this._webgl
     const positionBuffer = gl.createBuffer()
+    const normalBuffer = gl.createBuffer()
     const indexBuffer = gl.createBuffer()
     const lineIndexBuffer = gl.createBuffer()
 
-    if (!positionBuffer || !indexBuffer || !lineIndexBuffer) {
+    if (!positionBuffer || !normalBuffer || !indexBuffer || !lineIndexBuffer) {
       throw new Error(`Could not create MeshHiPS buffers for ${this.key}`)
     }
     const lineIndices = this.buildLineIndices(mesh.indices)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW)
+
+    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, mesh.normals, gl.STATIC_DRAW)
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW)
@@ -142,6 +163,7 @@ export class MeshHiPSTile {
 
     return {
       positionBuffer,
+      normalBuffer,
       indexBuffer,
       lineIndexBuffer,
       indexCount: mesh.indices.length,

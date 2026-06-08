@@ -14,6 +14,7 @@ export class MeshHiPS extends AbstractSkyEntity {
     _tiles = new Map();
     _currentOrder;
     _visibleTiles = [];
+    _coverageTiles = [];
     constructor(radius, position, xrad, yrad, _descriptor, webgl, _healpixGrid) {
         super(radius, position, xrad, yrad, _descriptor.name, webgl, false);
         this._descriptor = _descriptor;
@@ -44,24 +45,52 @@ export class MeshHiPS extends AbstractSkyEntity {
     getProperty(key) {
         return this._descriptor.getProperty(key);
     }
+    refreshOrder(fovDeg) {
+        if (this._descriptor.fixedOrder) {
+            this._currentOrder = this._descriptor.selectedOrder;
+            return this._currentOrder;
+        }
+        const fov = Number.isFinite(fovDeg) && fovDeg > 0
+            ? fovDeg
+            : this._healpixGrid.getMinFoV();
+        const safeFov = Number.isFinite(fov) && fov > 0 ? fov : 1e-6;
+        const order = fovHelper.getHiPSNorder(safeFov, this._currentOrder);
+        this._currentOrder = Math.max(this._descriptor.minOrder, Math.min(this._descriptor.maxOrder, order));
+        return this._currentOrder;
+    }
     draw(input) {
         const vMatrix = input.camera.getCameraMatrix();
         if (!vMatrix || !input.pMatrix)
             return;
-        this.refresh(input);
+        this.refreshOrder(input.fovDeg);
         this._visibleTiles = this.resolveVisibleTiles();
-        this.ensureTiles(this._visibleTiles);
+        this._coverageTiles = this.resolveCoverageTiles(this._visibleTiles);
+        this.ensureTiles(this._coverageTiles);
         this.evictCached();
         const gl = this._webgl;
         const pMatrix = input.pMatrix;
         const mMatrix = this.getModelMatrix();
         const wasCullFace = gl.isEnabled(gl.CULL_FACE);
+        const wasDepthTest = gl.isEnabled(gl.DEPTH_TEST);
+        const wasDepthMask = gl.getParameter(gl.DEPTH_WRITEMASK);
+        const previousDepthFunc = gl.getParameter(gl.DEPTH_FUNC);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+        gl.depthFunc(gl.LEQUAL);
         gl.disable(gl.CULL_FACE);
-        for (const coord of this._visibleTiles) {
-            this._tiles.get(this.tileKey(coord))?.draw(pMatrix, vMatrix, mMatrix, this._descriptor.color, this._descriptor.wireframe);
+        const byOrder = this.groupTilesByOrder(this._coverageTiles);
+        const orders = Array.from(byOrder.keys()).sort((a, b) => a - b);
+        for (const order of orders) {
+            for (const coord of byOrder.get(order) ?? []) {
+                this._tiles.get(this.tileKey(coord))?.draw(pMatrix, vMatrix, mMatrix, this._descriptor.color, this._descriptor.wireframe);
+            }
         }
         if (wasCullFace)
             gl.enable(gl.CULL_FACE);
+        if (!wasDepthTest)
+            gl.disable(gl.DEPTH_TEST);
+        gl.depthFunc(previousDepthFunc);
+        gl.depthMask(wasDepthMask);
     }
     getDebugStats() {
         const tiles = Array.from(this._tiles.values());
@@ -71,17 +100,12 @@ export class MeshHiPS extends AbstractSkyEntity {
             meshHiPSUrl: this._descriptor.baseUrl,
             currentOrder: this._currentOrder,
             visibleTileCount: this._visibleTiles.length,
+            coverageTileCount: this._coverageTiles.length,
             cacheSize: this._tiles.size,
             readyTileCount: tiles.filter((tile) => tile.ready).length,
             loadingTileCount: tiles.filter((tile) => tile.loading).length,
             failedTileCount: tiles.filter((tile) => tile.failed).length,
         };
-    }
-    refresh(input) {
-        const rawFov = input.fovDeg ?? this._healpixGrid.getMinFoV();
-        const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6;
-        const order = fovHelper.getHiPSNorder(fov, this._currentOrder);
-        this._currentOrder = Math.max(this._descriptor.minOrder, Math.min(this._descriptor.maxOrder, order));
     }
     resolveVisibleTiles() {
         const manager = this._healpixGrid.visibleTilesManager;
@@ -95,6 +119,41 @@ export class MeshHiPS extends AbstractSkyEntity {
         const tileCount = 12 * 4 ** this._currentOrder;
         return Array.from({ length: tileCount }, (_, ipix) => ({ order: this._currentOrder, ipix }));
     }
+    resolveCoverageTiles(visibleTiles) {
+        const tiles = new Map();
+        const add = (coord) => {
+            if (coord.order < this._descriptor.minOrder || coord.order > this._descriptor.maxOrder)
+                return;
+            tiles.set(this.tileKey(coord), coord);
+        };
+        for (const coord of visibleTiles) {
+            add(coord);
+            for (let order = coord.order - 1; order >= this._descriptor.minOrder; order--) {
+                const shift = 2 * (coord.order - order);
+                add({ order, ipix: coord.ipix >> shift });
+            }
+        }
+        const manager = this._healpixGrid.visibleTilesManager;
+        const ancestorsMap = manager?.ancestorsMap;
+        if (ancestorsMap) {
+            for (const [order, ipixes] of ancestorsMap) {
+                if (order < this._descriptor.minOrder || order > this._descriptor.maxOrder)
+                    continue;
+                for (const ipix of ipixes)
+                    add({ order, ipix });
+            }
+        }
+        return Array.from(tiles.values());
+    }
+    groupTilesByOrder(coords) {
+        const byOrder = new Map();
+        for (const coord of coords) {
+            const list = byOrder.get(coord.order) ?? [];
+            list.push(coord);
+            byOrder.set(coord.order, list);
+        }
+        return byOrder;
+    }
     ensureTiles(coords) {
         for (const coord of coords) {
             const key = this.tileKey(coord);
@@ -107,7 +166,7 @@ export class MeshHiPS extends AbstractSkyEntity {
         const maxCached = this._descriptor.maxCachedTiles;
         if (this._tiles.size <= maxCached)
             return;
-        const visibleKeys = new Set(this._visibleTiles.map((coord) => this.tileKey(coord)));
+        const visibleKeys = new Set(this._coverageTiles.map((coord) => this.tileKey(coord)));
         const evictable = Array.from(this._tiles.entries())
             .filter(([key]) => !visibleKeys.has(key))
             .sort((a, b) => a[1].lastUsedAt - b[1].lastUsedAt);

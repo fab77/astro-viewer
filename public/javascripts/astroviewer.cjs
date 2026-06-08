@@ -2908,11 +2908,14 @@ class MeshHiPSDescriptor {
     _minOrder = 0;
     _maxOrder = 0;
     _selectedOrder;
+    _fixedOrder = false;
     _maxCachedTiles = 384;
-    _color = [0.72, 0.86, 1.0, 1.0];
+    // default neutral color (contrasts with page background)
+    _color = [0.32, 0.34, 0.36, 1.0];
     _wireframe = false;
     _propertiesRawText = '';
     _propertiesMap = new Map();
+    _meshRadius = null;
     constructor(config, propertiesText = '') {
         this._baseUrl = this.normalizeBaseUrl(config.baseUrl);
         this._propertiesRawText = propertiesText;
@@ -2920,11 +2923,45 @@ class MeshHiPSDescriptor {
         this._name = config.name ?? this._propertiesMap.get('obs_collection') ?? this._propertiesMap.get('label') ?? this._name;
         this._minOrder = config.minOrder ?? this.readNumber('hips_order_min', this._minOrder);
         this._maxOrder = config.maxOrder ?? this.readNumber('hips_order', this.readNumber('hips_order_max', this._maxOrder));
-        this._selectedOrder = config.order ?? this._maxOrder;
+        this._fixedOrder = config.order !== undefined;
+        this._selectedOrder = config.order ?? this._minOrder;
         this._maxCachedTiles = config.maxCachedTiles ?? this._maxCachedTiles;
-        this._color = config.color ?? this._color;
+        // color: prefer explicit config, then properties.mesh_color, then default
+        if (config.color) {
+            this._color = config.color;
+        }
+        else if (this._propertiesMap.has('mesh_color')) {
+            const raw = this._propertiesMap.get('mesh_color') || '';
+            const parts = raw.split(/[,\s]+/).map((v) => Number(v)).filter(Number.isFinite);
+            if (parts.length >= 3) {
+                let [r, g, b, a] = parts;
+                if (r > 1 || g > 1 || b > 1) {
+                    // assume 0-255 range
+                    r = r / 255;
+                    g = g / 255;
+                    b = b / 255;
+                }
+                if (!Number.isFinite(a))
+                    a = 1;
+                this._color = [r, g, b, a];
+            }
+        }
+        else {
+            this._color = this._color;
+        }
         this._wireframe = config.wireframe ?? this._wireframe;
         this._selectedOrder = this.clampOrder(this._selectedOrder);
+        // mesh radius: prefer explicit value from config, otherwise read mandatory property
+        if (Number.isFinite(config.meshRadius)) {
+            this._meshRadius = config.meshRadius;
+        }
+        else {
+            const radiusFromProps = this.readNumber('mesh_radius', NaN);
+            if (!Number.isFinite(radiusFromProps)) {
+                throw new Error('Missing mandatory property "mesh_radius" in MeshHiPS properties');
+            }
+            this._meshRadius = radiusFromProps;
+        }
     }
     get name() {
         return this._name;
@@ -2941,6 +2978,9 @@ class MeshHiPSDescriptor {
     get selectedOrder() {
         return this._selectedOrder;
     }
+    get fixedOrder() {
+        return this._fixedOrder;
+    }
     get maxCachedTiles() {
         return this._maxCachedTiles;
     }
@@ -2955,6 +2995,9 @@ class MeshHiPSDescriptor {
     }
     get properties() {
         return new Map(this._propertiesMap);
+    }
+    get meshRadius() {
+        return this._meshRadius;
     }
     getProperty(key) {
         return this._propertiesMap.get(key);
@@ -13927,6 +13970,7 @@ class MeshHiPSShaderProgram {
             vMatrix: null,
             color: null,
             vertexPositionAttribute: -1,
+            vertexNormalAttribute: -1,
         };
     }
     get shaderProgram() {
@@ -13953,6 +13997,7 @@ class MeshHiPSShaderProgram {
         this.locations.mMatrix = gl.getUniformLocation(program, 'uMMatrix');
         this.locations.color = gl.getUniformLocation(program, 'uColor');
         this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition');
+        this.locations.vertexNormalAttribute = gl.getAttribLocation(program, 'aVertexNormal');
         gl.uniformMatrix4fv(this.locations.pMatrix, false, pMatrix);
         gl.uniformMatrix4fv(this.locations.vMatrix, false, vMatrix);
         gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix);
@@ -13961,19 +14006,30 @@ class MeshHiPSShaderProgram {
     initShaders() {
         const gl = this._webgl;
         const vertexShader = this.compileShader(gl.VERTEX_SHADER, `#version 300 es
+      precision mediump float;
       in vec3 aVertexPosition;
+      in vec3 aVertexNormal;
       uniform mat4 uPMatrix;
       uniform mat4 uVMatrix;
       uniform mat4 uMMatrix;
+      out vec3 vNormal;
       void main(void) {
-        gl_Position = uPMatrix * uVMatrix * uMMatrix * vec4(aVertexPosition, 1.0);
+        vec3 worldPos = (uMMatrix * vec4(aVertexPosition, 1.0)).xyz;
+        vNormal = normalize((uMMatrix * vec4(aVertexNormal, 0.0)).xyz);
+        gl_Position = uPMatrix * uVMatrix * vec4(worldPos, 1.0);
       }`);
         const fragmentShader = this.compileShader(gl.FRAGMENT_SHADER, `#version 300 es
       precision mediump float;
+      in vec3 vNormal;
       uniform vec4 uColor;
       out vec4 outColor;
       void main(void) {
-        outColor = uColor;
+        vec3 normal = normalize(vNormal);
+        vec3 lightDir = normalize(vec3(0.45, 0.8, 0.35));
+        float diffuse = max(dot(normal, lightDir), 0.0);
+        float rim = pow(1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
+        vec3 color = uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim;
+        outColor = vec4(color, uColor.a);
       }`);
         gl.attachShader(this._shaderProgram, vertexShader);
         gl.attachShader(this._shaderProgram, fragmentShader);
@@ -15984,6 +16040,7 @@ class OBJMeshParser {
     static parse(text) {
         const vertices = [];
         const indices = [];
+        const normals = [];
         const lines = text.split(/\r\n|\n/);
         for (const raw of lines) {
             const line = raw.trim();
@@ -15994,6 +16051,7 @@ class OBJMeshParser {
                 if (parts.length < 4)
                     continue;
                 vertices.push(Number(parts[1]), Number(parts[2]), Number(parts[3]));
+                normals.push(0, 0, 0);
                 continue;
             }
             if (line.startsWith('f ')) {
@@ -16011,10 +16069,55 @@ class OBJMeshParser {
                 }
             }
         }
+        OBJMeshParser.computeVertexNormals(vertices, indices, normals);
         return {
             positions: new Float32Array(vertices),
+            normals: new Float32Array(normals),
             indices: new Uint32Array(indices),
         };
+    }
+    static computeVertexNormals(vertices, indices, normals) {
+        for (let i = 0; i < indices.length; i += 3) {
+            const ia = indices[i];
+            const ib = indices[i + 1];
+            const ic = indices[i + 2];
+            const ax = vertices[ia * 3];
+            const ay = vertices[ia * 3 + 1];
+            const az = vertices[ia * 3 + 2];
+            const bx = vertices[ib * 3];
+            const by = vertices[ib * 3 + 1];
+            const bz = vertices[ib * 3 + 2];
+            const cx = vertices[ic * 3];
+            const cy = vertices[ic * 3 + 1];
+            const cz = vertices[ic * 3 + 2];
+            const abx = bx - ax;
+            const aby = by - ay;
+            const abz = bz - az;
+            const acx = cx - ax;
+            const acy = cy - ay;
+            const acz = cz - az;
+            const nx = aby * acz - abz * acy;
+            const ny = abz * acx - abx * acz;
+            const nz = abx * acy - aby * acx;
+            normals[ia * 3] += nx;
+            normals[ia * 3 + 1] += ny;
+            normals[ia * 3 + 2] += nz;
+            normals[ib * 3] += nx;
+            normals[ib * 3 + 1] += ny;
+            normals[ib * 3 + 2] += nz;
+            normals[ic * 3] += nx;
+            normals[ic * 3 + 1] += ny;
+            normals[ic * 3 + 2] += nz;
+        }
+        for (let i = 0; i < normals.length; i += 3) {
+            const nx = normals[i];
+            const ny = normals[i + 1];
+            const nz = normals[i + 2];
+            const len = Math.hypot(nx, ny, nz) || 1;
+            normals[i] = nx / len;
+            normals[i + 1] = ny / len;
+            normals[i + 2] = nz / len;
+        }
     }
     static resolveIndex(objIndex, vertexCount) {
         return objIndex > 0 ? objIndex - 1 : vertexCount + objIndex;
@@ -17305,7 +17408,7 @@ class AstroSphere {
         this._activeBaseLayer = "xyz";
     }
     activateMeshHiPS(descriptor) {
-        this._activeMeshHiPS = new MeshHiPS_js_1.MeshHiPS(1, [0.0, 0.0, 0.0], 0, 0, descriptor, this._webgl, this._healpixGrid);
+        this._activeMeshHiPS = new MeshHiPS_js_1.MeshHiPS(descriptor.meshRadius, [0.0, 0.0, 0.0], 0, 0, descriptor, this._webgl, this._healpixGrid);
         this._activeBaseLayer = "meships";
     }
     activateWMTS(config) {
@@ -17664,7 +17767,7 @@ class AstroSphere {
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
         if (this._activeBaseLayer === "meships" && this._activeMeshHiPS) {
-            const visibleOrder = Math.min(Math.max(this._healpixGrid.visibleorder, this._activeMeshHiPS.minOrder), this._activeMeshHiPS.maxOrder);
+            const visibleOrder = this._activeMeshHiPS.refreshOrder(this.fov?.minFoV ?? this._healpixGrid.getMinFoV());
             this._healpixGrid.visibleTilesManager.computeVisiblePixels(visibleOrder, this._webgl, this._camera, this._perspectiveMatrixManager.pMatrix);
         }
         // DRAW HiPS
@@ -19312,6 +19415,7 @@ class MeshHiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _tiles = new Map();
     _currentOrder;
     _visibleTiles = [];
+    _coverageTiles = [];
     constructor(radius, position, xrad, yrad, _descriptor, webgl, _healpixGrid) {
         super(radius, position, xrad, yrad, _descriptor.name, webgl, false);
         this._descriptor = _descriptor;
@@ -19342,24 +19446,52 @@ class MeshHiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     getProperty(key) {
         return this._descriptor.getProperty(key);
     }
+    refreshOrder(fovDeg) {
+        if (this._descriptor.fixedOrder) {
+            this._currentOrder = this._descriptor.selectedOrder;
+            return this._currentOrder;
+        }
+        const fov = Number.isFinite(fovDeg) && fovDeg > 0
+            ? fovDeg
+            : this._healpixGrid.getMinFoV();
+        const safeFov = Number.isFinite(fov) && fov > 0 ? fov : 1e-6;
+        const order = FoVHelper_js_1.fovHelper.getHiPSNorder(safeFov, this._currentOrder);
+        this._currentOrder = Math.max(this._descriptor.minOrder, Math.min(this._descriptor.maxOrder, order));
+        return this._currentOrder;
+    }
     draw(input) {
         const vMatrix = input.camera.getCameraMatrix();
         if (!vMatrix || !input.pMatrix)
             return;
-        this.refresh(input);
+        this.refreshOrder(input.fovDeg);
         this._visibleTiles = this.resolveVisibleTiles();
-        this.ensureTiles(this._visibleTiles);
+        this._coverageTiles = this.resolveCoverageTiles(this._visibleTiles);
+        this.ensureTiles(this._coverageTiles);
         this.evictCached();
         const gl = this._webgl;
         const pMatrix = input.pMatrix;
         const mMatrix = this.getModelMatrix();
         const wasCullFace = gl.isEnabled(gl.CULL_FACE);
+        const wasDepthTest = gl.isEnabled(gl.DEPTH_TEST);
+        const wasDepthMask = gl.getParameter(gl.DEPTH_WRITEMASK);
+        const previousDepthFunc = gl.getParameter(gl.DEPTH_FUNC);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+        gl.depthFunc(gl.LEQUAL);
         gl.disable(gl.CULL_FACE);
-        for (const coord of this._visibleTiles) {
-            this._tiles.get(this.tileKey(coord))?.draw(pMatrix, vMatrix, mMatrix, this._descriptor.color, this._descriptor.wireframe);
+        const byOrder = this.groupTilesByOrder(this._coverageTiles);
+        const orders = Array.from(byOrder.keys()).sort((a, b) => a - b);
+        for (const order of orders) {
+            for (const coord of byOrder.get(order) ?? []) {
+                this._tiles.get(this.tileKey(coord))?.draw(pMatrix, vMatrix, mMatrix, this._descriptor.color, this._descriptor.wireframe);
+            }
         }
         if (wasCullFace)
             gl.enable(gl.CULL_FACE);
+        if (!wasDepthTest)
+            gl.disable(gl.DEPTH_TEST);
+        gl.depthFunc(previousDepthFunc);
+        gl.depthMask(wasDepthMask);
     }
     getDebugStats() {
         const tiles = Array.from(this._tiles.values());
@@ -19369,17 +19501,12 @@ class MeshHiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
             meshHiPSUrl: this._descriptor.baseUrl,
             currentOrder: this._currentOrder,
             visibleTileCount: this._visibleTiles.length,
+            coverageTileCount: this._coverageTiles.length,
             cacheSize: this._tiles.size,
             readyTileCount: tiles.filter((tile) => tile.ready).length,
             loadingTileCount: tiles.filter((tile) => tile.loading).length,
             failedTileCount: tiles.filter((tile) => tile.failed).length,
         };
-    }
-    refresh(input) {
-        const rawFov = input.fovDeg ?? this._healpixGrid.getMinFoV();
-        const fov = Number.isFinite(rawFov) && rawFov > 0 ? rawFov : 1e-6;
-        const order = FoVHelper_js_1.fovHelper.getHiPSNorder(fov, this._currentOrder);
-        this._currentOrder = Math.max(this._descriptor.minOrder, Math.min(this._descriptor.maxOrder, order));
     }
     resolveVisibleTiles() {
         const manager = this._healpixGrid.visibleTilesManager;
@@ -19393,6 +19520,41 @@ class MeshHiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const tileCount = 12 * 4 ** this._currentOrder;
         return Array.from({ length: tileCount }, (_, ipix) => ({ order: this._currentOrder, ipix }));
     }
+    resolveCoverageTiles(visibleTiles) {
+        const tiles = new Map();
+        const add = (coord) => {
+            if (coord.order < this._descriptor.minOrder || coord.order > this._descriptor.maxOrder)
+                return;
+            tiles.set(this.tileKey(coord), coord);
+        };
+        for (const coord of visibleTiles) {
+            add(coord);
+            for (let order = coord.order - 1; order >= this._descriptor.minOrder; order--) {
+                const shift = 2 * (coord.order - order);
+                add({ order, ipix: coord.ipix >> shift });
+            }
+        }
+        const manager = this._healpixGrid.visibleTilesManager;
+        const ancestorsMap = manager?.ancestorsMap;
+        if (ancestorsMap) {
+            for (const [order, ipixes] of ancestorsMap) {
+                if (order < this._descriptor.minOrder || order > this._descriptor.maxOrder)
+                    continue;
+                for (const ipix of ipixes)
+                    add({ order, ipix });
+            }
+        }
+        return Array.from(tiles.values());
+    }
+    groupTilesByOrder(coords) {
+        const byOrder = new Map();
+        for (const coord of coords) {
+            const list = byOrder.get(coord.order) ?? [];
+            list.push(coord);
+            byOrder.set(coord.order, list);
+        }
+        return byOrder;
+    }
     ensureTiles(coords) {
         for (const coord of coords) {
             const key = this.tileKey(coord);
@@ -19405,7 +19567,7 @@ class MeshHiPS extends AbstractSkyEntity_js_1.AbstractSkyEntity {
         const maxCached = this._descriptor.maxCachedTiles;
         if (this._tiles.size <= maxCached)
             return;
-        const visibleKeys = new Set(this._visibleTiles.map((coord) => this.tileKey(coord)));
+        const visibleKeys = new Set(this._coverageTiles.map((coord) => this.tileKey(coord)));
         const evictable = Array.from(this._tiles.entries())
             .filter(([key]) => !visibleKeys.has(key))
             .sort((a, b) => a[1].lastUsedAt - b[1].lastUsedAt);
@@ -20951,15 +21113,25 @@ class MeshHiPSTile {
         gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.positionBuffer);
         gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
         gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.normalBuffer);
+            gl.vertexAttribPointer(this._shaderProgram.locations.vertexNormalAttribute, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute);
+        }
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wireframe ? this._gpuMesh.lineIndexBuffer : this._gpuMesh.indexBuffer);
         gl.drawElements(wireframe ? gl.LINES : gl.TRIANGLES, wireframe ? this._gpuMesh.lineIndexCount : this._gpuMesh.indexCount, this._gpuMesh.indexType, 0);
         gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+            gl.disableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute);
+        }
         return true;
     }
     dispose() {
         const gl = this._webgl;
         if (this._gpuMesh?.positionBuffer)
             gl.deleteBuffer(this._gpuMesh.positionBuffer);
+        if (this._gpuMesh?.normalBuffer)
+            gl.deleteBuffer(this._gpuMesh.normalBuffer);
         if (this._gpuMesh?.indexBuffer)
             gl.deleteBuffer(this._gpuMesh.indexBuffer);
         if (this._gpuMesh?.lineIndexBuffer)
@@ -20993,20 +21165,24 @@ class MeshHiPSTile {
     uploadMesh(mesh) {
         const gl = this._webgl;
         const positionBuffer = gl.createBuffer();
+        const normalBuffer = gl.createBuffer();
         const indexBuffer = gl.createBuffer();
         const lineIndexBuffer = gl.createBuffer();
-        if (!positionBuffer || !indexBuffer || !lineIndexBuffer) {
+        if (!positionBuffer || !normalBuffer || !indexBuffer || !lineIndexBuffer) {
             throw new Error(`Could not create MeshHiPS buffers for ${this.key}`);
         }
         const lineIndices = this.buildLineIndices(mesh.indices);
         gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.normals, gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lineIndexBuffer);
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, lineIndices, gl.STATIC_DRAW);
         return {
             positionBuffer,
+            normalBuffer,
             indexBuffer,
             lineIndexBuffer,
             indexCount: mesh.indices.length,
