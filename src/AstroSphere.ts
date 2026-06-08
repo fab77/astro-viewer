@@ -56,6 +56,9 @@ import { xyzTileRequestScheduler } from "./model/earth/XYZTileRequestScheduler.j
 import { WMTSAdapter } from "./model/earth/WMTSAdapter.js";
 import { XYZMapDescriptor } from "./model/earth/XYZMapDescriptor.js";
 import { XYZMap } from "./model/earth/XYZMap.js";
+import { MeshHiPS } from "./model/meships/MeshHiPS.js";
+import { MeshHiPSDescriptor } from "./model/meships/MeshHiPSDescriptor.js";
+import type { MeshHiPSDebugStats } from "./model/meships/MeshHiPSTypes.js";
 import { mat4, vec3, vec4 } from "gl-matrix";
 
 export type PointCoordinates = {
@@ -112,7 +115,8 @@ class AstroSphere {
 
   private _activeHiPS: HiPS | null = null;
   private _activeXYZ2: XYZMap | null = null;
-  private _activeBaseLayer: "hips" | "xyz" | null = null;
+  private _activeMeshHiPS: MeshHiPS | null = null;
+  private _activeBaseLayer: "hips" | "xyz" | "meships" | null = null;
 
   private startup = true;
 
@@ -467,7 +471,7 @@ class AstroSphere {
 
   private emitCameraChanged(reason: string) {
     // avoid dispatch before scene is ready
-    if (!this._activeHiPS) return;
+    if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS) return;
     if (!(this._healpixGrid as any)?.fovObj) return;
 
     const detail = this.getCurrentStatus();
@@ -904,6 +908,19 @@ class AstroSphere {
     this._activeBaseLayer = "xyz";
   }
 
+  activateMeshHiPS(descriptor: MeshHiPSDescriptor) {
+    this._activeMeshHiPS = new MeshHiPS(
+      descriptor.meshRadius,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      descriptor,
+      this._webgl,
+      this._healpixGrid,
+    );
+    this._activeBaseLayer = "meships";
+  }
+
   activateWMTS(config: WMTSLayerConfig) {
     const adapter = new WMTSAdapter(config);
     const xyzConfig = adapter.toXYZLayerConfig();
@@ -1182,7 +1199,7 @@ class AstroSphere {
   }
 
   changeColorMap(cm: ColorMap) {
-    if (!this._activeHiPS && !this._activeXYZ2) return;
+    if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS) return;
     this._selectedColorMap = cm;
     this._activeHiPS?.changeColorMap(cm);
     this._activeXYZ2?.changeColorMap(cm);
@@ -1198,6 +1215,10 @@ class AstroSphere {
 
   get activeXYZ(): XYZMap | null {
     return this._activeXYZ2;
+  }
+
+  get activeMeshHiPS(): MeshHiPS | null {
+    return this._activeMeshHiPS;
   }
 
   isLonLatGridVisible(): boolean {
@@ -1245,10 +1266,15 @@ class AstroSphere {
     return this._activeHiPS.getDebugStats();
   }
 
+  getMeshHiPSDebugStats(): MeshHiPSDebugStats | null {
+    if (!this._activeMeshHiPS) return null;
+    return this._activeMeshHiPS.getDebugStats();
+  }
+
   draw(canvas: HTMLCanvasElement) {
     if (this._refreshingStatus) return;
     if (!this._webgl) return;
-    if (!this._activeHiPS && !this._activeXYZ2) return;
+    if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS) return;
 
     if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
       return;
@@ -1414,6 +1440,17 @@ class AstroSphere {
         this._perspectiveMatrixManager.pMatrix,
       );
     }
+    if (this._activeBaseLayer === "meships" && this._activeMeshHiPS) {
+      const visibleOrder = this._activeMeshHiPS.refreshOrder(
+        this.fov?.minFoV ?? this._healpixGrid.getMinFoV(),
+      );
+      this._healpixGrid.visibleTilesManager.computeVisiblePixels(
+        visibleOrder,
+        this._webgl,
+        this._camera,
+        this._perspectiveMatrixManager.pMatrix,
+      );
+    }
 
     // DRAW HiPS
     const stableFovDeg = this.fov?.minFoV ?? this._healpixGrid.getMinFoV();
@@ -1447,6 +1484,9 @@ class AstroSphere {
     if (this._activeBaseLayer === "xyz") {
       this._activeXYZ2?.draw(skyEntityDrawInput);
     }
+    if (this._activeBaseLayer === "meships") {
+      this._activeMeshHiPS?.draw(skyEntityDrawInput);
+    }
 
     this._healpixGrid.draw(skyEntityDrawInput);
     this._equatorialGrid.draw(skyEntityDrawInput);
@@ -1474,7 +1514,8 @@ class AstroSphere {
     this.activeCatalogues.forEach((cat) => {
       const activeModelMatrix =
         this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix();
+        this._activeXYZ2?.getModelMatrix() ??
+        this._activeMeshHiPS?.getModelMatrix();
       if (activeModelMatrix) {
         cat.draw(
           activeModelMatrix as Float32Array,
@@ -1490,7 +1531,8 @@ class AstroSphere {
     this.activeFootprintSets.forEach((fst) => {
       const activeModelMatrix =
         this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix();
+        this._activeXYZ2?.getModelMatrix() ??
+        this._activeMeshHiPS?.getModelMatrix();
       if (activeModelMatrix) {
         fst.draw(
           activeModelMatrix as Float32Array,

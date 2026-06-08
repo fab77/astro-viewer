@@ -1,5 +1,5 @@
 export type HiPSDebugStats = {
-  activeBaseLayer: 'hips' | 'xyz' | null
+  activeBaseLayer: 'hips' | 'xyz' | 'meships' | null
   hipsName: string | null
   hipsUrl: string | null
   isGalactic: boolean | null

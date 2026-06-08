@@ -48,7 +48,7 @@ export type XYZRequestSchedulerDebugStats = {
     hostsInBackoff: XYZRequestBackoffDebugEntry[];
 };
 export type XYZDebugStats = {
-    activeBaseLayer: 'hips' | 'xyz' | null;
+    activeBaseLayer: 'hips' | 'xyz' | 'meships' | null;
     layer: XYZLayerDebugStats | null;
     requests: XYZRequestSchedulerDebugStats;
 };

@@ -1,7 +1,7 @@
 {
   "name": "astro-viewer",
   "description": "Astrobrowser 3d engine.",
-  "version": "3.2.1",
+  "version": "3.3.0",
   "keywords": [
     "HiPS",
     "HiPS cutout",
@@ -49,9 +49,9 @@
     "prod": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=production && npm run web",
     "build": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=production",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "web": "cp dist/* public/javascripts/; cp -R src/html/javascripts/ public/javascripts/; cp -R src/html/css/ public/css/; cp src/html/*.html public/",
-    "start-server": "npm run web; python3 -m http.server 8080 -d public",
-    "all": "npm run clean; npm run prod; npm run start-server",
+    "web": "cp dist/* public/javascripts/ && cp -R src/html/javascripts/ public/javascripts/ && cp -R src/html/css/ public/css/ && cp src/html/*.html public/",
+    "start-server": "npm run build && npm run web && python3 -m http.server 8080 -d public",
+    "all": "npm run start-server",
     "prepublishOnly": "npm run build"
   },
   "engines": {
