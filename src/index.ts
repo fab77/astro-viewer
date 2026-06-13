@@ -25,6 +25,8 @@ export { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js'
 export type { TerraPolylineMetadata, TerraPolylinePoint } from './model/terra/TerraPolylineSetGL.js'
 export { SatelliteObjectGL } from './model/terra/SatelliteObjectGL.js'
 export type { SatelliteObjectOptions, SatelliteObjectPosition } from './model/terra/SatelliteObjectGL.js'
+export { SensorConeGL } from './model/terra/SensorConeGL.js'
+export type { SensorConeFootprintPosition, SensorConeOptions, SensorConePoint } from './model/terra/SensorConeGL.js'
 
 export { MetadataManager } from './model/MetadataManager.js'
 export { MetadataColumn, MetadataInit, ColumnType } from './model/MetadataColumn.js'

@@ -34,6 +34,7 @@ import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
 import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js'
 import { SatelliteObjectGL, type SatelliteObjectOptions } from './model/terra/SatelliteObjectGL.js'
+import { SensorConeGL, type SensorConeOptions } from './model/terra/SensorConeGL.js'
 import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js'
 import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
@@ -221,6 +222,22 @@ createFootprintSet(footprintSetName: string,
   changeTerraPolylineSetColor(polylineSet: TerraPolylineSetGL, hexColor: string): TerraPolylineSetGL {
     polylineSet.changeColor(hexColor)
     return polylineSet
+  }
+
+  createSensorCone(options: SensorConeOptions): SensorConeGL {
+    return new SensorConeGL(options, this.webgl)
+  }
+
+  showSensorCone(sensorCone: SensorConeGL) {
+    this.astroSphere.showSensorCone(sensorCone)
+  }
+
+  hideSensorCone(sensorCone: SensorConeGL, isVisible: boolean) {
+    sensorCone.setIsVisible(isVisible)
+  }
+
+  deleteSensorCone(sensorCone: SensorConeGL) {
+    this.astroSphere.deleteSensorCone(sensorCone)
   }
 
   createSatelliteObject(options: SatelliteObjectOptions): SatelliteObjectGL {

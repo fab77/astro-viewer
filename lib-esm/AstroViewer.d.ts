@@ -16,6 +16,7 @@ import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js';
 import { SatelliteObjectGL, type SatelliteObjectOptions } from './model/terra/SatelliteObjectGL.js';
+import { SensorConeGL, type SensorConeOptions } from './model/terra/SensorConeGL.js';
 import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js';
 export declare class AstroViewer {
     private astroSphere;
@@ -53,6 +54,10 @@ export declare class AstroViewer {
     hideTerraPolylineSet(polylineSet: TerraPolylineSetGL, isVisible: boolean): void;
     deleteTerraPolylineSet(polylineSet: TerraPolylineSetGL): void;
     changeTerraPolylineSetColor(polylineSet: TerraPolylineSetGL, hexColor: string): TerraPolylineSetGL;
+    createSensorCone(options: SensorConeOptions): SensorConeGL;
+    showSensorCone(sensorCone: SensorConeGL): void;
+    hideSensorCone(sensorCone: SensorConeGL, isVisible: boolean): void;
+    deleteSensorCone(sensorCone: SensorConeGL): void;
     createSatelliteObject(options: SatelliteObjectOptions): SatelliteObjectGL;
     showSatelliteObject(satelliteObject: SatelliteObjectGL): void;
     hideSatelliteObject(satelliteObject: SatelliteObjectGL, isVisible: boolean): void;

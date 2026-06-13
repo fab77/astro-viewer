@@ -139,11 +139,15 @@ function computeFrame(samples, currentMs) {
 }
 
 function frameFromSamples(previousSample, nextSample, t) {
-  const markerPoint = interpolateGroundTrackPoint(previousSample, nextSample, t);
+  const currentGroundPoint = interpolateGroundTrackPoint(previousSample, nextSample, t);
   const nearestSample = t < 0.5 ? previousSample : nextSample;
+  const currentFootprint = interpolateFootprint(previousSample, nextSample, t, nearestSample.footprint);
 
   return {
-    markerPoint,
+    markerPoint: currentGroundPoint,
+    currentGroundPoint,
+    currentFootprint,
+    interpolationT: t,
     previousSample,
     nextSample,
     nearestSample,
@@ -167,6 +171,64 @@ function interpolateGroundTrackPoint(previousSample, nextSample, t) {
 function interpolateLongitude(leftLongitudeDeg, rightLongitudeDeg, t) {
   const delta = normalizeLongitudeDeg(rightLongitudeDeg - leftLongitudeDeg);
   return normalizeLongitudeDeg(leftLongitudeDeg + delta * t);
+}
+
+// Visual-only interpolation for the AstroViewer dev demo.
+// Production UI should use astrospatial-core observation samples or recompute
+// the footprint for the current timestamp instead of interpolating render data.
+function interpolateFootprint(previousSample, nextSample, t, fallbackFootprint) {
+  const previousRing = normalizeOpenRing(previousSample.footprint);
+  const nextRing = normalizeOpenRing(nextSample.footprint);
+
+  if (
+    previousRing.length < 3
+    || previousRing.length !== nextRing.length
+  ) {
+    return fallbackFootprint;
+  }
+
+  const ring = previousRing.map(([previousLon, previousLat], index) => {
+    const [nextLon, nextLat] = nextRing[index];
+    return [
+      interpolateLongitude(previousLon, nextLon, t),
+      lerp(previousLat, nextLat, t),
+    ];
+  });
+
+  return closeRing(ring);
+}
+
+function normalizeOpenRing(footprint) {
+  if (!Array.isArray(footprint)) return [];
+
+  const ring = [];
+  for (const coordinate of footprint) {
+    if (!Array.isArray(coordinate) || coordinate.length < 2) return [];
+    const lon = Number(coordinate[0]);
+    const lat = Number(coordinate[1]);
+    if (!Number.isFinite(lon) || !Number.isFinite(lat) || lat < -90 || lat > 90) {
+      return [];
+    }
+    ring.push([normalizeLongitudeDeg(lon), lat]);
+  }
+
+  while (ring.length > 1 && sameLonLat(ring[0], ring[ring.length - 1])) {
+    ring.pop();
+  }
+
+  return ring;
+}
+
+function closeRing(ring) {
+  if (ring.length === 0) return ring;
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  return sameLonLat(first, last) ? ring : [...ring, [...first]];
+}
+
+function sameLonLat(left, right) {
+  return Math.abs(left[0] - right[0]) < 1e-9
+    && Math.abs(left[1] - right[1]) < 1e-9;
 }
 
 function normalizeLongitudeDeg(longitudeDeg) {

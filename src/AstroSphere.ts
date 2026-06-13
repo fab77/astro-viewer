@@ -61,6 +61,7 @@ import { MeshHiPSDescriptor } from "./model/meships/MeshHiPSDescriptor.js";
 import type { MeshHiPSDebugStats } from "./model/meships/MeshHiPSTypes.js";
 import { TerraPolylineSetGL } from "./model/terra/TerraPolylineSetGL.js";
 import { SatelliteObjectGL } from "./model/terra/SatelliteObjectGL.js";
+import { SensorConeGL } from "./model/terra/SensorConeGL.js";
 import { mat4, vec3, vec4 } from "gl-matrix";
 
 export type PointCoordinates = {
@@ -127,6 +128,7 @@ class AstroSphere {
   private activeCatalogues: CatalogueGL[] = [];
   private activeFootprintSets: FootprintSetGL[] = [];
   private activePolylineSets: TerraPolylineSetGL[] = [];
+  private activeSensorCones: SensorConeGL[] = [];
   private activeSatelliteObjects: SatelliteObjectGL[] = [];
   private _webgl: WebGL2RenderingContext;
   private _selectedColorMap: any;
@@ -987,6 +989,18 @@ class AstroSphere {
     polylineSet.dispose();
   }
 
+  async showSensorCone(sensorCone: SensorConeGL) {
+    if (sensorCone) this.activeSensorCones.push(sensorCone);
+    return sensorCone;
+  }
+
+  deleteSensorCone(sensorCone: SensorConeGL) {
+    this.activeSensorCones = this.activeSensorCones.filter(
+      (cone) => cone !== sensorCone,
+    );
+    sensorCone.dispose();
+  }
+
   async showSatelliteObject(satelliteObject: SatelliteObjectGL) {
     if (satelliteObject) this.activeSatelliteObjects.push(satelliteObject);
     return satelliteObject;
@@ -1582,6 +1596,20 @@ class AstroSphere {
           this.mouseHelper,
           this._camera.getCameraMatrix() as Float32Array,
           this._perspectiveMatrixManager.pMatrix as Float32Array,
+        );
+      }
+    });
+
+    this.activeSensorCones.forEach((sensorCone) => {
+      const activeModelMatrix =
+        this._activeHiPS?.getModelMatrix() ??
+        this._activeXYZ2?.getModelMatrix() ??
+        this._activeMeshHiPS?.getModelMatrix();
+      if (activeModelMatrix) {
+        sensorCone.draw(
+          this._perspectiveMatrixManager.pMatrix as Float32Array,
+          this._camera.getCameraMatrix() as Float32Array,
+          activeModelMatrix as Float32Array,
         );
       }
     });

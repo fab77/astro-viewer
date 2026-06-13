@@ -18,6 +18,7 @@ import { MeshHiPSDescriptor } from "./model/meships/MeshHiPSDescriptor.js";
 import type { MeshHiPSDebugStats } from "./model/meships/MeshHiPSTypes.js";
 import { TerraPolylineSetGL } from "./model/terra/TerraPolylineSetGL.js";
 import { SatelliteObjectGL } from "./model/terra/SatelliteObjectGL.js";
+import { SensorConeGL } from "./model/terra/SensorConeGL.js";
 export type PointCoordinates = {
     astroDeg: AstroCoords;
     raHMS: HMS;
@@ -71,6 +72,7 @@ declare class AstroSphere {
     private activeCatalogues;
     private activeFootprintSets;
     private activePolylineSets;
+    private activeSensorCones;
     private activeSatelliteObjects;
     private _webgl;
     private _selectedColorMap;
@@ -119,6 +121,8 @@ declare class AstroSphere {
     deleteFootprintSet(footprintSet: FootprintSetGL): void;
     showPolylineSet(polylineSet: TerraPolylineSetGL): Promise<TerraPolylineSetGL>;
     deletePolylineSet(polylineSet: TerraPolylineSetGL): void;
+    showSensorCone(sensorCone: SensorConeGL): Promise<SensorConeGL>;
+    deleteSensorCone(sensorCone: SensorConeGL): void;
     showSatelliteObject(satelliteObject: SatelliteObjectGL): Promise<SatelliteObjectGL>;
     deleteSatelliteObject(satelliteObject: SatelliteObjectGL): void;
     getHoveredFootprints(): HoveredFootprintDetail[];

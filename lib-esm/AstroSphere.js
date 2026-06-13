@@ -62,6 +62,7 @@ class AstroSphere {
     activeCatalogues = [];
     activeFootprintSets = [];
     activePolylineSets = [];
+    activeSensorCones = [];
     activeSatelliteObjects = [];
     _webgl;
     _selectedColorMap;
@@ -610,6 +611,15 @@ class AstroSphere {
         this.activePolylineSets = this.activePolylineSets.filter((set) => set !== polylineSet);
         polylineSet.dispose();
     }
+    async showSensorCone(sensorCone) {
+        if (sensorCone)
+            this.activeSensorCones.push(sensorCone);
+        return sensorCone;
+    }
+    deleteSensorCone(sensorCone) {
+        this.activeSensorCones = this.activeSensorCones.filter((cone) => cone !== sensorCone);
+        sensorCone.dispose();
+    }
     async showSatelliteObject(satelliteObject) {
         if (satelliteObject)
             this.activeSatelliteObjects.push(satelliteObject);
@@ -1028,6 +1038,14 @@ class AstroSphere {
                 this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 polylineSet.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activeSensorCones.forEach((sensorCone) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                sensorCone.draw(this._perspectiveMatrixManager.pMatrix, this._camera.getCameraMatrix(), activeModelMatrix);
             }
         });
         this.activeSatelliteObjects.forEach((satelliteObject) => {

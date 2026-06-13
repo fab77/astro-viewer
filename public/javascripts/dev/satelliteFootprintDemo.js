@@ -65,6 +65,25 @@ const DEMO_OBSERVATIONS = [
   },
 ];
 
+const DEMO_OBSERVATION_TRACK = {
+  satellite: {
+    id: 'iss',
+    name: 'ISS (ZARYA)',
+    tleName: 'ISS (ZARYA)',
+  },
+  sensor: {
+    name: 'Demo nadir optical sensor',
+    pointingMode: 'nadir',
+    fieldOfViewDeg: 30,
+    footprintVertexCount: 16,
+  },
+  target: {
+    name: 'Spain regions',
+    geojsonUrl: SPAIN_REGIONS_GEOJSON_URL,
+  },
+  samples: DEMO_OBSERVATIONS,
+};
+
 let loadedDemo = {
   country: null,
   footprints: null,
@@ -72,6 +91,7 @@ let loadedDemo = {
   groundTrack: null,
   marker: null,
   satelliteObject: null,
+  sensorCone: null,
   timeline: null,
   currentFootprintIndex: -1,
 };
@@ -103,8 +123,9 @@ async function loadSatelliteFootprintDemo() {
     loadedDemo.groundTrack = createGroundTrackOverlay(api, viewer);
     loadedDemo.marker = createSatelliteMarkerOverlay(api, viewer);
     loadedDemo.satelliteObject = createSatelliteObject(api);
+    loadedDemo.sensorCone = createSensorCone(api);
     loadedDemo.timeline = createSatelliteTimelineController({
-      samples: DEMO_OBSERVATIONS,
+      samples: DEMO_OBSERVATION_TRACK.samples,
       playbackRate: 1,
       onFrame: (frame) => updateTimelineFrame(api, viewer, frame),
     });
@@ -114,9 +135,9 @@ async function loadSatelliteFootprintDemo() {
       api.goTo(-3.7, 40.4);
     }
 
-    const hits = DEMO_OBSERVATIONS.filter((sample) => sample.intersects);
+    const hits = DEMO_OBSERVATION_TRACK.samples.filter((sample) => sample.intersects);
     setStatus(
-      `Loaded ISS Spain footprint demo: ${DEMO_OBSERVATIONS.length} samples, `
+      `Loaded ISS Spain footprint demo: ${DEMO_OBSERVATION_TRACK.samples.length} samples, `
       + `${hits.length} intersecting footprints. Use timeline controls to move the satellite marker.`
     );
   } catch (error) {
@@ -149,7 +170,7 @@ function createCountryOverlay(api, viewer, spainRegionsGeoJSON) {
 function createFootprintOverlay(api, viewer) {
   const featureCollection = {
     type: 'FeatureCollection',
-    features: DEMO_OBSERVATIONS.map((sample, index) => ({
+    features: DEMO_OBSERVATION_TRACK.samples.map((sample, index) => ({
       type: 'Feature',
       properties: {
         name: `ISS footprint ${index + 1}`,
@@ -210,7 +231,7 @@ function createGroundTrackOverlay(api, viewer) {
     new viewer.MetadataManager([]),
   );
   set.addGroundTrack(
-    DEMO_OBSERVATIONS.map((sample) => ({
+    DEMO_OBSERVATION_TRACK.samples.map((sample) => ({
       ...sample.groundTrackPoint,
       timestamp: sample.timestamp,
     })),
@@ -246,10 +267,24 @@ function createSatelliteObject(api) {
   return object;
 }
 
+function createSensorCone(api) {
+  if (typeof api.createSensorCone !== 'function') return null;
+
+  const cone = api.createSensorCone({
+    name: 'Demo ISS sensor cone',
+    color: [0.0, 1.0, 0.95, 0.68],
+    wireframe: true,
+    filled: false,
+  });
+  api.showSensorCone?.(cone);
+  return cone;
+}
+
 function updateTimelineFrame(api, viewer, frame) {
   updateTimelineControls(frame);
-  updateSatelliteMarker(loadedDemo.marker, viewer, frame.markerPoint);
+  updateSatelliteMarker(loadedDemo.marker, viewer, frame.currentGroundPoint);
   updateSatelliteObject(loadedDemo.satelliteObject, frame);
+  updateSensorCone(loadedDemo.sensorCone, frame);
 
   if (frame.nearestSampleIndex !== loadedDemo.currentFootprintIndex) {
     if (loadedDemo.currentFootprint) {
@@ -276,10 +311,18 @@ function updateSatelliteObject(satelliteObject, frame) {
   if (!satelliteObject || typeof satelliteObject.setPosition !== 'function') return;
 
   satelliteObject.setPosition(
-    frame.markerPoint,
+    frame.currentGroundPoint,
     frame.previousSample?.groundTrackPoint ?? null,
     frame.nextSample?.groundTrackPoint ?? null,
   );
+}
+
+function updateSensorCone(sensorCone, frame) {
+  if (!sensorCone || typeof sensorCone.setGeometry !== 'function') return;
+  // Demo-only visual interpolation: production astrobrowser-ui should pass
+  // astrospatial-core observation samples or recompute footprints for the
+  // current timestamp instead of deriving analysis geometry in astro-viewer.
+  sensorCone.setGeometry(frame.currentGroundPoint, frame.currentFootprint);
 }
 
 function createMarkerColumns(viewer) {
@@ -312,8 +355,8 @@ function updateTimelineControls(frame) {
   const label = el('satelliteTimelineTime');
   if (label) {
     label.textContent = `${new Date(frame.currentMs).toISOString()} `
-      + `lon=${frame.markerPoint.longitudeDeg.toFixed(3)} `
-      + `lat=${frame.markerPoint.latitudeDeg.toFixed(3)}`;
+      + `lon=${frame.currentGroundPoint.longitudeDeg.toFixed(3)} `
+      + `lat=${frame.currentGroundPoint.latitudeDeg.toFixed(3)}`;
   }
 }
 
@@ -325,6 +368,7 @@ function removeExistingDemo(api) {
   if (loadedDemo.groundTrack) api.deleteTerraPolylineSet?.(loadedDemo.groundTrack);
   if (loadedDemo.marker) api.deleteTerraPointSet?.(loadedDemo.marker);
   if (loadedDemo.satelliteObject) api.deleteSatelliteObject?.(loadedDemo.satelliteObject);
+  if (loadedDemo.sensorCone) api.deleteSensorCone?.(loadedDemo.sensorCone);
   setTimelineControlsEnabled(false);
 
   loadedDemo = {
@@ -334,6 +378,7 @@ function removeExistingDemo(api) {
     groundTrack: null,
     marker: null,
     satelliteObject: null,
+    sensorCone: null,
     timeline: null,
     currentFootprintIndex: -1,
   };
