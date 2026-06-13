@@ -9,6 +9,8 @@ export { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 export { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 export { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js';
 export type { TerraPolylineMetadata, TerraPolylinePoint } from './model/terra/TerraPolylineSetGL.js';
+export { SatelliteObjectGL } from './model/terra/SatelliteObjectGL.js';
+export type { SatelliteObjectOptions, SatelliteObjectPosition } from './model/terra/SatelliteObjectGL.js';
 export { MetadataManager } from './model/MetadataManager.js';
 export { MetadataColumn, MetadataInit, ColumnType } from './model/MetadataColumn.js';
 export { Point, SphericalOpts, AstroOpts, PointInitOpts, CartesianOpts } from './model/Point.js';

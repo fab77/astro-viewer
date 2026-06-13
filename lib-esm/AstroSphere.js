@@ -62,6 +62,7 @@ class AstroSphere {
     activeCatalogues = [];
     activeFootprintSets = [];
     activePolylineSets = [];
+    activeSatelliteObjects = [];
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
@@ -609,6 +610,15 @@ class AstroSphere {
         this.activePolylineSets = this.activePolylineSets.filter((set) => set !== polylineSet);
         polylineSet.dispose();
     }
+    async showSatelliteObject(satelliteObject) {
+        if (satelliteObject)
+            this.activeSatelliteObjects.push(satelliteObject);
+        return satelliteObject;
+    }
+    deleteSatelliteObject(satelliteObject) {
+        this.activeSatelliteObjects = this.activeSatelliteObjects.filter((object) => object !== satelliteObject);
+        satelliteObject.dispose();
+    }
     getHoveredFootprints() {
         let footprintsHovered = [];
         this.activeFootprintSets.forEach((fset) => {
@@ -1018,6 +1028,14 @@ class AstroSphere {
                 this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 polylineSet.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activeSatelliteObjects.forEach((satelliteObject) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                satelliteObject.draw(this._perspectiveMatrixManager.pMatrix, this._camera.getCameraMatrix(), activeModelMatrix);
             }
         });
     }

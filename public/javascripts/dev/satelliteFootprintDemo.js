@@ -3,6 +3,7 @@ import { state } from './state.js';
 import { createSatelliteTimelineController } from './satelliteTimelineController.js';
 
 const SPAIN_REGIONS_GEOJSON_URL = 'test-data/generation/spain_regions.geojson';
+const SIMPLE_SATELLITE_OBJ_URL = 'test-data/satellite/simple_satellite.obj';
 
 // Fixture generated from astrospatial-core/examples/real-tle-spain-observation.mjs.
 // This keeps the AstroViewer dev demo independent from astrospatial-core packaging for now.
@@ -70,6 +71,7 @@ let loadedDemo = {
   currentFootprint: null,
   groundTrack: null,
   marker: null,
+  satelliteObject: null,
   timeline: null,
   currentFootprintIndex: -1,
 };
@@ -100,6 +102,7 @@ async function loadSatelliteFootprintDemo() {
     loadedDemo.footprints = createFootprintOverlay(api, viewer);
     loadedDemo.groundTrack = createGroundTrackOverlay(api, viewer);
     loadedDemo.marker = createSatelliteMarkerOverlay(api, viewer);
+    loadedDemo.satelliteObject = createSatelliteObject(api);
     loadedDemo.timeline = createSatelliteTimelineController({
       samples: DEMO_OBSERVATIONS,
       playbackRate: 1,
@@ -230,9 +233,23 @@ function createSatelliteMarkerOverlay(api, viewer) {
   return set;
 }
 
+function createSatelliteObject(api) {
+  if (typeof api.createSatelliteObject !== 'function') return null;
+
+  const object = api.createSatelliteObject({
+    name: 'Demo ISS OBJ marker',
+    objUrl: SIMPLE_SATELLITE_OBJ_URL,
+    color: [1.0, 0.84, 0.22, 1.0],
+    scale: 0.028,
+  });
+  api.showSatelliteObject?.(object);
+  return object;
+}
+
 function updateTimelineFrame(api, viewer, frame) {
   updateTimelineControls(frame);
   updateSatelliteMarker(loadedDemo.marker, viewer, frame.markerPoint);
+  updateSatelliteObject(loadedDemo.satelliteObject, frame);
 
   if (frame.nearestSampleIndex !== loadedDemo.currentFootprintIndex) {
     if (loadedDemo.currentFootprint) {
@@ -253,6 +270,16 @@ function updateSatelliteMarker(markerSet, viewer, point) {
     point.timestamp,
     point.altitudeKm,
   ]], columns);
+}
+
+function updateSatelliteObject(satelliteObject, frame) {
+  if (!satelliteObject || typeof satelliteObject.setPosition !== 'function') return;
+
+  satelliteObject.setPosition(
+    frame.markerPoint,
+    frame.previousSample?.groundTrackPoint ?? null,
+    frame.nextSample?.groundTrackPoint ?? null,
+  );
 }
 
 function createMarkerColumns(viewer) {
@@ -297,6 +324,7 @@ function removeExistingDemo(api) {
   if (loadedDemo.currentFootprint) api.deleteTerraFootprintSet?.(loadedDemo.currentFootprint);
   if (loadedDemo.groundTrack) api.deleteTerraPolylineSet?.(loadedDemo.groundTrack);
   if (loadedDemo.marker) api.deleteTerraPointSet?.(loadedDemo.marker);
+  if (loadedDemo.satelliteObject) api.deleteSatelliteObject?.(loadedDemo.satelliteObject);
   setTimelineControlsEnabled(false);
 
   loadedDemo = {
@@ -305,6 +333,7 @@ function removeExistingDemo(api) {
     currentFootprint: null,
     groundTrack: null,
     marker: null,
+    satelliteObject: null,
     timeline: null,
     currentFootprintIndex: -1,
   };

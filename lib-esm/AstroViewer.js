@@ -22,6 +22,7 @@ import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js';
+import { SatelliteObjectGL } from './model/terra/SatelliteObjectGL.js';
 import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js';
 // & {
 //   viewportWidth: number
@@ -129,6 +130,18 @@ export class AstroViewer {
     changeTerraPolylineSetColor(polylineSet, hexColor) {
         polylineSet.changeColor(hexColor);
         return polylineSet;
+    }
+    createSatelliteObject(options) {
+        return new SatelliteObjectGL(options, this.webgl);
+    }
+    showSatelliteObject(satelliteObject) {
+        this.astroSphere.showSatelliteObject(satelliteObject);
+    }
+    hideSatelliteObject(satelliteObject, isVisible) {
+        satelliteObject.setIsVisible(isVisible);
+    }
+    deleteSatelliteObject(satelliteObject) {
+        this.astroSphere.deleteSatelliteObject(satelliteObject);
     }
     changeFootprintSetColor(footprintSet, hexColor) {
         // footprintSet.footprintsetProps.changeColor(hexColor)

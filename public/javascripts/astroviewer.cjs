@@ -2440,6 +2440,7 @@ const XYZMapDescriptor_js_1 = __webpack_require__(8868);
 const TerraPointSetGL_js_1 = __webpack_require__(5781);
 const TerraFootprintSetGL_js_1 = __webpack_require__(9022);
 const TerraPolylineSetGL_js_1 = __webpack_require__(3665);
+const SatelliteObjectGL_js_1 = __webpack_require__(3603);
 const MeshHiPSDescriptor_js_1 = __webpack_require__(847);
 // & {
 //   viewportWidth: number
@@ -2547,6 +2548,18 @@ class AstroViewer {
     changeTerraPolylineSetColor(polylineSet, hexColor) {
         polylineSet.changeColor(hexColor);
         return polylineSet;
+    }
+    createSatelliteObject(options) {
+        return new SatelliteObjectGL_js_1.SatelliteObjectGL(options, this.webgl);
+    }
+    showSatelliteObject(satelliteObject) {
+        this.astroSphere.showSatelliteObject(satelliteObject);
+    }
+    hideSatelliteObject(satelliteObject, isVisible) {
+        satelliteObject.setIsVisible(isVisible);
+    }
+    deleteSatelliteObject(satelliteObject) {
+        this.astroSphere.deleteSatelliteObject(satelliteObject);
     }
     changeFootprintSetColor(footprintSet, hexColor) {
         // footprintSet.footprintsetProps.changeColor(hexColor)
@@ -4623,7 +4636,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraPolylineSetGL = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.SatelliteObjectGL = exports.TerraPolylineSetGL = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(5087);
@@ -4643,6 +4656,8 @@ var TerraFootprintSetGL_js_1 = __webpack_require__(9022);
 Object.defineProperty(exports, "TerraFootprintSetGL", ({ enumerable: true, get: function () { return TerraFootprintSetGL_js_1.TerraFootprintSetGL; } }));
 var TerraPolylineSetGL_js_1 = __webpack_require__(3665);
 Object.defineProperty(exports, "TerraPolylineSetGL", ({ enumerable: true, get: function () { return TerraPolylineSetGL_js_1.TerraPolylineSetGL; } }));
+var SatelliteObjectGL_js_1 = __webpack_require__(3603);
+Object.defineProperty(exports, "SatelliteObjectGL", ({ enumerable: true, get: function () { return SatelliteObjectGL_js_1.SatelliteObjectGL; } }));
 var MetadataManager_js_1 = __webpack_require__(5403);
 Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
 var MetadataColumn_js_1 = __webpack_require__(1072);
@@ -13979,10 +13994,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MeshHiPSShaderProgram = void 0;
 class MeshHiPSShaderProgram {
     _webgl;
+    _options;
     locations;
     _shaderProgram;
-    constructor(_webgl) {
+    constructor(_webgl, _options = {}) {
         this._webgl = _webgl;
+        this._options = _options;
         this.locations = {
             pMatrix: null,
             mMatrix: null,
@@ -14045,9 +14062,13 @@ class MeshHiPSShaderProgram {
       void main(void) {
         vec3 normal = normalize(vNormal);
         vec3 lightDir = normalize(vec3(0.45, 0.8, 0.35));
-        float diffuse = max(dot(normal, lightDir), 0.0);
+        float diffuse = ${this._options.twoSidedLighting
+            ? 'abs(dot(normal, lightDir))'
+            : 'max(dot(normal, lightDir), 0.0)'};
         float rim = pow(1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
-        vec3 color = uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim;
+        vec3 color = ${this._options.markerLighting
+            ? 'uColor.rgb * (0.78 + diffuse * 0.18) + vec3(0.06, 0.08, 0.07) * rim'
+            : 'uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim'};
         outColor = vec4(color, uColor.a);
       }`);
         gl.attachShader(this._shaderProgram, vertexShader);
@@ -15456,6 +15477,237 @@ exports.CatalogueShaderProgram = CatalogueShaderProgram;
 
 /***/ }),
 
+/***/ 3603:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SatelliteObjectGL = void 0;
+const gl_matrix_1 = __webpack_require__(1961);
+const MeshHiPSShaderProgram_js_1 = __webpack_require__(2257);
+const OBJMeshParser_js_1 = __webpack_require__(4322);
+const Point_js_1 = __webpack_require__(6553);
+const CoordsType_js_1 = __webpack_require__(8145);
+class SatelliteObjectGL {
+    _options;
+    _webgl;
+    static EARTH_RADIUS_KM = 6371;
+    _kind = 'SatelliteObjectGL';
+    _gpuMesh = null;
+    _shaderProgram;
+    _modelMatrix = gl_matrix_1.mat4.create();
+    _isVisible = true;
+    _ready = false;
+    _loading = false;
+    _failed = false;
+    _color;
+    _scale;
+    constructor(_options, _webgl) {
+        this._options = _options;
+        this._webgl = _webgl;
+        this._shaderProgram = new MeshHiPSShaderProgram_js_1.MeshHiPSShaderProgram(this._webgl, {
+            twoSidedLighting: true,
+            markerLighting: true,
+        });
+        this._color = _options.color ?? [1.0, 0.85, 0.25, 1.0];
+        this._scale = _options.scale ?? 0.025;
+        void this.load();
+    }
+    get ready() {
+        return this._ready;
+    }
+    get loading() {
+        return this._loading;
+    }
+    get failed() {
+        return this._failed;
+    }
+    async load() {
+        if (this._loading || this._ready)
+            return;
+        this._loading = true;
+        try {
+            const response = await fetch(this._options.objUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status} fetching ${this._options.objUrl}`);
+            }
+            const mesh = OBJMeshParser_js_1.OBJMeshParser.parse(await response.text(), {
+                preferFileNormals: true,
+                generatedNormals: 'flat',
+            });
+            this._gpuMesh = this.uploadMesh(mesh);
+            this._ready = true;
+            this._failed = false;
+        }
+        catch (error) {
+            console.warn('[SatelliteObjectGL] load failed', this._options.objUrl, error);
+            this._ready = false;
+            this._failed = true;
+        }
+        finally {
+            this._loading = false;
+        }
+    }
+    setIsVisible(isVisible) {
+        this._isVisible = isVisible;
+    }
+    setColor(color) {
+        this._color = color;
+    }
+    setScale(scale) {
+        if (Number.isFinite(scale) && scale > 0) {
+            this._scale = scale;
+        }
+    }
+    setPosition(position, previous, next) {
+        if (!isValidPosition(position))
+            return;
+        const worldPosition = lonLatAltToWorld(position);
+        const up = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), worldPosition);
+        const forward = this.computeForward(position, worldPosition, up, previous, next);
+        const right = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), forward, up));
+        if (gl_matrix_1.vec3.length(right) < 1e-6) {
+            this.setFallbackMatrix(worldPosition, up);
+            return;
+        }
+        const correctedForward = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), up, right));
+        this.setMatrixFromBasis(worldPosition, right, correctedForward, up);
+    }
+    draw(pMatrix, vMatrix, baseModelMatrix) {
+        if (!this._isVisible || !this._ready || !this._gpuMesh)
+            return;
+        const gl = this._webgl;
+        const modelMatrix = gl_matrix_1.mat4.multiply(gl_matrix_1.mat4.create(), baseModelMatrix, this._modelMatrix);
+        this._shaderProgram.enableShaders(pMatrix, vMatrix, modelMatrix, this._color);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.positionBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.normalBuffer);
+            gl.vertexAttribPointer(this._shaderProgram.locations.vertexNormalAttribute, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute);
+        }
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._gpuMesh.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, this._gpuMesh.indexCount, this._gpuMesh.indexType, 0);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+            gl.disableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    dispose() {
+        const gl = this._webgl;
+        if (this._gpuMesh?.positionBuffer)
+            gl.deleteBuffer(this._gpuMesh.positionBuffer);
+        if (this._gpuMesh?.normalBuffer)
+            gl.deleteBuffer(this._gpuMesh.normalBuffer);
+        if (this._gpuMesh?.indexBuffer)
+            gl.deleteBuffer(this._gpuMesh.indexBuffer);
+        if (this._gpuMesh?.lineIndexBuffer)
+            gl.deleteBuffer(this._gpuMesh.lineIndexBuffer);
+        this._gpuMesh = null;
+        this._ready = false;
+        this._loading = false;
+    }
+    computeForward(position, worldPosition, up, previous, next) {
+        const before = previous && isValidPosition(previous) ? lonLatAltToWorld(previous) : null;
+        const after = next && isValidPosition(next) ? lonLatAltToWorld(next) : null;
+        let forward = gl_matrix_1.vec3.create();
+        if (before && after) {
+            gl_matrix_1.vec3.subtract(forward, after, before);
+        }
+        else if (after) {
+            gl_matrix_1.vec3.subtract(forward, after, worldPosition);
+        }
+        else if (before) {
+            gl_matrix_1.vec3.subtract(forward, worldPosition, before);
+        }
+        else {
+            return this.localEastFallback(position, up);
+        }
+        const radialComponent = gl_matrix_1.vec3.scale(gl_matrix_1.vec3.create(), up, gl_matrix_1.vec3.dot(forward, up));
+        gl_matrix_1.vec3.subtract(forward, forward, radialComponent);
+        if (gl_matrix_1.vec3.length(forward) < 1e-6) {
+            return this.localEastFallback(position, up);
+        }
+        return gl_matrix_1.vec3.normalize(forward, forward);
+    }
+    localEastFallback(position, up) {
+        const nearby = lonLatAltToWorld({
+            ...position,
+            longitudeDeg: position.longitudeDeg + 0.01,
+        });
+        const tangent = gl_matrix_1.vec3.subtract(gl_matrix_1.vec3.create(), nearby, lonLatAltToWorld(position));
+        const radialComponent = gl_matrix_1.vec3.scale(gl_matrix_1.vec3.create(), up, gl_matrix_1.vec3.dot(tangent, up));
+        gl_matrix_1.vec3.subtract(tangent, tangent, radialComponent);
+        return gl_matrix_1.vec3.normalize(tangent, tangent);
+    }
+    setFallbackMatrix(worldPosition, up) {
+        const reference = Math.abs(up[2]) > 0.9
+            ? gl_matrix_1.vec3.fromValues(1, 0, 0)
+            : gl_matrix_1.vec3.fromValues(0, 0, 1);
+        const right = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), reference, up));
+        const forward = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), up, right));
+        this.setMatrixFromBasis(worldPosition, right, forward, up);
+    }
+    setMatrixFromBasis(worldPosition, right, forward, up) {
+        const scale = this._scale;
+        this._modelMatrix = gl_matrix_1.mat4.fromValues(right[0] * scale, right[1] * scale, right[2] * scale, 0, forward[0] * scale, forward[1] * scale, forward[2] * scale, 0, up[0] * scale, up[1] * scale, up[2] * scale, 0, worldPosition[0], worldPosition[1], worldPosition[2], 1);
+    }
+    uploadMesh(mesh) {
+        const gl = this._webgl;
+        const positionBuffer = gl.createBuffer();
+        const normalBuffer = gl.createBuffer();
+        const indexBuffer = gl.createBuffer();
+        if (!positionBuffer || !normalBuffer || !indexBuffer) {
+            throw new Error(`Could not create SatelliteObjectGL buffers for ${this._options.name}`);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.normals, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
+        return {
+            positionBuffer,
+            normalBuffer,
+            indexBuffer,
+            lineIndexBuffer: null,
+            indexCount: mesh.indices.length,
+            lineIndexCount: 0,
+            indexType: gl.UNSIGNED_INT,
+        };
+    }
+}
+exports.SatelliteObjectGL = SatelliteObjectGL;
+function lonLatAltToWorld(position) {
+    const point = new Point_js_1.Point({
+        lonDeg: normalizeLongitudeDeg(position.longitudeDeg),
+        latDeg: position.latitudeDeg,
+    }, CoordsType_js_1.CoordsType.GEOGRAPHIC);
+    const radialScale = 1 + Math.max(0, position.altitudeKm ?? 0) / SatelliteObjectGL.EARTH_RADIUS_KM;
+    return gl_matrix_1.vec3.fromValues(point.x * radialScale, point.y * radialScale, point.z * radialScale);
+}
+function isValidPosition(position) {
+    return Number.isFinite(position.longitudeDeg)
+        && Number.isFinite(position.latitudeDeg)
+        && position.latitudeDeg >= -90
+        && position.latitudeDeg <= 90;
+}
+function normalizeLongitudeDeg(longitudeDeg) {
+    const normalized = ((((longitudeDeg + 180) % 360) + 360) % 360) - 180;
+    return Object.is(normalized, -0) ? 0 : normalized;
+}
+
+
+/***/ }),
+
 /***/ 3665:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -16246,10 +16498,12 @@ exports.TileBuffer = TileBuffer;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OBJMeshParser = void 0;
 class OBJMeshParser {
-    static parse(text) {
-        const vertices = [];
-        const indices = [];
-        const normals = [];
+    static parse(text, options = {}) {
+        const preferFileNormals = options.preferFileNormals ?? true;
+        const generatedNormals = options.generatedNormals ?? 'smooth';
+        const sourcePositions = [];
+        const sourceNormals = [];
+        const faces = [];
         const lines = text.split(/\r\n|\n/);
         for (const raw of lines) {
             const line = raw.trim();
@@ -16259,8 +16513,25 @@ class OBJMeshParser {
                 const parts = line.split(/\s+/);
                 if (parts.length < 4)
                     continue;
-                vertices.push(Number(parts[1]), Number(parts[2]), Number(parts[3]));
-                normals.push(0, 0, 0);
+                const x = Number(parts[1]);
+                const y = Number(parts[2]);
+                const z = Number(parts[3]);
+                if (![x, y, z].every(Number.isFinite))
+                    continue;
+                sourcePositions.push(x, y, z);
+                continue;
+            }
+            if (line.startsWith('vn ')) {
+                const parts = line.split(/\s+/);
+                if (parts.length < 4)
+                    continue;
+                const x = Number(parts[1]);
+                const y = Number(parts[2]);
+                const z = Number(parts[3]);
+                if (![x, y, z].every(Number.isFinite))
+                    continue;
+                const len = Math.hypot(x, y, z) || 1;
+                sourceNormals.push(x / len, y / len, z / len);
                 continue;
             }
             if (line.startsWith('f ')) {
@@ -16268,19 +16539,110 @@ class OBJMeshParser {
                     .slice(2)
                     .trim()
                     .split(/\s+/)
-                    .map((part) => Number(part.split('/')[0]))
-                    .filter((idx) => Number.isInteger(idx) && idx !== 0);
-                if (face.length < 3)
-                    continue;
-                const first = OBJMeshParser.resolveIndex(face[0], vertices.length / 3);
-                for (let i = 1; i < face.length - 1; i++) {
-                    indices.push(first, OBJMeshParser.resolveIndex(face[i], vertices.length / 3), OBJMeshParser.resolveIndex(face[i + 1], vertices.length / 3));
-                }
+                    .map((part) => OBJMeshParser.parseFaceToken(part, sourcePositions.length / 3, sourceNormals.length / 3))
+                    .filter((vertex) => vertex !== null);
+                if (face.length >= 3)
+                    faces.push(face);
             }
         }
-        OBJMeshParser.computeVertexNormals(vertices, indices, normals);
+        const triangles = OBJMeshParser.triangulateFaces(faces);
+        const canUseFileNormals = preferFileNormals
+            && triangles.length > 0
+            && triangles.every((vertex) => vertex.normalIndex !== undefined);
+        if (canUseFileNormals) {
+            return OBJMeshParser.buildMeshWithFileNormals(sourcePositions, sourceNormals, triangles);
+        }
+        if (generatedNormals === 'flat') {
+            return OBJMeshParser.buildMeshWithFlatNormals(sourcePositions, triangles);
+        }
+        return OBJMeshParser.buildMeshWithSmoothNormals(sourcePositions, triangles);
+    }
+    static parseFaceToken(token, positionCount, normalCount) {
+        const parts = token.split('/');
+        const positionIndex = OBJMeshParser.parseIndex(parts[0], positionCount);
+        if (positionIndex === null)
+            return null;
+        const normalPart = parts.length >= 3 ? parts[2] : undefined;
+        const normalIndex = normalPart
+            ? OBJMeshParser.parseIndex(normalPart, normalCount)
+            : null;
         return {
-            positions: new Float32Array(vertices),
+            positionIndex,
+            normalIndex: normalIndex ?? undefined,
+        };
+    }
+    static parseIndex(raw, count) {
+        if (!raw)
+            return null;
+        const index = Number(raw);
+        if (!Number.isInteger(index) || index === 0)
+            return null;
+        const resolved = index > 0 ? index - 1 : count + index;
+        return resolved >= 0 && resolved < count ? resolved : null;
+    }
+    static triangulateFaces(faces) {
+        const triangles = [];
+        for (const face of faces) {
+            const first = face[0];
+            for (let i = 1; i < face.length - 1; i++) {
+                triangles.push(first, face[i], face[i + 1]);
+            }
+        }
+        return triangles;
+    }
+    static buildMeshWithFileNormals(sourcePositions, sourceNormals, triangles) {
+        const positions = [];
+        const normals = [];
+        const indices = [];
+        const vertexMap = new Map();
+        for (const vertex of triangles) {
+            const normalIndex = vertex.normalIndex;
+            const key = `${vertex.positionIndex}/${normalIndex}`;
+            let outputIndex = vertexMap.get(key);
+            if (outputIndex === undefined) {
+                outputIndex = positions.length / 3;
+                vertexMap.set(key, outputIndex);
+                positions.push(sourcePositions[vertex.positionIndex * 3], sourcePositions[vertex.positionIndex * 3 + 1], sourcePositions[vertex.positionIndex * 3 + 2]);
+                normals.push(sourceNormals[normalIndex * 3], sourceNormals[normalIndex * 3 + 1], sourceNormals[normalIndex * 3 + 2]);
+            }
+            indices.push(outputIndex);
+        }
+        return {
+            positions: new Float32Array(positions),
+            normals: new Float32Array(normals),
+            indices: new Uint32Array(indices),
+        };
+    }
+    static buildMeshWithSmoothNormals(sourcePositions, triangles) {
+        const positions = [...sourcePositions];
+        const normals = new Array(positions.length).fill(0);
+        const indices = triangles.map((vertex) => vertex.positionIndex);
+        OBJMeshParser.computeVertexNormals(positions, indices, normals);
+        return {
+            positions: new Float32Array(positions),
+            normals: new Float32Array(normals),
+            indices: new Uint32Array(indices),
+        };
+    }
+    static buildMeshWithFlatNormals(sourcePositions, triangles) {
+        const positions = [];
+        const normals = [];
+        const indices = [];
+        for (let i = 0; i < triangles.length; i += 3) {
+            const a = triangles[i];
+            const b = triangles[i + 1];
+            const c = triangles[i + 2];
+            if (!a || !b || !c)
+                continue;
+            const normal = OBJMeshParser.computeFaceNormal(sourcePositions, a.positionIndex, b.positionIndex, c.positionIndex);
+            for (const vertex of [a, b, c]) {
+                positions.push(sourcePositions[vertex.positionIndex * 3], sourcePositions[vertex.positionIndex * 3 + 1], sourcePositions[vertex.positionIndex * 3 + 2]);
+                normals.push(normal[0], normal[1], normal[2]);
+                indices.push(indices.length);
+            }
+        }
+        return {
+            positions: new Float32Array(positions),
             normals: new Float32Array(normals),
             indices: new Uint32Array(indices),
         };
@@ -16290,33 +16652,16 @@ class OBJMeshParser {
             const ia = indices[i];
             const ib = indices[i + 1];
             const ic = indices[i + 2];
-            const ax = vertices[ia * 3];
-            const ay = vertices[ia * 3 + 1];
-            const az = vertices[ia * 3 + 2];
-            const bx = vertices[ib * 3];
-            const by = vertices[ib * 3 + 1];
-            const bz = vertices[ib * 3 + 2];
-            const cx = vertices[ic * 3];
-            const cy = vertices[ic * 3 + 1];
-            const cz = vertices[ic * 3 + 2];
-            const abx = bx - ax;
-            const aby = by - ay;
-            const abz = bz - az;
-            const acx = cx - ax;
-            const acy = cy - ay;
-            const acz = cz - az;
-            const nx = aby * acz - abz * acy;
-            const ny = abz * acx - abx * acz;
-            const nz = abx * acy - aby * acx;
-            normals[ia * 3] += nx;
-            normals[ia * 3 + 1] += ny;
-            normals[ia * 3 + 2] += nz;
-            normals[ib * 3] += nx;
-            normals[ib * 3 + 1] += ny;
-            normals[ib * 3 + 2] += nz;
-            normals[ic * 3] += nx;
-            normals[ic * 3 + 1] += ny;
-            normals[ic * 3 + 2] += nz;
+            const normal = OBJMeshParser.computeRawFaceNormal(vertices, ia, ib, ic);
+            normals[ia * 3] += normal[0];
+            normals[ia * 3 + 1] += normal[1];
+            normals[ia * 3 + 2] += normal[2];
+            normals[ib * 3] += normal[0];
+            normals[ib * 3 + 1] += normal[1];
+            normals[ib * 3 + 2] += normal[2];
+            normals[ic * 3] += normal[0];
+            normals[ic * 3 + 1] += normal[1];
+            normals[ic * 3 + 2] += normal[2];
         }
         for (let i = 0; i < normals.length; i += 3) {
             const nx = normals[i];
@@ -16328,8 +16673,31 @@ class OBJMeshParser {
             normals[i + 2] = nz / len;
         }
     }
-    static resolveIndex(objIndex, vertexCount) {
-        return objIndex > 0 ? objIndex - 1 : vertexCount + objIndex;
+    static computeFaceNormal(vertices, ia, ib, ic) {
+        const [nx, ny, nz] = OBJMeshParser.computeRawFaceNormal(vertices, ia, ib, ic);
+        const len = Math.hypot(nx, ny, nz) || 1;
+        return [nx / len, ny / len, nz / len];
+    }
+    static computeRawFaceNormal(vertices, ia, ib, ic) {
+        const ax = vertices[ia * 3];
+        const ay = vertices[ia * 3 + 1];
+        const az = vertices[ia * 3 + 2];
+        const bx = vertices[ib * 3];
+        const by = vertices[ib * 3 + 1];
+        const bz = vertices[ib * 3 + 2];
+        const cx = vertices[ic * 3];
+        const cy = vertices[ic * 3 + 1];
+        const cz = vertices[ic * 3 + 2];
+        const abx = bx - ax;
+        const aby = by - ay;
+        const abz = bz - az;
+        const acx = cx - ax;
+        const acy = cy - ay;
+        const acz = cz - az;
+        const nx = aby * acz - abz * acy;
+        const ny = abz * acx - abx * acz;
+        const nz = abx * acy - aby * acx;
+        return [nx, ny, nz];
     }
 }
 exports.OBJMeshParser = OBJMeshParser;
@@ -17110,6 +17478,7 @@ class AstroSphere {
     activeCatalogues = [];
     activeFootprintSets = [];
     activePolylineSets = [];
+    activeSatelliteObjects = [];
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
@@ -17657,6 +18026,15 @@ class AstroSphere {
         this.activePolylineSets = this.activePolylineSets.filter((set) => set !== polylineSet);
         polylineSet.dispose();
     }
+    async showSatelliteObject(satelliteObject) {
+        if (satelliteObject)
+            this.activeSatelliteObjects.push(satelliteObject);
+        return satelliteObject;
+    }
+    deleteSatelliteObject(satelliteObject) {
+        this.activeSatelliteObjects = this.activeSatelliteObjects.filter((object) => object !== satelliteObject);
+        satelliteObject.dispose();
+    }
     getHoveredFootprints() {
         let footprintsHovered = [];
         this.activeFootprintSets.forEach((fset) => {
@@ -18066,6 +18444,14 @@ class AstroSphere {
                 this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 polylineSet.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activeSatelliteObjects.forEach((satelliteObject) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                satelliteObject.draw(this._perspectiveMatrixManager.pMatrix, this._camera.getCameraMatrix(), activeModelMatrix);
             }
         });
     }

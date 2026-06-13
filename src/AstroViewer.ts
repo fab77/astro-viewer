@@ -33,6 +33,7 @@ import { XYZMap } from './model/earth/XYZMap.js'
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
 import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js'
+import { SatelliteObjectGL, type SatelliteObjectOptions } from './model/terra/SatelliteObjectGL.js'
 import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js'
 import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
@@ -220,6 +221,22 @@ createFootprintSet(footprintSetName: string,
   changeTerraPolylineSetColor(polylineSet: TerraPolylineSetGL, hexColor: string): TerraPolylineSetGL {
     polylineSet.changeColor(hexColor)
     return polylineSet
+  }
+
+  createSatelliteObject(options: SatelliteObjectOptions): SatelliteObjectGL {
+    return new SatelliteObjectGL(options, this.webgl)
+  }
+
+  showSatelliteObject(satelliteObject: SatelliteObjectGL) {
+    this.astroSphere.showSatelliteObject(satelliteObject)
+  }
+
+  hideSatelliteObject(satelliteObject: SatelliteObjectGL, isVisible: boolean) {
+    satelliteObject.setIsVisible(isVisible)
+  }
+
+  deleteSatelliteObject(satelliteObject: SatelliteObjectGL) {
+    this.astroSphere.deleteSatelliteObject(satelliteObject)
   }
 
   changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {

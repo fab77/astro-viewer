@@ -13,11 +13,19 @@ type MeshHiPSLocations = {
   vertexNormalAttribute: number
 }
 
+export interface MeshHiPSShaderProgramOptions {
+  readonly twoSidedLighting?: boolean
+  readonly markerLighting?: boolean
+}
+
 export class MeshHiPSShaderProgram {
   readonly locations: MeshHiPSLocations
   private _shaderProgram?: WebGLProgram
 
-  constructor(private _webgl: WebGL2RenderingContext) {
+  constructor(
+    private _webgl: WebGL2RenderingContext,
+    private _options: MeshHiPSShaderProgramOptions = {},
+  ) {
     this.locations = {
       pMatrix: null,
       mMatrix: null,
@@ -96,9 +104,13 @@ export class MeshHiPSShaderProgram {
       void main(void) {
         vec3 normal = normalize(vNormal);
         vec3 lightDir = normalize(vec3(0.45, 0.8, 0.35));
-        float diffuse = max(dot(normal, lightDir), 0.0);
+        float diffuse = ${this._options.twoSidedLighting
+          ? 'abs(dot(normal, lightDir))'
+          : 'max(dot(normal, lightDir), 0.0)'};
         float rim = pow(1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
-        vec3 color = uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim;
+        vec3 color = ${this._options.markerLighting
+          ? 'uColor.rgb * (0.78 + diffuse * 0.18) + vec3(0.06, 0.08, 0.07) * rim'
+          : 'uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim'};
         outColor = vec4(color, uColor.a);
       }`,
     )

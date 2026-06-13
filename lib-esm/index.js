@@ -19,6 +19,7 @@ export { CatalogueGL } from './model/catalogues/CatalogueGL.js';
 export { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 export { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 export { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js';
+export { SatelliteObjectGL } from './model/terra/SatelliteObjectGL.js';
 export { MetadataManager } from './model/MetadataManager.js';
 export { MetadataColumn, ColumnType } from './model/MetadataColumn.js';
 export { Point } from './model/Point.js';

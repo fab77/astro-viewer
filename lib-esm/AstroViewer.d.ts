@@ -15,6 +15,7 @@ import { XYZMap } from './model/earth/XYZMap.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
 import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js';
+import { SatelliteObjectGL, type SatelliteObjectOptions } from './model/terra/SatelliteObjectGL.js';
 import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js';
 export declare class AstroViewer {
     private astroSphere;
@@ -52,6 +53,10 @@ export declare class AstroViewer {
     hideTerraPolylineSet(polylineSet: TerraPolylineSetGL, isVisible: boolean): void;
     deleteTerraPolylineSet(polylineSet: TerraPolylineSetGL): void;
     changeTerraPolylineSetColor(polylineSet: TerraPolylineSetGL, hexColor: string): TerraPolylineSetGL;
+    createSatelliteObject(options: SatelliteObjectOptions): SatelliteObjectGL;
+    showSatelliteObject(satelliteObject: SatelliteObjectGL): void;
+    hideSatelliteObject(satelliteObject: SatelliteObjectGL, isVisible: boolean): void;
+    deleteSatelliteObject(satelliteObject: SatelliteObjectGL): void;
     changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string): void;
     getHoveredFootprints(): HoveredFootprintDetail[];
     getDefaultHiPSURL(): string;
