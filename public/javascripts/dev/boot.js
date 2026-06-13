@@ -24,6 +24,7 @@ import { wireCoords } from './coords.js';
 import { wireXYZDiagnostics, wireHiPSDiagnostics } from './xyzDiagnostics.js';
 import { applyWMTSPreset, loadWMTSCapabilities, WMTS_PRESETS } from './wmtsCapabilities.js';
 import { wireImporterControls } from './importer.js';
+import { wireSatelliteFootprintDemo } from './satelliteFootprintDemo.js';
 
 (function applyFixedProxy() {
   const FIXED_PROXY_BASE = ""; // set if needed
@@ -154,6 +155,7 @@ async function bootstrap() {
     renderCatalogueManager();
     wireCatalogueManagerControls();
     wireImporterControls();
+    wireSatelliteFootprintDemo();
     wireGoto();
     wireCoords();
     wireHoveredFootprints();
