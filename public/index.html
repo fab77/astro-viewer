@@ -340,7 +340,11 @@
                 <label>Satellite footprint demo</label>
                 <div class="row">
                     <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">Load ISS Spain demo</button>
-                    <span class="hint">Dev-only fixture: Spain GeoJSON, ISS footprint polygons, and ground-track sample points.</span>
+                    <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>Play</button>
+                    <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>Pause</button>
+                    <input id="satelliteTimelineSeek" type="range" min="0" max="1000" value="0" disabled />
+                    <span id="satelliteTimelineTime" class="hint">Timeline not loaded</span>
+                    <span class="hint">Dev-only fixture: Spain GeoJSON, ISS footprint polygons, and ground-track line.</span>
                 </div>
             </div>
         </details>

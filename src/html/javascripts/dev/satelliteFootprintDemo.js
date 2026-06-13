@@ -1,5 +1,6 @@
 import { el, setStatus } from './ui.js';
 import { state } from './state.js';
+import { createSatelliteTimelineController } from './satelliteTimelineController.js';
 
 const SPAIN_REGIONS_GEOJSON_URL = 'test-data/generation/spain_regions.geojson';
 
@@ -66,11 +67,21 @@ const DEMO_OBSERVATIONS = [
 let loadedDemo = {
   country: null,
   footprints: null,
+  currentFootprint: null,
   groundTrack: null,
+  marker: null,
+  timeline: null,
+  currentFootprintIndex: -1,
 };
 
 export function wireSatelliteFootprintDemo() {
   el('btnLoadSatelliteFootprintDemo')?.addEventListener('click', loadSatelliteFootprintDemo);
+  el('btnSatelliteTimelinePlay')?.addEventListener('click', () => loadedDemo.timeline?.play());
+  el('btnSatelliteTimelinePause')?.addEventListener('click', () => loadedDemo.timeline?.pause());
+  el('satelliteTimelineSeek')?.addEventListener('input', (event) => {
+    loadedDemo.timeline?.seek(Number(event.target.value) / 1000);
+  });
+  setTimelineControlsEnabled(false);
 }
 
 async function loadSatelliteFootprintDemo() {
@@ -88,6 +99,13 @@ async function loadSatelliteFootprintDemo() {
     loadedDemo.country = createCountryOverlay(api, viewer, spainRegionsGeoJSON);
     loadedDemo.footprints = createFootprintOverlay(api, viewer);
     loadedDemo.groundTrack = createGroundTrackOverlay(api, viewer);
+    loadedDemo.marker = createSatelliteMarkerOverlay(api, viewer);
+    loadedDemo.timeline = createSatelliteTimelineController({
+      samples: DEMO_OBSERVATIONS,
+      playbackRate: 1,
+      onFrame: (frame) => updateTimelineFrame(api, viewer, frame),
+    });
+    setTimelineControlsEnabled(true);
 
     if (typeof api.goTo === 'function') {
       api.goTo(-3.7, 40.4);
@@ -96,7 +114,7 @@ async function loadSatelliteFootprintDemo() {
     const hits = DEMO_OBSERVATIONS.filter((sample) => sample.intersects);
     setStatus(
       `Loaded ISS Spain footprint demo: ${DEMO_OBSERVATIONS.length} samples, `
-      + `${hits.length} intersecting footprints. Ground track rendered with TerraPolylineSetGL.`
+      + `${hits.length} intersecting footprints. Use timeline controls to move the satellite marker.`
     );
   } catch (error) {
     console.error('[satelliteFootprintDemo] failed', error);
@@ -153,6 +171,34 @@ function createFootprintOverlay(api, viewer) {
   return set;
 }
 
+function createCurrentFootprintOverlay(api, viewer, sample) {
+  const featureCollection = {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      properties: {
+        name: 'Current ISS footprint',
+        timestamp: sample.timestamp,
+        intersects: sample.intersects ? 'true' : 'false',
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [sample.footprint],
+      },
+    }],
+  };
+  const set = api.createTerraFootprintSet(
+    'Current ISS footprint',
+    'Current timeline footprint sample',
+    'astrospatial-core fixture',
+    new viewer.MetadataManager([]),
+  );
+  set.addGeoJSONFeatures(viewer.GeoJSONParser.parseGeoJSON(featureCollection));
+  api.changeFootprintSetColor?.(set, '#ff4d4d');
+  api.showTerraFootprintSet(set);
+  return set;
+}
+
 function createGroundTrackOverlay(api, viewer) {
   const set = api.createTerraPolylineSet(
     'Demo ISS ground track',
@@ -172,14 +218,94 @@ function createGroundTrackOverlay(api, viewer) {
   return set;
 }
 
+function createSatelliteMarkerOverlay(api, viewer) {
+  const set = api.createTerraPointSet(
+    'Demo ISS moving marker',
+    'Interpolated satellite marker along GroundTrackPoint[]',
+    'astrospatial-core fixture',
+    new viewer.MetadataManager(createMarkerColumns(viewer)),
+  );
+  api.changeCatalogueColor?.(set, '#ff4d4d');
+  api.showTerraPointSet(set);
+  return set;
+}
+
+function updateTimelineFrame(api, viewer, frame) {
+  updateTimelineControls(frame);
+  updateSatelliteMarker(loadedDemo.marker, viewer, frame.markerPoint);
+
+  if (frame.nearestSampleIndex !== loadedDemo.currentFootprintIndex) {
+    if (loadedDemo.currentFootprint) {
+      api.deleteTerraFootprintSet?.(loadedDemo.currentFootprint);
+    }
+    loadedDemo.currentFootprint = createCurrentFootprintOverlay(api, viewer, frame.nearestSample);
+    loadedDemo.currentFootprintIndex = frame.nearestSampleIndex;
+  }
+}
+
+function updateSatelliteMarker(markerSet, viewer, point) {
+  if (!markerSet) return;
+  const columns = createMarkerColumns(viewer);
+  markerSet.clearSources();
+  markerSet.addSources([[
+    point.longitudeDeg,
+    point.latitudeDeg,
+    point.timestamp,
+    point.altitudeKm,
+  ]], columns);
+}
+
+function createMarkerColumns(viewer) {
+  return [
+    new viewer.MetadataColumn({ index: 0, name: 'longitudeDeg', columnType: viewer.ColumnType.GEOM_RA, unit: 'deg' }),
+    new viewer.MetadataColumn({ index: 1, name: 'latitudeDeg', columnType: viewer.ColumnType.GEOM_DEC, unit: 'deg' }),
+    new viewer.MetadataColumn({ index: 2, name: 'timestamp', columnType: viewer.ColumnType.MAIN_NAME, unit: '' }),
+    new viewer.MetadataColumn({ index: 3, name: 'altitudeKm', columnType: viewer.ColumnType.NUMBER, unit: 'km' }),
+  ];
+}
+
+function setTimelineControlsEnabled(enabled) {
+  const play = el('btnSatelliteTimelinePlay');
+  const pause = el('btnSatelliteTimelinePause');
+  const seek = el('satelliteTimelineSeek');
+  if (play) play.disabled = !enabled;
+  if (pause) pause.disabled = !enabled;
+  if (seek) seek.disabled = !enabled;
+  if (!enabled) {
+    if (seek) seek.value = '0';
+    const label = el('satelliteTimelineTime');
+    if (label) label.textContent = 'Timeline not loaded';
+  }
+}
+
+function updateTimelineControls(frame) {
+  const seek = el('satelliteTimelineSeek');
+  if (seek) seek.value = String(Math.round(frame.progress01 * 1000));
+
+  const label = el('satelliteTimelineTime');
+  if (label) {
+    label.textContent = `${new Date(frame.currentMs).toISOString()} `
+      + `lon=${frame.markerPoint.longitudeDeg.toFixed(3)} `
+      + `lat=${frame.markerPoint.latitudeDeg.toFixed(3)}`;
+  }
+}
+
 function removeExistingDemo(api) {
+  loadedDemo.timeline?.destroy();
   if (loadedDemo.country) api.deleteTerraFootprintSet?.(loadedDemo.country);
   if (loadedDemo.footprints) api.deleteTerraFootprintSet?.(loadedDemo.footprints);
+  if (loadedDemo.currentFootprint) api.deleteTerraFootprintSet?.(loadedDemo.currentFootprint);
   if (loadedDemo.groundTrack) api.deleteTerraPolylineSet?.(loadedDemo.groundTrack);
+  if (loadedDemo.marker) api.deleteTerraPointSet?.(loadedDemo.marker);
+  setTimelineControlsEnabled(false);
 
   loadedDemo = {
     country: null,
     footprints: null,
+    currentFootprint: null,
     groundTrack: null,
+    marker: null,
+    timeline: null,
+    currentFootprintIndex: -1,
   };
 }
