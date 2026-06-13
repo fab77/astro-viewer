@@ -87,7 +87,7 @@ async function loadSatelliteFootprintDemo() {
     const spainRegionsGeoJSON = await loadSpainRegionsGeoJSON();
     loadedDemo.country = createCountryOverlay(api, viewer, spainRegionsGeoJSON);
     loadedDemo.footprints = createFootprintOverlay(api, viewer);
-    loadedDemo.groundTrack = createGroundTrackPointOverlay(api, viewer);
+    loadedDemo.groundTrack = createGroundTrackOverlay(api, viewer);
 
     if (typeof api.goTo === 'function') {
       api.goTo(-3.7, 40.4);
@@ -96,7 +96,7 @@ async function loadSatelliteFootprintDemo() {
     const hits = DEMO_OBSERVATIONS.filter((sample) => sample.intersects);
     setStatus(
       `Loaded ISS Spain footprint demo: ${DEMO_OBSERVATIONS.length} samples, `
-      + `${hits.length} intersecting footprints. Ground track is point-only until TerraPolylineSetGL exists.`
+      + `${hits.length} intersecting footprints. Ground track rendered with TerraPolylineSetGL.`
     );
   } catch (error) {
     console.error('[satelliteFootprintDemo] failed', error);
@@ -153,35 +153,29 @@ function createFootprintOverlay(api, viewer) {
   return set;
 }
 
-function createGroundTrackPointOverlay(api, viewer) {
-  const columns = [
-    new viewer.MetadataColumn({ index: 0, name: 'longitudeDeg', columnType: viewer.ColumnType.GEOM_RA, unit: 'deg' }),
-    new viewer.MetadataColumn({ index: 1, name: 'latitudeDeg', columnType: viewer.ColumnType.GEOM_DEC, unit: 'deg' }),
-    new viewer.MetadataColumn({ index: 2, name: 'timestamp', columnType: viewer.ColumnType.MAIN_NAME, unit: '' }),
-    new viewer.MetadataColumn({ index: 3, name: 'altitudeKm', columnType: viewer.ColumnType.NUMBER, unit: 'km' }),
-  ];
-  const rows = DEMO_OBSERVATIONS.map((sample) => [
-    sample.groundTrackPoint.longitudeDeg,
-    sample.groundTrackPoint.latitudeDeg,
-    sample.timestamp,
-    sample.groundTrackPoint.altitudeKm,
-  ]);
-  const set = api.createTerraPointSet(
-    'Demo ISS ground-track samples',
-    'Temporary point fallback for GroundTrackPoint[] until TerraPolylineSetGL exists',
+function createGroundTrackOverlay(api, viewer) {
+  const set = api.createTerraPolylineSet(
+    'Demo ISS ground track',
+    'GroundTrackPoint[] rendered as an open geographic LINE_STRIP',
     'astrospatial-core fixture',
-    new viewer.MetadataManager(columns),
+    new viewer.MetadataManager([]),
   );
-  set.addSources(rows, columns);
-  api.changeCatalogueColor?.(set, '#ffe066');
-  api.showTerraPointSet(set);
+  set.addGroundTrack(
+    DEMO_OBSERVATIONS.map((sample) => ({
+      ...sample.groundTrackPoint,
+      timestamp: sample.timestamp,
+    })),
+    { name: 'ISS pass over Spain' },
+  );
+  api.changeTerraPolylineSetColor?.(set, '#ffe066');
+  api.showTerraPolylineSet(set);
   return set;
 }
 
 function removeExistingDemo(api) {
   if (loadedDemo.country) api.deleteTerraFootprintSet?.(loadedDemo.country);
   if (loadedDemo.footprints) api.deleteTerraFootprintSet?.(loadedDemo.footprints);
-  if (loadedDemo.groundTrack) api.deleteTerraPointSet?.(loadedDemo.groundTrack);
+  if (loadedDemo.groundTrack) api.deleteTerraPolylineSet?.(loadedDemo.groundTrack);
 
   loadedDemo = {
     country: null,

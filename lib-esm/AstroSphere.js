@@ -61,6 +61,7 @@ class AstroSphere {
     fov;
     activeCatalogues = [];
     activeFootprintSets = [];
+    activePolylineSets = [];
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
@@ -599,6 +600,15 @@ class AstroSphere {
     deleteFootprintSet(footprintSet) {
         this.activeFootprintSets = this.activeFootprintSets.filter((fst) => fst !== footprintSet);
     }
+    async showPolylineSet(polylineSet) {
+        if (polylineSet)
+            this.activePolylineSets.push(polylineSet);
+        return polylineSet;
+    }
+    deletePolylineSet(polylineSet) {
+        this.activePolylineSets = this.activePolylineSets.filter((set) => set !== polylineSet);
+        polylineSet.dispose();
+    }
     getHoveredFootprints() {
         let footprintsHovered = [];
         this.activeFootprintSets.forEach((fset) => {
@@ -1000,6 +1010,14 @@ class AstroSphere {
                 this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activePolylineSets.forEach((polylineSet) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                polylineSet.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
     }

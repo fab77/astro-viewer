@@ -59,6 +59,7 @@ import { XYZMap } from "./model/earth/XYZMap.js";
 import { MeshHiPS } from "./model/meships/MeshHiPS.js";
 import { MeshHiPSDescriptor } from "./model/meships/MeshHiPSDescriptor.js";
 import type { MeshHiPSDebugStats } from "./model/meships/MeshHiPSTypes.js";
+import { TerraPolylineSetGL } from "./model/terra/TerraPolylineSetGL.js";
 import { mat4, vec3, vec4 } from "gl-matrix";
 
 export type PointCoordinates = {
@@ -124,6 +125,7 @@ class AstroSphere {
 
   private activeCatalogues: CatalogueGL[] = [];
   private activeFootprintSets: FootprintSetGL[] = [];
+  private activePolylineSets: TerraPolylineSetGL[] = [];
   private _webgl: WebGL2RenderingContext;
   private _selectedColorMap: any;
   private _cameraStatusChanged: boolean = false;
@@ -971,6 +973,18 @@ class AstroSphere {
     );
   }
 
+  async showPolylineSet(polylineSet: TerraPolylineSetGL) {
+    if (polylineSet) this.activePolylineSets.push(polylineSet);
+    return polylineSet;
+  }
+
+  deletePolylineSet(polylineSet: TerraPolylineSetGL) {
+    this.activePolylineSets = this.activePolylineSets.filter(
+      (set) => set !== polylineSet,
+    );
+    polylineSet.dispose();
+  }
+
   getHoveredFootprints(): HoveredFootprintDetail[] {
     let footprintsHovered: HoveredFootprintDetail[] = [];
     this.activeFootprintSets.forEach((fset) => {
@@ -1535,6 +1549,21 @@ class AstroSphere {
         this._activeMeshHiPS?.getModelMatrix();
       if (activeModelMatrix) {
         fst.draw(
+          activeModelMatrix as Float32Array,
+          this.mouseHelper,
+          this._camera.getCameraMatrix() as Float32Array,
+          this._perspectiveMatrixManager.pMatrix as Float32Array,
+        );
+      }
+    });
+
+    this.activePolylineSets.forEach((polylineSet) => {
+      const activeModelMatrix =
+        this._activeHiPS?.getModelMatrix() ??
+        this._activeXYZ2?.getModelMatrix() ??
+        this._activeMeshHiPS?.getModelMatrix();
+      if (activeModelMatrix) {
+        polylineSet.draw(
           activeModelMatrix as Float32Array,
           this.mouseHelper,
           this._camera.getCameraMatrix() as Float32Array,

@@ -2439,6 +2439,7 @@ const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
 const XYZMapDescriptor_js_1 = __webpack_require__(8868);
 const TerraPointSetGL_js_1 = __webpack_require__(5781);
 const TerraFootprintSetGL_js_1 = __webpack_require__(9022);
+const TerraPolylineSetGL_js_1 = __webpack_require__(3665);
 const MeshHiPSDescriptor_js_1 = __webpack_require__(847);
 // & {
 //   viewportWidth: number
@@ -2530,6 +2531,22 @@ class AstroViewer {
     }
     deleteTerraFootprintSet(footprintSet) {
         this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    createTerraPolylineSet(polylineSetName, polylineSetDescription, providerUrl, metadataManager) {
+        return new TerraPolylineSetGL_js_1.TerraPolylineSetGL(polylineSetName, polylineSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraPolylineSet(polylineSet) {
+        this.astroSphere.showPolylineSet(polylineSet);
+    }
+    hideTerraPolylineSet(polylineSet, isVisible) {
+        polylineSet.setIsVisible(isVisible);
+    }
+    deleteTerraPolylineSet(polylineSet) {
+        this.astroSphere.deletePolylineSet(polylineSet);
+    }
+    changeTerraPolylineSetColor(polylineSet, hexColor) {
+        polylineSet.changeColor(hexColor);
+        return polylineSet;
     }
     changeFootprintSetColor(footprintSet, hexColor) {
         // footprintSet.footprintsetProps.changeColor(hexColor)
@@ -4606,7 +4623,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraPolylineSetGL = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(5087);
@@ -4624,6 +4641,8 @@ var TerraPointSetGL_js_1 = __webpack_require__(5781);
 Object.defineProperty(exports, "TerraPointSetGL", ({ enumerable: true, get: function () { return TerraPointSetGL_js_1.TerraPointSetGL; } }));
 var TerraFootprintSetGL_js_1 = __webpack_require__(9022);
 Object.defineProperty(exports, "TerraFootprintSetGL", ({ enumerable: true, get: function () { return TerraFootprintSetGL_js_1.TerraFootprintSetGL; } }));
+var TerraPolylineSetGL_js_1 = __webpack_require__(3665);
+Object.defineProperty(exports, "TerraPolylineSetGL", ({ enumerable: true, get: function () { return TerraPolylineSetGL_js_1.TerraPolylineSetGL; } }));
 var MetadataManager_js_1 = __webpack_require__(5403);
 Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
 var MetadataColumn_js_1 = __webpack_require__(1072);
@@ -15437,6 +15456,196 @@ exports.CatalogueShaderProgram = CatalogueShaderProgram;
 
 /***/ }),
 
+/***/ 3665:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TerraPolylineSetGL = void 0;
+const FootprintShaderProgram_js_1 = __webpack_require__(8909);
+const CoordsType_js_1 = __webpack_require__(8145);
+const Utils_js_1 = __webpack_require__(7930);
+const Point_js_1 = __webpack_require__(6553);
+class TerraPolylineSetGL {
+    _name;
+    _description;
+    _providerUrl;
+    _metadataManager;
+    _webgl;
+    _visibleTilesManager;
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    _kind = 'TerraPolylineSetGL';
+    _isVisible = true;
+    _ready = true;
+    _shapeColor = '#ffe066';
+    _bufferInitialised = false;
+    paths = [];
+    renderSegments = [];
+    _polylineShaderProgram;
+    constructor(_name, _description, _providerUrl, _metadataManager, _webgl, _visibleTilesManager) {
+        this._name = _name;
+        this._description = _description;
+        this._providerUrl = _providerUrl;
+        this._metadataManager = _metadataManager;
+        this._webgl = _webgl;
+        this._visibleTilesManager = _visibleTilesManager;
+        this._polylineShaderProgram = new FootprintShaderProgram_js_1.FootprintShaderProgram(this._webgl);
+    }
+    addPath(points, metadata) {
+        this.paths.push({ points: [...points], metadata });
+        this._ready = true;
+        this._bufferInitialised = false;
+    }
+    addGroundTrack(points, metadata) {
+        this.addPath(points, metadata);
+    }
+    clearPaths() {
+        this.paths = [];
+        this.disposeBuffers();
+        this.renderSegments = [];
+        this._bufferInitialised = false;
+    }
+    setIsVisible(isVisible) {
+        this._isVisible = isVisible;
+    }
+    get isVisible() {
+        return this._isVisible;
+    }
+    changeColor(color) {
+        this._shapeColor = color;
+    }
+    dispose() {
+        this.disposeBuffers();
+        this.renderSegments = [];
+        this.paths = [];
+        this._bufferInitialised = false;
+    }
+    draw(in_mMatrix, _in_mouseHelper, vMatrix, pMatrix) {
+        if (!this._isVisible)
+            return;
+        if (!this._ready)
+            return;
+        if (!vMatrix)
+            return;
+        if (!this._webgl)
+            return;
+        if (!this._bufferInitialised)
+            this.initBuffers();
+        if (this.renderSegments.length === 0)
+            return;
+        this._polylineShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
+        const rgb = (0, Utils_js_1.colorHex2RGB)(this._shapeColor);
+        this._webgl.uniform4f(this._polylineShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
+        for (const segment of this.renderSegments) {
+            if (!segment.buffer || segment.vertices.length < TerraPolylineSetGL.ELEM_SIZE * 2)
+                continue;
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, segment.buffer);
+            this._webgl.vertexAttribPointer(this._polylineShaderProgram.locations.position, TerraPolylineSetGL.ELEM_SIZE, this._webgl.FLOAT, false, TerraPolylineSetGL.BYTES_X_ELEM * TerraPolylineSetGL.ELEM_SIZE, 0);
+            this._webgl.enableVertexAttribArray(this._polylineShaderProgram.locations.position);
+            this._webgl.drawArrays(this._webgl.LINE_STRIP, 0, segment.vertices.length / TerraPolylineSetGL.ELEM_SIZE);
+        }
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    initBuffers() {
+        this.disposeBuffers();
+        this.renderSegments = this.buildRenderSegments();
+        for (const segment of this.renderSegments) {
+            const buffer = this._webgl.createBuffer();
+            segment.buffer = buffer;
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, buffer);
+            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, segment.vertices, this._webgl.STATIC_DRAW);
+        }
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
+        this._bufferInitialised = true;
+    }
+    buildRenderSegments() {
+        const segments = [];
+        for (const path of this.paths) {
+            for (const segment of this.splitPath(path.points)) {
+                if (segment.length < 2)
+                    continue;
+                const vertices = new Float32Array(segment.length * TerraPolylineSetGL.ELEM_SIZE);
+                let offset = 0;
+                for (const point of segment) {
+                    const geoPoint = new Point_js_1.Point({
+                        lonDeg: normalizeLongitudeDeg(point.longitudeDeg),
+                        latDeg: point.latitudeDeg,
+                    }, CoordsType_js_1.CoordsType.GEOGRAPHIC);
+                    vertices[offset] = geoPoint.x;
+                    vertices[offset + 1] = geoPoint.y;
+                    vertices[offset + 2] = geoPoint.z;
+                    offset += TerraPolylineSetGL.ELEM_SIZE;
+                }
+                segments.push({ vertices, buffer: null });
+            }
+        }
+        return segments;
+    }
+    splitPath(points) {
+        const segments = [];
+        let current = [];
+        let previous = null;
+        for (const point of points) {
+            if (!isValidPoint(point)) {
+                if (current.length > 1)
+                    segments.push(current);
+                current = [];
+                previous = null;
+                continue;
+            }
+            if (previous && crossesAntimeridian(previous.longitudeDeg, point.longitudeDeg)) {
+                if (current.length > 1)
+                    segments.push(current);
+                current = [];
+            }
+            current.push(point);
+            previous = point;
+        }
+        if (current.length > 1)
+            segments.push(current);
+        return segments;
+    }
+    disposeBuffers() {
+        for (const segment of this.renderSegments) {
+            if (segment.buffer) {
+                this._webgl.deleteBuffer(segment.buffer);
+                segment.buffer = null;
+            }
+        }
+    }
+}
+exports.TerraPolylineSetGL = TerraPolylineSetGL;
+function isValidPoint(point) {
+    return Number.isFinite(point.longitudeDeg)
+        && Number.isFinite(point.latitudeDeg)
+        && point.latitudeDeg >= -90
+        && point.latitudeDeg <= 90;
+}
+function crossesAntimeridian(leftLongitudeDeg, rightLongitudeDeg) {
+    return Math.abs(normalizeLongitudeDeg(rightLongitudeDeg) - normalizeLongitudeDeg(leftLongitudeDeg)) > 180;
+}
+function normalizeLongitudeDeg(longitudeDeg) {
+    const normalized = ((((longitudeDeg + 180) % 360) + 360) % 360) - 180;
+    return Object.is(normalized, -0) ? 0 : normalized;
+}
+
+
+/***/ }),
+
 /***/ 3726:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
@@ -16900,6 +17109,7 @@ class AstroSphere {
     fov;
     activeCatalogues = [];
     activeFootprintSets = [];
+    activePolylineSets = [];
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
@@ -17438,6 +17648,15 @@ class AstroSphere {
     deleteFootprintSet(footprintSet) {
         this.activeFootprintSets = this.activeFootprintSets.filter((fst) => fst !== footprintSet);
     }
+    async showPolylineSet(polylineSet) {
+        if (polylineSet)
+            this.activePolylineSets.push(polylineSet);
+        return polylineSet;
+    }
+    deletePolylineSet(polylineSet) {
+        this.activePolylineSets = this.activePolylineSets.filter((set) => set !== polylineSet);
+        polylineSet.dispose();
+    }
     getHoveredFootprints() {
         let footprintsHovered = [];
         this.activeFootprintSets.forEach((fset) => {
@@ -17839,6 +18058,14 @@ class AstroSphere {
                 this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activePolylineSets.forEach((polylineSet) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                polylineSet.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
             }
         });
     }

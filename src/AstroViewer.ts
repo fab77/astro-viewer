@@ -32,6 +32,7 @@ import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js'
 import { XYZMap } from './model/earth/XYZMap.js'
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
+import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js'
 import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js'
 import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
@@ -186,6 +187,39 @@ createFootprintSet(footprintSetName: string,
 
   deleteTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
     this.astroSphere.deleteFootprintSet(footprintSet)
+  }
+
+  createTerraPolylineSet(
+    polylineSetName: string,
+    polylineSetDescription: string,
+    providerUrl: string,
+    metadataManager: MetadataManager,
+  ): TerraPolylineSetGL {
+    return new TerraPolylineSetGL(
+      polylineSetName,
+      polylineSetDescription,
+      providerUrl,
+      metadataManager,
+      this.webgl,
+      this.astroSphere.healpixGrid.visibleTilesManager,
+    )
+  }
+
+  showTerraPolylineSet(polylineSet: TerraPolylineSetGL) {
+    this.astroSphere.showPolylineSet(polylineSet)
+  }
+
+  hideTerraPolylineSet(polylineSet: TerraPolylineSetGL, isVisible: boolean) {
+    polylineSet.setIsVisible(isVisible)
+  }
+
+  deleteTerraPolylineSet(polylineSet: TerraPolylineSetGL) {
+    this.astroSphere.deletePolylineSet(polylineSet)
+  }
+
+  changeTerraPolylineSetColor(polylineSet: TerraPolylineSetGL, hexColor: string): TerraPolylineSetGL {
+    polylineSet.changeColor(hexColor)
+    return polylineSet
   }
 
   changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {

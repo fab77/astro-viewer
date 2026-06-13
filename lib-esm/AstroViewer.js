@@ -21,6 +21,7 @@ import { xyzTileRequestScheduler } from './model/earth/XYZTileRequestScheduler.j
 import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js';
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js';
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js';
+import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js';
 import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js';
 // & {
 //   viewportWidth: number
@@ -112,6 +113,22 @@ export class AstroViewer {
     }
     deleteTerraFootprintSet(footprintSet) {
         this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    createTerraPolylineSet(polylineSetName, polylineSetDescription, providerUrl, metadataManager) {
+        return new TerraPolylineSetGL(polylineSetName, polylineSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraPolylineSet(polylineSet) {
+        this.astroSphere.showPolylineSet(polylineSet);
+    }
+    hideTerraPolylineSet(polylineSet, isVisible) {
+        polylineSet.setIsVisible(isVisible);
+    }
+    deleteTerraPolylineSet(polylineSet) {
+        this.astroSphere.deletePolylineSet(polylineSet);
+    }
+    changeTerraPolylineSetColor(polylineSet, hexColor) {
+        polylineSet.changeColor(hexColor);
+        return polylineSet;
     }
     changeFootprintSetColor(footprintSet, hexColor) {
         // footprintSet.footprintsetProps.changeColor(hexColor)

@@ -21,6 +21,8 @@ export { HoveredFootprintDetail, FootprintSetGL } from './model/footprints/Footp
 export { CatalogueGL } from './model/catalogues/CatalogueGL.js'
 export { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 export { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
+export { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js'
+export type { TerraPolylineMetadata, TerraPolylinePoint } from './model/terra/TerraPolylineSetGL.js'
 
 export { MetadataManager } from './model/MetadataManager.js'
 export { MetadataColumn, MetadataInit, ColumnType } from './model/MetadataColumn.js'
