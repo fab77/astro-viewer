@@ -27,6 +27,34 @@ export { SatelliteObjectGL } from './model/terra/SatelliteObjectGL.js'
 export type { SatelliteObjectOptions, SatelliteObjectPosition } from './model/terra/SatelliteObjectGL.js'
 export { SensorConeGL } from './model/terra/SensorConeGL.js'
 export type { SensorConeFootprintPosition, SensorConeOptions, SensorConePoint } from './model/terra/SensorConeGL.js'
+export {
+  createObservationTrackTimeline,
+  footprintToRing,
+  ObservationTrackTimeline,
+  ObservationTrackViewerAdapter,
+} from './model/observation/index.js'
+export type {
+  FootprintGeometryLike,
+  FootprintGeoPositionLike,
+  FootprintMultiPolygonLike,
+  FootprintPolygonLike,
+  GroundTrackPointLike,
+  ObservationSampleLike,
+  ObservationTargetLike,
+  ObservationTimelineSample,
+  ObservationTrackFrame,
+  ObservationTrackLike,
+  ObservationTrackTimelineController,
+  ObservationTrackTimelineOptions,
+  ObservationTrackTimelineState,
+  ObservationTrackViewerAdapterOptions,
+  ObservationTrackViewerColors,
+  ObservationTrackViewerHandle,
+  ObservationVisualisationLike,
+  SatelliteConfigLike,
+  SatelliteModelConfigLike,
+  SensorConfigLike,
+} from './model/observation/index.js'
 
 export { MetadataManager } from './model/MetadataManager.js'
 export { MetadataColumn, MetadataInit, ColumnType } from './model/MetadataColumn.js'

@@ -4649,7 +4649,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.SensorConeGL = exports.SatelliteObjectGL = exports.TerraPolylineSetGL = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.ObservationTrackViewerAdapter = exports.ObservationTrackTimeline = exports.footprintToRing = exports.createObservationTrackTimeline = exports.SensorConeGL = exports.SatelliteObjectGL = exports.TerraPolylineSetGL = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(5087);
@@ -4673,6 +4673,11 @@ var SatelliteObjectGL_js_1 = __webpack_require__(3603);
 Object.defineProperty(exports, "SatelliteObjectGL", ({ enumerable: true, get: function () { return SatelliteObjectGL_js_1.SatelliteObjectGL; } }));
 var SensorConeGL_js_1 = __webpack_require__(3102);
 Object.defineProperty(exports, "SensorConeGL", ({ enumerable: true, get: function () { return SensorConeGL_js_1.SensorConeGL; } }));
+var index_js_1 = __webpack_require__(5866);
+Object.defineProperty(exports, "createObservationTrackTimeline", ({ enumerable: true, get: function () { return index_js_1.createObservationTrackTimeline; } }));
+Object.defineProperty(exports, "footprintToRing", ({ enumerable: true, get: function () { return index_js_1.footprintToRing; } }));
+Object.defineProperty(exports, "ObservationTrackTimeline", ({ enumerable: true, get: function () { return index_js_1.ObservationTrackTimeline; } }));
+Object.defineProperty(exports, "ObservationTrackViewerAdapter", ({ enumerable: true, get: function () { return index_js_1.ObservationTrackViewerAdapter; } }));
 var MetadataManager_js_1 = __webpack_require__(5403);
 Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
 var MetadataColumn_js_1 = __webpack_require__(1072);
@@ -19469,6 +19474,347 @@ exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
 
 /***/ }),
 
+/***/ 5772:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObservationTrackViewerAdapter = void 0;
+const GeoJSONParser_js_1 = __importDefault(__webpack_require__(8755));
+const MetadataColumn_js_1 = __webpack_require__(1072);
+const MetadataManager_js_1 = __webpack_require__(5403);
+const ObservationTrackTimeline_js_1 = __webpack_require__(8022);
+const DEFAULT_VISUALISATION = {
+    showSatelliteModel: true,
+    showGroundTrack: true,
+    showFootprint: true,
+    showSensorCone: true,
+    showCurrentFootprintOnly: false,
+    showAllFootprints: true,
+};
+const DEFAULT_COLORS = {
+    groundTrack: '#ffe066',
+    footprints: '#00fff2',
+    currentFootprint: '#ff4d4d',
+    marker: '#ff4d4d',
+    satelliteObject: [1.0, 0.84, 0.22, 1.0],
+    sensorCone: [0.0, 1.0, 0.95, 0.68],
+    target: '#ffb347',
+};
+class ObservationTrackViewerAdapter {
+    activeHandle = null;
+    viewer;
+    metadataManagerFactory;
+    colors;
+    onFrame;
+    constructor(options) {
+        this.viewer = options.viewer;
+        this.metadataManagerFactory = options.metadataManagerFactory ?? (() => new MetadataManager_js_1.MetadataManager([]));
+        this.colors = {
+            ...DEFAULT_COLORS,
+            ...options.colors,
+        };
+        this.onFrame = options.onFrame;
+    }
+    load(track) {
+        this.clear();
+        const handle = new InternalObservationTrackViewerHandle(this.viewer, track, this.metadataManagerFactory, this.colors, this.onFrame);
+        this.activeHandle = handle;
+        return handle;
+    }
+    clear() {
+        this.activeHandle?.dispose();
+        this.activeHandle = null;
+    }
+}
+exports.ObservationTrackViewerAdapter = ObservationTrackViewerAdapter;
+class InternalObservationTrackViewerHandle {
+    viewer;
+    track;
+    metadataManagerFactory;
+    colors;
+    onFrame;
+    timeline;
+    objects = {
+        target: null,
+        groundTrack: null,
+        footprints: null,
+        currentFootprint: null,
+        marker: null,
+        satelliteObject: null,
+        sensorCone: null,
+    };
+    visualisation;
+    currentFootprintIndex = -1;
+    disposed = false;
+    constructor(viewer, track, metadataManagerFactory, colors, onFrame) {
+        this.viewer = viewer;
+        this.track = track;
+        this.metadataManagerFactory = metadataManagerFactory;
+        this.colors = colors;
+        this.onFrame = onFrame;
+        validateTrack(track);
+        this.visualisation = {
+            ...DEFAULT_VISUALISATION,
+            ...track.visualisation,
+        };
+        this.createStaticObjects();
+        this.timeline = (0, ObservationTrackTimeline_js_1.createObservationTrackTimeline)({
+            samples: track.samples,
+            playbackRate: 1,
+            onFrame: (frame) => this.updateFrame(frame),
+        });
+        this.applyVisualisation();
+    }
+    play() {
+        this.timeline.play();
+    }
+    pause() {
+        this.timeline.pause();
+    }
+    seek(progress01) {
+        this.timeline.seek(progress01);
+    }
+    setVisualisation(config) {
+        this.visualisation = {
+            ...this.visualisation,
+            ...config,
+        };
+        this.applyVisualisation();
+    }
+    dispose() {
+        if (this.disposed)
+            return;
+        this.disposed = true;
+        this.timeline.destroy();
+        this.deleteObjects();
+    }
+    createStaticObjects() {
+        this.objects.target = this.createTargetOverlay();
+        this.objects.footprints = this.createAllFootprintsOverlay();
+        this.objects.groundTrack = this.createGroundTrackOverlay();
+        this.objects.marker = this.createMarkerOverlay();
+        this.objects.satelliteObject = this.createSatelliteObject();
+        this.objects.sensorCone = this.createSensorCone();
+    }
+    createTargetOverlay() {
+        const geojson = this.track.target?.geojson;
+        if (!geojson)
+            return null;
+        const set = this.viewer.createTerraFootprintSet(this.track.target?.name ?? 'Observation target', 'ObservationTrack target GeoJSON', this.track.target?.geojsonUrl ?? 'ObservationTrack', this.metadataManagerFactory());
+        set.addGeoJSONFeatures(GeoJSONParser_js_1.default.parseGeoJSON(geojson));
+        this.viewer.changeFootprintSetColor(set, this.colors.target);
+        this.viewer.showTerraFootprintSet(set);
+        return set;
+    }
+    createAllFootprintsOverlay() {
+        const featureCollection = {
+            type: 'FeatureCollection',
+            features: this.track.samples.map((sample, index) => footprintFeature(sample, index)),
+        };
+        const set = this.viewer.createTerraFootprintSet(`${this.track.satellite?.name ?? 'Satellite'} footprints`, 'ObservationTrack sampled sensor footprints', this.track.id ?? 'ObservationTrack', this.metadataManagerFactory());
+        set.addGeoJSONFeatures(GeoJSONParser_js_1.default.parseGeoJSON(featureCollection));
+        this.viewer.changeFootprintSetColor(set, this.colors.footprints);
+        this.viewer.showTerraFootprintSet(set);
+        return set;
+    }
+    createGroundTrackOverlay() {
+        const set = this.viewer.createTerraPolylineSet(`${this.track.satellite?.name ?? 'Satellite'} ground track`, 'ObservationTrack GroundTrackPoint[]', this.track.id ?? 'ObservationTrack', this.metadataManagerFactory());
+        set.addGroundTrack(this.track.samples.map((sample) => ({
+            ...sample.groundTrackPoint,
+            timestamp: sample.timestamp,
+        })), { name: `${this.track.satellite?.name ?? 'Satellite'} ground track` });
+        this.viewer.changeTerraPolylineSetColor(set, this.colors.groundTrack);
+        this.viewer.showTerraPolylineSet(set);
+        return set;
+    }
+    createMarkerOverlay() {
+        const set = this.viewer.createTerraPointSet(`${this.track.satellite?.name ?? 'Satellite'} marker`, 'ObservationTrack interpolated satellite marker', this.track.id ?? 'ObservationTrack', new MetadataManager_js_1.MetadataManager(createMarkerColumns()));
+        this.viewer.changeCatalogueColor(set, this.colors.marker);
+        this.viewer.showTerraPointSet(set);
+        return set;
+    }
+    createSatelliteObject() {
+        const objUrl = this.track.satellite?.model?.objUrl;
+        if (!objUrl)
+            return null;
+        const object = this.viewer.createSatelliteObject({
+            name: `${this.track.satellite?.name ?? 'Satellite'} object`,
+            objUrl,
+            color: this.colors.satelliteObject,
+            scale: this.track.satellite?.model?.visualScale,
+        });
+        this.viewer.showSatelliteObject(object);
+        return object;
+    }
+    createSensorCone() {
+        const cone = this.viewer.createSensorCone({
+            name: `${this.track.sensor?.name ?? 'Sensor'} cone`,
+            color: this.colors.sensorCone,
+            wireframe: true,
+            filled: false,
+        });
+        this.viewer.showSensorCone(cone);
+        return cone;
+    }
+    updateFrame(frame) {
+        if (this.disposed)
+            return;
+        this.updateMarker(frame.currentGroundPoint);
+        this.updateSatelliteObject(frame);
+        this.updateSensorCone(frame);
+        this.updateCurrentFootprint(frame);
+        this.onFrame?.(frame);
+    }
+    updateMarker(point) {
+        const marker = this.objects.marker;
+        if (!marker)
+            return;
+        marker.clearSources();
+        marker.addSources([[
+                point.longitudeDeg,
+                point.latitudeDeg,
+                String(point.timestamp ?? ''),
+                point.altitudeKm,
+            ]], createMarkerColumns());
+    }
+    updateSatelliteObject(frame) {
+        const satelliteObject = this.objects.satelliteObject;
+        if (!satelliteObject)
+            return;
+        satelliteObject.setPosition(frame.currentGroundPoint, frame.previousSample?.groundTrackPoint ?? null, frame.nextSample?.groundTrackPoint ?? null);
+    }
+    updateSensorCone(frame) {
+        const sensorCone = this.objects.sensorCone;
+        if (!sensorCone)
+            return;
+        sensorCone.setGeometry(frame.currentGroundPoint, frame.currentFootprint);
+    }
+    updateCurrentFootprint(frame) {
+        if (frame.nearestSampleIndex === this.currentFootprintIndex)
+            return;
+        if (this.objects.currentFootprint) {
+            this.viewer.deleteTerraFootprintSet(this.objects.currentFootprint);
+        }
+        this.objects.currentFootprint = this.createCurrentFootprintOverlay(frame.nearestSample);
+        this.currentFootprintIndex = frame.nearestSampleIndex;
+        this.applyVisualisation();
+    }
+    createCurrentFootprintOverlay(sample) {
+        const featureCollection = {
+            type: 'FeatureCollection',
+            features: [footprintFeature(sample, sample.index, 'Current footprint')],
+        };
+        const set = this.viewer.createTerraFootprintSet(`${this.track.satellite?.name ?? 'Satellite'} current footprint`, 'ObservationTrack nearest sampled footprint', this.track.id ?? 'ObservationTrack', this.metadataManagerFactory());
+        set.addGeoJSONFeatures(GeoJSONParser_js_1.default.parseGeoJSON(featureCollection));
+        this.viewer.changeFootprintSetColor(set, this.colors.currentFootprint);
+        this.viewer.showTerraFootprintSet(set);
+        return set;
+    }
+    applyVisualisation() {
+        const showFootprint = Boolean(this.visualisation.showFootprint);
+        const showAllFootprints = showFootprint
+            && Boolean(this.visualisation.showAllFootprints)
+            && !this.visualisation.showCurrentFootprintOnly;
+        const showCurrentFootprint = showFootprint
+            && (Boolean(this.visualisation.showCurrentFootprintOnly) || !showAllFootprints);
+        if (this.objects.target)
+            this.viewer.hideTerraFootprintSet(this.objects.target, true);
+        if (this.objects.groundTrack) {
+            this.viewer.hideTerraPolylineSet(this.objects.groundTrack, Boolean(this.visualisation.showGroundTrack));
+        }
+        if (this.objects.footprints) {
+            this.viewer.hideTerraFootprintSet(this.objects.footprints, showAllFootprints);
+        }
+        if (this.objects.currentFootprint) {
+            this.viewer.hideTerraFootprintSet(this.objects.currentFootprint, showCurrentFootprint);
+        }
+        if (this.objects.marker)
+            this.viewer.hideTerraPointSet(this.objects.marker, true);
+        if (this.objects.satelliteObject) {
+            this.viewer.hideSatelliteObject(this.objects.satelliteObject, Boolean(this.visualisation.showSatelliteModel));
+        }
+        if (this.objects.sensorCone) {
+            this.viewer.hideSensorCone(this.objects.sensorCone, Boolean(this.visualisation.showSensorCone));
+        }
+    }
+    deleteObjects() {
+        if (this.objects.target)
+            this.viewer.deleteTerraFootprintSet(this.objects.target);
+        if (this.objects.groundTrack)
+            this.viewer.deleteTerraPolylineSet(this.objects.groundTrack);
+        if (this.objects.footprints)
+            this.viewer.deleteTerraFootprintSet(this.objects.footprints);
+        if (this.objects.currentFootprint)
+            this.viewer.deleteTerraFootprintSet(this.objects.currentFootprint);
+        if (this.objects.marker)
+            this.viewer.deleteTerraPointSet(this.objects.marker);
+        if (this.objects.satelliteObject)
+            this.viewer.deleteSatelliteObject(this.objects.satelliteObject);
+        if (this.objects.sensorCone)
+            this.viewer.deleteSensorCone(this.objects.sensorCone);
+        this.objects.target = null;
+        this.objects.groundTrack = null;
+        this.objects.footprints = null;
+        this.objects.currentFootprint = null;
+        this.objects.marker = null;
+        this.objects.satelliteObject = null;
+        this.objects.sensorCone = null;
+    }
+}
+function validateTrack(track) {
+    if (!track.samples || track.samples.length === 0) {
+        throw new Error('ObservationTrackViewerAdapter requires at least one sample.');
+    }
+}
+function footprintFeature(sample, index, name = `Footprint ${index + 1}`) {
+    return {
+        type: 'Feature',
+        properties: {
+            name,
+            timestamp: String(sample.timestamp),
+            intersectsTarget: String(Boolean(sample.intersectsTarget ?? sample.intersects)),
+        },
+        geometry: footprintToGeoJSONGeometry(sample.footprint),
+    };
+}
+function footprintToGeoJSONGeometry(footprint) {
+    if (!Array.isArray(footprint) && 'polygons' in footprint) {
+        return {
+            type: 'MultiPolygon',
+            coordinates: footprint.polygons.map((polygon) => [ringToGeoJSON((0, ObservationTrackTimeline_js_1.footprintToRing)(polygon))]),
+        };
+    }
+    return {
+        type: 'Polygon',
+        coordinates: [ringToGeoJSON((0, ObservationTrackTimeline_js_1.footprintToRing)(footprint))],
+    };
+}
+function ringToGeoJSON(ring) {
+    if (ring.length === 0)
+        return ring;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (Math.abs(first[0] - last[0]) < 1e-9 && Math.abs(first[1] - last[1]) < 1e-9) {
+        return ring;
+    }
+    return [...ring, [first[0], first[1]]];
+}
+function createMarkerColumns() {
+    return [
+        new MetadataColumn_js_1.MetadataColumn({ index: 0, name: 'longitudeDeg', columnType: MetadataColumn_js_1.ColumnType.GEOM_RA, unit: 'deg' }),
+        new MetadataColumn_js_1.MetadataColumn({ index: 1, name: 'latitudeDeg', columnType: MetadataColumn_js_1.ColumnType.GEOM_DEC, unit: 'deg' }),
+        new MetadataColumn_js_1.MetadataColumn({ index: 2, name: 'timestamp', columnType: MetadataColumn_js_1.ColumnType.MAIN_NAME, unit: '' }),
+        new MetadataColumn_js_1.MetadataColumn({ index: 3, name: 'altitudeKm', columnType: MetadataColumn_js_1.ColumnType.NUMBER, unit: 'km' }),
+    ];
+}
+
+
+/***/ }),
+
 /***/ 5781:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -19699,6 +20045,22 @@ class SphereFoV {
     }
 }
 exports.SphereFoV = SphereFoV;
+
+
+/***/ }),
+
+/***/ 5866:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObservationTrackViewerAdapter = exports.ObservationTrackTimeline = exports.footprintToRing = exports.createObservationTrackTimeline = void 0;
+var ObservationTrackTimeline_js_1 = __webpack_require__(8022);
+Object.defineProperty(exports, "createObservationTrackTimeline", ({ enumerable: true, get: function () { return ObservationTrackTimeline_js_1.createObservationTrackTimeline; } }));
+Object.defineProperty(exports, "footprintToRing", ({ enumerable: true, get: function () { return ObservationTrackTimeline_js_1.footprintToRing; } }));
+Object.defineProperty(exports, "ObservationTrackTimeline", ({ enumerable: true, get: function () { return ObservationTrackTimeline_js_1.ObservationTrackTimeline; } }));
+var ObservationTrackViewerAdapter_js_1 = __webpack_require__(5772);
+Object.defineProperty(exports, "ObservationTrackViewerAdapter", ({ enumerable: true, get: function () { return ObservationTrackViewerAdapter_js_1.ObservationTrackViewerAdapter; } }));
 
 
 /***/ }),
@@ -21302,6 +21664,250 @@ function decDegToDMS(decDeg) {
     const s = (decDegAbs - d - m / 60) * 3600;
     d = d * sign;
     return { d, m, s };
+}
+
+
+/***/ }),
+
+/***/ 8022:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObservationTrackTimeline = void 0;
+exports.createObservationTrackTimeline = createObservationTrackTimeline;
+exports.footprintToRing = footprintToRing;
+function createObservationTrackTimeline(options) {
+    return new ObservationTrackTimeline(options);
+}
+class ObservationTrackTimeline {
+    samples;
+    startMs;
+    endMs;
+    currentMs;
+    playing = false;
+    rafId = null;
+    lastFrameNowMs = null;
+    playbackRate;
+    onFrame;
+    onStop;
+    constructor(options) {
+        this.samples = options.samples
+            .map((sample, index) => ({
+            ...sample,
+            index,
+            timeMs: Date.parse(String(sample.timestamp)),
+        }))
+            .filter((sample) => Number.isFinite(sample.timeMs))
+            .sort((left, right) => left.timeMs - right.timeMs);
+        if (this.samples.length === 0) {
+            throw new Error('ObservationTrackTimeline requires at least one timestamped sample.');
+        }
+        this.startMs = this.samples[0].timeMs;
+        this.endMs = this.samples[this.samples.length - 1].timeMs;
+        this.currentMs = this.startMs;
+        this.playbackRate = options.playbackRate ?? 1;
+        this.onFrame = options.onFrame;
+        this.onStop = options.onStop;
+        this.emitFrame();
+    }
+    play() {
+        if (this.playing)
+            return;
+        this.playing = true;
+        this.lastFrameNowMs = null;
+        this.rafId = requestAnimationFrame((nowMs) => this.tick(nowMs));
+    }
+    pause() {
+        if (!this.playing)
+            return;
+        this.playing = false;
+        this.cancelPendingFrame();
+        this.onStop?.(this.getState());
+    }
+    seek(progress01) {
+        const clampedProgress = clamp01(progress01);
+        this.currentMs = this.startMs + (this.endMs - this.startMs) * clampedProgress;
+        this.emitFrame();
+    }
+    destroy() {
+        this.playing = false;
+        this.cancelPendingFrame();
+        this.onStop?.(this.getState());
+    }
+    getState() {
+        return {
+            startMs: this.startMs,
+            endMs: this.endMs,
+            currentMs: this.currentMs,
+            progress01: this.getProgress(),
+            playing: this.playing,
+        };
+    }
+    tick(nowMs) {
+        if (!this.playing)
+            return;
+        if (this.lastFrameNowMs === null) {
+            this.lastFrameNowMs = nowMs;
+        }
+        const elapsedMs = nowMs - this.lastFrameNowMs;
+        this.lastFrameNowMs = nowMs;
+        this.currentMs += elapsedMs * this.playbackRate;
+        if (this.currentMs >= this.endMs) {
+            this.currentMs = this.endMs;
+            this.emitFrame();
+            this.pause();
+            return;
+        }
+        this.emitFrame();
+        this.rafId = requestAnimationFrame((nextNowMs) => this.tick(nextNowMs));
+    }
+    emitFrame() {
+        const frame = computeFrame(this.samples, this.currentMs);
+        this.onFrame?.({
+            currentMs: this.currentMs,
+            progress01: this.getProgress(),
+            ...frame,
+        });
+    }
+    getProgress() {
+        if (this.endMs === this.startMs)
+            return 0;
+        return clamp01((this.currentMs - this.startMs) / (this.endMs - this.startMs));
+    }
+    cancelPendingFrame() {
+        if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+    }
+}
+exports.ObservationTrackTimeline = ObservationTrackTimeline;
+function computeFrame(samples, currentMs) {
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    if (currentMs <= first.timeMs) {
+        return frameFromSamples(first, first, 0);
+    }
+    if (currentMs >= last.timeMs) {
+        return frameFromSamples(last, last, 0);
+    }
+    for (let index = 0; index < samples.length - 1; index++) {
+        const previousSample = samples[index];
+        const nextSample = samples[index + 1];
+        if (currentMs >= previousSample.timeMs && currentMs <= nextSample.timeMs) {
+            const t = (currentMs - previousSample.timeMs) / (nextSample.timeMs - previousSample.timeMs);
+            return frameFromSamples(previousSample, nextSample, t);
+        }
+    }
+    return frameFromSamples(last, last, 0);
+}
+function frameFromSamples(previousSample, nextSample, t) {
+    const currentGroundPoint = interpolateGroundTrackPoint(previousSample, nextSample, t);
+    const nearestSample = t < 0.5 ? previousSample : nextSample;
+    const currentFootprint = interpolateFootprint(previousSample.footprint, nextSample.footprint, t, footprintToRing(nearestSample.footprint));
+    return {
+        markerPoint: currentGroundPoint,
+        currentGroundPoint,
+        currentFootprint,
+        interpolationT: t,
+        previousSample,
+        nextSample,
+        nearestSample,
+        nearestSampleIndex: nearestSample.index,
+    };
+}
+function interpolateGroundTrackPoint(previousSample, nextSample, t) {
+    const previous = previousSample.groundTrackPoint;
+    const next = nextSample.groundTrackPoint;
+    const timeMs = lerp(previousSample.timeMs, nextSample.timeMs, t);
+    return {
+        timestamp: new Date(timeMs).toISOString(),
+        longitudeDeg: interpolateLongitude(previous.longitudeDeg, next.longitudeDeg, t),
+        latitudeDeg: lerp(previous.latitudeDeg, next.latitudeDeg, t),
+        altitudeKm: lerp(previous.altitudeKm, next.altitudeKm, t),
+    };
+}
+function interpolateFootprint(previousFootprint, nextFootprint, t, fallbackFootprint) {
+    const previousRing = normalizeOpenRing(footprintToRing(previousFootprint));
+    const nextRing = normalizeOpenRing(footprintToRing(nextFootprint));
+    if (previousRing.length < 3
+        || previousRing.length !== nextRing.length) {
+        return fallbackFootprint;
+    }
+    const ring = previousRing.map(([previousLon, previousLat], index) => {
+        const [nextLon, nextLat] = nextRing[index];
+        return [
+            interpolateLongitude(previousLon, nextLon, t),
+            lerp(previousLat, nextLat, t),
+        ];
+    });
+    return closeRing(ring);
+}
+function footprintToRing(footprint) {
+    if (isFootprintPolygon(footprint)) {
+        return footprint.coordinates.map((coordinate) => [
+            coordinate.longitudeDeg,
+            coordinate.latitudeDeg,
+        ]);
+    }
+    if (isFootprintMultiPolygon(footprint)) {
+        const firstPolygon = footprint.polygons[0];
+        return firstPolygon ? footprintToRing(firstPolygon) : [];
+    }
+    if (Array.isArray(footprint))
+        return footprint;
+    return [];
+}
+function isFootprintPolygon(footprint) {
+    return !Array.isArray(footprint) && 'coordinates' in footprint;
+}
+function isFootprintMultiPolygon(footprint) {
+    return !Array.isArray(footprint) && 'polygons' in footprint;
+}
+function normalizeOpenRing(footprint) {
+    if (!Array.isArray(footprint))
+        return [];
+    const ring = [];
+    for (const coordinate of footprint) {
+        if (!Array.isArray(coordinate) || coordinate.length < 2)
+            return [];
+        const lon = Number(coordinate[0]);
+        const lat = Number(coordinate[1]);
+        if (!Number.isFinite(lon) || !Number.isFinite(lat) || lat < -90 || lat > 90) {
+            return [];
+        }
+        ring.push([normalizeLongitudeDeg(lon), lat]);
+    }
+    while (ring.length > 1 && sameLonLat(ring[0], ring[ring.length - 1])) {
+        ring.pop();
+    }
+    return ring;
+}
+function closeRing(ring) {
+    if (ring.length === 0)
+        return ring;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    return sameLonLat(first, last) ? ring : [...ring, [...first]];
+}
+function sameLonLat(left, right) {
+    return Math.abs(left[0] - right[0]) < 1e-9
+        && Math.abs(left[1] - right[1]) < 1e-9;
+}
+function interpolateLongitude(leftLongitudeDeg, rightLongitudeDeg, t) {
+    const delta = normalizeLongitudeDeg(rightLongitudeDeg - leftLongitudeDeg);
+    return normalizeLongitudeDeg(leftLongitudeDeg + delta * t);
+}
+function normalizeLongitudeDeg(longitudeDeg) {
+    const normalized = ((((longitudeDeg + 180) % 360) + 360) % 360) - 180;
+    return Object.is(normalized, -0) ? 0 : normalized;
+}
+function lerp(left, right, t) {
+    return left + (right - left) * t;
+}
+function clamp01(value) {
+    return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
 
 
