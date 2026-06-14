@@ -37,6 +37,7 @@ import { SatelliteObjectGL, type SatelliteObjectOptions } from './model/terra/Sa
 import { SensorConeGL, type SensorConeOptions } from './model/terra/SensorConeGL.js'
 import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js'
 import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js'
+import type { GridLabelContainers } from './model/grid/GridTextHelper.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext 
@@ -44,6 +45,10 @@ type GL2WithViewport = WebGL2RenderingContext
 //   viewportWidth: number
 //   viewportHeight: number
 // }
+
+export type AstroViewerOptions = {
+  gridLabelContainers?: GridLabelContainers;
+};
 
 export class AstroViewer {
   private astroSphere!: AstroSphere
@@ -54,6 +59,7 @@ export class AstroViewer {
   private viewfinderEl: HTMLDivElement | null = null
   private viewfinderVisible = bootSetup.showViewfinder
   private viewfinderColor = 'rgba(75,148,226,0.68)'
+  private options: AstroViewerOptions = {}
 
 
 
@@ -536,7 +542,8 @@ createFootprintSet(footprintSetName: string,
   }
 
   // Internal
-  constructor(canvasEl: HTMLCanvasElement) {
+  constructor(canvasEl: HTMLCanvasElement, options: AstroViewerOptions = {}) {
+    this.options = options
     this.init(canvasEl)
     this.webglContextList = new Map<string, GL2WithViewport>()
   }
@@ -566,7 +573,9 @@ createFootprintSet(footprintSetName: string,
 
     this.initListeners()
       // ; (global as any).gl = this.webgl
-    this.astroSphere = new AstroSphere(this.canvas, this.webgl)
+    this.astroSphere = new AstroSphere(this.canvas, this.webgl, {
+      gridLabelContainers: this.options.gridLabelContainers,
+    })
   }
 
   private initViewfinder(): void {

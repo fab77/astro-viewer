@@ -25,10 +25,6 @@ import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js';
 import { SatelliteObjectGL } from './model/terra/SatelliteObjectGL.js';
 import { SensorConeGL } from './model/terra/SensorConeGL.js';
 import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js';
-// & {
-//   viewportWidth: number
-//   viewportHeight: number
-// }
 export class AstroViewer {
     astroSphere;
     canvas;
@@ -38,6 +34,7 @@ export class AstroViewer {
     viewfinderEl = null;
     viewfinderVisible = bootSetup.showViewfinder;
     viewfinderColor = 'rgba(75,148,226,0.68)';
+    options = {};
     // API
     run() {
         return this.tick();
@@ -374,7 +371,8 @@ export class AstroViewer {
         return this.astroSphere.getZoomSensitivity();
     }
     // Internal
-    constructor(canvasEl) {
+    constructor(canvasEl, options = {}) {
+        this.options = options;
         this.init(canvasEl);
         this.webglContextList = new Map();
     }
@@ -400,7 +398,9 @@ export class AstroViewer {
         }
         this.initListeners();
         // ; (global as any).gl = this.webgl
-        this.astroSphere = new AstroSphere(this.canvas, this.webgl);
+        this.astroSphere = new AstroSphere(this.canvas, this.webgl, {
+            gridLabelContainers: this.options.gridLabelContainers,
+        });
     }
     initViewfinder() {
         const parent = this.canvas.parentElement;

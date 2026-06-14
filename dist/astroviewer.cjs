@@ -2443,10 +2443,6 @@ const TerraPolylineSetGL_js_1 = __webpack_require__(3665);
 const SatelliteObjectGL_js_1 = __webpack_require__(3603);
 const SensorConeGL_js_1 = __webpack_require__(3102);
 const MeshHiPSDescriptor_js_1 = __webpack_require__(847);
-// & {
-//   viewportWidth: number
-//   viewportHeight: number
-// }
 class AstroViewer {
     astroSphere;
     canvas;
@@ -2456,6 +2452,7 @@ class AstroViewer {
     viewfinderEl = null;
     viewfinderVisible = Config_js_1.bootSetup.showViewfinder;
     viewfinderColor = 'rgba(75,148,226,0.68)';
+    options = {};
     // API
     run() {
         return this.tick();
@@ -2792,7 +2789,8 @@ class AstroViewer {
         return this.astroSphere.getZoomSensitivity();
     }
     // Internal
-    constructor(canvasEl) {
+    constructor(canvasEl, options = {}) {
+        this.options = options;
         this.init(canvasEl);
         this.webglContextList = new Map();
     }
@@ -2818,7 +2816,9 @@ class AstroViewer {
         }
         this.initListeners();
         // ; (global as any).gl = this.webgl
-        this.astroSphere = new AstroSphere_js_1.default(this.canvas, this.webgl);
+        this.astroSphere = new AstroSphere_js_1.default(this.canvas, this.webgl, {
+            gridLabelContainers: this.options.gridLabelContainers,
+        });
     }
     initViewfinder() {
         const parent = this.canvas.parentElement;
@@ -5571,14 +5571,14 @@ class XYZMap extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _latLonGrid;
     _colorMapIdx = 0;
     _colorMap = ColorMaps_js_1.ColorMaps['native'];
-    constructor(radius, position, xrad, yrad, descriptor, webgl) {
+    constructor(radius, position, xrad, yrad, descriptor, webgl, gridLabelContainers) {
         super(radius, position, xrad, yrad, descriptor.name, webgl, false);
         this._descriptor = descriptor;
         this._xyzShaderProgram = new XYZShaderProgram_js_1.XYZShaderProgram(webgl);
         this._meshBuilder = new XYZMeshBuilder_js_1.XYZMeshBuilder();
         this._tileBuffer = new XYZTileBuffer_js_1.XYZTileBuffer(1);
         this.initGL(webgl);
-        this._latLonGrid = new LonLatGrid_js_1.LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl);
+        this._latLonGrid = new LonLatGrid_js_1.LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl, gridLabelContainers);
         this._visibleTilesManager = new XYZVisibleTilesManager_js_1.XYZVisibleTilesManager();
         this._baseurl = descriptor.url;
         this.initShaders();
@@ -17160,7 +17160,7 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     fragmentShader;
     vertexShader;
     defaultColor = '#ec0acaff';
-    gridText = new GridTextHelper_js_1.default('healpix');
+    gridText;
     // private _hipsShaderProgram: HiPSShaderProgram
     _attribLocations = {
         position: 0,
@@ -17180,8 +17180,9 @@ class HealpixGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     static INITIAL_PhiRad = 0;
     static INITIAL_ThetaRad = 0;
     _visibleTilesManager;
-    constructor(webgl) {
+    constructor(webgl, gridLabelContainers) {
         super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
+        this.gridText = new GridTextHelper_js_1.default('healpix', gridLabelContainers);
         this.init();
         this._visibleTilesManager = new VisibleTilesManager_js_1.VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
         this._visibleTilesManager.init(Config_js_1.bootSetup.insideSphere);
@@ -17714,20 +17715,22 @@ class AstroSphere {
     lockedEastWestRaDeg = null;
     lockedNorthSouthDecDeg = null;
     keepCameraNorthUp = true;
-    constructor(canvas, webgl) {
+    gridLabelContainers;
+    constructor(canvas, webgl, options = {}) {
         console.log("[AstroSphere] new instance for canvas", canvas.id);
         // Keep global GL context (as in original JS)
         this._webgl = webgl;
         this.mouseHelper = new MouseHelper_js_1.default();
         this.canvas = canvas;
+        this.gridLabelContainers = options.gridLabelContainers;
         const nativeColorMap = "native";
         this._selectedColorMap = ColorMaps_js_1.default[nativeColorMap];
         Global_js_1.default.insideSphere = Config_js_1.bootSetup.insideSphere;
         this.initCamera();
-        this._healpixGrid = new HealpixGrid_js_1.HealpixGrid(this._webgl);
+        this._healpixGrid = new HealpixGrid_js_1.HealpixGrid(this._webgl, this.gridLabelContainers);
         this._perspectiveMatrixManager = new PerspectiveMatrixManager_js_1.PerspectiveMatrixManager(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Config_js_1.bootSetup.insideSphere);
         this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, Config_js_1.bootSetup.camera_fov_deg, Config_js_1.bootSetup.camera_near_plane, Config_js_1.bootSetup.insideSphere);
-        this._equatorialGrid = new EquatorialGrid_js_1.EquatorialGrid(this._webgl, this._healpixGrid);
+        this._equatorialGrid = new EquatorialGrid_js_1.EquatorialGrid(this._webgl, this._healpixGrid, this.gridLabelContainers);
         this._equatorialGrid.init(this._healpixGrid.getMinFoV());
         this.updateCentralPoint();
         this.startup = true;
@@ -18207,7 +18210,7 @@ class AstroSphere {
         this._activeBaseLayer = "xyz";
     }
     activateXYZ2(config) {
-        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
+        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl, this.gridLabelContainers);
         this._activeBaseLayer = "xyz";
     }
     activateMeshHiPS(descriptor) {
@@ -18217,7 +18220,7 @@ class AstroSphere {
     activateWMTS(config) {
         const adapter = new WMTSAdapter_js_1.WMTSAdapter(config);
         const xyzConfig = adapter.toXYZLayerConfig();
-        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor_js_1.XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : "WMTS Earth2 Layer", xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
+        this._activeXYZ2 = new XYZMap_js_1.XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor_js_1.XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : "WMTS Earth2 Layer", xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl, this.gridLabelContainers);
         this._activeBaseLayer = "xyz";
     }
     // Catalogue section
@@ -19063,17 +19066,28 @@ exports.HiPSDescriptor = HiPSDescriptor;
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 class GridTextHelper {
-    static layers = new Map();
     layer;
-    constructor(layer = 'equatorial') {
+    state;
+    containers;
+    constructor(layer = 'equatorial', containers) {
         this.layer = layer;
-        GridTextHelper.getLayerState(layer);
+        this.containers = containers;
+        this.state = {
+            container: this.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
     }
     initHtml() {
-        GridTextHelper.getLayerState(this.layer);
+        this.refreshContainer(this.layer, this.state);
     }
     resetDivSets(layer = this.layer) {
-        const state = GridTextHelper.getLayerState(layer);
+        const state = layer === this.layer ? this.state : {
+            container: this.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
+        this.refreshContainer(layer, state);
         for (; state.divSetNdx < state.divSets.length; ++state.divSetNdx) {
             state.divSets[state.divSetNdx].style.display = 'none';
         }
@@ -19089,7 +19103,12 @@ class GridTextHelper {
         this.addLabel('lonlat', msg, type === 'lon' ? x + 25 : x, type === 'lon' ? y : y + 25, type);
     }
     addLabel(layer, msg, x, y, kind) {
-        const state = GridTextHelper.getLayerState(layer);
+        const state = layer === this.layer ? this.state : {
+            container: this.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
+        this.refreshContainer(layer, state);
         if (!state.container)
             return;
         let divSet = state.divSets[state.divSetNdx++];
@@ -19103,9 +19122,30 @@ class GridTextHelper {
         }
         divSet.div.className = this.classNameForKind(kind);
         divSet.style.display = 'block';
-        divSet.style.left = `${Math.floor(x)}px`;
-        divSet.style.top = `${Math.floor(y)}px`;
+        divSet.style.position = 'absolute';
+        divSet.style.zIndex = '2';
+        divSet.style.pointerEvents = 'none';
+        divSet.style.font = '12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+        divSet.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.7)';
+        divSet.style.color = this.colorForKind(kind);
+        const containerRect = state.container.getBoundingClientRect();
+        divSet.style.left = `${Math.floor(x - containerRect.left)}px`;
+        divSet.style.top = `${Math.floor(y - containerRect.top)}px`;
         divSet.textNode.nodeValue = msg;
+    }
+    colorForKind(kind) {
+        switch (kind) {
+            case 'dec':
+                return '#3fd35f';
+            case 'lat':
+                return '#f6d35b';
+            case 'lon':
+                return '#40c8ff';
+            case 'hpx':
+            case 'ra':
+            default:
+                return '#5b7cff';
+        }
     }
     classNameForKind(kind) {
         switch (kind) {
@@ -19121,26 +19161,32 @@ class GridTextHelper {
                 return 'floating-div-ra';
         }
     }
-    static getLayerState(layer) {
-        const current = GridTextHelper.layers.get(layer);
-        if (current) {
-            if (!current.container)
-                current.container = GridTextHelper.resolveContainer(layer);
-            return current;
-        }
-        const state = {
-            container: GridTextHelper.resolveContainer(layer),
-            divSets: [],
-            divSetNdx: 0,
-        };
-        GridTextHelper.layers.set(layer, state);
-        return state;
-    }
-    static resolveContainer(layer) {
+    resolveContainer(layer) {
         if (layer === 'healpix') {
+            const resolved = this.containers?.resolveHealpix?.();
+            if (resolved)
+                return resolved;
+            if (this.containers?.healpix)
+                return this.containers.healpix;
             return document.querySelector('#gridhpx');
         }
+        const resolved = this.containers?.resolveCoords?.();
+        if (resolved)
+            return resolved;
+        if (this.containers?.coords)
+            return this.containers.coords;
         return document.querySelector('#gridcoords');
+    }
+    refreshContainer(layer, state) {
+        const next = this.resolveContainer(layer);
+        if (next === state.container)
+            return;
+        for (const divSet of state.divSets) {
+            divSet.div.remove();
+        }
+        state.container = next;
+        state.divSets = [];
+        state.divSetNdx = 0;
     }
 }
 exports["default"] = GridTextHelper;
@@ -22205,9 +22251,10 @@ class LatLonGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _latArray = [];
     _bufferKey = '';
     defaultColor = '#41d4d4';
-    gridText = new GridTextHelper_js_1.default('lonlat');
-    constructor(radius, position, xrad, yrad, name, webgl) {
+    gridText;
+    constructor(radius, position, xrad, yrad, name, webgl, gridLabelContainers) {
         super(radius, position, xrad, yrad, name, webgl);
+        this.gridText = new GridTextHelper_js_1.default('lonlat', gridLabelContainers);
         this._fovObj = new SphereFoV_js_1.SphereFoV(webgl);
         this.init();
     }
@@ -23936,7 +23983,7 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
     _vertexShader;
     _fragmentShader;
     defaultColor = '#41d421';
-    gridText = new GridTextHelper_js_1.default('equatorial');
+    gridText;
     _attribLocations = {
         position: 0,
         selected: 1,
@@ -23964,9 +24011,10 @@ class EquatorialGrid extends AbstractSkyEntity_js_1.AbstractSkyEntity {
      * @param radius Not used by current implementation (sphere is unit-radius)
      * @param fov    Field of view in degrees
      */
-    constructor(webgl, healpixGrid) {
+    constructor(webgl, healpixGrid, gridLabelContainers) {
         super(HealpixGrid_js_1.HealpixGrid.RADIUS, HealpixGrid_js_1.HealpixGrid.INITIAL_POSITION, HealpixGrid_js_1.HealpixGrid.INITIAL_PhiRad, HealpixGrid_js_1.HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
         this._healpixGrid = healpixGrid;
+        this.gridText = new GridTextHelper_js_1.default('equatorial', gridLabelContainers);
     }
     init(fov) {
         this._fov = fov;

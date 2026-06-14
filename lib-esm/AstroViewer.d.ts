@@ -18,6 +18,10 @@ import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js';
 import { SatelliteObjectGL, type SatelliteObjectOptions } from './model/terra/SatelliteObjectGL.js';
 import { SensorConeGL, type SensorConeOptions } from './model/terra/SensorConeGL.js';
 import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js';
+import type { GridLabelContainers } from './model/grid/GridTextHelper.js';
+export type AstroViewerOptions = {
+    gridLabelContainers?: GridLabelContainers;
+};
 export declare class AstroViewer {
     private astroSphere;
     private canvas;
@@ -27,6 +31,7 @@ export declare class AstroViewer {
     private viewfinderEl;
     private viewfinderVisible;
     private viewfinderColor;
+    private options;
     run(): number;
     createCatalogue(catalogueName: string, catalogueDescription: string, providerUrl: string, metadataManager: MetadataManager): CatalogueGL;
     showCatalogue(catalogue: CatalogueGL): void;
@@ -122,7 +127,7 @@ export declare class AstroViewer {
     getRotationSensitivity(): number;
     setZoomSensitivity(value: number): void;
     getZoomSensitivity(): number;
-    constructor(canvasEl: HTMLCanvasElement);
+    constructor(canvasEl: HTMLCanvasElement, options?: AstroViewerOptions);
     private init;
     private initViewfinder;
     private syncViewfinderVisibility;

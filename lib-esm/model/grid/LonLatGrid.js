@@ -40,9 +40,10 @@ export class LatLonGrid extends AbstractSkyEntity {
     _latArray = [];
     _bufferKey = '';
     defaultColor = '#41d4d4';
-    gridText = new GridTextHelper('lonlat');
-    constructor(radius, position, xrad, yrad, name, webgl) {
+    gridText;
+    constructor(radius, position, xrad, yrad, name, webgl, gridLabelContainers) {
         super(radius, position, xrad, yrad, name, webgl);
+        this.gridText = new GridTextHelper('lonlat', gridLabelContainers);
         this._fovObj = new SphereFoV(webgl);
         this.init();
     }

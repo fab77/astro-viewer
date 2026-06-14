@@ -43,6 +43,7 @@ import { Source } from "./model/Source.js";
 
 import { EquatorialGrid } from "./model/grid/EquatorialGrid.js";
 import { HealpixGrid } from "./model/grid/HealpixGrid.js";
+import type { GridLabelContainers } from "./model/grid/GridTextHelper.js";
 import { SkyEntityDrawInput } from "./model/AbstractSkyEntity.js";
 import { CoordsType } from "./utils/CoordsType.js";
 import ColorMaps, { ColorMapName, ColorMap } from "./model/ColorMaps.js";
@@ -85,6 +86,10 @@ export type CameraChangedDetail = {
   centralPoint: Point;
   mouseHoverPoint: PointCoordinates | undefined;
   getFoVPolygon: Point[];
+};
+
+export type AstroSphereOptions = {
+  gridLabelContainers?: GridLabelContainers;
 };
 
 /**
@@ -141,13 +146,15 @@ class AstroSphere {
   private lockedEastWestRaDeg: number | null = null;
   private lockedNorthSouthDecDeg: number | null = null;
   private keepCameraNorthUp = true;
+  private gridLabelContainers?: GridLabelContainers;
 
-  constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
+  constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext, options: AstroSphereOptions = {}) {
     console.log("[AstroSphere] new instance for canvas", canvas.id);
     // Keep global GL context (as in original JS)
     this._webgl = webgl;
     this.mouseHelper = new MouseHelper();
     this.canvas = canvas;
+    this.gridLabelContainers = options.gridLabelContainers;
 
     const nativeColorMap: ColorMapName = "native";
     this._selectedColorMap = ColorMaps[nativeColorMap];
@@ -156,7 +163,7 @@ class AstroSphere {
 
     this.initCamera();
 
-    this._healpixGrid = new HealpixGrid(this._webgl);
+    this._healpixGrid = new HealpixGrid(this._webgl, this.gridLabelContainers);
     this._perspectiveMatrixManager = new PerspectiveMatrixManager(
       canvas,
       this._camera,
@@ -172,7 +179,7 @@ class AstroSphere {
       bootSetup.insideSphere,
     );
 
-    this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
+    this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid, this.gridLabelContainers);
     this._equatorialGrid.init(this._healpixGrid.getMinFoV());
 
     this.updateCentralPoint();
@@ -910,6 +917,7 @@ class AstroSphere {
       0,
       config,
       this._webgl,
+      this.gridLabelContainers,
     );
     this._activeBaseLayer = "xyz";
   }
@@ -946,6 +954,7 @@ class AstroSphere {
         xyzConfig.urlResolver,
       ),
       this._webgl,
+      this.gridLabelContainers,
     );
     this._activeBaseLayer = "xyz";
   }

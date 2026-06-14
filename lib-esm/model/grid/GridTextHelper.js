@@ -11,17 +11,28 @@
  * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
  */
 class GridTextHelper {
-    static layers = new Map();
     layer;
-    constructor(layer = 'equatorial') {
+    state;
+    containers;
+    constructor(layer = 'equatorial', containers) {
         this.layer = layer;
-        GridTextHelper.getLayerState(layer);
+        this.containers = containers;
+        this.state = {
+            container: this.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
     }
     initHtml() {
-        GridTextHelper.getLayerState(this.layer);
+        this.refreshContainer(this.layer, this.state);
     }
     resetDivSets(layer = this.layer) {
-        const state = GridTextHelper.getLayerState(layer);
+        const state = layer === this.layer ? this.state : {
+            container: this.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
+        this.refreshContainer(layer, state);
         for (; state.divSetNdx < state.divSets.length; ++state.divSetNdx) {
             state.divSets[state.divSetNdx].style.display = 'none';
         }
@@ -37,7 +48,12 @@ class GridTextHelper {
         this.addLabel('lonlat', msg, type === 'lon' ? x + 25 : x, type === 'lon' ? y : y + 25, type);
     }
     addLabel(layer, msg, x, y, kind) {
-        const state = GridTextHelper.getLayerState(layer);
+        const state = layer === this.layer ? this.state : {
+            container: this.resolveContainer(layer),
+            divSets: [],
+            divSetNdx: 0,
+        };
+        this.refreshContainer(layer, state);
         if (!state.container)
             return;
         let divSet = state.divSets[state.divSetNdx++];
@@ -51,9 +67,30 @@ class GridTextHelper {
         }
         divSet.div.className = this.classNameForKind(kind);
         divSet.style.display = 'block';
-        divSet.style.left = `${Math.floor(x)}px`;
-        divSet.style.top = `${Math.floor(y)}px`;
+        divSet.style.position = 'absolute';
+        divSet.style.zIndex = '2';
+        divSet.style.pointerEvents = 'none';
+        divSet.style.font = '12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+        divSet.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.7)';
+        divSet.style.color = this.colorForKind(kind);
+        const containerRect = state.container.getBoundingClientRect();
+        divSet.style.left = `${Math.floor(x - containerRect.left)}px`;
+        divSet.style.top = `${Math.floor(y - containerRect.top)}px`;
         divSet.textNode.nodeValue = msg;
+    }
+    colorForKind(kind) {
+        switch (kind) {
+            case 'dec':
+                return '#3fd35f';
+            case 'lat':
+                return '#f6d35b';
+            case 'lon':
+                return '#40c8ff';
+            case 'hpx':
+            case 'ra':
+            default:
+                return '#5b7cff';
+        }
     }
     classNameForKind(kind) {
         switch (kind) {
@@ -69,26 +106,32 @@ class GridTextHelper {
                 return 'floating-div-ra';
         }
     }
-    static getLayerState(layer) {
-        const current = GridTextHelper.layers.get(layer);
-        if (current) {
-            if (!current.container)
-                current.container = GridTextHelper.resolveContainer(layer);
-            return current;
-        }
-        const state = {
-            container: GridTextHelper.resolveContainer(layer),
-            divSets: [],
-            divSetNdx: 0,
-        };
-        GridTextHelper.layers.set(layer, state);
-        return state;
-    }
-    static resolveContainer(layer) {
+    resolveContainer(layer) {
         if (layer === 'healpix') {
+            const resolved = this.containers?.resolveHealpix?.();
+            if (resolved)
+                return resolved;
+            if (this.containers?.healpix)
+                return this.containers.healpix;
             return document.querySelector('#gridhpx');
         }
+        const resolved = this.containers?.resolveCoords?.();
+        if (resolved)
+            return resolved;
+        if (this.containers?.coords)
+            return this.containers.coords;
         return document.querySelector('#gridcoords');
+    }
+    refreshContainer(layer, state) {
+        const next = this.resolveContainer(layer);
+        if (next === state.container)
+            return;
+        for (const divSet of state.divSets) {
+            divSet.div.remove();
+        }
+        state.container = next;
+        state.divSets = [];
+        state.divSetNdx = 0;
     }
 }
 export default GridTextHelper;

@@ -75,20 +75,22 @@ class AstroSphere {
     lockedEastWestRaDeg = null;
     lockedNorthSouthDecDeg = null;
     keepCameraNorthUp = true;
-    constructor(canvas, webgl) {
+    gridLabelContainers;
+    constructor(canvas, webgl, options = {}) {
         console.log("[AstroSphere] new instance for canvas", canvas.id);
         // Keep global GL context (as in original JS)
         this._webgl = webgl;
         this.mouseHelper = new MouseHelper();
         this.canvas = canvas;
+        this.gridLabelContainers = options.gridLabelContainers;
         const nativeColorMap = "native";
         this._selectedColorMap = ColorMaps[nativeColorMap];
         global.insideSphere = bootSetup.insideSphere;
         this.initCamera();
-        this._healpixGrid = new HealpixGrid(this._webgl);
+        this._healpixGrid = new HealpixGrid(this._webgl, this.gridLabelContainers);
         this._perspectiveMatrixManager = new PerspectiveMatrixManager(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
         this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
-        this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
+        this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid, this.gridLabelContainers);
         this._equatorialGrid.init(this._healpixGrid.getMinFoV());
         this.updateCentralPoint();
         this.startup = true;
@@ -568,7 +570,7 @@ class AstroSphere {
         this._activeBaseLayer = "xyz";
     }
     activateXYZ2(config) {
-        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
+        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl, this.gridLabelContainers);
         this._activeBaseLayer = "xyz";
     }
     activateMeshHiPS(descriptor) {
@@ -578,7 +580,7 @@ class AstroSphere {
     activateWMTS(config) {
         const adapter = new WMTSAdapter(config);
         const xyzConfig = adapter.toXYZLayerConfig();
-        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : "WMTS Earth2 Layer", xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
+        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : "WMTS Earth2 Layer", xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl, this.gridLabelContainers);
         this._activeBaseLayer = "xyz";
     }
     // Catalogue section

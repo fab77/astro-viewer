@@ -12,6 +12,7 @@
  */
 
 export { AstroViewer } from './AstroViewer.js';
+export type { AstroViewerOptions } from './AstroViewer.js';
 export { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 export { SphereFoV as FoV } from './model/SphereFoV.js'
 export { SphereFoV } from './model/SphereFoV.js'
@@ -72,6 +73,7 @@ export { MeshHiPS } from './model/meships/MeshHiPS.js'
 export { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js'
 export type { XYZLayerConfig, WMTSLayerConfig, WMTSRequestEncoding } from './model/earth/XYZConfig.js'
 export type { XYZTileCoord, XYZTileMesh } from './model/earth/XYZTypes.js'
+export type { GridLabelContainers } from './model/grid/GridTextHelper.js'
 export type { MeshHiPSConfig, MeshHiPSDebugStats, MeshHiPSTileCoord } from './model/meships/MeshHiPSTypes.js'
 
 export {Source} from './model/Source.js'

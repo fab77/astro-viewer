@@ -34,7 +34,7 @@ export class HealpixGrid extends AbstractSkyEntity {
     fragmentShader;
     vertexShader;
     defaultColor = '#ec0acaff';
-    gridText = new GridTextHelper('healpix');
+    gridText;
     // private _hipsShaderProgram: HiPSShaderProgram
     _attribLocations = {
         position: 0,
@@ -54,8 +54,9 @@ export class HealpixGrid extends AbstractSkyEntity {
     static INITIAL_PhiRad = 0;
     static INITIAL_ThetaRad = 0;
     _visibleTilesManager;
-    constructor(webgl) {
+    constructor(webgl, gridLabelContainers) {
         super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
+        this.gridText = new GridTextHelper('healpix', gridLabelContainers);
         this.init();
         this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this);
         this._visibleTilesManager.init(bootSetup.insideSphere);

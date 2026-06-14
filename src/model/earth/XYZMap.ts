@@ -17,6 +17,7 @@ import { XYZVisibleTilesManager } from "./XYZVisibleTilesManager.js";
 import { xyzFovHelper } from "./XYZFoVHelper.js";
 import { ColorMap, ColorMaps } from "../ColorMaps.js";
 import { LatLonGrid } from "../grid/LonLatGrid.js";
+import type { GridLabelContainers } from "../grid/GridTextHelper.js";
 import { XYZShaderProgram } from "../../shader/XYZShaderProgram.js";
 import { XYZTileBuffer } from "./XYZTileBuffer.js";
 import { XYZAnchestorTile } from "./XYZAnchestorTile.js";
@@ -46,7 +47,7 @@ export class XYZMap extends AbstractSkyEntity {
     yrad: number,
     descriptor: XYZMapDescriptor,
     webgl: WebGL2RenderingContext,
-
+    gridLabelContainers?: GridLabelContainers,
   ) {
     super(radius, position, xrad, yrad, descriptor.name, webgl, false)
     this._descriptor = descriptor
@@ -56,7 +57,7 @@ export class XYZMap extends AbstractSkyEntity {
 
     this.initGL(webgl as WebGL2RenderingContext)
 
-    this._latLonGrid = new LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl)
+    this._latLonGrid = new LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl, gridLabelContainers)
 
     this._visibleTilesManager = new XYZVisibleTilesManager()
     this._baseurl = descriptor.url

@@ -1,6 +1,7 @@
 import { AbstractSkyEntity, SkyEntityDrawInput } from "../AbstractSkyEntity.js";
 import { XYZMapDescriptor } from "./XYZMapDescriptor.js";
 import { ColorMap } from "../ColorMaps.js";
+import type { GridLabelContainers } from "../grid/GridTextHelper.js";
 import { SphereFoV } from "../SphereFoV.js";
 import type { XYZLayerDebugStats } from "./XYZConfig.js";
 export declare class XYZMap extends AbstractSkyEntity {
@@ -14,7 +15,7 @@ export declare class XYZMap extends AbstractSkyEntity {
     private _latLonGrid;
     private _colorMapIdx;
     private _colorMap;
-    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, descriptor: XYZMapDescriptor, webgl: WebGL2RenderingContext);
+    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, descriptor: XYZMapDescriptor, webgl: WebGL2RenderingContext, gridLabelContainers?: GridLabelContainers);
     changeColorMap(colorMap: ColorMap): void;
     private initShaders;
     isLonLatGridVisible(): boolean;

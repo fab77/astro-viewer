@@ -1,3 +1,4 @@
+import type { GridLabelContainers } from './GridTextHelper.js';
 import { HealpixGrid } from './HealpixGrid.js';
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 /** Equatorial grid rendered as RA/Dec great-circle line loops */
@@ -28,7 +29,7 @@ export declare class EquatorialGrid extends AbstractSkyEntity {
      * @param radius Not used by current implementation (sphere is unit-radius)
      * @param fov    Field of view in degrees
      */
-    constructor(webgl: WebGL2RenderingContext, healpixGrid: HealpixGrid);
+    constructor(webgl: WebGL2RenderingContext, healpixGrid: HealpixGrid, gridLabelContainers?: GridLabelContainers);
     init(fov: number): void;
     /** Compile/link shaders and fetch uniform/attribute locations */
     private initShaders;

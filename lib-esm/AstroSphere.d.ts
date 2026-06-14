@@ -8,6 +8,7 @@ import { CatalogueGL } from "./model/catalogues/CatalogueGL.js";
 import { FootprintSetGL, HoveredFootprintDetail } from "./model/footprints/FootprintSetGL.js";
 import { EquatorialGrid } from "./model/grid/EquatorialGrid.js";
 import { HealpixGrid } from "./model/grid/HealpixGrid.js";
+import type { GridLabelContainers } from "./model/grid/GridTextHelper.js";
 import { ColorMap } from "./model/ColorMaps.js";
 import type { WMTSLayerConfig, XYZDebugStats, XYZLayerConfig } from "./model/earth/XYZConfig.js";
 import type { HiPSDebugStats } from "./model/hips/HiPSConfig.js";
@@ -39,6 +40,9 @@ export type CameraChangedDetail = {
     centralPoint: Point;
     mouseHoverPoint: PointCoordinates | undefined;
     getFoVPolygon: Point[];
+};
+export type AstroSphereOptions = {
+    gridLabelContainers?: GridLabelContainers;
 };
 /**
  * AstroSphere — main WebGL scene controller (TS port)
@@ -85,7 +89,8 @@ declare class AstroSphere {
     private lockedEastWestRaDeg;
     private lockedNorthSouthDecDeg;
     private keepCameraNorthUp;
-    constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext);
+    private gridLabelContainers?;
+    constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext, options?: AstroSphereOptions);
     private initCamera;
     setCamera(camera: Camera): void;
     setCameraRotationSensitivity(value: number): void;
