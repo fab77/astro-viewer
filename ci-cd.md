@@ -24,19 +24,19 @@ review:
 git checkout dev
 git pull origin dev
 
-git checkout -b release/3.4.0
+git checkout -b release/3.5.0
 
-npm version 3.4.0 --no-git-tag-version
+npm version 3.5.0 --no-git-tag-version
 npm install
 npm run build
 
 git status
 git add package.json package-lock.json README.md LICENSE.md LICENSE-COMMERCIAL.md LICENSE-NONCOMMERCIAL.md DEPENDENCY-LICENSING.md ci-cd.md .github/workflows/ci.yml
-git commit -m "Prepare release 3.4.0"
+git commit -m "Prepare release 3.5.0"
 
-git push -u origin release/3.4.0
+git push -u origin release/3.5.0
 ```
-Open PR `release/3.4.0 -> main` in GitHub and merge on `main`.
+Open PR `release/3.5.0 -> main` in GitHub and merge on `main`.
 
 From `main`:
 ```bash
@@ -49,14 +49,14 @@ npm run build
 npm pack --dry-run
 find dist lib-esm -name "*.map"
 
-git tag -a v3.4.0 -m "Release v3.4.0"
-git push origin v3.4.0
+git tag -a v3.5.0 -m "Release v3.5.0"
+git push origin v3.5.0
 npm publish --registry=https://npm.pkg.github.com
 
 ```
 ## Verify published package
 ```bash
-npm view @fab77/astro-viewer@3.4.0 --registry=https://npm.pkg.github.com
+npm view @fab77/astro-viewer@3.5.0 --registry=https://npm.pkg.github.com
 npm info @fab77/astro-viewer --registry=https://npm.pkg.github.com
 ```
 
@@ -68,7 +68,7 @@ cd /tmp/av-test
 
 npm init -y
 echo "@fab77:registry=https://npm.pkg.github.com" > .npmrc
-npm install @fab77/astro-viewer@3.4.0
+npm install @fab77/astro-viewer@3.5.0
 node -e "console.log(require('@fab77/astro-viewer/package.json').version)"
 ```
 
@@ -80,10 +80,10 @@ git checkout dev
 git pull origin dev
 git merge main
 
-npm version 3.5.0-snapshot --no-git-tag-version
+npm version 3.6.0-snapshot --no-git-tag-version
 npm install
 
 git add package.json package-lock.json
-git commit -m "Start 3.5.0-snapshot development"
+git commit -m "Start 3.6.0-snapshot development"
 git push origin dev
 ```
