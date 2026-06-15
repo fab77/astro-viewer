@@ -1,0 +1,8 @@
+
+@fab77:registry=https://npm.pkg.github.com
+
+# Authenticate with a token that can read private packages from the @astrobrowser scope.
+# Replace ${GITHUB_PACKAGES_TOKEN} with your preferred local or CI secret name.
+//npm.pkg.github.com/:_authToken=${GITHUB_PACKAGES_TOKEN}
+
+

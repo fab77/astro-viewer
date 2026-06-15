@@ -1,7 +1,7 @@
 {
-  "name": "astro-viewer",
+  "name": "@fab77/astro-viewer",
   "description": "Astrobrowser 3d engine.",
-  "version": "3.4.0-snapshot",
+  "version": "3.4.0",
   "keywords": [
     "HiPS",
     "HiPS cutout",
@@ -13,6 +13,9 @@
     "webGL",
     "3D"
   ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "author": "Fabrizio Giordano (fab77)",
   "license": "SEE LICENSE IN LICENSE.md",
   "homepage": "https://github.com/fab77/astro-viewer#readme",
