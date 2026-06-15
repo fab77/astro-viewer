@@ -64,6 +64,7 @@
     "@types/jest": "^29.0.0",
     "@types/node": "^18.19.76",
     "jest": "^29.0.0",
+    "canvas": "3.1.0",
     "shx": "^0.3.4",
     "ts-jest": "^29.0.0",
     "ts-loader": "^9.0.0",
@@ -73,7 +74,6 @@
     "webpack-cli": "^5.0.0"
   },
   "dependencies": {
-    "canvas": "3.1.0",
     "gl-matrix": "^3.3.0",
     "jsfitsio": "^2.0.0",
     "healpixjs": "^2.0.0",
