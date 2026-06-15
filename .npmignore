@@ -1,1 +1,9 @@
 .npmrc
+*.map
+**/*.map
+src/
+test/
+tests/
+docs/
+examples/
+coverage/

@@ -1,7 +1,7 @@
 {
   "name": "@fab77/astro-viewer",
   "description": "Astrobrowser 3d engine.",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "keywords": [
     "HiPS",
     "HiPS cutout",
@@ -33,7 +33,8 @@
       "types": "./lib-esm/index.d.ts",
       "import": "./lib-esm/index.js",
       "require": "./dist/astroviewer.cjs"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "module": "./lib-esm/index.js",
   "main": "./dist/astroviewer.cjs",
@@ -42,7 +43,10 @@
   "jsdelivr": "dist/astroviewer.min.js",
   "files": [
     "lib-esm/",
-    "dist"
+    "dist/",
+    "README.md",
+    "LICENSE.md",
+    "package.json"
   ],
   "sideEffects": false,
   "scripts": {
@@ -53,7 +57,7 @@
     "build": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=production",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
     "web": "cp dist/* public/javascripts/ && cp -R src/html/javascripts/ public/javascripts/ && cp -R src/html/css/ public/css/ && cp -R src/html/test-data/ public/test-data/ && cp src/html/*.html public/",
-    "start-server": "npm run build && npm run web && python3 -m http.server 8080 -d public",
+    "start-server": "npm run build && npm run web && node scripts/serve_test_ui.mjs",
     "all": "npm run start-server",
     "prepublishOnly": "npm run build"
   },
