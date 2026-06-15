@@ -31,7 +31,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
     _vertexShader;
     _fragmentShader;
     defaultColor = '#41d421';
-    gridText = new GridTextHelper('equatorial');
+    gridText;
     _attribLocations = {
         position: 0,
         selected: 1,
@@ -59,9 +59,10 @@ export class EquatorialGrid extends AbstractSkyEntity {
      * @param radius Not used by current implementation (sphere is unit-radius)
      * @param fov    Field of view in degrees
      */
-    constructor(webgl, healpixGrid) {
+    constructor(webgl, healpixGrid, gridLabelContainers) {
         super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
         this._healpixGrid = healpixGrid;
+        this.gridText = new GridTextHelper('equatorial', gridLabelContainers);
     }
     init(fov) {
         this._fov = fov;

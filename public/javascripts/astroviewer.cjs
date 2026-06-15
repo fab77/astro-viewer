@@ -2439,6 +2439,9 @@ const XYZTileRequestScheduler_js_1 = __webpack_require__(5409);
 const XYZMapDescriptor_js_1 = __webpack_require__(8868);
 const TerraPointSetGL_js_1 = __webpack_require__(5781);
 const TerraFootprintSetGL_js_1 = __webpack_require__(9022);
+const TerraPolylineSetGL_js_1 = __webpack_require__(3665);
+const SatelliteObjectGL_js_1 = __webpack_require__(3603);
+const SensorConeGL_js_1 = __webpack_require__(3102);
 const MeshHiPSDescriptor_js_1 = __webpack_require__(847);
 // & {
 //   viewportWidth: number
@@ -2530,6 +2533,46 @@ class AstroViewer {
     }
     deleteTerraFootprintSet(footprintSet) {
         this.astroSphere.deleteFootprintSet(footprintSet);
+    }
+    createTerraPolylineSet(polylineSetName, polylineSetDescription, providerUrl, metadataManager) {
+        return new TerraPolylineSetGL_js_1.TerraPolylineSetGL(polylineSetName, polylineSetDescription, providerUrl, metadataManager, this.webgl, this.astroSphere.healpixGrid.visibleTilesManager);
+    }
+    showTerraPolylineSet(polylineSet) {
+        this.astroSphere.showPolylineSet(polylineSet);
+    }
+    hideTerraPolylineSet(polylineSet, isVisible) {
+        polylineSet.setIsVisible(isVisible);
+    }
+    deleteTerraPolylineSet(polylineSet) {
+        this.astroSphere.deletePolylineSet(polylineSet);
+    }
+    changeTerraPolylineSetColor(polylineSet, hexColor) {
+        polylineSet.changeColor(hexColor);
+        return polylineSet;
+    }
+    createSensorCone(options) {
+        return new SensorConeGL_js_1.SensorConeGL(options, this.webgl);
+    }
+    showSensorCone(sensorCone) {
+        this.astroSphere.showSensorCone(sensorCone);
+    }
+    hideSensorCone(sensorCone, isVisible) {
+        sensorCone.setIsVisible(isVisible);
+    }
+    deleteSensorCone(sensorCone) {
+        this.astroSphere.deleteSensorCone(sensorCone);
+    }
+    createSatelliteObject(options) {
+        return new SatelliteObjectGL_js_1.SatelliteObjectGL(options, this.webgl);
+    }
+    showSatelliteObject(satelliteObject) {
+        this.astroSphere.showSatelliteObject(satelliteObject);
+    }
+    hideSatelliteObject(satelliteObject, isVisible) {
+        satelliteObject.setIsVisible(isVisible);
+    }
+    deleteSatelliteObject(satelliteObject) {
+        this.astroSphere.deleteSatelliteObject(satelliteObject);
     }
     changeFootprintSetColor(footprintSet, hexColor) {
         // footprintSet.footprintsetProps.changeColor(hexColor)
@@ -4606,7 +4649,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
+exports.Footprint = exports.Source = exports.MeshHiPSDescriptor = exports.MeshHiPS = exports.WMTSAdapter = exports.XYZMap = exports.HiPS = exports.createColorMapFromSamples = exports.COLOR_MAP_SAMPLE_COUNT = exports.ColorMaps = exports.GeoJSONParser = exports.CoordsType = exports.FoVUtils = exports.CartesianOpts = exports.PointInitOpts = exports.AstroOpts = exports.SphericalOpts = exports.Point = exports.ColumnType = exports.MetadataInit = exports.MetadataColumn = exports.MetadataManager = exports.ObservationTrackViewerAdapter = exports.ObservationTrackTimeline = exports.footprintToRing = exports.createObservationTrackTimeline = exports.SensorConeGL = exports.SatelliteObjectGL = exports.TerraPolylineSetGL = exports.TerraFootprintSetGL = exports.TerraPointSetGL = exports.CatalogueGL = exports.FootprintSetGL = exports.HoveredFootprintDetail = exports.SphereFoV = exports.FoV = exports.HiPSDescriptor = exports.AstroViewer = void 0;
 var AstroViewer_js_1 = __webpack_require__(772);
 Object.defineProperty(exports, "AstroViewer", ({ enumerable: true, get: function () { return AstroViewer_js_1.AstroViewer; } }));
 var HiPSDescriptor_js_1 = __webpack_require__(5087);
@@ -4624,6 +4667,17 @@ var TerraPointSetGL_js_1 = __webpack_require__(5781);
 Object.defineProperty(exports, "TerraPointSetGL", ({ enumerable: true, get: function () { return TerraPointSetGL_js_1.TerraPointSetGL; } }));
 var TerraFootprintSetGL_js_1 = __webpack_require__(9022);
 Object.defineProperty(exports, "TerraFootprintSetGL", ({ enumerable: true, get: function () { return TerraFootprintSetGL_js_1.TerraFootprintSetGL; } }));
+var TerraPolylineSetGL_js_1 = __webpack_require__(3665);
+Object.defineProperty(exports, "TerraPolylineSetGL", ({ enumerable: true, get: function () { return TerraPolylineSetGL_js_1.TerraPolylineSetGL; } }));
+var SatelliteObjectGL_js_1 = __webpack_require__(3603);
+Object.defineProperty(exports, "SatelliteObjectGL", ({ enumerable: true, get: function () { return SatelliteObjectGL_js_1.SatelliteObjectGL; } }));
+var SensorConeGL_js_1 = __webpack_require__(3102);
+Object.defineProperty(exports, "SensorConeGL", ({ enumerable: true, get: function () { return SensorConeGL_js_1.SensorConeGL; } }));
+var index_js_1 = __webpack_require__(5866);
+Object.defineProperty(exports, "createObservationTrackTimeline", ({ enumerable: true, get: function () { return index_js_1.createObservationTrackTimeline; } }));
+Object.defineProperty(exports, "footprintToRing", ({ enumerable: true, get: function () { return index_js_1.footprintToRing; } }));
+Object.defineProperty(exports, "ObservationTrackTimeline", ({ enumerable: true, get: function () { return index_js_1.ObservationTrackTimeline; } }));
+Object.defineProperty(exports, "ObservationTrackViewerAdapter", ({ enumerable: true, get: function () { return index_js_1.ObservationTrackViewerAdapter; } }));
 var MetadataManager_js_1 = __webpack_require__(5403);
 Object.defineProperty(exports, "MetadataManager", ({ enumerable: true, get: function () { return MetadataManager_js_1.MetadataManager; } }));
 var MetadataColumn_js_1 = __webpack_require__(1072);
@@ -13960,10 +14014,12 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.MeshHiPSShaderProgram = void 0;
 class MeshHiPSShaderProgram {
     _webgl;
+    _options;
     locations;
     _shaderProgram;
-    constructor(_webgl) {
+    constructor(_webgl, _options = {}) {
         this._webgl = _webgl;
+        this._options = _options;
         this.locations = {
             pMatrix: null,
             mMatrix: null,
@@ -14026,9 +14082,13 @@ class MeshHiPSShaderProgram {
       void main(void) {
         vec3 normal = normalize(vNormal);
         vec3 lightDir = normalize(vec3(0.45, 0.8, 0.35));
-        float diffuse = max(dot(normal, lightDir), 0.0);
+        float diffuse = ${this._options.twoSidedLighting
+            ? 'abs(dot(normal, lightDir))'
+            : 'max(dot(normal, lightDir), 0.0)'};
         float rim = pow(1.0 - max(dot(normal, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
-        vec3 color = uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim;
+        vec3 color = ${this._options.markerLighting
+            ? 'uColor.rgb * (0.78 + diffuse * 0.18) + vec3(0.06, 0.08, 0.07) * rim'
+            : 'uColor.rgb * (0.24 + diffuse * 0.78) + vec3(0.16, 0.24, 0.20) * rim'};
         outColor = vec4(color, uColor.a);
       }`);
         gl.attachShader(this._shaderProgram, vertexShader);
@@ -15220,6 +15280,209 @@ exports["default"] = GeomUtils;
 
 /***/ }),
 
+/***/ 3102:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SensorConeGL = void 0;
+const FootprintShaderProgram_js_1 = __webpack_require__(8909);
+const CoordsType_js_1 = __webpack_require__(8145);
+const Point_js_1 = __webpack_require__(6553);
+class SensorConeGL {
+    _options;
+    _webgl;
+    static EARTH_RADIUS_KM = 6371;
+    static ELEM_SIZE = 3;
+    _kind = 'SensorConeGL';
+    _lineBuffer = null;
+    _lineVertexCount = 0;
+    _isVisible = true;
+    _shaderProgram;
+    _color;
+    constructor(_options, _webgl) {
+        this._options = _options;
+        this._webgl = _webgl;
+        this._shaderProgram = new FootprintShaderProgram_js_1.FootprintShaderProgram(this._webgl);
+        this._color = _options.color ?? [0.0, 1.0, 0.95, 0.68];
+    }
+    setGeometry(apex, footprint) {
+        if (!isValidPoint(apex)) {
+            this.clear();
+            return;
+        }
+        const ring = normalizeFootprintRing(footprint);
+        if (ring.length < 3 || crossesAntimeridian(ring)) {
+            this.clear();
+            return;
+        }
+        const apexVertex = lonLatAltToWorld(apex);
+        const footprintVertices = ring.map(([longitudeDeg, latitudeDeg]) => (lonLatAltToWorld({ longitudeDeg, latitudeDeg, altitudeKm: 0 })));
+        const vertices = this.buildLineVertices(apexVertex, footprintVertices);
+        this.uploadLineVertices(vertices);
+    }
+    setIsVisible(isVisible) {
+        this._isVisible = isVisible;
+    }
+    setColor(color) {
+        this._color = color;
+    }
+    clear() {
+        this._lineVertexCount = 0;
+        if (this._lineBuffer) {
+            this._webgl.deleteBuffer(this._lineBuffer);
+            this._lineBuffer = null;
+        }
+    }
+    draw(pMatrix, vMatrix, baseModelMatrix) {
+        if (!this._isVisible)
+            return;
+        if (!this._lineBuffer || this._lineVertexCount === 0)
+            return;
+        const gl = this._webgl;
+        const previousBlend = gl.isEnabled(gl.BLEND);
+        const previousDepthTest = gl.isEnabled(gl.DEPTH_TEST);
+        const previousCullFace = gl.isEnabled(gl.CULL_FACE);
+        const previousDepthMask = gl.getParameter(gl.DEPTH_WRITEMASK);
+        const previousDepthFunc = gl.getParameter(gl.DEPTH_FUNC);
+        const previousBlendSrcRgb = gl.getParameter(gl.BLEND_SRC_RGB);
+        const previousBlendDstRgb = gl.getParameter(gl.BLEND_DST_RGB);
+        const previousBlendSrcAlpha = gl.getParameter(gl.BLEND_SRC_ALPHA);
+        const previousBlendDstAlpha = gl.getParameter(gl.BLEND_DST_ALPHA);
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(false);
+        gl.disable(gl.CULL_FACE);
+        this._shaderProgram.enableShaders(pMatrix, baseModelMatrix, vMatrix);
+        gl.uniform4f(this._shaderProgram.locations.color, this._color[0], this._color[1], this._color[2], this._color[3]);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._lineBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.position, SensorConeGL.ELEM_SIZE, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.position);
+        gl.drawArrays(gl.LINES, 0, this._lineVertexCount);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.position);
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.depthMask(previousDepthMask);
+        gl.depthFunc(previousDepthFunc);
+        gl.blendFuncSeparate(previousBlendSrcRgb, previousBlendDstRgb, previousBlendSrcAlpha, previousBlendDstAlpha);
+        if (previousCullFace)
+            gl.enable(gl.CULL_FACE);
+        else
+            gl.disable(gl.CULL_FACE);
+        if (previousDepthTest)
+            gl.enable(gl.DEPTH_TEST);
+        else
+            gl.disable(gl.DEPTH_TEST);
+        if (previousBlend)
+            gl.enable(gl.BLEND);
+        else
+            gl.disable(gl.BLEND);
+    }
+    dispose() {
+        this.clear();
+    }
+    buildLineVertices(apex, footprintVertices) {
+        const vertexCount = footprintVertices.length * 4;
+        const vertices = new Float32Array(vertexCount * SensorConeGL.ELEM_SIZE);
+        let offset = 0;
+        for (const vertex of footprintVertices) {
+            offset = writeVertex(vertices, offset, apex);
+            offset = writeVertex(vertices, offset, vertex);
+        }
+        for (let index = 0; index < footprintVertices.length; index++) {
+            const current = footprintVertices[index];
+            const next = footprintVertices[(index + 1) % footprintVertices.length];
+            offset = writeVertex(vertices, offset, current);
+            offset = writeVertex(vertices, offset, next);
+        }
+        return vertices;
+    }
+    uploadLineVertices(vertices) {
+        if (!this._lineBuffer) {
+            this._lineBuffer = this._webgl.createBuffer();
+        }
+        if (!this._lineBuffer) {
+            throw new Error(`Could not create SensorConeGL line buffer for ${this._options.name}`);
+        }
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this._lineBuffer);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER, vertices, this._webgl.DYNAMIC_DRAW);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
+        this._lineVertexCount = vertices.length / SensorConeGL.ELEM_SIZE;
+    }
+}
+exports.SensorConeGL = SensorConeGL;
+function normalizeFootprintRing(footprint) {
+    const ring = [];
+    for (const coordinate of footprint) {
+        if (!Array.isArray(coordinate) || coordinate.length < 2)
+            return [];
+        const longitudeDeg = Number(coordinate[0]);
+        const latitudeDeg = Number(coordinate[1]);
+        if (!isValidLonLat(longitudeDeg, latitudeDeg))
+            return [];
+        ring.push([normalizeLongitudeDeg(longitudeDeg), latitudeDeg]);
+    }
+    while (ring.length > 1 && sameLonLat(ring[0], ring[ring.length - 1])) {
+        ring.pop();
+    }
+    const unique = new Set(ring.map(([longitudeDeg, latitudeDeg]) => (`${longitudeDeg.toFixed(9)},${latitudeDeg.toFixed(9)}`)));
+    return unique.size >= 3 ? ring : [];
+}
+function lonLatAltToWorld(point) {
+    const geoPoint = new Point_js_1.Point({
+        lonDeg: normalizeLongitudeDeg(point.longitudeDeg),
+        latDeg: point.latitudeDeg,
+    }, CoordsType_js_1.CoordsType.GEOGRAPHIC);
+    const radialScale = 1 + Math.max(0, point.altitudeKm ?? 0) / SensorConeGL.EARTH_RADIUS_KM;
+    return [
+        geoPoint.x * radialScale,
+        geoPoint.y * radialScale,
+        geoPoint.z * radialScale,
+    ];
+}
+function writeVertex(vertices, offset, vertex) {
+    vertices[offset] = vertex[0];
+    vertices[offset + 1] = vertex[1];
+    vertices[offset + 2] = vertex[2];
+    return offset + SensorConeGL.ELEM_SIZE;
+}
+function isValidPoint(point) {
+    return isValidLonLat(point.longitudeDeg, point.latitudeDeg)
+        && (point.altitudeKm === undefined || Number.isFinite(point.altitudeKm));
+}
+function isValidLonLat(longitudeDeg, latitudeDeg) {
+    return Number.isFinite(longitudeDeg)
+        && Number.isFinite(latitudeDeg)
+        && latitudeDeg >= -90
+        && latitudeDeg <= 90;
+}
+function sameLonLat(left, right) {
+    return Math.abs(left[0] - right[0]) < 1e-9
+        && Math.abs(left[1] - right[1]) < 1e-9;
+}
+function crossesAntimeridian(ring) {
+    for (let index = 0; index < ring.length; index++) {
+        const current = ring[index];
+        const next = ring[(index + 1) % ring.length];
+        if (Math.abs(normalizeLongitudeDeg(next[0]) - normalizeLongitudeDeg(current[0])) > 180) {
+            return true;
+        }
+    }
+    return false;
+}
+function normalizeLongitudeDeg(longitudeDeg) {
+    const normalized = ((((longitudeDeg + 180) % 360) + 360) % 360) - 180;
+    return Object.is(normalized, -0) ? 0 : normalized;
+}
+
+
+/***/ }),
+
 /***/ 3174:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -15433,6 +15696,427 @@ class CatalogueShaderProgram {
 }
 exports.CatalogueShaderProgram = CatalogueShaderProgram;
 // export const catalogueShaderProgram = new CatalogueShaderProgram()
+
+
+/***/ }),
+
+/***/ 3603:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.SatelliteObjectGL = void 0;
+const gl_matrix_1 = __webpack_require__(1961);
+const MeshHiPSShaderProgram_js_1 = __webpack_require__(2257);
+const OBJMeshParser_js_1 = __webpack_require__(4322);
+const Point_js_1 = __webpack_require__(6553);
+const CoordsType_js_1 = __webpack_require__(8145);
+class SatelliteObjectGL {
+    _options;
+    _webgl;
+    static EARTH_RADIUS_KM = 6371;
+    _kind = 'SatelliteObjectGL';
+    _gpuMesh = null;
+    _shaderProgram;
+    _modelMatrix = gl_matrix_1.mat4.create();
+    _isVisible = true;
+    _ready = false;
+    _loading = false;
+    _failed = false;
+    _color;
+    _scale;
+    constructor(_options, _webgl) {
+        this._options = _options;
+        this._webgl = _webgl;
+        this._shaderProgram = new MeshHiPSShaderProgram_js_1.MeshHiPSShaderProgram(this._webgl, {
+            twoSidedLighting: true,
+            markerLighting: true,
+        });
+        this._color = _options.color ?? [1.0, 0.85, 0.25, 1.0];
+        this._scale = _options.scale ?? 0.025;
+        void this.load();
+    }
+    get ready() {
+        return this._ready;
+    }
+    get loading() {
+        return this._loading;
+    }
+    get failed() {
+        return this._failed;
+    }
+    async load() {
+        if (this._loading || this._ready)
+            return;
+        this._loading = true;
+        try {
+            const response = await fetch(this._options.objUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status} fetching ${this._options.objUrl}`);
+            }
+            const mesh = OBJMeshParser_js_1.OBJMeshParser.parse(await response.text(), {
+                preferFileNormals: true,
+                generatedNormals: 'flat',
+            });
+            this._gpuMesh = this.uploadMesh(mesh);
+            this._ready = true;
+            this._failed = false;
+        }
+        catch (error) {
+            console.warn('[SatelliteObjectGL] load failed', this._options.objUrl, error);
+            this._ready = false;
+            this._failed = true;
+        }
+        finally {
+            this._loading = false;
+        }
+    }
+    setIsVisible(isVisible) {
+        this._isVisible = isVisible;
+    }
+    setColor(color) {
+        this._color = color;
+    }
+    setScale(scale) {
+        if (Number.isFinite(scale) && scale > 0) {
+            this._scale = scale;
+        }
+    }
+    setPosition(position, previous, next) {
+        if (!isValidPosition(position))
+            return;
+        const worldPosition = lonLatAltToWorld(position);
+        const up = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), worldPosition);
+        const forward = this.computeForward(position, worldPosition, up, previous, next);
+        const right = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), forward, up));
+        if (gl_matrix_1.vec3.length(right) < 1e-6) {
+            this.setFallbackMatrix(worldPosition, up);
+            return;
+        }
+        const correctedForward = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), up, right));
+        this.setMatrixFromBasis(worldPosition, right, correctedForward, up);
+    }
+    draw(pMatrix, vMatrix, baseModelMatrix) {
+        if (!this._isVisible || !this._ready || !this._gpuMesh)
+            return;
+        const gl = this._webgl;
+        const modelMatrix = gl_matrix_1.mat4.multiply(gl_matrix_1.mat4.create(), baseModelMatrix, this._modelMatrix);
+        this._shaderProgram.enableShaders(pMatrix, vMatrix, modelMatrix, this._color);
+        gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.positionBuffer);
+        gl.vertexAttribPointer(this._shaderProgram.locations.vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+            gl.bindBuffer(gl.ARRAY_BUFFER, this._gpuMesh.normalBuffer);
+            gl.vertexAttribPointer(this._shaderProgram.locations.vertexNormalAttribute, 3, gl.FLOAT, false, 0, 0);
+            gl.enableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute);
+        }
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this._gpuMesh.indexBuffer);
+        gl.drawElements(gl.TRIANGLES, this._gpuMesh.indexCount, this._gpuMesh.indexType, 0);
+        gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute);
+        if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
+            gl.disableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    dispose() {
+        const gl = this._webgl;
+        if (this._gpuMesh?.positionBuffer)
+            gl.deleteBuffer(this._gpuMesh.positionBuffer);
+        if (this._gpuMesh?.normalBuffer)
+            gl.deleteBuffer(this._gpuMesh.normalBuffer);
+        if (this._gpuMesh?.indexBuffer)
+            gl.deleteBuffer(this._gpuMesh.indexBuffer);
+        if (this._gpuMesh?.lineIndexBuffer)
+            gl.deleteBuffer(this._gpuMesh.lineIndexBuffer);
+        this._gpuMesh = null;
+        this._ready = false;
+        this._loading = false;
+    }
+    computeForward(position, worldPosition, up, previous, next) {
+        const before = previous && isValidPosition(previous) ? lonLatAltToWorld(previous) : null;
+        const after = next && isValidPosition(next) ? lonLatAltToWorld(next) : null;
+        let forward = gl_matrix_1.vec3.create();
+        if (before && after) {
+            gl_matrix_1.vec3.subtract(forward, after, before);
+        }
+        else if (after) {
+            gl_matrix_1.vec3.subtract(forward, after, worldPosition);
+        }
+        else if (before) {
+            gl_matrix_1.vec3.subtract(forward, worldPosition, before);
+        }
+        else {
+            return this.localEastFallback(position, up);
+        }
+        const radialComponent = gl_matrix_1.vec3.scale(gl_matrix_1.vec3.create(), up, gl_matrix_1.vec3.dot(forward, up));
+        gl_matrix_1.vec3.subtract(forward, forward, radialComponent);
+        if (gl_matrix_1.vec3.length(forward) < 1e-6) {
+            return this.localEastFallback(position, up);
+        }
+        return gl_matrix_1.vec3.normalize(forward, forward);
+    }
+    localEastFallback(position, up) {
+        const nearby = lonLatAltToWorld({
+            ...position,
+            longitudeDeg: position.longitudeDeg + 0.01,
+        });
+        const tangent = gl_matrix_1.vec3.subtract(gl_matrix_1.vec3.create(), nearby, lonLatAltToWorld(position));
+        const radialComponent = gl_matrix_1.vec3.scale(gl_matrix_1.vec3.create(), up, gl_matrix_1.vec3.dot(tangent, up));
+        gl_matrix_1.vec3.subtract(tangent, tangent, radialComponent);
+        return gl_matrix_1.vec3.normalize(tangent, tangent);
+    }
+    setFallbackMatrix(worldPosition, up) {
+        const reference = Math.abs(up[2]) > 0.9
+            ? gl_matrix_1.vec3.fromValues(1, 0, 0)
+            : gl_matrix_1.vec3.fromValues(0, 0, 1);
+        const right = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), reference, up));
+        const forward = gl_matrix_1.vec3.normalize(gl_matrix_1.vec3.create(), gl_matrix_1.vec3.cross(gl_matrix_1.vec3.create(), up, right));
+        this.setMatrixFromBasis(worldPosition, right, forward, up);
+    }
+    setMatrixFromBasis(worldPosition, right, forward, up) {
+        const scale = this._scale;
+        this._modelMatrix = gl_matrix_1.mat4.fromValues(right[0] * scale, right[1] * scale, right[2] * scale, 0, forward[0] * scale, forward[1] * scale, forward[2] * scale, 0, up[0] * scale, up[1] * scale, up[2] * scale, 0, worldPosition[0], worldPosition[1], worldPosition[2], 1);
+    }
+    uploadMesh(mesh) {
+        const gl = this._webgl;
+        const positionBuffer = gl.createBuffer();
+        const normalBuffer = gl.createBuffer();
+        const indexBuffer = gl.createBuffer();
+        if (!positionBuffer || !normalBuffer || !indexBuffer) {
+            throw new Error(`Could not create SatelliteObjectGL buffers for ${this._options.name}`);
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, mesh.normals, gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
+        return {
+            positionBuffer,
+            normalBuffer,
+            indexBuffer,
+            lineIndexBuffer: null,
+            indexCount: mesh.indices.length,
+            lineIndexCount: 0,
+            indexType: gl.UNSIGNED_INT,
+        };
+    }
+}
+exports.SatelliteObjectGL = SatelliteObjectGL;
+function lonLatAltToWorld(position) {
+    const point = new Point_js_1.Point({
+        lonDeg: normalizeLongitudeDeg(position.longitudeDeg),
+        latDeg: position.latitudeDeg,
+    }, CoordsType_js_1.CoordsType.GEOGRAPHIC);
+    const radialScale = 1 + Math.max(0, position.altitudeKm ?? 0) / SatelliteObjectGL.EARTH_RADIUS_KM;
+    return gl_matrix_1.vec3.fromValues(point.x * radialScale, point.y * radialScale, point.z * radialScale);
+}
+function isValidPosition(position) {
+    return Number.isFinite(position.longitudeDeg)
+        && Number.isFinite(position.latitudeDeg)
+        && position.latitudeDeg >= -90
+        && position.latitudeDeg <= 90;
+}
+function normalizeLongitudeDeg(longitudeDeg) {
+    const normalized = ((((longitudeDeg + 180) % 360) + 360) % 360) - 180;
+    return Object.is(normalized, -0) ? 0 : normalized;
+}
+
+
+/***/ }),
+
+/***/ 3665:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+/*
+ * AstroViewer
+ * Copyright (C) Fabrizio Giordano
+ * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ *
+ * This file is part of AstroViewer.
+ * AstroViewer is distributed under a dual-license model.
+ * Commercial use requires a separate commercial license.
+ * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ *
+ * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ */
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.TerraPolylineSetGL = void 0;
+const FootprintShaderProgram_js_1 = __webpack_require__(8909);
+const CoordsType_js_1 = __webpack_require__(8145);
+const Utils_js_1 = __webpack_require__(7930);
+const Point_js_1 = __webpack_require__(6553);
+class TerraPolylineSetGL {
+    _name;
+    _description;
+    _providerUrl;
+    _metadataManager;
+    _webgl;
+    _visibleTilesManager;
+    static ELEM_SIZE = 3;
+    static BYTES_X_ELEM = new Float32Array().BYTES_PER_ELEMENT;
+    _kind = 'TerraPolylineSetGL';
+    _isVisible = true;
+    _ready = true;
+    _shapeColor = '#ffe066';
+    _bufferInitialised = false;
+    paths = [];
+    renderSegments = [];
+    _polylineShaderProgram;
+    constructor(_name, _description, _providerUrl, _metadataManager, _webgl, _visibleTilesManager) {
+        this._name = _name;
+        this._description = _description;
+        this._providerUrl = _providerUrl;
+        this._metadataManager = _metadataManager;
+        this._webgl = _webgl;
+        this._visibleTilesManager = _visibleTilesManager;
+        this._polylineShaderProgram = new FootprintShaderProgram_js_1.FootprintShaderProgram(this._webgl);
+    }
+    addPath(points, metadata) {
+        this.paths.push({ points: [...points], metadata });
+        this._ready = true;
+        this._bufferInitialised = false;
+    }
+    addGroundTrack(points, metadata) {
+        this.addPath(points, metadata);
+    }
+    clearPaths() {
+        this.paths = [];
+        this.disposeBuffers();
+        this.renderSegments = [];
+        this._bufferInitialised = false;
+    }
+    setIsVisible(isVisible) {
+        this._isVisible = isVisible;
+    }
+    get isVisible() {
+        return this._isVisible;
+    }
+    changeColor(color) {
+        this._shapeColor = color;
+    }
+    dispose() {
+        this.disposeBuffers();
+        this.renderSegments = [];
+        this.paths = [];
+        this._bufferInitialised = false;
+    }
+    draw(in_mMatrix, _in_mouseHelper, vMatrix, pMatrix) {
+        if (!this._isVisible)
+            return;
+        if (!this._ready)
+            return;
+        if (!vMatrix)
+            return;
+        if (!this._webgl)
+            return;
+        if (!this._bufferInitialised)
+            this.initBuffers();
+        if (this.renderSegments.length === 0)
+            return;
+        this._polylineShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
+        const rgb = (0, Utils_js_1.colorHex2RGB)(this._shapeColor);
+        this._webgl.uniform4f(this._polylineShaderProgram.locations.color, rgb[0], rgb[1], rgb[2], 1.0);
+        for (const segment of this.renderSegments) {
+            if (!segment.buffer || segment.vertices.length < TerraPolylineSetGL.ELEM_SIZE * 2)
+                continue;
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, segment.buffer);
+            this._webgl.vertexAttribPointer(this._polylineShaderProgram.locations.position, TerraPolylineSetGL.ELEM_SIZE, this._webgl.FLOAT, false, TerraPolylineSetGL.BYTES_X_ELEM * TerraPolylineSetGL.ELEM_SIZE, 0);
+            this._webgl.enableVertexAttribArray(this._polylineShaderProgram.locations.position);
+            this._webgl.drawArrays(this._webgl.LINE_STRIP, 0, segment.vertices.length / TerraPolylineSetGL.ELEM_SIZE);
+        }
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
+        this._webgl.bindBuffer(this._webgl.ELEMENT_ARRAY_BUFFER, null);
+    }
+    initBuffers() {
+        this.disposeBuffers();
+        this.renderSegments = this.buildRenderSegments();
+        for (const segment of this.renderSegments) {
+            const buffer = this._webgl.createBuffer();
+            segment.buffer = buffer;
+            this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, buffer);
+            this._webgl.bufferData(this._webgl.ARRAY_BUFFER, segment.vertices, this._webgl.STATIC_DRAW);
+        }
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, null);
+        this._bufferInitialised = true;
+    }
+    buildRenderSegments() {
+        const segments = [];
+        for (const path of this.paths) {
+            for (const segment of this.splitPath(path.points)) {
+                if (segment.length < 2)
+                    continue;
+                const vertices = new Float32Array(segment.length * TerraPolylineSetGL.ELEM_SIZE);
+                let offset = 0;
+                for (const point of segment) {
+                    const geoPoint = new Point_js_1.Point({
+                        lonDeg: normalizeLongitudeDeg(point.longitudeDeg),
+                        latDeg: point.latitudeDeg,
+                    }, CoordsType_js_1.CoordsType.GEOGRAPHIC);
+                    vertices[offset] = geoPoint.x;
+                    vertices[offset + 1] = geoPoint.y;
+                    vertices[offset + 2] = geoPoint.z;
+                    offset += TerraPolylineSetGL.ELEM_SIZE;
+                }
+                segments.push({ vertices, buffer: null });
+            }
+        }
+        return segments;
+    }
+    splitPath(points) {
+        const segments = [];
+        let current = [];
+        let previous = null;
+        for (const point of points) {
+            if (!isValidPoint(point)) {
+                if (current.length > 1)
+                    segments.push(current);
+                current = [];
+                previous = null;
+                continue;
+            }
+            if (previous && crossesAntimeridian(previous.longitudeDeg, point.longitudeDeg)) {
+                if (current.length > 1)
+                    segments.push(current);
+                current = [];
+            }
+            current.push(point);
+            previous = point;
+        }
+        if (current.length > 1)
+            segments.push(current);
+        return segments;
+    }
+    disposeBuffers() {
+        for (const segment of this.renderSegments) {
+            if (segment.buffer) {
+                this._webgl.deleteBuffer(segment.buffer);
+                segment.buffer = null;
+            }
+        }
+    }
+}
+exports.TerraPolylineSetGL = TerraPolylineSetGL;
+function isValidPoint(point) {
+    return Number.isFinite(point.longitudeDeg)
+        && Number.isFinite(point.latitudeDeg)
+        && point.latitudeDeg >= -90
+        && point.latitudeDeg <= 90;
+}
+function crossesAntimeridian(leftLongitudeDeg, rightLongitudeDeg) {
+    return Math.abs(normalizeLongitudeDeg(rightLongitudeDeg) - normalizeLongitudeDeg(leftLongitudeDeg)) > 180;
+}
+function normalizeLongitudeDeg(longitudeDeg) {
+    const normalized = ((((longitudeDeg + 180) % 360) + 360) % 360) - 180;
+    return Object.is(normalized, -0) ? 0 : normalized;
+}
 
 
 /***/ }),
@@ -16037,10 +16721,12 @@ exports.TileBuffer = TileBuffer;
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.OBJMeshParser = void 0;
 class OBJMeshParser {
-    static parse(text) {
-        const vertices = [];
-        const indices = [];
-        const normals = [];
+    static parse(text, options = {}) {
+        const preferFileNormals = options.preferFileNormals ?? true;
+        const generatedNormals = options.generatedNormals ?? 'smooth';
+        const sourcePositions = [];
+        const sourceNormals = [];
+        const faces = [];
         const lines = text.split(/\r\n|\n/);
         for (const raw of lines) {
             const line = raw.trim();
@@ -16050,8 +16736,25 @@ class OBJMeshParser {
                 const parts = line.split(/\s+/);
                 if (parts.length < 4)
                     continue;
-                vertices.push(Number(parts[1]), Number(parts[2]), Number(parts[3]));
-                normals.push(0, 0, 0);
+                const x = Number(parts[1]);
+                const y = Number(parts[2]);
+                const z = Number(parts[3]);
+                if (![x, y, z].every(Number.isFinite))
+                    continue;
+                sourcePositions.push(x, y, z);
+                continue;
+            }
+            if (line.startsWith('vn ')) {
+                const parts = line.split(/\s+/);
+                if (parts.length < 4)
+                    continue;
+                const x = Number(parts[1]);
+                const y = Number(parts[2]);
+                const z = Number(parts[3]);
+                if (![x, y, z].every(Number.isFinite))
+                    continue;
+                const len = Math.hypot(x, y, z) || 1;
+                sourceNormals.push(x / len, y / len, z / len);
                 continue;
             }
             if (line.startsWith('f ')) {
@@ -16059,19 +16762,110 @@ class OBJMeshParser {
                     .slice(2)
                     .trim()
                     .split(/\s+/)
-                    .map((part) => Number(part.split('/')[0]))
-                    .filter((idx) => Number.isInteger(idx) && idx !== 0);
-                if (face.length < 3)
-                    continue;
-                const first = OBJMeshParser.resolveIndex(face[0], vertices.length / 3);
-                for (let i = 1; i < face.length - 1; i++) {
-                    indices.push(first, OBJMeshParser.resolveIndex(face[i], vertices.length / 3), OBJMeshParser.resolveIndex(face[i + 1], vertices.length / 3));
-                }
+                    .map((part) => OBJMeshParser.parseFaceToken(part, sourcePositions.length / 3, sourceNormals.length / 3))
+                    .filter((vertex) => vertex !== null);
+                if (face.length >= 3)
+                    faces.push(face);
             }
         }
-        OBJMeshParser.computeVertexNormals(vertices, indices, normals);
+        const triangles = OBJMeshParser.triangulateFaces(faces);
+        const canUseFileNormals = preferFileNormals
+            && triangles.length > 0
+            && triangles.every((vertex) => vertex.normalIndex !== undefined);
+        if (canUseFileNormals) {
+            return OBJMeshParser.buildMeshWithFileNormals(sourcePositions, sourceNormals, triangles);
+        }
+        if (generatedNormals === 'flat') {
+            return OBJMeshParser.buildMeshWithFlatNormals(sourcePositions, triangles);
+        }
+        return OBJMeshParser.buildMeshWithSmoothNormals(sourcePositions, triangles);
+    }
+    static parseFaceToken(token, positionCount, normalCount) {
+        const parts = token.split('/');
+        const positionIndex = OBJMeshParser.parseIndex(parts[0], positionCount);
+        if (positionIndex === null)
+            return null;
+        const normalPart = parts.length >= 3 ? parts[2] : undefined;
+        const normalIndex = normalPart
+            ? OBJMeshParser.parseIndex(normalPart, normalCount)
+            : null;
         return {
-            positions: new Float32Array(vertices),
+            positionIndex,
+            normalIndex: normalIndex ?? undefined,
+        };
+    }
+    static parseIndex(raw, count) {
+        if (!raw)
+            return null;
+        const index = Number(raw);
+        if (!Number.isInteger(index) || index === 0)
+            return null;
+        const resolved = index > 0 ? index - 1 : count + index;
+        return resolved >= 0 && resolved < count ? resolved : null;
+    }
+    static triangulateFaces(faces) {
+        const triangles = [];
+        for (const face of faces) {
+            const first = face[0];
+            for (let i = 1; i < face.length - 1; i++) {
+                triangles.push(first, face[i], face[i + 1]);
+            }
+        }
+        return triangles;
+    }
+    static buildMeshWithFileNormals(sourcePositions, sourceNormals, triangles) {
+        const positions = [];
+        const normals = [];
+        const indices = [];
+        const vertexMap = new Map();
+        for (const vertex of triangles) {
+            const normalIndex = vertex.normalIndex;
+            const key = `${vertex.positionIndex}/${normalIndex}`;
+            let outputIndex = vertexMap.get(key);
+            if (outputIndex === undefined) {
+                outputIndex = positions.length / 3;
+                vertexMap.set(key, outputIndex);
+                positions.push(sourcePositions[vertex.positionIndex * 3], sourcePositions[vertex.positionIndex * 3 + 1], sourcePositions[vertex.positionIndex * 3 + 2]);
+                normals.push(sourceNormals[normalIndex * 3], sourceNormals[normalIndex * 3 + 1], sourceNormals[normalIndex * 3 + 2]);
+            }
+            indices.push(outputIndex);
+        }
+        return {
+            positions: new Float32Array(positions),
+            normals: new Float32Array(normals),
+            indices: new Uint32Array(indices),
+        };
+    }
+    static buildMeshWithSmoothNormals(sourcePositions, triangles) {
+        const positions = [...sourcePositions];
+        const normals = new Array(positions.length).fill(0);
+        const indices = triangles.map((vertex) => vertex.positionIndex);
+        OBJMeshParser.computeVertexNormals(positions, indices, normals);
+        return {
+            positions: new Float32Array(positions),
+            normals: new Float32Array(normals),
+            indices: new Uint32Array(indices),
+        };
+    }
+    static buildMeshWithFlatNormals(sourcePositions, triangles) {
+        const positions = [];
+        const normals = [];
+        const indices = [];
+        for (let i = 0; i < triangles.length; i += 3) {
+            const a = triangles[i];
+            const b = triangles[i + 1];
+            const c = triangles[i + 2];
+            if (!a || !b || !c)
+                continue;
+            const normal = OBJMeshParser.computeFaceNormal(sourcePositions, a.positionIndex, b.positionIndex, c.positionIndex);
+            for (const vertex of [a, b, c]) {
+                positions.push(sourcePositions[vertex.positionIndex * 3], sourcePositions[vertex.positionIndex * 3 + 1], sourcePositions[vertex.positionIndex * 3 + 2]);
+                normals.push(normal[0], normal[1], normal[2]);
+                indices.push(indices.length);
+            }
+        }
+        return {
+            positions: new Float32Array(positions),
             normals: new Float32Array(normals),
             indices: new Uint32Array(indices),
         };
@@ -16081,33 +16875,16 @@ class OBJMeshParser {
             const ia = indices[i];
             const ib = indices[i + 1];
             const ic = indices[i + 2];
-            const ax = vertices[ia * 3];
-            const ay = vertices[ia * 3 + 1];
-            const az = vertices[ia * 3 + 2];
-            const bx = vertices[ib * 3];
-            const by = vertices[ib * 3 + 1];
-            const bz = vertices[ib * 3 + 2];
-            const cx = vertices[ic * 3];
-            const cy = vertices[ic * 3 + 1];
-            const cz = vertices[ic * 3 + 2];
-            const abx = bx - ax;
-            const aby = by - ay;
-            const abz = bz - az;
-            const acx = cx - ax;
-            const acy = cy - ay;
-            const acz = cz - az;
-            const nx = aby * acz - abz * acy;
-            const ny = abz * acx - abx * acz;
-            const nz = abx * acy - aby * acx;
-            normals[ia * 3] += nx;
-            normals[ia * 3 + 1] += ny;
-            normals[ia * 3 + 2] += nz;
-            normals[ib * 3] += nx;
-            normals[ib * 3 + 1] += ny;
-            normals[ib * 3 + 2] += nz;
-            normals[ic * 3] += nx;
-            normals[ic * 3 + 1] += ny;
-            normals[ic * 3 + 2] += nz;
+            const normal = OBJMeshParser.computeRawFaceNormal(vertices, ia, ib, ic);
+            normals[ia * 3] += normal[0];
+            normals[ia * 3 + 1] += normal[1];
+            normals[ia * 3 + 2] += normal[2];
+            normals[ib * 3] += normal[0];
+            normals[ib * 3 + 1] += normal[1];
+            normals[ib * 3 + 2] += normal[2];
+            normals[ic * 3] += normal[0];
+            normals[ic * 3 + 1] += normal[1];
+            normals[ic * 3 + 2] += normal[2];
         }
         for (let i = 0; i < normals.length; i += 3) {
             const nx = normals[i];
@@ -16119,8 +16896,31 @@ class OBJMeshParser {
             normals[i + 2] = nz / len;
         }
     }
-    static resolveIndex(objIndex, vertexCount) {
-        return objIndex > 0 ? objIndex - 1 : vertexCount + objIndex;
+    static computeFaceNormal(vertices, ia, ib, ic) {
+        const [nx, ny, nz] = OBJMeshParser.computeRawFaceNormal(vertices, ia, ib, ic);
+        const len = Math.hypot(nx, ny, nz) || 1;
+        return [nx / len, ny / len, nz / len];
+    }
+    static computeRawFaceNormal(vertices, ia, ib, ic) {
+        const ax = vertices[ia * 3];
+        const ay = vertices[ia * 3 + 1];
+        const az = vertices[ia * 3 + 2];
+        const bx = vertices[ib * 3];
+        const by = vertices[ib * 3 + 1];
+        const bz = vertices[ib * 3 + 2];
+        const cx = vertices[ic * 3];
+        const cy = vertices[ic * 3 + 1];
+        const cz = vertices[ic * 3 + 2];
+        const abx = bx - ax;
+        const aby = by - ay;
+        const abz = bz - az;
+        const acx = cx - ax;
+        const acy = cy - ay;
+        const acz = cz - az;
+        const nx = aby * acz - abz * acy;
+        const ny = abz * acx - abx * acz;
+        const nz = abx * acy - aby * acx;
+        return [nx, ny, nz];
     }
 }
 exports.OBJMeshParser = OBJMeshParser;
@@ -16900,6 +17700,9 @@ class AstroSphere {
     fov;
     activeCatalogues = [];
     activeFootprintSets = [];
+    activePolylineSets = [];
+    activeSensorCones = [];
+    activeSatelliteObjects = [];
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
@@ -17438,6 +18241,33 @@ class AstroSphere {
     deleteFootprintSet(footprintSet) {
         this.activeFootprintSets = this.activeFootprintSets.filter((fst) => fst !== footprintSet);
     }
+    async showPolylineSet(polylineSet) {
+        if (polylineSet)
+            this.activePolylineSets.push(polylineSet);
+        return polylineSet;
+    }
+    deletePolylineSet(polylineSet) {
+        this.activePolylineSets = this.activePolylineSets.filter((set) => set !== polylineSet);
+        polylineSet.dispose();
+    }
+    async showSensorCone(sensorCone) {
+        if (sensorCone)
+            this.activeSensorCones.push(sensorCone);
+        return sensorCone;
+    }
+    deleteSensorCone(sensorCone) {
+        this.activeSensorCones = this.activeSensorCones.filter((cone) => cone !== sensorCone);
+        sensorCone.dispose();
+    }
+    async showSatelliteObject(satelliteObject) {
+        if (satelliteObject)
+            this.activeSatelliteObjects.push(satelliteObject);
+        return satelliteObject;
+    }
+    deleteSatelliteObject(satelliteObject) {
+        this.activeSatelliteObjects = this.activeSatelliteObjects.filter((object) => object !== satelliteObject);
+        satelliteObject.dispose();
+    }
     getHoveredFootprints() {
         let footprintsHovered = [];
         this.activeFootprintSets.forEach((fset) => {
@@ -17839,6 +18669,30 @@ class AstroSphere {
                 this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activePolylineSets.forEach((polylineSet) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                polylineSet.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activeSensorCones.forEach((sensorCone) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                sensorCone.draw(this._perspectiveMatrixManager.pMatrix, this._camera.getCameraMatrix(), activeModelMatrix);
+            }
+        });
+        this.activeSatelliteObjects.forEach((satelliteObject) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                satelliteObject.draw(this._perspectiveMatrixManager.pMatrix, this._camera.getCameraMatrix(), activeModelMatrix);
             }
         });
     }
@@ -18620,6 +19474,347 @@ exports.xyzTileRequestScheduler = new XYZTileRequestScheduler();
 
 /***/ }),
 
+/***/ 5772:
+/***/ (function(__unused_webpack_module, exports, __webpack_require__) {
+
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObservationTrackViewerAdapter = void 0;
+const GeoJSONParser_js_1 = __importDefault(__webpack_require__(8755));
+const MetadataColumn_js_1 = __webpack_require__(1072);
+const MetadataManager_js_1 = __webpack_require__(5403);
+const ObservationTrackTimeline_js_1 = __webpack_require__(8022);
+const DEFAULT_VISUALISATION = {
+    showSatelliteModel: true,
+    showGroundTrack: true,
+    showFootprint: true,
+    showSensorCone: true,
+    showCurrentFootprintOnly: false,
+    showAllFootprints: true,
+};
+const DEFAULT_COLORS = {
+    groundTrack: '#ffe066',
+    footprints: '#00fff2',
+    currentFootprint: '#ff4d4d',
+    marker: '#ff4d4d',
+    satelliteObject: [1.0, 0.84, 0.22, 1.0],
+    sensorCone: [0.0, 1.0, 0.95, 0.68],
+    target: '#ffb347',
+};
+class ObservationTrackViewerAdapter {
+    activeHandle = null;
+    viewer;
+    metadataManagerFactory;
+    colors;
+    onFrame;
+    constructor(options) {
+        this.viewer = options.viewer;
+        this.metadataManagerFactory = options.metadataManagerFactory ?? (() => new MetadataManager_js_1.MetadataManager([]));
+        this.colors = {
+            ...DEFAULT_COLORS,
+            ...options.colors,
+        };
+        this.onFrame = options.onFrame;
+    }
+    load(track) {
+        this.clear();
+        const handle = new InternalObservationTrackViewerHandle(this.viewer, track, this.metadataManagerFactory, this.colors, this.onFrame);
+        this.activeHandle = handle;
+        return handle;
+    }
+    clear() {
+        this.activeHandle?.dispose();
+        this.activeHandle = null;
+    }
+}
+exports.ObservationTrackViewerAdapter = ObservationTrackViewerAdapter;
+class InternalObservationTrackViewerHandle {
+    viewer;
+    track;
+    metadataManagerFactory;
+    colors;
+    onFrame;
+    timeline;
+    objects = {
+        target: null,
+        groundTrack: null,
+        footprints: null,
+        currentFootprint: null,
+        marker: null,
+        satelliteObject: null,
+        sensorCone: null,
+    };
+    visualisation;
+    currentFootprintIndex = -1;
+    disposed = false;
+    constructor(viewer, track, metadataManagerFactory, colors, onFrame) {
+        this.viewer = viewer;
+        this.track = track;
+        this.metadataManagerFactory = metadataManagerFactory;
+        this.colors = colors;
+        this.onFrame = onFrame;
+        validateTrack(track);
+        this.visualisation = {
+            ...DEFAULT_VISUALISATION,
+            ...track.visualisation,
+        };
+        this.createStaticObjects();
+        this.timeline = (0, ObservationTrackTimeline_js_1.createObservationTrackTimeline)({
+            samples: track.samples,
+            playbackRate: 1,
+            onFrame: (frame) => this.updateFrame(frame),
+        });
+        this.applyVisualisation();
+    }
+    play() {
+        this.timeline.play();
+    }
+    pause() {
+        this.timeline.pause();
+    }
+    seek(progress01) {
+        this.timeline.seek(progress01);
+    }
+    setVisualisation(config) {
+        this.visualisation = {
+            ...this.visualisation,
+            ...config,
+        };
+        this.applyVisualisation();
+    }
+    dispose() {
+        if (this.disposed)
+            return;
+        this.disposed = true;
+        this.timeline.destroy();
+        this.deleteObjects();
+    }
+    createStaticObjects() {
+        this.objects.target = this.createTargetOverlay();
+        this.objects.footprints = this.createAllFootprintsOverlay();
+        this.objects.groundTrack = this.createGroundTrackOverlay();
+        this.objects.marker = this.createMarkerOverlay();
+        this.objects.satelliteObject = this.createSatelliteObject();
+        this.objects.sensorCone = this.createSensorCone();
+    }
+    createTargetOverlay() {
+        const geojson = this.track.target?.geojson;
+        if (!geojson)
+            return null;
+        const set = this.viewer.createTerraFootprintSet(this.track.target?.name ?? 'Observation target', 'ObservationTrack target GeoJSON', this.track.target?.geojsonUrl ?? 'ObservationTrack', this.metadataManagerFactory());
+        set.addGeoJSONFeatures(GeoJSONParser_js_1.default.parseGeoJSON(geojson));
+        this.viewer.changeFootprintSetColor(set, this.colors.target);
+        this.viewer.showTerraFootprintSet(set);
+        return set;
+    }
+    createAllFootprintsOverlay() {
+        const featureCollection = {
+            type: 'FeatureCollection',
+            features: this.track.samples.map((sample, index) => footprintFeature(sample, index)),
+        };
+        const set = this.viewer.createTerraFootprintSet(`${this.track.satellite?.name ?? 'Satellite'} footprints`, 'ObservationTrack sampled sensor footprints', this.track.id ?? 'ObservationTrack', this.metadataManagerFactory());
+        set.addGeoJSONFeatures(GeoJSONParser_js_1.default.parseGeoJSON(featureCollection));
+        this.viewer.changeFootprintSetColor(set, this.colors.footprints);
+        this.viewer.showTerraFootprintSet(set);
+        return set;
+    }
+    createGroundTrackOverlay() {
+        const set = this.viewer.createTerraPolylineSet(`${this.track.satellite?.name ?? 'Satellite'} ground track`, 'ObservationTrack GroundTrackPoint[]', this.track.id ?? 'ObservationTrack', this.metadataManagerFactory());
+        set.addGroundTrack(this.track.samples.map((sample) => ({
+            ...sample.groundTrackPoint,
+            timestamp: sample.timestamp,
+        })), { name: `${this.track.satellite?.name ?? 'Satellite'} ground track` });
+        this.viewer.changeTerraPolylineSetColor(set, this.colors.groundTrack);
+        this.viewer.showTerraPolylineSet(set);
+        return set;
+    }
+    createMarkerOverlay() {
+        const set = this.viewer.createTerraPointSet(`${this.track.satellite?.name ?? 'Satellite'} marker`, 'ObservationTrack interpolated satellite marker', this.track.id ?? 'ObservationTrack', new MetadataManager_js_1.MetadataManager(createMarkerColumns()));
+        this.viewer.changeCatalogueColor(set, this.colors.marker);
+        this.viewer.showTerraPointSet(set);
+        return set;
+    }
+    createSatelliteObject() {
+        const objUrl = this.track.satellite?.model?.objUrl;
+        if (!objUrl)
+            return null;
+        const object = this.viewer.createSatelliteObject({
+            name: `${this.track.satellite?.name ?? 'Satellite'} object`,
+            objUrl,
+            color: this.colors.satelliteObject,
+            scale: this.track.satellite?.model?.visualScale,
+        });
+        this.viewer.showSatelliteObject(object);
+        return object;
+    }
+    createSensorCone() {
+        const cone = this.viewer.createSensorCone({
+            name: `${this.track.sensor?.name ?? 'Sensor'} cone`,
+            color: this.colors.sensorCone,
+            wireframe: true,
+            filled: false,
+        });
+        this.viewer.showSensorCone(cone);
+        return cone;
+    }
+    updateFrame(frame) {
+        if (this.disposed)
+            return;
+        this.updateMarker(frame.currentGroundPoint);
+        this.updateSatelliteObject(frame);
+        this.updateSensorCone(frame);
+        this.updateCurrentFootprint(frame);
+        this.onFrame?.(frame);
+    }
+    updateMarker(point) {
+        const marker = this.objects.marker;
+        if (!marker)
+            return;
+        marker.clearSources();
+        marker.addSources([[
+                point.longitudeDeg,
+                point.latitudeDeg,
+                String(point.timestamp ?? ''),
+                point.altitudeKm,
+            ]], createMarkerColumns());
+    }
+    updateSatelliteObject(frame) {
+        const satelliteObject = this.objects.satelliteObject;
+        if (!satelliteObject)
+            return;
+        satelliteObject.setPosition(frame.currentGroundPoint, frame.previousSample?.groundTrackPoint ?? null, frame.nextSample?.groundTrackPoint ?? null);
+    }
+    updateSensorCone(frame) {
+        const sensorCone = this.objects.sensorCone;
+        if (!sensorCone)
+            return;
+        sensorCone.setGeometry(frame.currentGroundPoint, frame.currentFootprint);
+    }
+    updateCurrentFootprint(frame) {
+        if (frame.nearestSampleIndex === this.currentFootprintIndex)
+            return;
+        if (this.objects.currentFootprint) {
+            this.viewer.deleteTerraFootprintSet(this.objects.currentFootprint);
+        }
+        this.objects.currentFootprint = this.createCurrentFootprintOverlay(frame.nearestSample);
+        this.currentFootprintIndex = frame.nearestSampleIndex;
+        this.applyVisualisation();
+    }
+    createCurrentFootprintOverlay(sample) {
+        const featureCollection = {
+            type: 'FeatureCollection',
+            features: [footprintFeature(sample, sample.index, 'Current footprint')],
+        };
+        const set = this.viewer.createTerraFootprintSet(`${this.track.satellite?.name ?? 'Satellite'} current footprint`, 'ObservationTrack nearest sampled footprint', this.track.id ?? 'ObservationTrack', this.metadataManagerFactory());
+        set.addGeoJSONFeatures(GeoJSONParser_js_1.default.parseGeoJSON(featureCollection));
+        this.viewer.changeFootprintSetColor(set, this.colors.currentFootprint);
+        this.viewer.showTerraFootprintSet(set);
+        return set;
+    }
+    applyVisualisation() {
+        const showFootprint = Boolean(this.visualisation.showFootprint);
+        const showAllFootprints = showFootprint
+            && Boolean(this.visualisation.showAllFootprints)
+            && !this.visualisation.showCurrentFootprintOnly;
+        const showCurrentFootprint = showFootprint
+            && (Boolean(this.visualisation.showCurrentFootprintOnly) || !showAllFootprints);
+        if (this.objects.target)
+            this.viewer.hideTerraFootprintSet(this.objects.target, true);
+        if (this.objects.groundTrack) {
+            this.viewer.hideTerraPolylineSet(this.objects.groundTrack, Boolean(this.visualisation.showGroundTrack));
+        }
+        if (this.objects.footprints) {
+            this.viewer.hideTerraFootprintSet(this.objects.footprints, showAllFootprints);
+        }
+        if (this.objects.currentFootprint) {
+            this.viewer.hideTerraFootprintSet(this.objects.currentFootprint, showCurrentFootprint);
+        }
+        if (this.objects.marker)
+            this.viewer.hideTerraPointSet(this.objects.marker, true);
+        if (this.objects.satelliteObject) {
+            this.viewer.hideSatelliteObject(this.objects.satelliteObject, Boolean(this.visualisation.showSatelliteModel));
+        }
+        if (this.objects.sensorCone) {
+            this.viewer.hideSensorCone(this.objects.sensorCone, Boolean(this.visualisation.showSensorCone));
+        }
+    }
+    deleteObjects() {
+        if (this.objects.target)
+            this.viewer.deleteTerraFootprintSet(this.objects.target);
+        if (this.objects.groundTrack)
+            this.viewer.deleteTerraPolylineSet(this.objects.groundTrack);
+        if (this.objects.footprints)
+            this.viewer.deleteTerraFootprintSet(this.objects.footprints);
+        if (this.objects.currentFootprint)
+            this.viewer.deleteTerraFootprintSet(this.objects.currentFootprint);
+        if (this.objects.marker)
+            this.viewer.deleteTerraPointSet(this.objects.marker);
+        if (this.objects.satelliteObject)
+            this.viewer.deleteSatelliteObject(this.objects.satelliteObject);
+        if (this.objects.sensorCone)
+            this.viewer.deleteSensorCone(this.objects.sensorCone);
+        this.objects.target = null;
+        this.objects.groundTrack = null;
+        this.objects.footprints = null;
+        this.objects.currentFootprint = null;
+        this.objects.marker = null;
+        this.objects.satelliteObject = null;
+        this.objects.sensorCone = null;
+    }
+}
+function validateTrack(track) {
+    if (!track.samples || track.samples.length === 0) {
+        throw new Error('ObservationTrackViewerAdapter requires at least one sample.');
+    }
+}
+function footprintFeature(sample, index, name = `Footprint ${index + 1}`) {
+    return {
+        type: 'Feature',
+        properties: {
+            name,
+            timestamp: String(sample.timestamp),
+            intersectsTarget: String(Boolean(sample.intersectsTarget ?? sample.intersects)),
+        },
+        geometry: footprintToGeoJSONGeometry(sample.footprint),
+    };
+}
+function footprintToGeoJSONGeometry(footprint) {
+    if (!Array.isArray(footprint) && 'polygons' in footprint) {
+        return {
+            type: 'MultiPolygon',
+            coordinates: footprint.polygons.map((polygon) => [ringToGeoJSON((0, ObservationTrackTimeline_js_1.footprintToRing)(polygon))]),
+        };
+    }
+    return {
+        type: 'Polygon',
+        coordinates: [ringToGeoJSON((0, ObservationTrackTimeline_js_1.footprintToRing)(footprint))],
+    };
+}
+function ringToGeoJSON(ring) {
+    if (ring.length === 0)
+        return ring;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (Math.abs(first[0] - last[0]) < 1e-9 && Math.abs(first[1] - last[1]) < 1e-9) {
+        return ring;
+    }
+    return [...ring, [first[0], first[1]]];
+}
+function createMarkerColumns() {
+    return [
+        new MetadataColumn_js_1.MetadataColumn({ index: 0, name: 'longitudeDeg', columnType: MetadataColumn_js_1.ColumnType.GEOM_RA, unit: 'deg' }),
+        new MetadataColumn_js_1.MetadataColumn({ index: 1, name: 'latitudeDeg', columnType: MetadataColumn_js_1.ColumnType.GEOM_DEC, unit: 'deg' }),
+        new MetadataColumn_js_1.MetadataColumn({ index: 2, name: 'timestamp', columnType: MetadataColumn_js_1.ColumnType.MAIN_NAME, unit: '' }),
+        new MetadataColumn_js_1.MetadataColumn({ index: 3, name: 'altitudeKm', columnType: MetadataColumn_js_1.ColumnType.NUMBER, unit: 'km' }),
+    ];
+}
+
+
+/***/ }),
+
 /***/ 5781:
 /***/ ((__unused_webpack_module, exports, __webpack_require__) => {
 
@@ -18850,6 +20045,22 @@ class SphereFoV {
     }
 }
 exports.SphereFoV = SphereFoV;
+
+
+/***/ }),
+
+/***/ 5866:
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObservationTrackViewerAdapter = exports.ObservationTrackTimeline = exports.footprintToRing = exports.createObservationTrackTimeline = void 0;
+var ObservationTrackTimeline_js_1 = __webpack_require__(8022);
+Object.defineProperty(exports, "createObservationTrackTimeline", ({ enumerable: true, get: function () { return ObservationTrackTimeline_js_1.createObservationTrackTimeline; } }));
+Object.defineProperty(exports, "footprintToRing", ({ enumerable: true, get: function () { return ObservationTrackTimeline_js_1.footprintToRing; } }));
+Object.defineProperty(exports, "ObservationTrackTimeline", ({ enumerable: true, get: function () { return ObservationTrackTimeline_js_1.ObservationTrackTimeline; } }));
+var ObservationTrackViewerAdapter_js_1 = __webpack_require__(5772);
+Object.defineProperty(exports, "ObservationTrackViewerAdapter", ({ enumerable: true, get: function () { return ObservationTrackViewerAdapter_js_1.ObservationTrackViewerAdapter; } }));
 
 
 /***/ }),
@@ -20453,6 +21664,250 @@ function decDegToDMS(decDeg) {
     const s = (decDegAbs - d - m / 60) * 3600;
     d = d * sign;
     return { d, m, s };
+}
+
+
+/***/ }),
+
+/***/ 8022:
+/***/ ((__unused_webpack_module, exports) => {
+
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ObservationTrackTimeline = void 0;
+exports.createObservationTrackTimeline = createObservationTrackTimeline;
+exports.footprintToRing = footprintToRing;
+function createObservationTrackTimeline(options) {
+    return new ObservationTrackTimeline(options);
+}
+class ObservationTrackTimeline {
+    samples;
+    startMs;
+    endMs;
+    currentMs;
+    playing = false;
+    rafId = null;
+    lastFrameNowMs = null;
+    playbackRate;
+    onFrame;
+    onStop;
+    constructor(options) {
+        this.samples = options.samples
+            .map((sample, index) => ({
+            ...sample,
+            index,
+            timeMs: Date.parse(String(sample.timestamp)),
+        }))
+            .filter((sample) => Number.isFinite(sample.timeMs))
+            .sort((left, right) => left.timeMs - right.timeMs);
+        if (this.samples.length === 0) {
+            throw new Error('ObservationTrackTimeline requires at least one timestamped sample.');
+        }
+        this.startMs = this.samples[0].timeMs;
+        this.endMs = this.samples[this.samples.length - 1].timeMs;
+        this.currentMs = this.startMs;
+        this.playbackRate = options.playbackRate ?? 1;
+        this.onFrame = options.onFrame;
+        this.onStop = options.onStop;
+        this.emitFrame();
+    }
+    play() {
+        if (this.playing)
+            return;
+        this.playing = true;
+        this.lastFrameNowMs = null;
+        this.rafId = requestAnimationFrame((nowMs) => this.tick(nowMs));
+    }
+    pause() {
+        if (!this.playing)
+            return;
+        this.playing = false;
+        this.cancelPendingFrame();
+        this.onStop?.(this.getState());
+    }
+    seek(progress01) {
+        const clampedProgress = clamp01(progress01);
+        this.currentMs = this.startMs + (this.endMs - this.startMs) * clampedProgress;
+        this.emitFrame();
+    }
+    destroy() {
+        this.playing = false;
+        this.cancelPendingFrame();
+        this.onStop?.(this.getState());
+    }
+    getState() {
+        return {
+            startMs: this.startMs,
+            endMs: this.endMs,
+            currentMs: this.currentMs,
+            progress01: this.getProgress(),
+            playing: this.playing,
+        };
+    }
+    tick(nowMs) {
+        if (!this.playing)
+            return;
+        if (this.lastFrameNowMs === null) {
+            this.lastFrameNowMs = nowMs;
+        }
+        const elapsedMs = nowMs - this.lastFrameNowMs;
+        this.lastFrameNowMs = nowMs;
+        this.currentMs += elapsedMs * this.playbackRate;
+        if (this.currentMs >= this.endMs) {
+            this.currentMs = this.endMs;
+            this.emitFrame();
+            this.pause();
+            return;
+        }
+        this.emitFrame();
+        this.rafId = requestAnimationFrame((nextNowMs) => this.tick(nextNowMs));
+    }
+    emitFrame() {
+        const frame = computeFrame(this.samples, this.currentMs);
+        this.onFrame?.({
+            currentMs: this.currentMs,
+            progress01: this.getProgress(),
+            ...frame,
+        });
+    }
+    getProgress() {
+        if (this.endMs === this.startMs)
+            return 0;
+        return clamp01((this.currentMs - this.startMs) / (this.endMs - this.startMs));
+    }
+    cancelPendingFrame() {
+        if (this.rafId !== null) {
+            cancelAnimationFrame(this.rafId);
+            this.rafId = null;
+        }
+    }
+}
+exports.ObservationTrackTimeline = ObservationTrackTimeline;
+function computeFrame(samples, currentMs) {
+    const first = samples[0];
+    const last = samples[samples.length - 1];
+    if (currentMs <= first.timeMs) {
+        return frameFromSamples(first, first, 0);
+    }
+    if (currentMs >= last.timeMs) {
+        return frameFromSamples(last, last, 0);
+    }
+    for (let index = 0; index < samples.length - 1; index++) {
+        const previousSample = samples[index];
+        const nextSample = samples[index + 1];
+        if (currentMs >= previousSample.timeMs && currentMs <= nextSample.timeMs) {
+            const t = (currentMs - previousSample.timeMs) / (nextSample.timeMs - previousSample.timeMs);
+            return frameFromSamples(previousSample, nextSample, t);
+        }
+    }
+    return frameFromSamples(last, last, 0);
+}
+function frameFromSamples(previousSample, nextSample, t) {
+    const currentGroundPoint = interpolateGroundTrackPoint(previousSample, nextSample, t);
+    const nearestSample = t < 0.5 ? previousSample : nextSample;
+    const currentFootprint = interpolateFootprint(previousSample.footprint, nextSample.footprint, t, footprintToRing(nearestSample.footprint));
+    return {
+        markerPoint: currentGroundPoint,
+        currentGroundPoint,
+        currentFootprint,
+        interpolationT: t,
+        previousSample,
+        nextSample,
+        nearestSample,
+        nearestSampleIndex: nearestSample.index,
+    };
+}
+function interpolateGroundTrackPoint(previousSample, nextSample, t) {
+    const previous = previousSample.groundTrackPoint;
+    const next = nextSample.groundTrackPoint;
+    const timeMs = lerp(previousSample.timeMs, nextSample.timeMs, t);
+    return {
+        timestamp: new Date(timeMs).toISOString(),
+        longitudeDeg: interpolateLongitude(previous.longitudeDeg, next.longitudeDeg, t),
+        latitudeDeg: lerp(previous.latitudeDeg, next.latitudeDeg, t),
+        altitudeKm: lerp(previous.altitudeKm, next.altitudeKm, t),
+    };
+}
+function interpolateFootprint(previousFootprint, nextFootprint, t, fallbackFootprint) {
+    const previousRing = normalizeOpenRing(footprintToRing(previousFootprint));
+    const nextRing = normalizeOpenRing(footprintToRing(nextFootprint));
+    if (previousRing.length < 3
+        || previousRing.length !== nextRing.length) {
+        return fallbackFootprint;
+    }
+    const ring = previousRing.map(([previousLon, previousLat], index) => {
+        const [nextLon, nextLat] = nextRing[index];
+        return [
+            interpolateLongitude(previousLon, nextLon, t),
+            lerp(previousLat, nextLat, t),
+        ];
+    });
+    return closeRing(ring);
+}
+function footprintToRing(footprint) {
+    if (isFootprintPolygon(footprint)) {
+        return footprint.coordinates.map((coordinate) => [
+            coordinate.longitudeDeg,
+            coordinate.latitudeDeg,
+        ]);
+    }
+    if (isFootprintMultiPolygon(footprint)) {
+        const firstPolygon = footprint.polygons[0];
+        return firstPolygon ? footprintToRing(firstPolygon) : [];
+    }
+    if (Array.isArray(footprint))
+        return footprint;
+    return [];
+}
+function isFootprintPolygon(footprint) {
+    return !Array.isArray(footprint) && 'coordinates' in footprint;
+}
+function isFootprintMultiPolygon(footprint) {
+    return !Array.isArray(footprint) && 'polygons' in footprint;
+}
+function normalizeOpenRing(footprint) {
+    if (!Array.isArray(footprint))
+        return [];
+    const ring = [];
+    for (const coordinate of footprint) {
+        if (!Array.isArray(coordinate) || coordinate.length < 2)
+            return [];
+        const lon = Number(coordinate[0]);
+        const lat = Number(coordinate[1]);
+        if (!Number.isFinite(lon) || !Number.isFinite(lat) || lat < -90 || lat > 90) {
+            return [];
+        }
+        ring.push([normalizeLongitudeDeg(lon), lat]);
+    }
+    while (ring.length > 1 && sameLonLat(ring[0], ring[ring.length - 1])) {
+        ring.pop();
+    }
+    return ring;
+}
+function closeRing(ring) {
+    if (ring.length === 0)
+        return ring;
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    return sameLonLat(first, last) ? ring : [...ring, [...first]];
+}
+function sameLonLat(left, right) {
+    return Math.abs(left[0] - right[0]) < 1e-9
+        && Math.abs(left[1] - right[1]) < 1e-9;
+}
+function interpolateLongitude(leftLongitudeDeg, rightLongitudeDeg, t) {
+    const delta = normalizeLongitudeDeg(rightLongitudeDeg - leftLongitudeDeg);
+    return normalizeLongitudeDeg(leftLongitudeDeg + delta * t);
+}
+function normalizeLongitudeDeg(longitudeDeg) {
+    const normalized = ((((longitudeDeg + 180) % 360) + 360) % 360) - 180;
+    return Object.is(normalized, -0) ? 0 : normalized;
+}
+function lerp(left, right, t) {
+    return left + (right - left) * t;
+}
+function clamp01(value) {
+    return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
 }
 
 

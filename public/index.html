@@ -336,6 +336,17 @@
                     <code>POLYGON lon1 lat1 lon2 lat2 ...</code>). Choose mappings then click Import.
                 </div>
             </div>
+            <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
+                <label>Satellite footprint demo</label>
+                <div class="row">
+                    <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">Load ISS Spain demo</button>
+                    <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>Play</button>
+                    <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>Pause</button>
+                    <input id="satelliteTimelineSeek" type="range" min="0" max="1000" value="0" disabled />
+                    <span id="satelliteTimelineTime" class="hint">Timeline not loaded</span>
+                    <span class="hint">Dev-only fixture: Spain GeoJSON, ISS footprint polygons, and ground-track line.</span>
+                </div>
+            </div>
         </details>
 
         <!-- Hovered footprints panel -->

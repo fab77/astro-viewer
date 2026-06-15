@@ -1,5 +1,6 @@
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import { SphereFoV } from '../SphereFoV.js';
+import type { GridLabelContainers } from './GridTextHelper.js';
 export declare class LatLonGrid extends AbstractSkyEntity {
     static ELEM_SIZE: number;
     static BYTES_X_ELEM: number;
@@ -20,7 +21,7 @@ export declare class LatLonGrid extends AbstractSkyEntity {
     private _bufferKey;
     private defaultColor;
     private gridText;
-    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, name: string, webgl: WebGL2RenderingContext);
+    constructor(radius: number, position: [number, number, number], xrad: number, yrad: number, name: string, webgl: WebGL2RenderingContext, gridLabelContainers?: GridLabelContainers);
     init(): void;
     private initShaders;
     private initBuffers;

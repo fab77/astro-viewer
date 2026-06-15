@@ -30,14 +30,14 @@ export class XYZMap extends AbstractSkyEntity {
     _latLonGrid;
     _colorMapIdx = 0;
     _colorMap = ColorMaps['native'];
-    constructor(radius, position, xrad, yrad, descriptor, webgl) {
+    constructor(radius, position, xrad, yrad, descriptor, webgl, gridLabelContainers) {
         super(radius, position, xrad, yrad, descriptor.name, webgl, false);
         this._descriptor = descriptor;
         this._xyzShaderProgram = new XYZShaderProgram(webgl);
         this._meshBuilder = new XYZMeshBuilder();
         this._tileBuffer = new XYZTileBuffer(1);
         this.initGL(webgl);
-        this._latLonGrid = new LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl);
+        this._latLonGrid = new LatLonGrid(radius, position, xrad, yrad, 'LatLonGrid', this._webgl, gridLabelContainers);
         this._visibleTilesManager = new XYZVisibleTilesManager();
         this._baseurl = descriptor.url;
         this.initShaders();

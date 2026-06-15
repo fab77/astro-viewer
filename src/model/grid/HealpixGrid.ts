@@ -29,6 +29,7 @@ import {Point} from '../Point.js';
 import GridShaderManager from '../../shader/GridShaderManager.js';
 import GeomUtils from '../../utils/GeomUtils.js';
 import GridTextHelper from './GridTextHelper.js';
+import type { GridLabelContainers } from './GridTextHelper.js';
 import { colorHex2RGB } from '../../utils/Utils.js';
 import { VisibleTilesManager } from '../hips/VisibleTilesManager.js';
 import { bootSetup } from '../../Config.js';
@@ -55,7 +56,7 @@ export class HealpixGrid extends AbstractSkyEntity {
   private vertexShader!: WebGLShader;
 
   private defaultColor = '#ec0acaff'
-  private gridText: GridTextHelper = new GridTextHelper('healpix')
+  private gridText: GridTextHelper
   // private _hipsShaderProgram: HiPSShaderProgram
 
   private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
@@ -83,8 +84,9 @@ export class HealpixGrid extends AbstractSkyEntity {
   private _visibleTilesManager: VisibleTilesManager;
   
 
-  constructor(webgl: WebGL2RenderingContext) {
+  constructor(webgl: WebGL2RenderingContext, gridLabelContainers?: GridLabelContainers) {
     super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'healpix-grid', webgl);
+    this.gridText = new GridTextHelper('healpix', gridLabelContainers)
     this.init()
     this._visibleTilesManager = new VisibleTilesManager(this._webgl, super.hipsShaderProgram, this)
     this._visibleTilesManager.init(bootSetup.insideSphere)
