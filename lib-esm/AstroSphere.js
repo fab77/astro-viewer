@@ -61,6 +61,9 @@ class AstroSphere {
     fov;
     activeCatalogues = [];
     activeFootprintSets = [];
+    activePolylineSets = [];
+    activeSensorCones = [];
+    activeSatelliteObjects = [];
     _webgl;
     _selectedColorMap;
     _cameraStatusChanged = false;
@@ -72,20 +75,22 @@ class AstroSphere {
     lockedEastWestRaDeg = null;
     lockedNorthSouthDecDeg = null;
     keepCameraNorthUp = true;
-    constructor(canvas, webgl) {
+    gridLabelContainers;
+    constructor(canvas, webgl, options = {}) {
         console.log("[AstroSphere] new instance for canvas", canvas.id);
         // Keep global GL context (as in original JS)
         this._webgl = webgl;
         this.mouseHelper = new MouseHelper();
         this.canvas = canvas;
+        this.gridLabelContainers = options.gridLabelContainers;
         const nativeColorMap = "native";
         this._selectedColorMap = ColorMaps[nativeColorMap];
         global.insideSphere = bootSetup.insideSphere;
         this.initCamera();
-        this._healpixGrid = new HealpixGrid(this._webgl);
+        this._healpixGrid = new HealpixGrid(this._webgl, this.gridLabelContainers);
         this._perspectiveMatrixManager = new PerspectiveMatrixManager(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
         this._perspectiveMatrixManager.computePerspectiveMatrix(canvas, this._camera, bootSetup.camera_fov_deg, bootSetup.camera_near_plane, bootSetup.insideSphere);
-        this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
+        this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid, this.gridLabelContainers);
         this._equatorialGrid.init(this._healpixGrid.getMinFoV());
         this.updateCentralPoint();
         this.startup = true;
@@ -565,7 +570,7 @@ class AstroSphere {
         this._activeBaseLayer = "xyz";
     }
     activateXYZ2(config) {
-        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl);
+        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, config, this._webgl, this.gridLabelContainers);
         this._activeBaseLayer = "xyz";
     }
     activateMeshHiPS(descriptor) {
@@ -575,7 +580,7 @@ class AstroSphere {
     activateWMTS(config) {
         const adapter = new WMTSAdapter(config);
         const xyzConfig = adapter.toXYZLayerConfig();
-        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : "WMTS Earth2 Layer", xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl);
+        this._activeXYZ2 = new XYZMap(1, [0.0, 0.0, 0.0], 0, 0, new XYZMapDescriptor(config.layer ? `WMTS ${config.layer}` : "WMTS Earth2 Layer", xyzConfig.urlTemplate, xyzConfig.minZoom ?? 0, xyzConfig.maxZoom ?? 8, xyzConfig.segmentsPerSide ?? 48, xyzConfig.maxCachedTiles ?? 384, 8, xyzConfig.urlResolver), this._webgl, this.gridLabelContainers);
         this._activeBaseLayer = "xyz";
     }
     // Catalogue section
@@ -598,6 +603,33 @@ class AstroSphere {
     }
     deleteFootprintSet(footprintSet) {
         this.activeFootprintSets = this.activeFootprintSets.filter((fst) => fst !== footprintSet);
+    }
+    async showPolylineSet(polylineSet) {
+        if (polylineSet)
+            this.activePolylineSets.push(polylineSet);
+        return polylineSet;
+    }
+    deletePolylineSet(polylineSet) {
+        this.activePolylineSets = this.activePolylineSets.filter((set) => set !== polylineSet);
+        polylineSet.dispose();
+    }
+    async showSensorCone(sensorCone) {
+        if (sensorCone)
+            this.activeSensorCones.push(sensorCone);
+        return sensorCone;
+    }
+    deleteSensorCone(sensorCone) {
+        this.activeSensorCones = this.activeSensorCones.filter((cone) => cone !== sensorCone);
+        sensorCone.dispose();
+    }
+    async showSatelliteObject(satelliteObject) {
+        if (satelliteObject)
+            this.activeSatelliteObjects.push(satelliteObject);
+        return satelliteObject;
+    }
+    deleteSatelliteObject(satelliteObject) {
+        this.activeSatelliteObjects = this.activeSatelliteObjects.filter((object) => object !== satelliteObject);
+        satelliteObject.dispose();
     }
     getHoveredFootprints() {
         let footprintsHovered = [];
@@ -1000,6 +1032,30 @@ class AstroSphere {
                 this._activeMeshHiPS?.getModelMatrix();
             if (activeModelMatrix) {
                 fst.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activePolylineSets.forEach((polylineSet) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                polylineSet.draw(activeModelMatrix, this.mouseHelper, this._camera.getCameraMatrix(), this._perspectiveMatrixManager.pMatrix);
+            }
+        });
+        this.activeSensorCones.forEach((sensorCone) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                sensorCone.draw(this._perspectiveMatrixManager.pMatrix, this._camera.getCameraMatrix(), activeModelMatrix);
+            }
+        });
+        this.activeSatelliteObjects.forEach((satelliteObject) => {
+            const activeModelMatrix = this._activeHiPS?.getModelMatrix() ??
+                this._activeXYZ2?.getModelMatrix() ??
+                this._activeMeshHiPS?.getModelMatrix();
+            if (activeModelMatrix) {
+                satelliteObject.draw(this._perspectiveMatrixManager.pMatrix, this._camera.getCameraMatrix(), activeModelMatrix);
             }
         });
     }

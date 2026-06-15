@@ -22,6 +22,7 @@ import { CoordsType } from '../../utils/CoordsType.js';
 import { FoVUtils } from '../../utils/FoVUtils.js';
 
 import GridTextHelper from './GridTextHelper.js';
+import type { GridLabelContainers } from './GridTextHelper.js';
 import { HealpixGrid } from './HealpixGrid.js';
 import { AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 // import healpixGridSingleton from './HealpixGridSingleton.js';
@@ -43,7 +44,7 @@ export class EquatorialGrid extends AbstractSkyEntity {
 	private _fragmentShader!: WebGLShader;
 
 	private defaultColor = '#41d421'
-	private gridText: GridTextHelper = new GridTextHelper('equatorial')
+	private gridText: GridTextHelper
 
 	private _attribLocations: { position: number; selected: number; pointSize: number; color: number } = {
 		position: 0,
@@ -79,9 +80,10 @@ export class EquatorialGrid extends AbstractSkyEntity {
 	 * @param radius Not used by current implementation (sphere is unit-radius)
 	 * @param fov    Field of view in degrees
 	 */
-	constructor(webgl: WebGL2RenderingContext, healpixGrid: HealpixGrid) {
+	constructor(webgl: WebGL2RenderingContext, healpixGrid: HealpixGrid, gridLabelContainers?: GridLabelContainers) {
 		super(HealpixGrid.RADIUS, HealpixGrid.INITIAL_POSITION, HealpixGrid.INITIAL_PhiRad, HealpixGrid.INITIAL_ThetaRad, 'equatorial-grid', webgl);
 		this._healpixGrid = healpixGrid
+		this.gridText = new GridTextHelper('equatorial', gridLabelContainers)
 	}
 
 	init(fov: number) {

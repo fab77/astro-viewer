@@ -21,6 +21,7 @@ import { colorHex2RGB, degToRad } from '../../utils/Utils.js';
 import { SphereFoV } from '../SphereFoV.js';
 import global from '../../Global.js';
 import GridTextHelper from './GridTextHelper.js';
+import type { GridLabelContainers } from './GridTextHelper.js';
 
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
@@ -48,7 +49,7 @@ export class LatLonGrid extends AbstractSkyEntity {
   private _latArray: Float32Array[] = [];
   private _bufferKey = '';
   private defaultColor = '#41d4d4';
-  private gridText: GridTextHelper = new GridTextHelper('lonlat');
+  private gridText: GridTextHelper;
 
   constructor(
     radius: number,
@@ -57,9 +58,11 @@ export class LatLonGrid extends AbstractSkyEntity {
     yrad: number,
     name: string,
     webgl: WebGL2RenderingContext,
+    gridLabelContainers?: GridLabelContainers,
   ) {
     super(radius, position, xrad, yrad, name, webgl);
 
+    this.gridText = new GridTextHelper('lonlat', gridLabelContainers);
     this._fovObj = new SphereFoV(webgl);
     this.init();
   }

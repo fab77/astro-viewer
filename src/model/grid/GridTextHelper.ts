@@ -14,6 +14,13 @@
 type GridLabelLayer = 'healpix' | 'equatorial' | 'lonlat';
 type GridLabelKind = 'hpx' | 'ra' | 'dec' | 'lon' | 'lat';
 
+export type GridLabelContainers = {
+  coords?: HTMLElement | null;
+  healpix?: HTMLElement | null;
+  resolveCoords?: () => HTMLElement | null | undefined;
+  resolveHealpix?: () => HTMLElement | null | undefined;
+};
+
 type DivSet = {
   div: HTMLDivElement;
   textNode: Text;
@@ -27,20 +34,31 @@ type LayerState = {
 };
 
 class GridTextHelper {
-  private static layers: Map<GridLabelLayer, LayerState> = new Map();
   private layer: GridLabelLayer;
+  private state: LayerState;
+  private containers?: GridLabelContainers;
 
-  constructor(layer: GridLabelLayer = 'equatorial') {
+  constructor(layer: GridLabelLayer = 'equatorial', containers?: GridLabelContainers) {
     this.layer = layer;
-    GridTextHelper.getLayerState(layer);
+    this.containers = containers;
+    this.state = {
+      container: this.resolveContainer(layer),
+      divSets: [],
+      divSetNdx: 0,
+    };
   }
 
   initHtml(): void {
-    GridTextHelper.getLayerState(this.layer);
+    this.refreshContainer(this.layer, this.state);
   }
 
   resetDivSets(layer: GridLabelLayer = this.layer): void {
-    const state = GridTextHelper.getLayerState(layer);
+    const state = layer === this.layer ? this.state : {
+      container: this.resolveContainer(layer),
+      divSets: [],
+      divSetNdx: 0,
+    };
+    this.refreshContainer(layer, state);
     for (; state.divSetNdx < state.divSets.length; ++state.divSetNdx) {
       state.divSets[state.divSetNdx].style.display = 'none';
     }
@@ -66,7 +84,12 @@ class GridTextHelper {
     y: number,
     kind: GridLabelKind,
   ): void {
-    const state = GridTextHelper.getLayerState(layer);
+    const state = layer === this.layer ? this.state : {
+      container: this.resolveContainer(layer),
+      divSets: [],
+      divSetNdx: 0,
+    };
+    this.refreshContainer(layer, state);
     if (!state.container) return;
 
     let divSet = state.divSets[state.divSetNdx++];
@@ -82,9 +105,31 @@ class GridTextHelper {
 
     divSet.div.className = this.classNameForKind(kind);
     divSet.style.display = 'block';
-    divSet.style.left = `${Math.floor(x)}px`;
-    divSet.style.top = `${Math.floor(y)}px`;
+    divSet.style.position = 'absolute';
+    divSet.style.zIndex = '2';
+    divSet.style.pointerEvents = 'none';
+    divSet.style.font = '12px/1.2 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+    divSet.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.7)';
+    divSet.style.color = this.colorForKind(kind);
+    const containerRect = state.container.getBoundingClientRect();
+    divSet.style.left = `${Math.floor(x - containerRect.left)}px`;
+    divSet.style.top = `${Math.floor(y - containerRect.top)}px`;
     divSet.textNode.nodeValue = msg;
+  }
+
+  private colorForKind(kind: GridLabelKind): string {
+    switch (kind) {
+      case 'dec':
+        return '#3fd35f';
+      case 'lat':
+        return '#f6d35b';
+      case 'lon':
+        return '#40c8ff';
+      case 'hpx':
+      case 'ra':
+      default:
+        return '#5b7cff';
+    }
   }
 
   private classNameForKind(kind: GridLabelKind): string {
@@ -102,27 +147,30 @@ class GridTextHelper {
     }
   }
 
-  private static getLayerState(layer: GridLabelLayer): LayerState {
-    const current = GridTextHelper.layers.get(layer);
-    if (current) {
-      if (!current.container) current.container = GridTextHelper.resolveContainer(layer);
-      return current;
-    }
-
-    const state: LayerState = {
-      container: GridTextHelper.resolveContainer(layer),
-      divSets: [],
-      divSetNdx: 0,
-    };
-    GridTextHelper.layers.set(layer, state);
-    return state;
-  }
-
-  private static resolveContainer(layer: GridLabelLayer): HTMLElement | null {
+  private resolveContainer(layer: GridLabelLayer): HTMLElement | null {
     if (layer === 'healpix') {
+      const resolved = this.containers?.resolveHealpix?.();
+      if (resolved) return resolved;
+      if (this.containers?.healpix) return this.containers.healpix;
       return document.querySelector<HTMLElement>('#gridhpx');
     }
+    const resolved = this.containers?.resolveCoords?.();
+    if (resolved) return resolved;
+    if (this.containers?.coords) return this.containers.coords;
     return document.querySelector<HTMLElement>('#gridcoords');
+  }
+
+  private refreshContainer(layer: GridLabelLayer, state: LayerState): void {
+    const next = this.resolveContainer(layer);
+    if (next === state.container) return;
+
+    for (const divSet of state.divSets) {
+      divSet.div.remove();
+    }
+
+    state.container = next;
+    state.divSets = [];
+    state.divSetNdx = 0;
   }
 }
 

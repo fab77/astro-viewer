@@ -43,6 +43,7 @@ import { Source } from "./model/Source.js";
 
 import { EquatorialGrid } from "./model/grid/EquatorialGrid.js";
 import { HealpixGrid } from "./model/grid/HealpixGrid.js";
+import type { GridLabelContainers } from "./model/grid/GridTextHelper.js";
 import { SkyEntityDrawInput } from "./model/AbstractSkyEntity.js";
 import { CoordsType } from "./utils/CoordsType.js";
 import ColorMaps, { ColorMapName, ColorMap } from "./model/ColorMaps.js";
@@ -59,6 +60,9 @@ import { XYZMap } from "./model/earth/XYZMap.js";
 import { MeshHiPS } from "./model/meships/MeshHiPS.js";
 import { MeshHiPSDescriptor } from "./model/meships/MeshHiPSDescriptor.js";
 import type { MeshHiPSDebugStats } from "./model/meships/MeshHiPSTypes.js";
+import { TerraPolylineSetGL } from "./model/terra/TerraPolylineSetGL.js";
+import { SatelliteObjectGL } from "./model/terra/SatelliteObjectGL.js";
+import { SensorConeGL } from "./model/terra/SensorConeGL.js";
 import { mat4, vec3, vec4 } from "gl-matrix";
 
 export type PointCoordinates = {
@@ -82,6 +86,10 @@ export type CameraChangedDetail = {
   centralPoint: Point;
   mouseHoverPoint: PointCoordinates | undefined;
   getFoVPolygon: Point[];
+};
+
+export type AstroSphereOptions = {
+  gridLabelContainers?: GridLabelContainers;
 };
 
 /**
@@ -124,6 +132,9 @@ class AstroSphere {
 
   private activeCatalogues: CatalogueGL[] = [];
   private activeFootprintSets: FootprintSetGL[] = [];
+  private activePolylineSets: TerraPolylineSetGL[] = [];
+  private activeSensorCones: SensorConeGL[] = [];
+  private activeSatelliteObjects: SatelliteObjectGL[] = [];
   private _webgl: WebGL2RenderingContext;
   private _selectedColorMap: any;
   private _cameraStatusChanged: boolean = false;
@@ -135,13 +146,15 @@ class AstroSphere {
   private lockedEastWestRaDeg: number | null = null;
   private lockedNorthSouthDecDeg: number | null = null;
   private keepCameraNorthUp = true;
+  private gridLabelContainers?: GridLabelContainers;
 
-  constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext) {
+  constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext, options: AstroSphereOptions = {}) {
     console.log("[AstroSphere] new instance for canvas", canvas.id);
     // Keep global GL context (as in original JS)
     this._webgl = webgl;
     this.mouseHelper = new MouseHelper();
     this.canvas = canvas;
+    this.gridLabelContainers = options.gridLabelContainers;
 
     const nativeColorMap: ColorMapName = "native";
     this._selectedColorMap = ColorMaps[nativeColorMap];
@@ -150,7 +163,7 @@ class AstroSphere {
 
     this.initCamera();
 
-    this._healpixGrid = new HealpixGrid(this._webgl);
+    this._healpixGrid = new HealpixGrid(this._webgl, this.gridLabelContainers);
     this._perspectiveMatrixManager = new PerspectiveMatrixManager(
       canvas,
       this._camera,
@@ -166,7 +179,7 @@ class AstroSphere {
       bootSetup.insideSphere,
     );
 
-    this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid);
+    this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid, this.gridLabelContainers);
     this._equatorialGrid.init(this._healpixGrid.getMinFoV());
 
     this.updateCentralPoint();
@@ -904,6 +917,7 @@ class AstroSphere {
       0,
       config,
       this._webgl,
+      this.gridLabelContainers,
     );
     this._activeBaseLayer = "xyz";
   }
@@ -940,6 +954,7 @@ class AstroSphere {
         xyzConfig.urlResolver,
       ),
       this._webgl,
+      this.gridLabelContainers,
     );
     this._activeBaseLayer = "xyz";
   }
@@ -969,6 +984,42 @@ class AstroSphere {
     this.activeFootprintSets = this.activeFootprintSets.filter(
       (fst) => fst !== footprintSet,
     );
+  }
+
+  async showPolylineSet(polylineSet: TerraPolylineSetGL) {
+    if (polylineSet) this.activePolylineSets.push(polylineSet);
+    return polylineSet;
+  }
+
+  deletePolylineSet(polylineSet: TerraPolylineSetGL) {
+    this.activePolylineSets = this.activePolylineSets.filter(
+      (set) => set !== polylineSet,
+    );
+    polylineSet.dispose();
+  }
+
+  async showSensorCone(sensorCone: SensorConeGL) {
+    if (sensorCone) this.activeSensorCones.push(sensorCone);
+    return sensorCone;
+  }
+
+  deleteSensorCone(sensorCone: SensorConeGL) {
+    this.activeSensorCones = this.activeSensorCones.filter(
+      (cone) => cone !== sensorCone,
+    );
+    sensorCone.dispose();
+  }
+
+  async showSatelliteObject(satelliteObject: SatelliteObjectGL) {
+    if (satelliteObject) this.activeSatelliteObjects.push(satelliteObject);
+    return satelliteObject;
+  }
+
+  deleteSatelliteObject(satelliteObject: SatelliteObjectGL) {
+    this.activeSatelliteObjects = this.activeSatelliteObjects.filter(
+      (object) => object !== satelliteObject,
+    );
+    satelliteObject.dispose();
   }
 
   getHoveredFootprints(): HoveredFootprintDetail[] {
@@ -1539,6 +1590,49 @@ class AstroSphere {
           this.mouseHelper,
           this._camera.getCameraMatrix() as Float32Array,
           this._perspectiveMatrixManager.pMatrix as Float32Array,
+        );
+      }
+    });
+
+    this.activePolylineSets.forEach((polylineSet) => {
+      const activeModelMatrix =
+        this._activeHiPS?.getModelMatrix() ??
+        this._activeXYZ2?.getModelMatrix() ??
+        this._activeMeshHiPS?.getModelMatrix();
+      if (activeModelMatrix) {
+        polylineSet.draw(
+          activeModelMatrix as Float32Array,
+          this.mouseHelper,
+          this._camera.getCameraMatrix() as Float32Array,
+          this._perspectiveMatrixManager.pMatrix as Float32Array,
+        );
+      }
+    });
+
+    this.activeSensorCones.forEach((sensorCone) => {
+      const activeModelMatrix =
+        this._activeHiPS?.getModelMatrix() ??
+        this._activeXYZ2?.getModelMatrix() ??
+        this._activeMeshHiPS?.getModelMatrix();
+      if (activeModelMatrix) {
+        sensorCone.draw(
+          this._perspectiveMatrixManager.pMatrix as Float32Array,
+          this._camera.getCameraMatrix() as Float32Array,
+          activeModelMatrix as Float32Array,
+        );
+      }
+    });
+
+    this.activeSatelliteObjects.forEach((satelliteObject) => {
+      const activeModelMatrix =
+        this._activeHiPS?.getModelMatrix() ??
+        this._activeXYZ2?.getModelMatrix() ??
+        this._activeMeshHiPS?.getModelMatrix();
+      if (activeModelMatrix) {
+        satelliteObject.draw(
+          this._perspectiveMatrixManager.pMatrix as Float32Array,
+          this._camera.getCameraMatrix() as Float32Array,
+          activeModelMatrix as Float32Array,
         );
       }
     });

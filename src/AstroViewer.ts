@@ -32,8 +32,12 @@ import { XYZMapDescriptor } from './model/earth/XYZMapDescriptor.js'
 import { XYZMap } from './model/earth/XYZMap.js'
 import { TerraPointSetGL } from './model/terra/TerraPointSetGL.js'
 import { TerraFootprintSetGL } from './model/terra/TerraFootprintSetGL.js'
+import { TerraPolylineSetGL } from './model/terra/TerraPolylineSetGL.js'
+import { SatelliteObjectGL, type SatelliteObjectOptions } from './model/terra/SatelliteObjectGL.js'
+import { SensorConeGL, type SensorConeOptions } from './model/terra/SensorConeGL.js'
 import { MeshHiPSDescriptor } from './model/meships/MeshHiPSDescriptor.js'
 import type { MeshHiPSConfig, MeshHiPSDebugStats } from './model/meships/MeshHiPSTypes.js'
+import type { GridLabelContainers } from './model/grid/GridTextHelper.js'
 // import healpixGridSingleton from './model/grid/HealpixGridSingleton.js'
 // import equatorialGridSingleton from './model/grid/EquatorialGrid.js'
 type GL2WithViewport = WebGL2RenderingContext 
@@ -41,6 +45,10 @@ type GL2WithViewport = WebGL2RenderingContext
 //   viewportWidth: number
 //   viewportHeight: number
 // }
+
+export type AstroViewerOptions = {
+  gridLabelContainers?: GridLabelContainers;
+};
 
 export class AstroViewer {
   private astroSphere!: AstroSphere
@@ -51,6 +59,7 @@ export class AstroViewer {
   private viewfinderEl: HTMLDivElement | null = null
   private viewfinderVisible = bootSetup.showViewfinder
   private viewfinderColor = 'rgba(75,148,226,0.68)'
+  private options: AstroViewerOptions = {}
 
 
 
@@ -186,6 +195,71 @@ createFootprintSet(footprintSetName: string,
 
   deleteTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
     this.astroSphere.deleteFootprintSet(footprintSet)
+  }
+
+  createTerraPolylineSet(
+    polylineSetName: string,
+    polylineSetDescription: string,
+    providerUrl: string,
+    metadataManager: MetadataManager,
+  ): TerraPolylineSetGL {
+    return new TerraPolylineSetGL(
+      polylineSetName,
+      polylineSetDescription,
+      providerUrl,
+      metadataManager,
+      this.webgl,
+      this.astroSphere.healpixGrid.visibleTilesManager,
+    )
+  }
+
+  showTerraPolylineSet(polylineSet: TerraPolylineSetGL) {
+    this.astroSphere.showPolylineSet(polylineSet)
+  }
+
+  hideTerraPolylineSet(polylineSet: TerraPolylineSetGL, isVisible: boolean) {
+    polylineSet.setIsVisible(isVisible)
+  }
+
+  deleteTerraPolylineSet(polylineSet: TerraPolylineSetGL) {
+    this.astroSphere.deletePolylineSet(polylineSet)
+  }
+
+  changeTerraPolylineSetColor(polylineSet: TerraPolylineSetGL, hexColor: string): TerraPolylineSetGL {
+    polylineSet.changeColor(hexColor)
+    return polylineSet
+  }
+
+  createSensorCone(options: SensorConeOptions): SensorConeGL {
+    return new SensorConeGL(options, this.webgl)
+  }
+
+  showSensorCone(sensorCone: SensorConeGL) {
+    this.astroSphere.showSensorCone(sensorCone)
+  }
+
+  hideSensorCone(sensorCone: SensorConeGL, isVisible: boolean) {
+    sensorCone.setIsVisible(isVisible)
+  }
+
+  deleteSensorCone(sensorCone: SensorConeGL) {
+    this.astroSphere.deleteSensorCone(sensorCone)
+  }
+
+  createSatelliteObject(options: SatelliteObjectOptions): SatelliteObjectGL {
+    return new SatelliteObjectGL(options, this.webgl)
+  }
+
+  showSatelliteObject(satelliteObject: SatelliteObjectGL) {
+    this.astroSphere.showSatelliteObject(satelliteObject)
+  }
+
+  hideSatelliteObject(satelliteObject: SatelliteObjectGL, isVisible: boolean) {
+    satelliteObject.setIsVisible(isVisible)
+  }
+
+  deleteSatelliteObject(satelliteObject: SatelliteObjectGL) {
+    this.astroSphere.deleteSatelliteObject(satelliteObject)
   }
 
   changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string) {
@@ -468,7 +542,8 @@ createFootprintSet(footprintSetName: string,
   }
 
   // Internal
-  constructor(canvasEl: HTMLCanvasElement) {
+  constructor(canvasEl: HTMLCanvasElement, options: AstroViewerOptions = {}) {
+    this.options = options
     this.init(canvasEl)
     this.webglContextList = new Map<string, GL2WithViewport>()
   }
@@ -498,7 +573,9 @@ createFootprintSet(footprintSetName: string,
 
     this.initListeners()
       // ; (global as any).gl = this.webgl
-    this.astroSphere = new AstroSphere(this.canvas, this.webgl)
+    this.astroSphere = new AstroSphere(this.canvas, this.webgl, {
+      gridLabelContainers: this.options.gridLabelContainers,
+    })
   }
 
   private initViewfinder(): void {
