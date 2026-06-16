@@ -3,4 +3,3 @@ node_modules/
 */**/.DS_Store
 docs/release-readiness-report.md
 .npmrc
-**/.DS_Store
