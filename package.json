@@ -1,10 +1,11 @@
 {
   "name": "astro-viewer",
-  "description": "Standards-driven 3D scientific visualization engine for astronomical and Earth-observation data.",
+  "description": "3D scientific visualization engine for astronomical and Earth observation data, supporting HiPS, FITS, TAP, ADQL, footprints and WebGL-based spatial exploration.",
   "version": "3.6.0-snapshot",
   "keywords": [
     "astronomy",
     "astrophysics",
+    "earth-observation",
     "scientific-visualization",
     "3d",
     "webgl",
@@ -14,13 +15,13 @@
     "wcs",
     "tap",
     "adql",
-    "ivoa",
-    "virtual-observatory",
-    "earth-observation",
-    "satellite",
     "footprints",
     "geospatial"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "author": "Fabrizio Giordano (fab77)",
   "license": "SEE LICENSE IN LICENSE.md",
   "homepage": "https://github.com/fab77/astro-viewer#readme",
@@ -31,10 +32,6 @@
   "bugs": {
     "url": "https://github.com/fab77/astro-viewer/issues",
     "email": "fabriziogiordano77@gmail.com"
-  },
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org/"
   },
   "type": "module",
   "exports": {
@@ -57,26 +54,28 @@
     "LICENSE.md",
     "LICENSE-AGPL.md",
     "LICENSE-COMMERCIAL.md",
-    "DEPENDENCY-LICENSING.md"
+    "DEPENDENCY-LICENSING.md",
+    "package.json"
   ],
   "sideEffects": false,
   "scripts": {
     "clean": "shx rm -rf dist lib-esm",
-    "build": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=production",
-    "prod": "npm run build",
-    "dev": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=development --watch --progress",
+    "dev": "npm run clean && tsc && webpack --mode=development --watch --progress",
     "dev:lib": "tsc -w -p tsconfig.build.json",
+    "prod": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=production && npm run web",
+    "build": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=production",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
     "web": "shx rm -rf public && shx mkdir -p public/javascripts public/css public/test-data && cp dist/* public/javascripts/ && cp -R src/html/javascripts/* public/javascripts/ && cp -R src/html/css/* public/css/ && cp -R src/html/test-data/* public/test-data/ && cp src/html/*.html public/",
-    "start-server": "npm run build && npm run web && node scripts/serve_test_ui.mjs"
+    "start-server": "npm run build && npm run web && node scripts/serve_test_ui.mjs",
+    "all": "npm run start-server",
+    "prepublishOnly": "npm run build"
   },
   "engines": {
     "node": ">=22.0.0"
   },
   "devDependencies": {
     "@types/jest": "^29.0.0",
-    "@types/node": "^22.0.0",
+    "@types/node": "^18.19.76",
     "canvas": "3.1.0",
     "jest": "^29.0.0",
     "shx": "^0.3.4",
