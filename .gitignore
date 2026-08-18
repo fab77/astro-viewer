@@ -1,5 +1,13 @@
 node_modules/
+
+dist/
+lib-esm/
+public/
+
+*.tgz
+
 .DS_Store
 */**/.DS_Store
+
 docs/release-readiness-report.md
 .npmrc

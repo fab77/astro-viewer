@@ -2,5 +2,10 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "isolatedModules": true
-  }
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.test.ts",
+    "tests/**/*.ts"
+  ]
 }
