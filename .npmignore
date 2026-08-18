@@ -1,9 +1,52 @@
-.npmrc
-*.map
-**/*.map
+# Source code
 src/
+
+# Development and test files
 test/
 tests/
-docs/
-examples/
+__tests__/
+scripts/
+
+# Development web application
+public/
+
+# Git / GitHub
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+
+# TypeScript / build configuration
+tsconfig.json
+tsconfig.build.json
+tsconfig.test.json
+webpack.config.js
+
+# CI/CD and internal documentation
+ci-cd.md
+
+# Development environment
+.env
+.env.*
+*.log
+
+# Coverage
 coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.swp
+
+# Package manager / local dependencies
+node_modules/
+
+# Lock file is not needed in the published library package
+package-lock.json

@@ -1,26 +1,43 @@
 # 🌌 AstroViewer
 
-[![License: Dual](https://img.shields.io/badge/license-dual-blue.svg)](#licensing)
+[![License: AGPL-3.0 or Commercial](https://img.shields.io/badge/license-AGPL--3.0%20or%20Commercial-blue.svg)](#licensing)
 [![TypeScript](https://img.shields.io/badge/language-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![WebGL](https://img.shields.io/badge/3D-WebGL-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API)
 
-**AstroViewer** is a lightweight 3D engine for **HiPS (Hierarchical Progressive Surveys)** visualisation and exploration, written in **TypeScript** and **WebGL**.  
-It powers the next generation of **Astrobrowser** and provides a simple API for embedding 3D HiPS viewers, catalogue overlays, footprints, and camera/navigation controls in any web project.
+**AstroViewer** is a standards-driven 3D scientific visualization engine for astronomical and Earth-observation data, written in **TypeScript** and **WebGL**.
+
+It provides reusable visualization and interaction components for scientific web applications, including support for astronomical imagery and catalogues, spatial footprints, coordinate-aware navigation, Earth imagery, satellite observation geometry, and standards-based scientific data access.
+
+Current capabilities include support for technologies and standards such as:
+
+- **HiPS** and **HEALPix** for hierarchical astronomical imagery and spatial indexing
+- **FITS** and astronomical coordinate transformations
+- **TAP**-based catalogue access and astronomical metadata
+- catalogue overlays and spatial footprints
+- **STC-S** geometry parsing
+- Earth visualization using tiled **XYZ** and **WMTS** imagery
+- satellite trajectories, observation tracks, footprints, and sensor geometry
+- WebGL-based 3D rendering, picking, camera navigation, and scientific overlays
+
+AstroViewer is the visualization engine used by **Astrobrowser**, but is designed as an independent npm library that can be embedded in other scientific web applications.
 
 ## Licensing
 
-AstroViewer is distributed under a dual-license model:
+AstroViewer is dual-licensed under:
 
-- a commercial license for proprietary or revenue-generating use
-- a separate non-commercial, source-available license for personal, academic,
-  research, evaluation, or other non-commercial use
+- the **GNU Affero General Public License version 3 (AGPL-3.0)**; or
+- a separate **commercial license**.
 
-The non-commercial option is not an OSI open source license. See
-`LICENSE.md`, `LICENSE-COMMERCIAL.md`, and `LICENSE-NONCOMMERCIAL.md` for the
-repository-level licensing structure.
+The AGPL-3.0 option is an open-source license and may be used for both commercial and non-commercial purposes, provided that its requirements are satisfied.
 
-The commercial posture of `astro-viewer` also depends on the licensing alignment
-of its first-party dependency chain. See `DEPENDENCY-LICENSING.md`.
+The commercial license is an alternative for organizations that want to integrate AstroViewer into proprietary products, services, or other software under terms that do not impose the AGPL-3.0 copyleft requirements.
+
+See:
+
+- `LICENSE.md` for an overview of the dual-license model
+- `LICENSE-AGPL.md` for the full AGPL-3.0 license text
+- `LICENSE-COMMERCIAL.md` for information about commercial licensing
+- `DEPENDENCY-LICENSING.md` for the licensing status of AstroViewer dependencies
 
 ---
 
@@ -319,10 +336,16 @@ AC.toggleInsideSphere();
 
 ## 📜 License
 
-This repository uses a dual-license model.  
-Commercial use requires a separate written agreement.  
-Non-commercial use is available under the source-available terms in `LICENSE-NONCOMMERCIAL.md`.  
-See also `LICENSE.md` and `LICENSE-COMMERCIAL.md`.
+AstroViewer is dual-licensed under:
+
+- **GNU Affero General Public License version 3 (AGPL-3.0)**
+- **Commercial License**
+
+You may use AstroViewer under the AGPL-3.0, including in commercial contexts, provided that you comply with its terms.
+
+If the AGPL-3.0 requirements are not suitable for your project, a separate commercial license is available for proprietary integration and other use cases requiring alternative licensing terms.
+
+See `LICENSE.md`, `LICENSE-AGPL.md`, and `LICENSE-COMMERCIAL.md` for details.
 
 ---
 

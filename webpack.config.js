@@ -1,13 +1,14 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import webpack from 'webpack'
-import { createRequire } from "node:module"
-const require = createRequire(import.meta.url)
+import webpack from 'webpack';
+import TerserPlugin from 'terser-webpack-plugin';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 const pkg = require('./package.json');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
 
 const ENTRY = path.resolve(__dirname, 'src/index.ts');
 const OUT = path.resolve(__dirname, 'dist');
@@ -16,63 +17,125 @@ export default (_, argv = {}) => {
   const isProduction = argv.mode === 'production';
 
   const common = {
+    entry: ENTRY,
+
     resolve: {
       extensions: ['.ts', '.tsx', '.js'],
       extensionAlias: {
-        '.js': ['.ts', '.js'],   // import './x.js' -> prefer './x.ts' at build time
+        '.js': ['.ts', '.js'],
         '.mjs': ['.mts', '.mjs']
-      }
+      },
+      conditionNames: ['import', 'module', 'browser', 'default']
     },
+
     module: {
-      rules: [{
-        test: /\.(ts|tsx)$/i,
-        use: {
-          loader: 'ts-loader',
-          options: {
-            transpileOnly: true,
-            configFile: isProduction ? 'tsconfig.build.json' : 'tsconfig.json'
-          }
-        },
-        exclude: /node_modules/
-      }]
+      rules: [
+        {
+          test: /\.(ts|tsx)$/i,
+          use: {
+            loader: 'ts-loader',
+            options: {
+              transpileOnly: true,
+              configFile: isProduction
+                ? 'tsconfig.build.json'
+                : 'tsconfig.json'
+            }
+          },
+          exclude: /node_modules/
+        }
+      ]
     },
-    optimization: { splitChunks: false, runtimeChunk: false },
-    devtool: isProduction ? false : 'source-map',
+
     plugins: [
-      new webpack.NormalModuleReplacementPlugin(/^node:/, r => { r.request = r.request.replace(/^node:/, ''); }),
-      new webpack.DefinePlugin({ __APP_VERSION__: JSON.stringify(pkg.version) }),
+      new webpack.NormalModuleReplacementPlugin(
+        /^node:/,
+        resource => {
+          resource.request = resource.request.replace(/^node:/, '');
+        }
+      ),
+
+      new webpack.DefinePlugin({
+        __APP_VERSION__: JSON.stringify(pkg.version)
+      })
     ],
+
+    devtool: 'source-map'
   };
 
-  const umdConfig = {
+  const browserConfig = {
     ...common,
+
+    name: 'browser',
+
     target: 'web',
-    entry: {
-      'astroviewer': ENTRY,
-      'astroviewer.min': ENTRY,
-    },
+
     output: {
       path: OUT,
-      filename: '[name].js',
+      filename: 'astroviewer.js',
       library: 'astroviewer',
       libraryTarget: 'umd',
       umdNamedDefine: true,
-      globalObject: 'self',
+      globalObject: 'self'
     },
+
+    optimization: {
+      splitChunks: false,
+      runtimeChunk: false,
+      minimize: false
+    }
+  };
+
+  const browserMinConfig = {
+    ...common,
+
+    name: 'browser-min',
+
+    target: 'web',
+
+    output: {
+      path: OUT,
+      filename: 'astroviewer.min.js',
+      library: 'astroviewer',
+      libraryTarget: 'umd',
+      umdNamedDefine: true,
+      globalObject: 'self'
+    },
+
+    optimization: {
+      splitChunks: false,
+      runtimeChunk: false,
+      minimize: true,
+      minimizer: [
+        new TerserPlugin({
+          extractComments: false
+        })
+      ]
+    }
   };
 
   const cjsConfig = {
     ...common,
+
+    name: 'cjs',
+
     target: 'node',
-    entry: ENTRY,
+
     output: {
       path: OUT,
       filename: 'astroviewer.cjs',
-      libraryTarget: 'commonjs2',
+      libraryTarget: 'commonjs2'
     },
-    optimization: { splitChunks: false, runtimeChunk: false, minimize: false }
+
+    optimization: {
+      splitChunks: false,
+      runtimeChunk: false,
+      minimize: false
+    }
   };
 
-  return [umdConfig, cjsConfig];
+  return [
+    browserConfig,
+    browserMinConfig,
+    cjsConfig
+  ];
 };
-

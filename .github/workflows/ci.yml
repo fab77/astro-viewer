@@ -2,20 +2,32 @@ name: AstroViewer CI
 
 on:
   push:
+    branches:
+      - main
+      - dev
+      - "feature/**"
+      - "release/**"
   pull_request:
+    branches:
+      - main
+      - dev
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  build-and-test:
+    name: Build and test
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: "22"
           cache: npm
 
       - name: Install dependencies
@@ -24,5 +36,8 @@ jobs:
       - name: Run tests
         run: npm test
 
-      - name: Build library
+      - name: Build package
         run: npm run build
+
+      - name: Verify package contents
+        run: npm pack --dry-run

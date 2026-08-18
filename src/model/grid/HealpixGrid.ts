@@ -1,14 +1,12 @@
 /*
  * AstroViewer
  * Copyright (C) Fabrizio Giordano
- * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AstroViewer-Commercial
  *
- * This file is part of AstroViewer.
- * AstroViewer is distributed under a dual-license model.
- * Commercial use requires a separate commercial license.
- * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ * AstroViewer is dual-licensed under the GNU Affero General Public License
+ * version 3 and a separate commercial license.
  *
- * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ * See LICENSE.md, LICENSE-AGPL.md, and LICENSE-COMMERCIAL.md for details.
  */
 
 'use strict';
@@ -17,7 +15,8 @@ import {AbstractSkyEntity, SkyEntityDrawInput } from '../AbstractSkyEntity.js';
 import global from '../../Global.js';
 
 import { mat4, vec4, ReadonlyMat4 } from 'gl-matrix';
-import { Healpix } from 'healpixjs';
+
+import { Healpix } from 'astrospatial-core/healpix';
 
 import { fovHelper } from '../hips/FoVHelper.js';
 import {FoVUtils} from '../../utils/FoVUtils.js';

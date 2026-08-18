@@ -1,1 +1,0 @@
-This is a development web UI used to test functionalities. It is not intended to be used in production.

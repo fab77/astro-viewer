@@ -1,5 +1,53 @@
+# Dependencies
 node_modules/
-.DS_Store
-*/**/.DS_Store
-docs/release-readiness-report.md
+
+# Generated library builds
+dist/
+lib-esm/
+
 .npmrc
+
+# Generated development/demo web application
+public/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# IDE / editors
+.vscode/
+.idea/
+
+# TypeScript incremental build information
+*.tsbuildinfo
+
+# Jest
+.jest-cache/
+
+# Local npm artifacts
+*.tgz
