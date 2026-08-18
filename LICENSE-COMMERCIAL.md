@@ -1,16 +1,37 @@
 AstroViewer Commercial Licensing
 
-Commercial use of AstroViewer requires a separate written agreement with the
-copyright holder.
+Copyright (C) Fabrizio Giordano
 
-Examples of commercial use include:
+AstroViewer is available under a dual-license model:
+
+- GNU Affero General Public License version 3 (AGPL-3.0)
+- a separate commercial license
+
+The commercial license provides an alternative for organizations that want to
+use AstroViewer under terms different from those of the AGPL-3.0.
+
+Typical use cases may include:
 
 - integration into proprietary software
-- internal business use
-- paid services or hosted offerings
-- consulting deliverables transferred to a client
+- integration into commercial products or platforms where AGPL-3.0 obligations
+  are not suitable
+- proprietary modifications or extensions
 - OEM or embedded redistribution
-- any use connected to direct or indirect revenue generation
+- commercial hosted services requiring alternative licensing terms
+- redistribution under terms incompatible with the AGPL-3.0
 
-Unless and until a commercial agreement is executed, no commercial rights are
-granted by this repository.
+A commercial license is not required merely because AstroViewer is used in a
+commercial context.
+
+AstroViewer may also be used commercially under the AGPL-3.0, provided that
+the applicable requirements of that license are satisfied.
+
+Commercial rights outside the AGPL-3.0 are granted only through a separate
+written commercial license agreement with the copyright holder.
+
+The specific commercial terms, including permitted use, redistribution,
+support, warranties, liability, duration, and fees where applicable, are
+defined by that agreement.
+
+For commercial licensing inquiries, contact the copyright holder through the
+contact information provided by the AstroViewer project.

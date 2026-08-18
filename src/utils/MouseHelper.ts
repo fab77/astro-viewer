@@ -1,21 +1,19 @@
 /*
  * AstroViewer
  * Copyright (C) Fabrizio Giordano
- * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
+ * SPDX-License-Identifier: AGPL-3.0-only OR LicenseRef-AstroViewer-Commercial
  *
- * This file is part of AstroViewer.
- * AstroViewer is distributed under a dual-license model.
- * Commercial use requires a separate commercial license.
- * Non-commercial use is governed by LICENSE-NONCOMMERCIAL.md.
+ * AstroViewer is dual-licensed under the GNU Affero General Public License
+ * version 3 and a separate commercial license.
  *
- * See LICENSE.md, LICENSE-COMMERCIAL.md, and LICENSE-NONCOMMERCIAL.md for details.
+ * See LICENSE.md, LICENSE-AGPL.md, and LICENSE-COMMERCIAL.md for details.
  */
 
 /**
  * @author Fabrizio Giordano (Fab)
  */
 import { vec3, ReadonlyVec3 } from "gl-matrix";
-import { Vec3, Pointing, Healpix } from "healpixjs";
+import { Vec3, Pointing, Healpix } from "astrospatial-core/healpix";
 import global from "../Global.js";
 import {
   cartesianToSpherical,
