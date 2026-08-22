@@ -9,25 +9,21 @@
  * See LICENSE.md, LICENSE-AGPL.md, and LICENSE-COMMERCIAL.md for details.
  */
 
-import global from '../../Global.js';
-import { Pointing, Vec3, Healpix } from 'astrospatial-core/healpix';
-import RayPickingUtils from '../../utils/RayPickingUtils.js';
-// import { newTileBuffer } from './TileBuffer.js';
-import { TileBuffer } from './TileBuffer.js';
-import { vec4, mat4, ReadonlyMat4 } from 'gl-matrix';
-// import healpixGridSingleton from '../grid/HealpixGridSingleton.js';
-// import {HealpixGridSingleton} from '../grid/HealpixGridSingleton.js';
-import { bootSetup } from '../../Config.js';
-import { HealpixGrid } from '../grid/HealpixGrid.js';
-import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js';
-import Camera from '../../Camera.js';
+import global from "../../Global.js";
+import { Pointing, Vec3, Healpix } from "astrospatial-core/healpix";
+import RayPickingUtils from "../../utils/RayPickingUtils.js";
+import { TileBuffer } from "./TileBuffer.js";
+import { vec4, mat4, ReadonlyMat4 } from "gl-matrix";
+import { bootSetup } from "../../Config.js";
+import { HealpixGrid } from "../grid/HealpixGrid.js";
+import { HiPSShaderProgram } from "../../shader/HiPSShaderProgram.js";
+import Camera from "../../Camera.js";
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
 interface VisibleTiles {
   pixels: number[];
   order: number;
 }
-
 
 export class VisibleTilesManager {
   private _visibleTilesByOrder: VisibleTiles;
@@ -39,15 +35,18 @@ export class VisibleTilesManager {
   private _galAncestorsMap: Map<number, number[]>;
   private _galacticMatrixInverted: mat4;
   private _galacticMatrix: mat4;
-  private insideSphere: boolean = bootSetup.insideSphere
-  private _tileBuffer: TileBuffer
+  private insideSphere: boolean = bootSetup.insideSphere;
+  private _tileBuffer: TileBuffer;
   private _healpixGrid: HealpixGrid;
   private _webgl: WebGL2RenderingContext;
 
-  constructor(webgl: WebGL2RenderingContext, hipsShaderProgram: HiPSShaderProgram, healpixGrid: HealpixGrid) {
-    
-    this._webgl = webgl
-    this._healpixGrid = healpixGrid
+  constructor(
+    webgl: WebGL2RenderingContext,
+    hipsShaderProgram: HiPSShaderProgram,
+    healpixGrid: HealpixGrid,
+  ) {
+    this._webgl = webgl;
+    this._healpixGrid = healpixGrid;
     this._visibleTilesByOrder = { pixels: [], order: 0 };
     this._ancestorsMap = new Map();
     this.initialised = false;
@@ -63,41 +62,52 @@ export class VisibleTilesManager {
     // This matrix is (galactic -> equatorial); we store its inverse too.
     mat4.set(
       this._galacticMatrixInverted,
-      -0.054876, -0.873437, -0.483835, 0, 
-      0.494109, -0.44483, 0.746982, -0, 
-      -0.867666, -0.198076, 0.455984, 0, 
-      0, 0, 0, 1
-    )
+      -0.054876,
+      -0.873437,
+      -0.483835,
+      0,
+      0.494109,
+      -0.44483,
+      0.746982,
+      -0,
+      -0.867666,
+      -0.198076,
+      0.455984,
+      0,
+      0,
+      0,
+      0,
+      1,
+    );
     mat4.invert(this._galacticMatrix, this._galacticMatrixInverted);
-    this._tileBuffer = new TileBuffer(1, webgl, hipsShaderProgram, this)
+    this._tileBuffer = new TileBuffer(1, webgl, hipsShaderProgram, this);
   }
 
   get healpixGrid() {
-    return this._healpixGrid
+    return this._healpixGrid;
   }
 
-  get tileBuffer() { 
-    return this._tileBuffer
+  get tileBuffer() {
+    return this._tileBuffer;
   }
 
   init(insideSphere: boolean): void {
     this.initialised = true;
-    this.insideSphere = insideSphere
-    // this.computeVisiblePixels();
-    // setInterval(() => this.computeVisiblePixels(), 500);
+    this.insideSphere = insideSphere;
   }
 
   getVisibleOrder(): number {
-    // return healpixGridSingleton.visibleorder;
     return this._healpixGrid.visibleorder;
   }
 
-
-  // computeVisiblePixels(): void {
-  computeVisiblePixels(order: number, webgl: WebGL2RenderingContext, camera: Camera, pMatrix: ReadonlyMat4): void {
+  computeVisiblePixels(
+    order: number,
+    webgl: WebGL2RenderingContext,
+    camera: Camera,
+    pMatrix: ReadonlyMat4,
+  ): void {
     if (!this.initialised) return;
 
-    // let order = healpixGridSingleton.visibleorder;
     if (global.insideSphere && order < 3) {
       order = 3;
     }
@@ -119,8 +129,6 @@ export class VisibleTilesManager {
       }
     } else {
       const geomhealpix: Healpix = global.getHealpix(order);
-      // const maxX = (global.gl as GL).canvas.width;
-      // const maxY = (global.gl as GL).canvas.height;
       const maxX = (webgl as GL).canvas.width;
       const maxY = (webgl as GL).canvas.height;
 
@@ -129,16 +137,26 @@ export class VisibleTilesManager {
         for (let j = 0; j <= maxY; j += maxY / 30) {
           const hit = RayPickingUtils.getIntersectionPointWithSingleModel(
             i,
-            j, this._healpixGrid, this._webgl, camera, pMatrix
+            j,
+            this._healpixGrid,
+            this._webgl,
+            camera,
+            pMatrix,
           );
 
           if (hit.length > 0) {
             // Equatorial -> Galactic (use _galacticMatrix)
             const galVec = vec4.create();
-            vec4.transformMat4(galVec, [hit[0], hit[1], hit[2], 1], this._galacticMatrix);
+            vec4.transformMat4(
+              galVec,
+              [hit[0], hit[1], hit[2], 1],
+              this._galacticMatrix,
+            );
 
             // Index in galactic HEALPix
-            const galPoint = new Pointing(new Vec3(galVec[0], galVec[1], galVec[2]));
+            const galPoint = new Pointing(
+              new Vec3(galVec[0], galVec[1], galVec[2]),
+            );
             const galTileNo = geomhealpix.ang2pix(galPoint);
 
             // Index in equatorial HEALPix
@@ -148,14 +166,12 @@ export class VisibleTilesManager {
             if (!pixels.includes(currPixNo)) {
               pixels.push(currPixNo);
               this._ancestorsMap.get(order)!.push(currPixNo);
-              // newTileBuffer.addTile(order, currPixNo);
               this._tileBuffer.addTile(order, currPixNo);
             }
 
             if (!galTiles.includes(galTileNo)) {
               galTiles.push(galTileNo);
               this._galAncestorsMap.get(order)!.push(galTileNo);
-              // newTileBuffer.addGalTile(order, galTileNo);
               this._tileBuffer.addGalTile(order, galTileNo);
             }
           }
@@ -176,7 +192,6 @@ export class VisibleTilesManager {
         const parent = pixels[p] >> (2 * o);
         if (!list.includes(parent)) {
           list.push(parent);
-          // newTileBuffer.addTile(tgtOrder, parent);
           this._tileBuffer.addTile(tgtOrder, parent);
         }
       }
@@ -191,7 +206,6 @@ export class VisibleTilesManager {
         const parent = galTiles[p] >> (2 * o);
         if (!list.includes(parent)) {
           list.push(parent);
-          // newTileBuffer.addGalTile(tgtOrder, parent);
           this._tileBuffer.addGalTile(tgtOrder, parent);
         }
       }

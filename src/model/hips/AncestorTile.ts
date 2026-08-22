@@ -12,22 +12,13 @@
 'use strict'
 
 import global from '../../Global.js'
-// import { hipsShaderProgram } from '../../shader/HiPSShaderProgram.js'
 import { HiPSShaderProgram } from '../../shader/HiPSShaderProgram.js'
-// import { newTileBuffer } from './TileBuffer.js'
 import { TileBuffer } from './TileBuffer.js'
 import { fovHelper } from './FoVHelper.js'
 import {HiPS} from './HiPS.js'
 
-interface Vec3 { x: number; y: number; z: number }
-interface Xyf { ix: number; iy: number; face: number }
-interface HealpixLike {
-  order: number
-  nest2xyf(nest: number): Xyf
-  xyf2nest(x: number, y: number, face: number): number
-  getBoundaries(nest: number): Vec3[]
-  getPointsForXyfNoStep(x: number, y: number, face: number): Vec3[]
-}
+type HealpixInstance = ReturnType<typeof global.getHealpix>
+type Xyf = ReturnType<HealpixInstance['nest2xyf']>
 
 class AncestorTile {
   private _hips: HiPS
@@ -133,7 +124,7 @@ class AncestorTile {
     // this.vertexIndexBuffer created later
 
     const reforder = fovHelper.getRefOrder(this._order)
-    const orighealpix = global.getHealpix(this._order) as HealpixLike
+    const orighealpix = global.getHealpix(this._order)
     const origxyf = orighealpix.nest2xyf(this._tileno)
 
     const orderjump = reforder - this._order
@@ -143,7 +134,7 @@ class AncestorTile {
     const dymin = origxyf.iy << orderjump
     const dymax = (origxyf.iy << orderjump) + (1 << orderjump)
 
-    const healpix = global.getHealpix(reforder) as HealpixLike
+    const healpix = global.getHealpix(reforder) 
 
     this._pixels = []
 
@@ -178,64 +169,6 @@ class AncestorTile {
     return vertexIndices
   }
 
-  // Version that uses getPointsForXyfNoStep (kept for reference; not used in this class)
-  private setupPositionAndTexture4Quadrant2(
-    dxmin: number,
-    dxmax: number,
-    dymin: number,
-    dymax: number,
-    qidx: number,
-    healpix: HealpixLike,
-    orderjump: number,
-    origxyf: Xyf
-  ): void {
-    this.vertexPosition[qidx] = new Float32Array(20 * (dxmax - dxmin) * (dymax - dymin))
-
-    const step = 1 / (1 << orderjump)
-    let p = 0
-
-    for (let dx = dxmin; dx < dxmax; dx++) {
-      for (let dy = dymin; dy < dymax; dy++) {
-        const facesVec3Array = healpix.getPointsForXyfNoStep(dx, dy, origxyf.face)
-        const uindex = dy - (origxyf.iy << orderjump)
-        const vindex = dx - (origxyf.ix << orderjump)
-
-        this.vertexPosition[qidx][20 * p] = facesVec3Array[0].x
-        this.vertexPosition[qidx][20 * p + 1] = facesVec3Array[0].y
-        this.vertexPosition[qidx][20 * p + 2] = facesVec3Array[0].z
-        this.vertexPosition[qidx][20 * p + 3] = step + step * uindex
-        this.vertexPosition[qidx][20 * p + 4] = 1 - (step + step * vindex)
-
-        this.vertexPosition[qidx][20 * p + 5] = facesVec3Array[1].x
-        this.vertexPosition[qidx][20 * p + 6] = facesVec3Array[1].y
-        this.vertexPosition[qidx][20 * p + 7] = facesVec3Array[1].z
-        this.vertexPosition[qidx][20 * p + 8] = step + step * uindex
-        this.vertexPosition[qidx][20 * p + 9] = 1 - step * vindex
-
-        this.vertexPosition[qidx][20 * p + 10] = facesVec3Array[2].x
-        this.vertexPosition[qidx][20 * p + 11] = facesVec3Array[2].y
-        this.vertexPosition[qidx][20 * p + 12] = facesVec3Array[2].z
-        this.vertexPosition[qidx][20 * p + 13] = step * uindex
-        this.vertexPosition[qidx][20 * p + 14] = 1 - step * vindex
-
-        this.vertexPosition[qidx][20 * p + 15] = facesVec3Array[3].x
-        this.vertexPosition[qidx][20 * p + 16] = facesVec3Array[3].y
-        this.vertexPosition[qidx][20 * p + 17] = facesVec3Array[3].z
-        this.vertexPosition[qidx][20 * p + 18] = step * uindex
-        this.vertexPosition[qidx][20 * p + 19] = 1 - (step + step * vindex)
-        p++
-      }
-    }
-
-    this.vertexPositionBuffer[qidx] = this._webgl.createBuffer()
-    this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.vertexPositionBuffer[qidx])
-    this._webgl.bufferData(
-      this._webgl.ARRAY_BUFFER,
-      this.vertexPosition[qidx],
-      this._webgl.STATIC_DRAW
-    )
-  }
-
   // Version used by the original JS, collecting _pixels via xyf2nest + getBoundaries
   private setupPositionAndTexture4Quadrant(
     dxmin: number,
@@ -243,7 +176,7 @@ class AncestorTile {
     dymin: number,
     dymax: number,
     qidx: number,
-    healpix: HealpixLike,
+    healpix: HealpixInstance,
     orderjump: number,
     origxyf: Xyf
   ): void {
@@ -378,8 +311,9 @@ class AncestorTile {
         
         // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
         childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx, this._hipsShaderProgram)
-        if ((childTile as any)._ready) {
-          quadrantsToDraw.delete((childTile as any)._tileno - (this._tileno << 2))
+        if (childTile.getReadyState()) {
+          quadrantsToDraw.delete(c)
+          // quadrantsToDraw.delete((childTile as any)._tileno - (this._tileno << 2))
         }
       }
     }
