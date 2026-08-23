@@ -31,6 +31,7 @@ export class HiPS extends AbstractSkyEntity {
 
   private _coverage: HiPSCoverage;
   private _coverageResolved = false;
+  private _opacity = 1.0;
 
   private _format: string;
   private _baseurl: string;
@@ -134,6 +135,18 @@ export class HiPS extends AbstractSkyEntity {
     // auto-detect all-sky: original code forces true
     this._allSky = true;
     this.initBaseTiles();
+  }
+
+  setOpacity(opacity: number): void {
+    if (!Number.isFinite(opacity)) {
+      throw new Error(`Invalid HiPS opacity: ${opacity}`);
+    }
+
+    this._opacity = Math.min(1, Math.max(0, opacity));
+  }
+
+  get opacity(): number {
+    return this._opacity;
   }
 
   intersectsCoverage(order: number, pixel: number): boolean {

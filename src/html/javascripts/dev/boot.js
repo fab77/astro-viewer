@@ -12,7 +12,7 @@
 import { wireHoveredFootprints } from "./hoveredFootprints.js";
 import { el, setStatus, minimisePanel, restorePanel } from "./ui.js";
 import { state, loadPersisted, persistBasic } from "./state.js";
-import { loadHiPS, wireHiPSFormatSelector } from "./hips.js";
+import { loadHiPS, wireHiPSControls } from "./hips.js";
 import { loadMeshHiPS } from "./meships.js";
 import { loadWMTS, loadXYZ } from "./xyz.js";
 import { loadTapRepo, showFootprint, hideFootprints } from "./tap.js";
@@ -187,7 +187,22 @@ async function bootstrap() {
 }
 
 function wireUI() {
-  wireHiPSFormatSelector();
+  wireHiPSControls();
+
+  el("btnLoadHiPS")?.addEventListener("click", async () => {
+    const url = el("hipsUrl").value.trim();
+
+    if (!url) {
+      return setStatus("Insert a HiPS URL.");
+    }
+
+    try {
+      await loadHiPS(url);
+      persistBasic();
+    } catch (e) {
+      setStatus("HiPS load error: " + (e.message || e));
+    }
+  });
 
   el("btnLoadHiPS")?.addEventListener("click", async () => {
     const url = el("hipsUrl").value.trim();

@@ -47,6 +47,8 @@ type Locations = {
   dataMin: Array<WebGLUniformLocation | null>;
   dataMax: Array<WebGLUniformLocation | null>;
 
+  layerOpacity: WebGLUniformLocation | null;
+
   clorMapIdx: WebGLUniformLocation | null;
 
   vertexPositionAttribute: number;
@@ -113,6 +115,8 @@ export class HiPSShaderProgram {
       dataMin: new Array(8).fill(null),
       dataMax: new Array(8).fill(null),
 
+      layerOpacity: null,
+
       clorMapIdx: null,
 
       vertexPositionAttribute: -1,
@@ -131,6 +135,19 @@ export class HiPSShaderProgram {
 
     gl.useProgram(this._shaderProgram);
     return this._shaderProgram;
+  }
+
+  setLayerOpacity(opacity: number): void {
+    const gl = this._webgl;
+
+    this.locations.layerOpacity = gl.getUniformLocation(
+      this.shaderProgram,
+      "uLayerOpacity",
+    );
+
+    if (this.locations.layerOpacity !== null) {
+      gl.uniform1f(this.locations.layerOpacity, opacity);
+    }
   }
 
   setRuntimeColorMap(
@@ -325,7 +342,7 @@ export class HiPSShaderProgram {
       gl.uniform1f(maxLocation, max);
     }
   }
-  
+
   enableShaders(
     pMatrix: Float32Array,
     vMatrix: Float32Array,

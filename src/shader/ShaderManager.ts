@@ -186,6 +186,7 @@ export default class ShaderManager {
 
     in vec2 vTextureCoord;
 
+    uniform float uLayerOpacity;
     uniform float uFactor0;
     uniform float uFactor1;
     uniform float uFactor2;
@@ -242,7 +243,7 @@ export default class ShaderManager {
           sampleHiPSTexture7(vTextureCoord).rgb * uFactor7;
       }
 
-      fragColor = vec4(finalColor, 1.0);
+      fragColor = vec4(finalColor, uLayerOpacity);
     }`;
   }
 
@@ -252,6 +253,7 @@ export default class ShaderManager {
 
     in vec2 vTextureCoord;
 
+    uniform float uLayerOpacity;
     uniform float uFactor0;
     uniform float uFactor1;
     uniform float uFactor2;
@@ -316,13 +318,15 @@ export default class ShaderManager {
         finalColor += color7.rgb * uFactor7;
       }
 
-      fragColor = vec4(finalColor, 1.0);
+      fragColor = vec4(finalColor, uLayerOpacity);
     }`;
   }
 
   static hipsColorMapFS(): GLSLSource {
     return `#version 300 es
     precision mediump float;
+
+    uniform float uLayerOpacity;
 
     in vec2 vTextureCoord;
 
@@ -416,7 +420,7 @@ export default class ShaderManager {
           ) * uFactor7;
       }
 
-      fragColor = vec4(finalColor, 1.0);
+      fragColor = vec4(finalColor, uLayerOpacity);
     }`;
   }
 
