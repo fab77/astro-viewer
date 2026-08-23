@@ -98,7 +98,7 @@ export class TileBuffer {
 
   /** Fetch (or create) an equatorial tile, reviving from cache if present. */
   getTile(tileno: number, order: number, hips: HiPS): Tile {
-    const tileKey = this.key(order, tileno, hips)
+    const tileKey = this.key(order, tileno, hips);
 
     if (!this._tiles.has(tileKey)) {
       if (this._cachedTiles.has(tileKey)) {
@@ -124,7 +124,7 @@ export class TileBuffer {
 
   /** Fetch (or create) a galactic tile, reviving from cache if present. */
   getGalTile(tileno: number, order: number, hips: HiPS): Tile {
-    const tileKey = this.key(order, tileno, hips)
+    const tileKey = this.key(order, tileno, hips);
 
     if (!this._galTiles.has(tileKey)) {
       if (this._galCachedTiles.has(tileKey)) {
@@ -150,7 +150,7 @@ export class TileBuffer {
 
   /** Move a tile (equatorial or galactic) into cache. */
   moveTileToCache(tileno: number, order: number, hips: HiPS): void {
-    const tileKey = this.key(order, tileno, hips)
+    const tileKey = this.key(order, tileno, hips);
 
     if (this._tiles.has(tileKey)) {
       const tile = this._tiles.get(tileKey)!;
@@ -198,6 +198,41 @@ export class TileBuffer {
   /** Compose a stable key for maps. */
   private key(order: number, tileno: number, hips: HiPS): string {
     return `${order}#${tileno}#${hips.baseURL}#${hips.format}`;
+  }
+
+  removeHiPS(hips: HiPS): void {
+    this.invalidateHiPS(hips);
+
+    this._activeHiPS.delete(hips);
+    this._galActiveHiPS.delete(hips);
+  }
+  
+  /**
+   * Remove all active and cached tiles belonging to a specific HiPS.
+   *
+   * Tile keys contain the HiPS base URL and format. We intentionally
+   * ignore the format here so that a format change removes resources
+   * created with the previous format as well.
+   */
+  invalidateHiPS(hips: HiPS): void {
+    const belongsToHiPS = (tileKey: string): boolean =>
+      tileKey.includes(`#${hips.baseURL}#`);
+
+    const clearTiles = (tiles: Map<string, Tile>): void => {
+      for (const [tileKey, tile] of tiles) {
+        if (!belongsToHiPS(tileKey)) {
+          continue;
+        }
+
+        tile.destroyIntervals();
+        tiles.delete(tileKey);
+      }
+    };
+
+    clearTiles(this._tiles);
+    clearTiles(this._cachedTiles);
+    clearTiles(this._galTiles);
+    clearTiles(this._galCachedTiles);
   }
 
   /** Optional: call to stop internal timers if you dispose this buffer. */

@@ -146,7 +146,11 @@ class AstroSphere {
   private keepCameraNorthUp = true;
   private gridLabelContainers?: GridLabelContainers;
 
-  constructor(canvas: HTMLCanvasElement, webgl: WebGL2RenderingContext, options: AstroSphereOptions = {}) {
+  constructor(
+    canvas: HTMLCanvasElement,
+    webgl: WebGL2RenderingContext,
+    options: AstroSphereOptions = {},
+  ) {
     console.log("[AstroSphere] new instance for canvas", canvas.id);
     // Keep global GL context (as in original JS)
     this._webgl = webgl;
@@ -177,7 +181,11 @@ class AstroSphere {
       bootSetup.insideSphere,
     );
 
-    this._equatorialGrid = new EquatorialGrid(this._webgl, this._healpixGrid, this.gridLabelContainers);
+    this._equatorialGrid = new EquatorialGrid(
+      this._webgl,
+      this._healpixGrid,
+      this.gridLabelContainers,
+    );
     this._equatorialGrid.init(this._healpixGrid.getMinFoV());
 
     this.updateCentralPoint();
@@ -642,10 +650,16 @@ class AstroSphere {
         const dragDirection = global.insideSphere ? -1 : 1;
         const dragSpeed = global.insideSphere ? 10.0 : 1;
         const deltaX =
-          (dragDirection * dragSpeed * (newX - (this.lastMouseX ?? newX)) * Math.PI) /
+          (dragDirection *
+            dragSpeed *
+            (newX - (this.lastMouseX ?? newX)) *
+            Math.PI) /
           canvas.width;
         const deltaY =
-          (dragDirection * dragSpeed * (newY - (this.lastMouseY ?? newY)) * Math.PI) /
+          (dragDirection *
+            dragSpeed *
+            (newY - (this.lastMouseY ?? newY)) *
+            Math.PI) /
           canvas.height;
         const filteredDelta = this.filterRotationDeltaByAstroLocks(
           deltaX,
@@ -845,50 +859,31 @@ class AstroSphere {
     return cartesianToSpherical(pickerPoint);
   }
 
-  private collectViewportSphericalSamples(
-    sampleCount = 5,
-  ): Array<{ phi: number; theta: number }> {
-    const rect = this.canvas.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const samples: Array<{ phi: number; theta: number }> = [];
-
-    for (let ix = 0; ix < sampleCount; ix++) {
-      const x =
-        sampleCount === 1 ? width / 2 : (ix / (sampleCount - 1)) * width;
-      for (let iy = 0; iy < sampleCount; iy++) {
-        const y =
-          sampleCount === 1 ? height / 2 : (iy / (sampleCount - 1)) * height;
-        const hit = RayPickingUtils.getIntersectionPointWithSingleModel(
-          x,
-          y,
-          this._healpixGrid,
-          this._webgl,
-          this._camera,
-          this._perspectiveMatrixManager.pMatrix,
-        );
-
-        if (hit && hit.length > 0) {
-          samples.push(cartesianToSpherical(hit));
-        }
-      }
+  changeHiPSFormat(format: string): void {
+    if (!this._activeHiPS) {
+      throw new Error("No active HiPS.");
     }
 
-    return samples;
+    this._activeHiPS.changeFormat(format);
   }
 
   activateHiPS(hipsDescriptor: HiPSDescriptor) {
+    if (this._activeHiPS) {
+      this._healpixGrid.visibleTilesManager.tileBuffer.removeHiPS(
+        this._activeHiPS,
+      );
+    }
+
     this._activeHiPS = new HiPS(
       1,
       [0.0, 0.0, 0.0],
-
       0,
       0,
-
       hipsDescriptor,
       this._webgl,
       this._healpixGrid,
     );
+
     this._activeBaseLayer = "hips";
   }
 
@@ -1221,7 +1216,10 @@ class AstroSphere {
     try {
       fovPolygon = this.getFoVPolygon();
     } catch (error) {
-      console.warn("[AstroSphere] getCurrentStatus: FoV polygon is not available.", error);
+      console.warn(
+        "[AstroSphere] getCurrentStatus: FoV polygon is not available.",
+        error,
+      );
     }
     // if (this._rotating && centraldecdeg && centralradeg) {
     const detail: CameraChangedDetail = {
@@ -1446,7 +1444,8 @@ class AstroSphere {
 
     if (this._cameraStatusChanged) {
       const now = performance.now();
-      const shouldEmitCameraChanged = !this.mouseDown || now - this.lastCameraChangedAt > 100;
+      const shouldEmitCameraChanged =
+        !this.mouseDown || now - this.lastCameraChangedAt > 100;
       const detail = shouldEmitCameraChanged ? this.getCurrentStatus() : null;
       if (detail) {
         // console.log('[AstroSphere::draw] emitting camera-changed event due to camera status change', detail)
@@ -1510,14 +1509,7 @@ class AstroSphere {
       Math.abs(this.inertiaX) > 0.02 ||
       Math.abs(this.inertiaY) > 0.02 ||
       nowForGrid - this.lastCameraMotionAt < 220;
-    // const skyEntityDrawInput: SkyEntityDrawInput = {
-    // fovDeg: this._healpixGrid.getMinFoV(),
-    //   camera: this._camera,
-    //   pMatrix: this._perspectiveMatrixManager.pMatrix,
-    //   centerSphericalDeg: this.updateCentralPoint().sphericalDeg,
-    //   fovPolygon: this._activeBaseLayer === 'xyz' ? this.getFoVPolygon() : undefined,
-    //   viewportSphericalSamples: this._activeBaseLayer === 'xyz' ? this.collectViewportSphericalSamples(7) : undefined,
-    // }
+
     const skyEntityDrawInput: SkyEntityDrawInput = {
       fovDeg: stableFovDeg,
       camera: this._camera,
@@ -1550,7 +1542,7 @@ class AstroSphere {
       const raHMS = raDegToHMS(raDecDeg.ra);
       const decDMS = decDegToDMS(raDecDeg.dec);
       // this.prevFov = this._healpixGrid.getMinFoV();
-      this.prevFov = this.fov?.minFoV ?? this._healpixGrid.getMinFoV()
+      this.prevFov = this.fov?.minFoV ?? this._healpixGrid.getMinFoV();
       this._cameraStatusChanged = true;
       console.log("(startup coords)", {
         raDeg: raDecDeg.ra,

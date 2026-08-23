@@ -112,6 +112,13 @@ export class HiPS extends AbstractSkyEntity {
 
     // auto-detect all-sky: original code forces true
     this._allSky = true;
+    this.initBaseTiles();
+  }
+
+  private initBaseTiles(): void {
+    this._ancestorTiles = [];
+    this._allSkyTile = null;
+
     if (this._allSky) {
       this._allSkyTile = new AllSky(
         this,
@@ -119,19 +126,21 @@ export class HiPS extends AbstractSkyEntity {
         this._healpixGrid.visibleTilesManager.tileBuffer,
         super.hipsShaderProgram,
       );
-    } else {
-      for (let t = 0; t < 12; t++) {
-        this._ancestorTiles.push(
-          new AncestorTile(
-            t,
-            0,
-            this,
-            this._healpixGrid.visibleTilesManager.tileBuffer,
-            super.hipsShaderProgram,
-            this._webgl,
-          ),
-        );
-      }
+
+      return;
+    }
+
+    for (let t = 0; t < 12; t++) {
+      this._ancestorTiles.push(
+        new AncestorTile(
+          t,
+          0,
+          this,
+          this._healpixGrid.visibleTilesManager.tileBuffer,
+          super.hipsShaderProgram,
+          this._webgl,
+        ),
+      );
     }
   }
 
@@ -140,7 +149,39 @@ export class HiPS extends AbstractSkyEntity {
   }
 
   changeFormat(format: string): void {
-    this._format = format;
+    const normalizedFormat = format.toLowerCase();
+
+    if (!this._descriptor.imgFormats.includes(normalizedFormat)) {
+      throw new Error(
+        `HiPS format "${format}" is not supported. ` +
+          `Available formats: ${this._descriptor.imgFormats.join(", ")}`,
+      );
+    }
+    if (normalizedFormat === this._format.toLowerCase()) {
+      return;
+    }
+    const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+    /*
+     * Remove Tile instances created using the previous format.
+     *
+     * TileBuffer invalidates by HiPS identity/base URL rather than by the
+     * current format, so both active and cached resources are discarded.
+     */
+    tileBuffer.invalidateHiPS(this);
+    /*
+     * Change format before recreating AllSky/AncestorTile because their
+     * constructors read hips.format.
+     */
+    this._format = normalizedFormat;
+    /*
+     * AllSky and AncestorTile also keep the format they were constructed
+     * with, so they must be recreated.
+     */
+    this.initBaseTiles();
+  }
+
+  get availableFormats(): readonly string[] {
+    return this._descriptor.imgFormats;
   }
 
   /**
@@ -228,18 +269,17 @@ export class HiPS extends AbstractSkyEntity {
     // this.shaderProgram = hipsShaderProgram.shaderProgram
   }
 
+  //   private selectDefaultFormat(formats: string[]): string {
+  //   if (formats.includes("fits")) return "fits";
+  //   if (formats.includes("png")) return "png";
+  //   if (formats.includes("jpg")) return "jpg";
 
-//   private selectDefaultFormat(formats: string[]): string {
-//   if (formats.includes("fits")) return "fits";
-//   if (formats.includes("png")) return "png";
-//   if (formats.includes("jpg")) return "jpg";
+  //   if (formats.length > 0) {
+  //     return formats[0];
+  //   }
 
-//   if (formats.length > 0) {
-//     return formats[0];
-//   }
-
-//   throw new Error("HiPS descriptor does not define a tile format");
-// }
+  //   throw new Error("HiPS descriptor does not define a tile format");
+  // }
 
   private selectDefaultFormat(formats: string[]): string {
     if (formats.includes("png")) return "png";

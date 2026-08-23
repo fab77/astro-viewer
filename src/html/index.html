@@ -91,6 +91,12 @@
                     <div id="hipsDiagRequests" class="div-text-wrapper">Requests: —</div>
                     <div id="hipsDiagBackoff" class="hint">Backoff: none</div>
                 </div>
+                <div class="row">
+                    <label for="hipsFormat">Format</label>
+                    <select id="hipsFormat" disabled>
+                        <option value="">—</option>
+                    </select>
+                </div>
             </details>
 
             <details id="meshHipsPanel" style="margin-top:8px; padding-left: 20px;">
@@ -285,7 +291,8 @@
             <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                 <label>Import catalogue / footprint</label>
                 <div class="row">
-                    <input id="importFile" type="file" accept=".json,.geojson,.csv,application/json,application/geo+json,text/csv" />
+                    <input id="importFile" type="file"
+                        accept=".json,.geojson,.csv,application/json,application/geo+json,text/csv" />
                     <select id="importType">
                         <option value="catalogue">Catalogue (points table)</option>
                         <option value="footprint">Footprint set</option>
@@ -332,7 +339,8 @@
                         </select>
                     </div>
                 </div>
-                <div class="hint">You can import a JSON array, CSV with headers, or GeoJSON FeatureCollection. For STCS footprints, use
+                <div class="hint">You can import a JSON array, CSV with headers, or GeoJSON FeatureCollection. For STCS
+                    footprints, use
                     (e.g.,
                     <code>POLYGON lon1 lat1 lon2 lat2 ...</code>). Choose mappings then click Import.
                 </div>
@@ -340,12 +348,14 @@
             <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                 <label>Satellite footprint demo</label>
                 <div class="row">
-                    <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">Load ISS Spain demo</button>
+                    <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">Load ISS Spain
+                        demo</button>
                     <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>Play</button>
                     <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>Pause</button>
                     <input id="satelliteTimelineSeek" type="range" min="0" max="1000" value="0" disabled />
                     <span id="satelliteTimelineTime" class="hint">Timeline not loaded</span>
-                    <span class="hint">Dev-only fixture: Spain GeoJSON, ISS footprint polygons, and ground-track line.</span>
+                    <span class="hint">Dev-only fixture: Spain GeoJSON, ISS footprint polygons, and ground-track
+                        line.</span>
                 </div>
             </div>
         </details>
