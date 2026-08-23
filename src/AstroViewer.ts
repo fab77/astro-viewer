@@ -404,15 +404,52 @@ export class AstroViewer {
     return desc.name;
   }
 
-  // changeColorMap(hips: HiPS, colorMapName: ColorMapName) {
+  setActiveHiPS(hips: HiPS): void {
+    this.astroSphere.setActiveHiPS(hips);
+  }
+
+  setHiPSOpacity(hips: HiPS, opacity: number): void {
+    this.astroSphere.setHiPSOpacity(hips, opacity);
+  }
+
   changeColorMap(colorMapName: ColorMapName) {
     const colorMap = ColorMaps[colorMapName];
-    // hips.changeColorMap(colorMap)
     this.astroSphere.changeColorMap(colorMap);
   }
 
   changeCustomColorMap(colorMap: ColorMap) {
     this.astroSphere.changeColorMap(colorMap);
+  }
+
+  addHiPS(hipsDescriptor: HiPSDescriptor): HiPS {
+    return this.astroSphere.addHiPS(hipsDescriptor);
+  }
+
+  async addHiPSFromUrl(baseUrl: string): Promise<HiPS> {
+    const hipsUrl = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
+
+    const resp = await fetch(hipsUrl + "properties");
+
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status} fetching properties`);
+    }
+
+    const propsText = await resp.text();
+    const desc = new HiPSDescriptor(propsText, hipsUrl);
+
+    return this.astroSphere.addHiPS(desc);
+  }
+
+  removeHiPS(hips: HiPS): void {
+    this.astroSphere.removeHiPS(hips);
+  }
+
+  removeAllHiPS(): void {
+    this.astroSphere.removeAllHiPS();
+  }
+
+  getActiveHiPSLayers(): readonly HiPS[] {
+    return this.astroSphere.activeHiPSLayers;
   }
 
   getActiveHiPS(): HiPS | null {

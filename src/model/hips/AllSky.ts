@@ -26,7 +26,7 @@ export default class AllSky {
   private _isGalacticHips: boolean;
 
   private _order = 3;
-  public opacity = 1.0;
+  // public opacity = 1.0;
 
   private _hipsShaderIndex = 0;
   private _texture: WebGLTexture | null = null;
@@ -448,9 +448,12 @@ export default class AllSky {
 
     const factorLocation =
       this._hipsShaderProgram.locations.textureAlpha[this._hipsShaderIndex];
-    if (factorLocation) {
-      gl.uniform1f(factorLocation, this.opacity);
+
+    if (factorLocation !== null) {
+      gl.uniform1f(factorLocation, 1.0);
     }
+
+    this._hipsShaderProgram.setLayerOpacity(this._hips.opacity);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexPositionBuffer);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer);
@@ -513,14 +516,16 @@ export default class AllSky {
 
     for (let i = 0; i < visibleTiles.length; i++) {
       const tileno = visibleTiles[i];
+
+      if (!this._hips.intersectsCoverage(childrenOrder, tileno)) {
+        allSkyTiles2Skip.push(tileno);
+        continue;
+      }
+
       const childTile = this._isGalacticHips
         ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
         : this._tileBuffer.getTile(tileno, childrenOrder, this._hips);
-      // const childTile = this._isGalacticHips
-      //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-      //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
 
-      // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
       childTile.draw(
         visibleOrder,
         visibleTilesMap,
@@ -530,6 +535,7 @@ export default class AllSky {
         colorMapIdx,
         this._hipsShaderProgram,
       );
+
       if (childTile.getReadyState()) {
         allSkyTiles2Skip.push(tileno);
       }

@@ -75,7 +75,7 @@ export default class Tile {
 
   private _tileBuffer: TileBuffer;
 
-  public opacity = 1.0;
+  // public opacity = 1.0;
   private _webgl: WebGL2RenderingContext;
   private _visibleTileManager: VisibleTilesManager;
   // private _hipsShaderProgram
@@ -605,8 +605,10 @@ export default class Tile {
     const factorLocation = locations.textureAlpha[this._hipsShaderIndex];
 
     if (factorLocation) {
-      gl.uniform1f(factorLocation, this.opacity);
+      gl.uniform1f(factorLocation, 1.0);
     }
+
+    hipsShaderProgram.setLayerOpacity(this._hips.opacity);
 
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.vertexIndexBuffer!);
     const elemno = this.vertexIndices.length;
@@ -659,6 +661,9 @@ export default class Tile {
       const childTileNo = (this._tileno << 2) + c;
       const list = visibleTilesMap.get(childrenOrder)!;
       if (list.includes(childTileNo)) {
+        if (!this._hips.intersectsCoverage(childrenOrder, childTileNo)) {
+          continue;
+        }
         const childTile = this._isGalacticHips
           ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
           : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);

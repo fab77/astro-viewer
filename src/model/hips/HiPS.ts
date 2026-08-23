@@ -22,11 +22,16 @@ import AllSky from "./AllSky.js";
 import { HiPSDescriptor } from "./HiPSDescriptor.js";
 import type { HiPSDebugStats } from "./HiPSConfig.js";
 import { HealpixGrid } from "../grid/HealpixGrid.js";
+import { HiPSCoverage } from "./HiPSCoverage.js";
 
 export class HiPS extends AbstractSkyEntity {
   private _ancestorTiles: AncestorTile[];
   private _allSkyTile: AllSky | null;
   private _descriptor: HiPSDescriptor;
+
+  private _coverage: HiPSCoverage;
+  private _coverageResolved = false;
+  private _opacity = 1.0;
 
   private _format: string;
   private _baseurl: string;
@@ -88,6 +93,23 @@ export class HiPS extends AbstractSkyEntity {
     this._maxorder = descriptor.maxOrder;
     this._minorder = descriptor.minOrder;
 
+    this._coverage = new HiPSCoverage();
+
+    void this._coverage
+      .load(this._baseurl)
+      .then(() => {
+        this._coverageResolved = true;
+      })
+      .catch((error) => {
+        console.warn(
+          `[HiPS] Coverage unavailable for ${this._baseurl}; continuing without MOC filtering.`,
+          error,
+        );
+
+        this._coverage.clear();
+        this._coverageResolved = true;
+      });
+
     if (this.isGalacticHips) {
       this._healpixGrid.visibleTilesManager.tileBuffer.addGalHiPS(this);
     } else {
@@ -113,6 +135,37 @@ export class HiPS extends AbstractSkyEntity {
     // auto-detect all-sky: original code forces true
     this._allSky = true;
     this.initBaseTiles();
+  }
+
+  setOpacity(opacity: number): void {
+    if (!Number.isFinite(opacity)) {
+      throw new Error(`Invalid HiPS opacity: ${opacity}`);
+    }
+
+    this._opacity = Math.min(1, Math.max(0, opacity));
+  }
+
+  get opacity(): number {
+    return this._opacity;
+  }
+
+  intersectsCoverage(order: number, pixel: number): boolean {
+    /*
+     * While Moc.fits is being resolved, do not start tile requests.
+     *
+     * Once loading has completed:
+     * - valid MOC -> filter using coverage
+     * - unavailable MOC -> HiPSCoverage is cleared and normal loading resumes
+     */
+    if (!this._coverageResolved) {
+      return false;
+    }
+
+    return this._coverage.intersectsTile(order, pixel);
+  }
+
+  get coverageLoaded(): boolean {
+    return this._coverage.loaded;
   }
 
   private initBaseTiles(): void {
