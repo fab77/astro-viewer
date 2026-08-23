@@ -149,7 +149,6 @@ export default class ShaderManager {
       gl_Position = uPMatrix * uMVMatrix * aCatPosition;
       gl_PointSize = u_pointsize;   // Works in WebGL2
     }`;
-    
   }
 
   static footprintFS(): GLSLSource {
@@ -162,7 +161,6 @@ export default class ShaderManager {
     void main() {
       fragColor = u_fragcolor;
     }`;
-    
   }
 
   static hipsVS(): GLSLSource {
@@ -188,15 +186,6 @@ export default class ShaderManager {
 
     in vec2 vTextureCoord;
 
-    uniform sampler2D uSampler0;
-    uniform sampler2D uSampler1;
-    uniform sampler2D uSampler2;
-    uniform sampler2D uSampler3;
-    uniform sampler2D uSampler4;
-    uniform sampler2D uSampler5;
-    uniform sampler2D uSampler6;
-    uniform sampler2D uSampler7;
-
     uniform float uFactor0;
     uniform float uFactor1;
     uniform float uFactor2;
@@ -206,23 +195,53 @@ export default class ShaderManager {
     uniform float uFactor6;
     uniform float uFactor7;
 
+    ${ShaderManager.hipsSamplersGLSL()}
+
     out vec4 fragColor;
 
     void main() {
       vec3 finalColor = vec3(0.0);
 
-      if (uFactor0 >= 0.0){
-        vec4 mycolor;
-        #if __VERSION__ > 120
-          vec4 color0 = texture(uSampler0, vTextureCoord);
-        #else
-          vec4 color0 = texture2D(uSampler0, vTextureCoord);
-        #endif
-        mycolor = color0;
-        finalColor += mycolor.rgb * uFactor0;
-      } else if (uFactor7 >= 0.0){
-        finalColor = vec3(1.0, 0.0, 0.0);
+      if (uFactor0 >= 0.0) {
+        finalColor +=
+          sampleHiPSTexture0(vTextureCoord).rgb * uFactor0;
       }
+
+      if (uFactor1 >= 0.0) {
+        finalColor +=
+          sampleHiPSTexture1(vTextureCoord).rgb * uFactor1;
+      }
+
+      if (uFactor2 >= 0.0) {
+        finalColor +=
+          sampleHiPSTexture2(vTextureCoord).rgb * uFactor2;
+      }
+
+      if (uFactor3 >= 0.0) {
+        finalColor +=
+          sampleHiPSTexture3(vTextureCoord).rgb * uFactor3;
+      }
+
+      if (uFactor4 >= 0.0) {
+        finalColor +=
+          sampleHiPSTexture4(vTextureCoord).rgb * uFactor4;
+      }
+
+      if (uFactor5 >= 0.0) {
+        finalColor +=
+          sampleHiPSTexture5(vTextureCoord).rgb * uFactor5;
+      }
+
+      if (uFactor6 >= 0.0) {
+        finalColor +=
+          sampleHiPSTexture6(vTextureCoord).rgb * uFactor6;
+      }
+
+      if (uFactor7 >= 0.0) {
+        finalColor +=
+          sampleHiPSTexture7(vTextureCoord).rgb * uFactor7;
+      }
+
       fragColor = vec4(finalColor, 1.0);
     }`;
   }
@@ -233,15 +252,6 @@ export default class ShaderManager {
 
     in vec2 vTextureCoord;
 
-    uniform sampler2D uSampler0;
-    uniform sampler2D uSampler1;
-    uniform sampler2D uSampler2;
-    uniform sampler2D uSampler3;
-    uniform sampler2D uSampler4;
-    uniform sampler2D uSampler5;
-    uniform sampler2D uSampler6;
-    uniform sampler2D uSampler7;
-
     uniform float uFactor0;
     uniform float uFactor1;
     uniform float uFactor2;
@@ -251,76 +261,61 @@ export default class ShaderManager {
     uniform float uFactor6;
     uniform float uFactor7;
 
+    ${ShaderManager.hipsSamplersGLSL()}
+
     out vec4 fragColor;
 
     void main() {
       vec3 finalColor = vec3(0.0);
 
-      if (uFactor0 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color0 = texture(uSampler0, vTextureCoord);
-        #else
-          vec4 color0 = texture2D(uSampler0, vTextureCoord);
-        #endif
-        float gray = 0.21 * color0.r + 0.71 * color0.g + 0.07 * color0.b;
-        finalColor = color0.rgb * (1.0 - uFactor0) + vec3(gray) * uFactor0;
+      if (uFactor0 >= 0.0) {
+        vec4 color0 = sampleHiPSTexture0(vTextureCoord);
+
+        float gray =
+          0.21 * color0.r +
+          0.71 * color0.g +
+          0.07 * color0.b;
+
+        finalColor =
+          color0.rgb * (1.0 - uFactor0) +
+          vec3(gray) * uFactor0;
       }
-      if (uFactor1 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color1 = texture(uSampler1, vTextureCoord);
-        #else
-          vec4 color1 = texture2D(uSampler1, vTextureCoord);
-        #endif
+
+      if (uFactor1 >= 0.0) {
+        vec4 color1 = sampleHiPSTexture1(vTextureCoord);
         finalColor += color1.rgb * uFactor1;
       }
-      if (uFactor2 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color2 = texture(uSampler2, vTextureCoord);
-        #else
-          vec4 color2 = texture2D(uSampler2, vTextureCoord);
-        #endif
+
+      if (uFactor2 >= 0.0) {
+        vec4 color2 = sampleHiPSTexture2(vTextureCoord);
         finalColor += color2.rgb * uFactor2;
       }
-      if (uFactor3 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color3 = texture(uSampler3, vTextureCoord);
-        #else
-          vec4 color3 = texture2D(uSampler3, vTextureCoord);
-        #endif
+
+      if (uFactor3 >= 0.0) {
+        vec4 color3 = sampleHiPSTexture3(vTextureCoord);
         finalColor += color3.rgb * uFactor3;
       }
-      if (uFactor4 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color4 = texture(uSampler4, vTextureCoord);
-        #else
-          vec4 color4 = texture2D(uSampler4, vTextureCoord);
-        #endif
+
+      if (uFactor4 >= 0.0) {
+        vec4 color4 = sampleHiPSTexture4(vTextureCoord);
         finalColor += color4.rgb * uFactor4;
       }
-      if (uFactor5 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color5 = texture(uSampler5, vTextureCoord);
-        #else
-          vec4 color5 = texture2D(uSampler5, vTextureCoord);
-        #endif
+
+      if (uFactor5 >= 0.0) {
+        vec4 color5 = sampleHiPSTexture5(vTextureCoord);
         finalColor += color5.rgb * uFactor5;
       }
-      if (uFactor6 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color6 = texture(uSampler6, vTextureCoord);
-        #else
-          vec4 color6 = texture2D(uSampler6, vTextureCoord);
-        #endif
+
+      if (uFactor6 >= 0.0) {
+        vec4 color6 = sampleHiPSTexture6(vTextureCoord);
         finalColor += color6.rgb * uFactor6;
       }
-      if (uFactor7 >= 0.0){
-        #if __VERSION__ > 120
-          vec4 color7 = texture(uSampler7, vTextureCoord);
-        #else
-          vec4 color7 = texture2D(uSampler7, vTextureCoord);
-        #endif
+
+      if (uFactor7 >= 0.0) {
+        vec4 color7 = sampleHiPSTexture7(vTextureCoord);
         finalColor += color7.rgb * uFactor7;
       }
+
       fragColor = vec4(finalColor, 1.0);
     }`;
   }
@@ -331,36 +326,142 @@ export default class ShaderManager {
 
     in vec2 vTextureCoord;
 
-    // UBO
     layout (std140) uniform colormap {
       float r_palette[256];
       float g_palette[256];
       float b_palette[256];
     };
 
-    uniform sampler2D uSampler0;
     uniform float uFactor0;
+    uniform float uFactor1;
+    uniform float uFactor2;
+    uniform float uFactor3;
+    uniform float uFactor4;
+    uniform float uFactor5;
+    uniform float uFactor6;
+    uniform float uFactor7;
+
+    ${ShaderManager.hipsSamplersGLSL()}
 
     out vec4 fragColor;
 
-    void main() {
-      #if __VERSION__ > 120
-        vec4 color0 = texture(uSampler0, vTextureCoord);
-      #else
-        vec4 color0 = texture2D(uSampler0, vTextureCoord);
-      #endif
+    vec3 applyColorMap(vec4 color) {
+      int x = int(clamp(color.r, 0.0, 1.0) * 255.0);
+      int y = int(clamp(color.g, 0.0, 1.0) * 255.0);
+      int z = int(clamp(color.b, 0.0, 1.0) * 255.0);
 
-      int x = int(color0.r * 255.0);
       float px = r_palette[x] / 256.0;
-
-      int y = int(color0.g * 255.0);
       float py = g_palette[y] / 256.0;
-
-      int z = int(color0.b * 255.0);
       float pz = b_palette[z] / 256.0;
 
-      // uFactor0 reserved for future blending if needed
-      fragColor = vec4(px, py, pz, 1.0);
+      return vec3(px, py, pz);
+    }
+
+    void main() {
+      vec3 finalColor = vec3(0.0);
+
+      if (uFactor0 >= 0.0) {
+        finalColor +=
+          applyColorMap(
+            sampleHiPSTexture0(vTextureCoord)
+          ) * uFactor0;
+      }
+
+      if (uFactor1 >= 0.0) {
+        finalColor +=
+          applyColorMap(
+            sampleHiPSTexture1(vTextureCoord)
+          ) * uFactor1;
+      }
+
+      if (uFactor2 >= 0.0) {
+        finalColor +=
+          applyColorMap(
+            sampleHiPSTexture2(vTextureCoord)
+          ) * uFactor2;
+      }
+
+      if (uFactor3 >= 0.0) {
+        finalColor +=
+          applyColorMap(
+            sampleHiPSTexture3(vTextureCoord)
+          ) * uFactor3;
+      }
+
+      if (uFactor4 >= 0.0) {
+        finalColor +=
+          applyColorMap(
+            sampleHiPSTexture4(vTextureCoord)
+          ) * uFactor4;
+      }
+
+      if (uFactor5 >= 0.0) {
+        finalColor +=
+          applyColorMap(
+            sampleHiPSTexture5(vTextureCoord)
+          ) * uFactor5;
+      }
+
+      if (uFactor6 >= 0.0) {
+        finalColor +=
+          applyColorMap(
+            sampleHiPSTexture6(vTextureCoord)
+          ) * uFactor6;
+      }
+
+      if (uFactor7 >= 0.0) {
+        finalColor +=
+          applyColorMap(
+            sampleHiPSTexture7(vTextureCoord)
+          ) * uFactor7;
+      }
+
+      fragColor = vec4(finalColor, 1.0);
     }`;
+  }
+
+  private static hipsSamplerGLSL(index: number): GLSLSource {
+    return `
+    uniform sampler2D uSampler${index};
+    uniform int uTextureMode${index};
+    uniform float uDataMin${index};
+    uniform float uDataMax${index};
+
+    vec4 sampleHiPSTexture${index}(vec2 uv) {
+      vec4 color = texture(uSampler${index}, uv);
+
+      // JPG / PNG
+      if (uTextureMode${index} == 0) {
+        return color;
+      }
+
+      // FITS physical value stored in red channel
+      float value = color.r;
+
+      if (isnan(value)) {
+        discard;
+      }
+
+      float normalized = clamp(
+        (value - uDataMin${index}) /
+        (uDataMax${index} - uDataMin${index}),
+        0.0,
+        1.0
+      );
+
+      return vec4(
+        normalized,
+        normalized,
+        normalized,
+        1.0
+      );
+    }
+  `;
+  }
+
+  private static hipsSamplersGLSL(): GLSLSource {
+    return Array.from({ length: 8 }, (_, index) =>
+      ShaderManager.hipsSamplerGLSL(index),
+    ).join("\n");
   }
 }

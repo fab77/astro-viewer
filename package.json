@@ -1,7 +1,7 @@
 {
   "name": "astro-viewer",
   "description": "3D scientific visualization engine for astronomical and Earth observation data, supporting HiPS, FITS, TAP, ADQL, footprints and WebGL-based spatial exploration.",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "keywords": [
     "astronomy",
     "astrophysics",
@@ -91,8 +91,8 @@
     "astrospatial-core": "^0.4.1",
     "cross-fetch": "^3.2.0",
     "gl-matrix": "^3.4.4",
-    "jsfitsio": "^2.1.2",
-    "wcslight": "^3.1.1"
+    "jsfitsio": "^3.1.0",
+    "wcslight": "^3.1.4"
   },
   "browser": {
     "fs": false,
