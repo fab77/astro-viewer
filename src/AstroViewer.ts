@@ -408,6 +408,10 @@ export class AstroViewer {
     this.astroSphere.setActiveHiPS(hips);
   }
 
+  setHiPSOpacity(hips: HiPS, opacity: number): void {
+    this.astroSphere.setHiPSOpacity(hips, opacity);
+  }
+
   changeColorMap(colorMapName: ColorMapName) {
     const colorMap = ColorMaps[colorMapName];
     this.astroSphere.changeColorMap(colorMap);

@@ -899,6 +899,14 @@ class AstroSphere {
     return hips;
   }
 
+  setHiPSOpacity(hips: HiPS, opacity: number): void {
+    if (!this._activeHiPSLayers.includes(hips)) {
+      throw new Error("HiPS layer is not active in this AstroSphere.");
+    }
+
+    hips.setOpacity(opacity);
+  }
+
   addHiPS(hipsDescriptor: HiPSDescriptor): HiPS {
     const normalizeURL = (url: string | URL): string =>
       String(url).replace(/\/+$/, "");
@@ -1624,7 +1632,7 @@ class AstroSphere {
 
       this._activeHiPS?.draw(skyEntityDrawInput);
     }
-    
+
     if (this._activeBaseLayer === "xyz") {
       this._activeXYZ2?.draw(skyEntityDrawInput);
     }

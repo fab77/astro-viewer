@@ -207,6 +207,27 @@ function renderHiPSLayers() {
     info.className = "hint";
     info.textContent = `${hips.format.toUpperCase()} · ${hips.isGalacticHips ? "Galactic" : "Equatorial"}`;
 
+    const opacity = document.createElement("input");
+    opacity.type = "range";
+    opacity.min = "0";
+    opacity.max = "1";
+    opacity.step = "0.05";
+    opacity.value = String(hips.opacity);
+    opacity.title = `Opacity ${Math.round(hips.opacity * 100)}%`;
+
+    const opacityValue = document.createElement("span");
+    opacityValue.className = "mono";
+    opacityValue.textContent = `${Math.round(hips.opacity * 100)}%`;
+
+    opacity.addEventListener("input", () => {
+      const value = Number(opacity.value);
+
+      state.AstroAPI.setHiPSOpacity(hips, value);
+
+      opacityValue.textContent = `${Math.round(value * 100)}%`;
+      opacity.title = `Opacity ${Math.round(value * 100)}%`;
+    });
+
     const removeButton = document.createElement("button");
     removeButton.type = "button";
     removeButton.textContent = "Remove";
@@ -218,7 +239,7 @@ function renderHiPSLayers() {
       setStatus(`✅ HiPS removed: ${getHiPSLabel(hips)}`);
     });
 
-    row.append(selectButton, info, removeButton);
+    row.append(selectButton, info, opacity, opacityValue, removeButton);
 
     container.appendChild(row);
   });

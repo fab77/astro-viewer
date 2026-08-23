@@ -3,6 +3,22 @@ import AstroSphere from "./AstroSphere.js";
 import { Point } from "./model/Point.js";
 import { CoordsType } from "./utils/CoordsType.js";
 
+function createMockHiPS(baseURL: string) {
+  let opacity = 1;
+
+  return {
+    baseURL,
+
+    get opacity() {
+      return opacity;
+    },
+
+    setOpacity(value: number) {
+      opacity = Math.min(1, Math.max(0, value));
+    },
+  };
+}
+
 function createStatusSubject(overrides: Record<string, unknown> = {}) {
   const subject = Object.create(AstroSphere.prototype) as AstroSphere &
     Record<string, unknown>;
@@ -66,9 +82,9 @@ function createHiPSLayersSubject() {
       },
     },
 
-    createHiPS: jest.fn((descriptor: { url: string }) => ({
-      baseURL: descriptor.url,
-    })),
+    createHiPS: jest.fn((descriptor: { url: string }) =>
+      createMockHiPS(descriptor.url),
+    ),
   });
 
   return subject;
@@ -351,5 +367,22 @@ describe("AstroSphere HiPS layers", () => {
     expect(() => subject.setActiveHiPS(hips1)).toThrow(
       "HiPS layer is not active in this AstroSphere.",
     );
+  });
+
+  it("changes opacity independently for each HiPS layer", () => {
+    const subject = createHiPSLayersSubject();
+
+    const hips1 = subject.addHiPS(
+      createHiPSDescriptor("https://example.test/hips1/"),
+    );
+
+    const hips2 = subject.addHiPS(
+      createHiPSDescriptor("https://example.test/hips2/"),
+    );
+
+    subject.setHiPSOpacity(hips1, 0.35);
+
+    expect(hips1.opacity).toBeCloseTo(0.35);
+    expect(hips2.opacity).toBe(1);
   });
 });
