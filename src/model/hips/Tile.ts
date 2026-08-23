@@ -659,6 +659,9 @@ export default class Tile {
       const childTileNo = (this._tileno << 2) + c;
       const list = visibleTilesMap.get(childrenOrder)!;
       if (list.includes(childTileNo)) {
+        if (!this._hips.intersectsCoverage(childrenOrder, childTileNo)) {
+          continue;
+        }
         const childTile = this._isGalacticHips
           ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
           : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);

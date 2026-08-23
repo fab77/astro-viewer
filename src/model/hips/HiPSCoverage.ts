@@ -17,6 +17,18 @@ interface CoverageInterval {
 }
 
 export class HiPSCoverage {
+  intersec(intersec: any, arg1: any) {
+    throw new Error("Method not implemented.");
+  }
+  ises(ises: any, expents: any, of: any, arg3: any): any {
+    throw new Error("Method not implemented.");
+  }
+  intersexpect(co: any, t: any, expe: any, arg3: any): any {
+    throw new Error("Method not implemented.");
+  }
+  intersectsT19(intersectsT19: any, arg1: any): any {
+    throw new Error("Method not implemented.");
+  }
   private _maxOrder = 0;
   private _intervals: CoverageInterval[] = [];
   private _loaded = false;
@@ -39,13 +51,21 @@ export class HiPSCoverage {
     this._loaded = false;
   }
 
-  async load(baseUrl: string): Promise<void> {
+  async load(baseUrl: string | URL): Promise<void> {
+    const baseUrlString =
+      baseUrl instanceof URL ? baseUrl.href : String(baseUrl);
+
+    const normalizedBaseUrl = baseUrlString.endsWith("/")
+      ? baseUrlString
+      : `${baseUrlString}/`;
+
+    await this.loadMoc(`${normalizedBaseUrl}Moc.fits`);
+  }
+
+  async loadMoc(mocUrl: string): Promise<void> {
     this.clear();
 
-    const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-
-    const fits = await FITSParser.loadFITSFile(`${normalizedBaseUrl}Moc.fits`);
-
+    const fits = await FITSParser.loadFITSFile(mocUrl);
     if (!fits) {
       throw new Error("Unable to load HiPS Moc.fits");
     }

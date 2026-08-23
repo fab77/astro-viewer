@@ -513,14 +513,16 @@ export default class AllSky {
 
     for (let i = 0; i < visibleTiles.length; i++) {
       const tileno = visibleTiles[i];
+
+      if (!this._hips.intersectsCoverage(childrenOrder, tileno)) {
+        allSkyTiles2Skip.push(tileno);
+        continue;
+      }
+
       const childTile = this._isGalacticHips
         ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
         : this._tileBuffer.getTile(tileno, childrenOrder, this._hips);
-      // const childTile = this._isGalacticHips
-      //   ? newTileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-      //   : newTileBuffer.getTile(tileno, childrenOrder, this._hips)
-
-      // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
+        
       childTile.draw(
         visibleOrder,
         visibleTilesMap,
@@ -530,6 +532,7 @@ export default class AllSky {
         colorMapIdx,
         this._hipsShaderProgram,
       );
+
       if (childTile.getReadyState()) {
         allSkyTiles2Skip.push(tileno);
       }

@@ -82,6 +82,11 @@ export class TileBuffer {
       if (order > hips.maxOrder) {
         continue;
       }
+
+      if (!hips.intersectsCoverage(order, tileno)) {
+        continue;
+      }
+
       this.getTile(tileno, order, hips);
     }
   }
@@ -92,6 +97,11 @@ export class TileBuffer {
       if (order > hips.maxOrder) {
         continue;
       }
+
+      if (!hips.intersectsCoverage(order, tileno)) {
+        continue;
+      }
+
       this.getGalTile(tileno, order, hips);
     }
   }
@@ -206,7 +216,7 @@ export class TileBuffer {
     this._activeHiPS.delete(hips);
     this._galActiveHiPS.delete(hips);
   }
-  
+
   /**
    * Remove all active and cached tiles belonging to a specific HiPS.
    *

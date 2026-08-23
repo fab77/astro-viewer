@@ -491,13 +491,22 @@ class AncestorTile {
 
     for (let c = 0; c < 4; c++) {
       const childTileNo = (this._tileno << 2) + c;
+
+      if (!this._hips.intersectsCoverage(childrenOrder, childTileNo)) {
+        continue;
+      }
       const visibleChildren = visibleTilesMap.get(childrenOrder)!;
+
       if (visibleChildren.includes(childTileNo)) {
+        if (!this._hips.intersectsCoverage(childrenOrder, childTileNo)) {
+          quadrantsToDraw.delete(c);
+          continue;
+        }
+
         const childTile = this._isGalacticHips
           ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
           : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
 
-        // childTile.draw(visibleOrder, visibleTilesMap, pMatrix, vMatrix, mMatrix, colorMapIdx)
         childTile.draw(
           visibleOrder,
           visibleTilesMap,
@@ -507,9 +516,9 @@ class AncestorTile {
           colorMapIdx,
           this._hipsShaderProgram,
         );
+
         if (childTile.getReadyState()) {
           quadrantsToDraw.delete(c);
-          // quadrantsToDraw.delete((childTile as any)._tileno - (this._tileno << 2))
         }
       }
     }
