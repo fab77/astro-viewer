@@ -120,6 +120,8 @@ class AstroSphere {
   private pointerDownAt = 0;
 
   private _activeHiPS: HiPS | null = null;
+  private _activeHiPSLayers: HiPS[] = [];
+
   private _activeXYZ2: XYZMap | null = null;
   private _activeMeshHiPS: MeshHiPS | null = null;
   private _activeBaseLayer: "hips" | "xyz" | "meships" | null = null;
@@ -867,14 +869,8 @@ class AstroSphere {
     this._activeHiPS.changeFormat(format);
   }
 
-  activateHiPS(hipsDescriptor: HiPSDescriptor) {
-    if (this._activeHiPS) {
-      this._healpixGrid.visibleTilesManager.tileBuffer.removeHiPS(
-        this._activeHiPS,
-      );
-    }
-
-    this._activeHiPS = new HiPS(
+  private createHiPS(hipsDescriptor: HiPSDescriptor): HiPS {
+    return new HiPS(
       1,
       [0.0, 0.0, 0.0],
       0,
@@ -883,8 +879,88 @@ class AstroSphere {
       this._webgl,
       this._healpixGrid,
     );
+  }
 
+  activateHiPS(hipsDescriptor: HiPSDescriptor): HiPS {
+    const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+
+    for (const hips of this._activeHiPSLayers) {
+      tileBuffer.removeHiPS(hips);
+    }
+
+    this._activeHiPSLayers = [];
+
+    const hips = this.createHiPS(hipsDescriptor);
+
+    this._activeHiPSLayers.push(hips);
+    this._activeHiPS = hips;
     this._activeBaseLayer = "hips";
+
+    return hips;
+  }
+
+  addHiPS(hipsDescriptor: HiPSDescriptor): HiPS {
+    const normalizeURL = (url: string | URL): string =>
+      String(url).replace(/\/+$/, "");
+
+    const descriptorURL = normalizeURL(hipsDescriptor.url);
+
+    const existing = this._activeHiPSLayers.find(
+      (hips) => normalizeURL(hips.baseURL) === descriptorURL,
+    );
+
+    if (existing) {
+      throw new Error(`HiPS already active: ${String(hipsDescriptor.url)}`);
+    }
+
+    const hips = this.createHiPS(hipsDescriptor);
+
+    this._activeHiPSLayers.push(hips);
+    this._activeHiPS = hips;
+    this._activeBaseLayer = "hips";
+
+    return hips;
+  }
+
+  removeHiPS(hips: HiPS): void {
+    const index = this._activeHiPSLayers.indexOf(hips);
+
+    if (index === -1) {
+      return;
+    }
+
+    this._healpixGrid.visibleTilesManager.tileBuffer.removeHiPS(hips);
+    this._activeHiPSLayers.splice(index, 1);
+
+    if (this._activeHiPSLayers.length === 0) {
+      this._activeHiPS = null;
+
+      if (this._activeBaseLayer === "hips") {
+        this._activeBaseLayer = null;
+      }
+
+      return;
+    }
+
+    if (this._activeHiPS === hips) {
+      this._activeHiPS =
+        this._activeHiPSLayers[this._activeHiPSLayers.length - 1];
+    }
+  }
+
+  removeAllHiPS(): void {
+    const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+
+    for (const hips of this._activeHiPSLayers) {
+      tileBuffer.removeHiPS(hips);
+    }
+
+    this._activeHiPSLayers = [];
+    this._activeHiPS = null;
+
+    if (this._activeBaseLayer === "hips") {
+      this._activeBaseLayer = null;
+    }
   }
 
   activateXYZ(config: XYZLayerConfig) {
@@ -1260,6 +1336,19 @@ class AstroSphere {
     return this._activeHiPS;
   }
 
+  get activeHiPSLayers(): readonly HiPS[] {
+    return this._activeHiPSLayers;
+  }
+
+  setActiveHiPS(hips: HiPS): void {
+    if (!this._activeHiPSLayers.includes(hips)) {
+      throw new Error("HiPS layer is not active in this AstroSphere.");
+    }
+
+    this._activeHiPS = hips;
+    this._activeBaseLayer = "hips";
+  }
+
   get activeXYZ(): XYZMap | null {
     return this._activeXYZ2;
   }
@@ -1476,11 +1565,16 @@ class AstroSphere {
       this._webgl.ONE_MINUS_SRC_ALPHA,
     );
 
-    if (this._activeBaseLayer === "hips" && this._activeHiPS) {
+    if (this._activeBaseLayer === "hips" && this._activeHiPSLayers.length > 0) {
+      const maxHiPSOrder = Math.max(
+        ...this._activeHiPSLayers.map((hips) => hips.maxOrder),
+      );
+
       const visibleOrder = Math.min(
         this._healpixGrid.visibleorder,
-        this._activeHiPS.maxOrder,
+        maxHiPSOrder,
       );
+
       this._healpixGrid.visibleTilesManager.computeVisiblePixels(
         visibleOrder,
         this._webgl,
@@ -1488,6 +1582,7 @@ class AstroSphere {
         this._perspectiveMatrixManager.pMatrix,
       );
     }
+
     if (this._activeBaseLayer === "meships" && this._activeMeshHiPS) {
       const visibleOrder = this._activeMeshHiPS.refreshOrder(
         this.fov?.minFoV ?? this._healpixGrid.getMinFoV(),
@@ -1519,9 +1614,17 @@ class AstroSphere {
       viewportSphericalSamples: undefined,
       cameraMoving: cameraMovingForGrid,
     };
+
     if (this._activeBaseLayer === "hips") {
+      for (const hips of this._activeHiPSLayers) {
+        if (hips !== this._activeHiPS) {
+          hips.draw(skyEntityDrawInput);
+        }
+      }
+
       this._activeHiPS?.draw(skyEntityDrawInput);
     }
+    
     if (this._activeBaseLayer === "xyz") {
       this._activeXYZ2?.draw(skyEntityDrawInput);
     }
