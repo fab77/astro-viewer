@@ -228,6 +228,19 @@ export class HiPS extends AbstractSkyEntity {
     // this.shaderProgram = hipsShaderProgram.shaderProgram
   }
 
+
+//   private selectDefaultFormat(formats: string[]): string {
+//   if (formats.includes("fits")) return "fits";
+//   if (formats.includes("png")) return "png";
+//   if (formats.includes("jpg")) return "jpg";
+
+//   if (formats.length > 0) {
+//     return formats[0];
+//   }
+
+//   throw new Error("HiPS descriptor does not define a tile format");
+// }
+
   private selectDefaultFormat(formats: string[]): string {
     if (formats.includes("png")) return "png";
     if (formats.includes("jpg")) return "jpg";
