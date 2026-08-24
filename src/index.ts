@@ -76,6 +76,3 @@ export type { MeshHiPSConfig, MeshHiPSDebugStats, MeshHiPSTileCoord } from './mo
 
 export {Source} from './model/Source.js'
 export {Footprint} from './model/footprints/Footprint.js'
-
-
-console.log('astroviewer UMD loaded')
