@@ -92,6 +92,7 @@ export default class AllSky {
   private async loadFits(): Promise<void> {
     try {
       this._fitsTile = await loadFitsTile(this._texurl);
+      this._hips.observeFITSDataRange(this._fitsTile);
 
       this.textureLoaded();
       this.initModelBuffer();
@@ -175,38 +176,7 @@ export default class AllSky {
   }
 
   private getFitsDataRange(): { min: number; max: number } | null {
-    const hipsRange = this._hips.dataRange;
-
-    if (
-      hipsRange.min !== undefined &&
-      hipsRange.max !== undefined &&
-      Number.isFinite(hipsRange.min) &&
-      Number.isFinite(hipsRange.max) &&
-      hipsRange.max > hipsRange.min
-    ) {
-      return {
-        min: hipsRange.min,
-        max: hipsRange.max,
-      };
-    }
-
-    const fits = this._fitsTile;
-
-    if (
-      fits &&
-      fits.dataMin !== null &&
-      fits.dataMax !== null &&
-      Number.isFinite(fits.dataMin) &&
-      Number.isFinite(fits.dataMax) &&
-      fits.dataMax > fits.dataMin
-    ) {
-      return {
-        min: fits.dataMin,
-        max: fits.dataMax,
-      };
-    }
-
-    return null;
+    return this._hips.getFITSDisplayRange(this._fitsTile);
   }
 
   private initModelBuffer(): void {
@@ -428,6 +398,8 @@ export default class AllSky {
         true,
         range.min,
         range.max,
+        this._hips.fitsStretch.scaleFunctionIndex,
+        this._hips.fitsStretch.scaleParam,
       );
     } else {
       this._hipsShaderProgram.setTextureDataMode(this._hipsShaderIndex, false);

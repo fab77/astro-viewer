@@ -29,6 +29,8 @@ type UniformNames = {
   textureMode: string;
   dataMin: string;
   dataMax: string;
+  scaleFunction: string;
+  scaleParam: string;
 };
 
 type AttributeNames = {
@@ -46,6 +48,8 @@ type Locations = {
   textureMode: Array<WebGLUniformLocation | null>;
   dataMin: Array<WebGLUniformLocation | null>;
   dataMax: Array<WebGLUniformLocation | null>;
+  scaleFunction: Array<WebGLUniformLocation | null>;
+  scaleParam: Array<WebGLUniformLocation | null>;
 
   layerOpacity: WebGLUniformLocation | null;
 
@@ -97,6 +101,8 @@ export class HiPSShaderProgram {
       textureMode: "uTextureMode",
       dataMin: "uDataMin",
       dataMax: "uDataMax",
+      scaleFunction: "uScaleFunction",
+      scaleParam: "uScaleParam",
     };
 
     this.gl_attributes = {
@@ -114,6 +120,8 @@ export class HiPSShaderProgram {
       textureMode: new Array(8).fill(null),
       dataMin: new Array(8).fill(null),
       dataMax: new Array(8).fill(null),
+      scaleFunction: new Array(8).fill(null),
+      scaleParam: new Array(8).fill(null),
 
       layerOpacity: null,
 
@@ -304,6 +312,8 @@ export class HiPSShaderProgram {
     fits: boolean,
     min?: number,
     max?: number,
+    scaleFunction = 0,
+    scaleParam = 1,
   ): void {
     if (samplerIndex < 0 || samplerIndex >= 8) {
       throw new Error(`Invalid HiPS sampler index: ${samplerIndex}`);
@@ -333,6 +343,8 @@ export class HiPSShaderProgram {
 
     const minLocation = this.locations.dataMin[samplerIndex];
     const maxLocation = this.locations.dataMax[samplerIndex];
+    const scaleFunctionLocation = this.locations.scaleFunction[samplerIndex];
+    const scaleParamLocation = this.locations.scaleParam[samplerIndex];
 
     if (minLocation) {
       gl.uniform1f(minLocation, min);
@@ -340,6 +352,14 @@ export class HiPSShaderProgram {
 
     if (maxLocation) {
       gl.uniform1f(maxLocation, max);
+    }
+
+    if (scaleFunctionLocation) {
+      gl.uniform1i(scaleFunctionLocation, scaleFunction);
+    }
+
+    if (scaleParamLocation) {
+      gl.uniform1f(scaleParamLocation, scaleParam);
     }
   }
 
@@ -395,6 +415,16 @@ export class HiPSShaderProgram {
       this.locations.dataMax[i] = gl.getUniformLocation(
         this.shaderProgram,
         `uDataMax${i}`,
+      );
+
+      this.locations.scaleFunction[i] = gl.getUniformLocation(
+        this.shaderProgram,
+        `uScaleFunction${i}`,
+      );
+
+      this.locations.scaleParam[i] = gl.getUniformLocation(
+        this.shaderProgram,
+        `uScaleParam${i}`,
       );
 
       if (this.locations.samplers[i]) {

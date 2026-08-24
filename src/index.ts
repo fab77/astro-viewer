@@ -65,6 +65,7 @@ export type { ParsedGeoJSONFeature, GeoJSONProperties } from './utils/GeoJSONPar
 export { ColorMaps, COLOR_MAP_SAMPLE_COUNT, createColorMapFromSamples } from './model/ColorMaps.js';
 export type { ColorMap, ColorMapName } from './model/ColorMaps.js';
 export { HiPS } from './model/hips/HiPS.js'
+export type { HiPSFITSRangeMode, HiPSFITSScaleFunction, HiPSFITSStretch } from './model/hips/HiPS.js'
 export { XYZMap } from './model/earth/XYZMap.js'
 export { WMTSAdapter } from './model/earth/WMTSAdapter.js'
 export { MeshHiPS } from './model/meships/MeshHiPS.js'
@@ -76,6 +77,3 @@ export type { MeshHiPSConfig, MeshHiPSDebugStats, MeshHiPSTileCoord } from './mo
 
 export {Source} from './model/Source.js'
 export {Footprint} from './model/footprints/Footprint.js'
-
-
-console.log('astroviewer UMD loaded')

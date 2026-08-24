@@ -1,425 +1,290 @@
-# AstroViewer CI/CD and Release Process
+# AstroViewer CI/CD
 
-This document defines the development, validation, and release workflow for
-`astro-viewer`.
+Operational workflow for development and npm releases.
 
-AstroViewer follows a dual-license model:
+## 1. Development
 
-- GNU Affero General Public License v3.0 (`AGPL-3.0`)
-- separate commercial licensing
-
-See:
-
-- `LICENSE.md`
-- `LICENSE-AGPL.md`
-- `LICENSE-COMMERCIAL.md`
-- `DEPENDENCY-LICENSING.md`
-
-## Branching model
-
-The repository uses the following branches:
+Development happens on `dev` using snapshot versions:
 
 ```text
-dev
- │
- ├── feature/*
- │
- └── release/<version>
-          │
-          ▼
-        main
-          │
-          ▼
-      v<version>
+3.9.0-snapshot
 ```
 
-### `dev`
-
-Main development branch.
-
-New development and dependency updates are integrated here.
-
-Development versions use the following convention:
-
-```text
-<next-version>-snapshot
-```
-
-Example:
-
-```text
-3.6.0-snapshot
-```
-
-### `release/<version>`
-
-Temporary release-preparation branch created from `dev`.
-
-Example:
-
-```text
-release/3.6.0
-```
-
-Only release-related changes should normally be made on this branch.
-
-### `main`
-
-Stable release branch.
-
-Every commit used for a published release must reach `main` through the release
-process.
-
-### Release tags
-
-Stable releases are tagged using:
-
-```text
-v<version>
-```
-
-Example:
-
-```text
-v3.6.0
-```
-
-## Continuous Integration
-
-GitHub Actions runs CI on pushes and pull requests.
-
-The current CI workflow is defined in:
-
-```text
-.github/workflows/ci.yml
-```
-
-The minimum CI pipeline is:
-
-```text
-npm ci
-npm test
-npm run build
-```
-
-A release must not proceed if CI fails.
-
-## Local validation
-
-Before preparing a release, run:
-
-```bash
-npm ci
-npm test
-npm run build
-npm pack --dry-run
-```
-
-Also verify the runtime dependency tree:
-
-```bash
-npm ls astrospatial-core wcslight jsfitsio gl-matrix cross-fetch
-```
-
-And check the security posture:
-
-```bash
-npm audit
-npm audit --omit=dev
-```
-
-Review unexpected vulnerabilities or dependency changes before proceeding.
-
-## Generated artifacts
-
-The following directories contain generated build artifacts:
-
-```text
-dist/
-lib-esm/
-public/
-```
-
-They must not be treated as source files.
-
-The build process generates:
-
-```text
-dist/
-lib-esm/
-```
-
-The development web environment is generated with:
-
-```bash
-npm run web
-```
-
-which recreates:
-
-```text
-public/
-```
-
-from the current build artifacts and the files under:
-
-```text
-src/html/
-```
-
-Generated artifacts must not be committed to the repository.
-
-A clean rebuild can be verified with:
-
-```bash
-rm -rf dist lib-esm public
-
-npm run build
-npm run web
-```
-
-## Preparing a release
-
-Start from an up-to-date `dev` branch:
+Feature branches start from `dev`:
 
 ```bash
 git checkout dev
-git pull origin dev
+git pull --ff-only origin dev
+
+git checkout -b feature/<name>
 ```
 
-Create the release branch:
+Before merging a feature:
 
 ```bash
-git checkout -b release/<version>
+npm test
+npm run build
+
+git status
+git add .
+git commit -m "<message>"
+git push -u origin feature/<name>
 ```
 
-For example:
+Merge the feature into `dev` and push:
 
 ```bash
-git checkout -b release/3.6.0
+git checkout dev
+git pull --ff-only origin dev
+
+git merge feature/<name>
+git push origin dev
 ```
 
-Set the release version:
+---
+
+## 2. Validate `dev`
+
+Before starting a release:
 
 ```bash
-npm version <version> --no-git-tag-version
-```
+git checkout dev
+git pull --ff-only origin dev
 
-For example:
+git status
+node -p "require('./package.json').version"
 
-```bash
-npm version 3.6.0 --no-git-tag-version
-```
-
-This updates:
-
-```text
-package.json
-package-lock.json
-```
-
-## Release validation
-
-Run the complete release validation:
-
-```bash
-npm ci
 npm test
 npm run build
 npm pack --dry-run
-
-npm ls astrospatial-core wcslight jsfitsio gl-matrix cross-fetch
-
-npm audit
-npm audit --omit=dev
 ```
 
-Check that generated artifacts do not accidentally enter the Git repository:
+Expected version:
 
-```bash
-git status --short
-```
-
-Verify that source maps and other unwanted generated files are not included in
-the npm package:
-
-```bash
-npm pack --dry-run
-```
-
-Review the package contents carefully before publishing.
-
-## Commit the release
-
-After validation:
-
-```bash
-git status
-git add package.json package-lock.json
-git commit -m "Prepare release <version>"
-```
-
-Include other files only when they were intentionally modified as part of the
-release.
-
-Push the release branch:
-
-```bash
-git push -u origin release/<version>
+```text
+<version>-snapshot
 ```
 
 Example:
 
-```bash
-git push -u origin release/3.6.0
+```text
+3.9.0-snapshot
 ```
+
+---
+
+## 3. Create Release Branch
+
+Example release: `3.9.0`.
+
+```bash
+git checkout -b release/3.9.0
+
+npm version 3.9.0 --no-git-tag-version
+```
+
+Verify:
+
+```bash
+node -p "require('./package.json').version"
+git diff
+```
+
+Run final validation:
+
+```bash
+npm test
+npm run build
+npm pack --dry-run
+```
+
+Commit and push:
+
+```bash
+git add package.json package-lock.json
+git commit -m "Release 3.9.0"
+
+git push -u origin release/3.9.0
+```
+
+---
+
+## 4. Merge Release into `main`
 
 Open a pull request:
 
 ```text
-release/<version> -> main
+release/3.9.0 -> main
 ```
 
-CI must pass before merging.
+After CI passes, merge the PR.
 
-## Creating the release tag
-
-After the release pull request has been merged:
+Then update local `main`:
 
 ```bash
 git checkout main
-git pull origin main
-```
+git pull --ff-only origin main
 
-Verify the version:
-
-```bash
+git status
 node -p "require('./package.json').version"
 ```
 
-Run the final validation:
+Expected:
+
+```text
+3.9.0
+```
+
+---
+
+## 5. Tag and Publish
+
+Create the release tag:
 
 ```bash
+git tag v3.9.0
+git push origin v3.9.0
+```
+
+Pushing the tag triggers the GitHub Actions release workflow.
+
+The workflow runs:
+
+```text
 npm ci
 npm test
 npm run build
-npm pack --dry-run
+npm pack
+npm publish
 ```
 
-Create the annotated release tag:
+Publication uses npm Trusted Publishing / OIDC.
+
+No `NPM_TOKEN` is required.
+
+---
+
+## 6. Verify npm Release
 
 ```bash
-git tag -a v<version> -m "Release v<version>"
+npm view astro-viewer version
+npm view astro-viewer dist-tags
 ```
 
-Example:
-
-```bash
-git tag -a v3.6.0 -m "Release v3.6.0"
-```
-
-Push the tag:
-
-```bash
-git push origin v<version>
-```
-
-## Package publication
-
-Package publication must use the registry and distribution channel defined for
-the corresponding AstroViewer release.
-
-Before publishing, verify:
-
-```bash
-npm whoami
-npm config get registry
-npm pack --dry-run
-```
-
-Do not publish development versions such as:
+Expected:
 
 ```text
-3.6.0-snapshot
+3.9.0
 ```
 
-as stable releases.
+The npm website may take a short time to display a newly published version.
 
-The package version must exactly match the Git tag:
+---
 
-```text
-package.json: 3.6.0
-Git tag:      v3.6.0
-```
+## 7. Return to `dev`
 
-## Post-release development
-
-After the release has been completed, synchronize `dev` with `main`:
+Merge the released `main` back into `dev`:
 
 ```bash
 git checkout dev
-git pull origin dev
+git pull --ff-only origin dev
+
 git merge main
 ```
 
-Set the next development version:
+Start the next development version:
 
 ```bash
+npm version 3.10.0-snapshot --no-git-tag-version
+
+git add package.json package-lock.json
+git commit -m "Start 3.10.0-snapshot development"
+
+git push origin dev
+```
+
+Verify:
+
+```bash
+node -p "require('./package.json').version"
+git status
+```
+
+Expected:
+
+```text
+3.10.0-snapshot
+```
+
+and:
+
+```text
+nothing to commit, working tree clean
+```
+
+---
+
+## Release Flow
+
+```text
+feature/*
+   ↓
+  dev
+   ↓
+release/x.y.z
+   ↓
+  main
+   ↓
+ tag vx.y.z
+   ↓
+GitHub Actions
+   ↓
+npm publish
+   ↓
+main -> dev
+   ↓
+next snapshot
+```
+
+## Quick Release Checklist
+
+```bash
+# DEV
+git checkout dev
+git pull --ff-only origin dev
+npm test
+npm run build
+npm pack --dry-run
+
+# RELEASE
+git checkout -b release/x.y.z
+npm version x.y.z --no-git-tag-version
+npm test
+npm run build
+npm pack --dry-run
+git add package.json package-lock.json
+git commit -m "Release x.y.z"
+git push -u origin release/x.y.z
+
+# PR
+# release/x.y.z -> main
+
+# MAIN
+git checkout main
+git pull --ff-only origin main
+git tag vx.y.z
+git push origin vx.y.z
+
+# VERIFY
+npm view astro-viewer version
+npm view astro-viewer dist-tags
+
+# NEXT DEVELOPMENT VERSION
+git checkout dev
+git pull --ff-only origin dev
+git merge main
 npm version <next-version>-snapshot --no-git-tag-version
-```
-
-For example:
-
-```bash
-npm version 3.7.0-snapshot --no-git-tag-version
-```
-
-Commit the new development version:
-
-```bash
 git add package.json package-lock.json
 git commit -m "Start <next-version>-snapshot development"
 git push origin dev
 ```
-
-## Release checklist
-
-Before every stable release verify:
-
-- CI passes
-- tests pass
-- production build succeeds
-- `npm pack --dry-run` contains only intended files
-- generated directories are not tracked by Git
-- dependency versions are correct
-- dependency licensing has been reviewed
-- `npm audit` results have been reviewed
-- `package.json` contains the stable release version
-- the Git tag matches the package version
-- licensing files are present and consistent
-- `DEPENDENCY-LICENSING.md` reflects the current dependency tree
-
-## Licensing files
-
-Every release repository must retain:
-
-```text
-LICENSE.md
-LICENSE-AGPL.md
-LICENSE-COMMERCIAL.md
-DEPENDENCY-LICENSING.md
-```
-
-The obsolete:
-
-```text
-LICENSE-NONCOMMERCIAL.md
-```
-
-must not be restored.
-
-## Release principle
-
-A release is considered valid only when the source commit, package version,
-dependency state, licensing metadata, CI result, and Git tag all refer to the
-same release state.

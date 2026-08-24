@@ -23,6 +23,41 @@ import { HiPSDescriptor } from "./HiPSDescriptor.js";
 import type { HiPSDebugStats } from "./HiPSConfig.js";
 import { HealpixGrid } from "../grid/HealpixGrid.js";
 import { HiPSCoverage } from "./HiPSCoverage.js";
+import type { FitsTileData } from "./FitsTileLoader.js";
+
+export type HiPSFITSScaleFunction =
+  | "linear"
+  | "sqrt"
+  | "log"
+  | "asinh"
+  | "gamma";
+
+export type HiPSFITSRangeMode = "robust" | "hips" | "tile";
+
+export type HiPSFITSStretch = {
+  scaleFunction: HiPSFITSScaleFunction;
+  scaleFunctionIndex: number;
+  scaleParam: number;
+  rangeMode: HiPSFITSRangeMode;
+};
+
+const FITS_SCALE_FUNCTION_INDEX: Record<HiPSFITSScaleFunction, number> = {
+  linear: 0,
+  sqrt: 1,
+  log: 2,
+  asinh: 3,
+  gamma: 4,
+};
+
+const DEFAULT_FITS_SCALE_PARAM: Record<HiPSFITSScaleFunction, number> = {
+  linear: 1,
+  sqrt: 1,
+  log: 100,
+  asinh: 10,
+  gamma: 0.5,
+};
+
+const MAX_ROBUST_TILE_RANGES = 512;
 
 export class HiPS extends AbstractSkyEntity {
   private _ancestorTiles: AncestorTile[];
@@ -44,6 +79,13 @@ export class HiPS extends AbstractSkyEntity {
   public samplerIdx = 0;
   public colorMapIdx = 0;
   public colorMap = ColorMaps["native"];
+  private _fitsStretch: HiPSFITSStretch = {
+    scaleFunction: "linear",
+    scaleFunctionIndex: FITS_SCALE_FUNCTION_INDEX.linear,
+    scaleParam: DEFAULT_FITS_SCALE_PARAM.linear,
+    rangeMode: "robust",
+  };
+  private _robustFITSRanges: Array<{ min: number; max: number }> = [];
   private _healpixGrid: HealpixGrid;
 
   // exposed read-only helpers
@@ -347,6 +389,182 @@ export class HiPS extends AbstractSkyEntity {
 
   get dataRange() {
     return this._descriptor.dataRange;
+  }
+
+  get fitsStretch(): HiPSFITSStretch {
+    return this._fitsStretch;
+  }
+
+  setFITSScaleFunction(
+    scaleFunction: HiPSFITSScaleFunction,
+    scaleParam?: number,
+  ): void {
+    const scaleFunctionIndex = FITS_SCALE_FUNCTION_INDEX[scaleFunction];
+
+    if (scaleFunctionIndex === undefined) {
+      throw new Error(`Unsupported FITS scale function: ${scaleFunction}`);
+    }
+
+    const defaultParam = DEFAULT_FITS_SCALE_PARAM[scaleFunction];
+    const param = scaleParam ?? defaultParam;
+
+    if (!Number.isFinite(param) || param <= 0) {
+      throw new Error(`Invalid FITS scale parameter: ${param}`);
+    }
+
+    this._fitsStretch = {
+      ...this._fitsStretch,
+      scaleFunction,
+      scaleFunctionIndex,
+      scaleParam: param,
+    };
+  }
+
+  setFITSRangeMode(rangeMode: HiPSFITSRangeMode): void {
+    if (rangeMode !== "robust" && rangeMode !== "hips" && rangeMode !== "tile") {
+      throw new Error(`Unsupported FITS range mode: ${rangeMode}`);
+    }
+
+    this._fitsStretch = {
+      ...this._fitsStretch,
+      rangeMode,
+    };
+  }
+
+  observeFITSDataRange(fits: FitsTileData): void {
+    if (
+      fits.robustMin === null ||
+      fits.robustMax === null ||
+      !Number.isFinite(fits.robustMin) ||
+      !Number.isFinite(fits.robustMax) ||
+      fits.robustMax <= fits.robustMin
+    ) {
+      return;
+    }
+
+    this._robustFITSRanges.push({
+      min: fits.robustMin,
+      max: fits.robustMax,
+    });
+
+    if (this._robustFITSRanges.length > MAX_ROBUST_TILE_RANGES) {
+      this._robustFITSRanges.shift();
+    }
+  }
+
+  getFITSDisplayRange(fits: FitsTileData | undefined): { min: number; max: number } | null {
+    const hipsRange = this.getHiPSDataRange();
+
+    if (this._fitsStretch.rangeMode === "hips" && hipsRange) {
+      return hipsRange;
+    }
+
+    if (this._fitsStretch.rangeMode === "robust") {
+      const robustRange = this.getRobustFITSRange() ?? this.getTileRobustRange(fits);
+
+      if (robustRange) {
+        return robustRange;
+      }
+    }
+
+    const tileRange = this.getTilePhysicalRange(fits) ?? this.getTileHeaderRange(fits);
+
+    if (tileRange) {
+      return tileRange;
+    }
+
+    return hipsRange;
+  }
+
+  private getHiPSDataRange(): { min: number; max: number } | null {
+    const hipsRange = this.dataRange;
+
+    if (
+      hipsRange.min !== undefined &&
+      hipsRange.max !== undefined &&
+      Number.isFinite(hipsRange.min) &&
+      Number.isFinite(hipsRange.max) &&
+      hipsRange.max > hipsRange.min
+    ) {
+      return {
+        min: hipsRange.min,
+        max: hipsRange.max,
+      };
+    }
+
+    return null;
+  }
+
+  private getRobustFITSRange(): { min: number; max: number } | null {
+    if (this._robustFITSRanges.length === 0) {
+      return null;
+    }
+
+    const lows = this._robustFITSRanges.map((range) => range.min).sort((a, b) => a - b);
+    const highs = this._robustFITSRanges.map((range) => range.max).sort((a, b) => a - b);
+
+    const min = lows[Math.floor((lows.length - 1) * 0.1)];
+    const max = highs[Math.ceil((highs.length - 1) * 0.9)];
+
+    if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+      return null;
+    }
+
+    return { min, max };
+  }
+
+  private getTileRobustRange(fits: FitsTileData | undefined): { min: number; max: number } | null {
+    if (
+      fits &&
+      fits.robustMin !== null &&
+      fits.robustMax !== null &&
+      Number.isFinite(fits.robustMin) &&
+      Number.isFinite(fits.robustMax) &&
+      fits.robustMax > fits.robustMin
+    ) {
+      return {
+        min: fits.robustMin,
+        max: fits.robustMax,
+      };
+    }
+
+    return null;
+  }
+
+  private getTilePhysicalRange(fits: FitsTileData | undefined): { min: number; max: number } | null {
+    if (
+      fits &&
+      fits.physicalMin !== null &&
+      fits.physicalMax !== null &&
+      Number.isFinite(fits.physicalMin) &&
+      Number.isFinite(fits.physicalMax) &&
+      fits.physicalMax > fits.physicalMin
+    ) {
+      return {
+        min: fits.physicalMin,
+        max: fits.physicalMax,
+      };
+    }
+
+    return null;
+  }
+
+  private getTileHeaderRange(fits: FitsTileData | undefined): { min: number; max: number } | null {
+    if (
+      fits &&
+      fits.dataMin !== null &&
+      fits.dataMax !== null &&
+      Number.isFinite(fits.dataMin) &&
+      Number.isFinite(fits.dataMax) &&
+      fits.dataMax > fits.dataMin
+    ) {
+      return {
+        min: fits.dataMin,
+        max: fits.dataMax,
+      };
+    }
+
+    return null;
   }
 
   getCurrentHealpixOrder(): number {

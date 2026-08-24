@@ -27,6 +27,11 @@ import {
 } from "./utils/Utils.js";
 
 import { HiPS } from "./model/hips/HiPS.js";
+import type {
+  HiPSFITSRangeMode,
+  HiPSFITSScaleFunction,
+  HiPSFITSStretch,
+} from "./model/hips/HiPS.js";
 import { HiPSDescriptor } from "./model/hips/HiPSDescriptor.js";
 import { PerspectiveMatrixManager } from "./utils/PerspectiveMatrixManager.js";
 import { SphereFoV } from "./model/SphereFoV.js";
@@ -867,6 +872,29 @@ class AstroSphere {
     }
 
     this._activeHiPS.changeFormat(format);
+  }
+
+  setHiPSFITSScaleFunction(
+    scaleFunction: HiPSFITSScaleFunction,
+    scaleParam?: number,
+  ): void {
+    if (!this._activeHiPS) {
+      throw new Error("No active HiPS.");
+    }
+
+    this._activeHiPS.setFITSScaleFunction(scaleFunction, scaleParam);
+  }
+
+  getActiveHiPSFITSStretch(): HiPSFITSStretch | null {
+    return this._activeHiPS?.fitsStretch ?? null;
+  }
+
+  setHiPSFITSRangeMode(rangeMode: HiPSFITSRangeMode): void {
+    if (!this._activeHiPS) {
+      throw new Error("No active HiPS.");
+    }
+
+    this._activeHiPS.setFITSRangeMode(rangeMode);
   }
 
   private createHiPS(hipsDescriptor: HiPSDescriptor): HiPS {

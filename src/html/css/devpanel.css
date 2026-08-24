@@ -139,6 +139,34 @@ label {
     min-height: 1.2em;
 }
 
+.dev-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.dev-tab {
+    background: #2f3340;
+    border-color: #454b5f;
+    color: #eee;
+    min-width: 0;
+    white-space: normal;
+}
+
+.dev-tab.active {
+    background: #1e88e5;
+    border-color: #1669b9;
+}
+
+.tab-panel {
+    margin-top: 8px;
+}
+
+details.nested {
+    padding-left: 14px;
+}
+
 .div-text-wrapper {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
     border-radius: 7px;

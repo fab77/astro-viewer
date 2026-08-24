@@ -90,6 +90,43 @@
 
                     <div id="hipsLayers"></div>
                 </div>
+
+                <details id="hipsRenderingPanel" open style="margin-top:8px; padding-left: 20px;">
+                    <summary>Rendering</summary>
+                    <div class="stack" style="margin-top:8px;">
+                        <label for="hipsColorMap">Colormap</label>
+                        <select id="hipsColorMap">
+                            <option value="native">Native</option>
+                            <option value="grayscale">Grayscale</option>
+                            <option value="planck">Planck</option>
+                            <option value="cmb">CMB</option>
+                            <option value="rainbow">Rainbow</option>
+                            <option value="eosb">EOSB</option>
+                            <option value="cubehelix">Cubehelix</option>
+                            <option value="hot">Hot</option>
+                            <option value="gray">Gray</option>
+                        </select>
+
+                        <label for="hipsScaleFunction">FITS scale function</label>
+                        <select id="hipsScaleFunction" disabled>
+                            <option value="linear">Linear</option>
+                            <option value="sqrt">Sqrt</option>
+                            <option value="log">Log1p</option>
+                            <option value="asinh">Asinh</option>
+                        </select>
+
+                        <label for="hipsRangeMode">FITS range</label>
+                        <select id="hipsRangeMode" disabled>
+                            <option value="robust">Robust percentile</option>
+                            <option value="hips">HiPS data min/max</option>
+                            <option value="tile">Tile min/max</option>
+                        </select>
+
+                        <label for="hipsScaleParam">Scale strength</label>
+                        <input id="hipsScaleParam" type="number" min="0.1" step="0.5" value="1" disabled />
+                        <div class="hint">FITS only. Robust percentile is the display default; HiPS min/max keeps the raw survey range.</div>
+                    </div>
+                </details>
             </div>
 
             <details id="hipsDiagnosticsPanel" open style="margin-top:8px; padding-left: 20px;">

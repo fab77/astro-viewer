@@ -1,357 +1,460 @@
-# 🌌 AstroViewer
+# AstroViewer
 
-[![License: AGPL-3.0 or Commercial](https://img.shields.io/badge/license-AGPL--3.0%20or%20Commercial-blue.svg)](#licensing)
-[![TypeScript](https://img.shields.io/badge/language-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![WebGL](https://img.shields.io/badge/3D-WebGL-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API)
+**AstroViewer** is a lightweight, framework-independent JavaScript/TypeScript library for interactive 3D visualization and analysis of astronomical and Earth observation data.
 
-**AstroViewer** is a standards-driven 3D scientific visualization engine for astronomical and Earth-observation data, written in **TypeScript** and **WebGL**.
+It provides a WebGL2-based rendering engine and a set of reusable APIs for building scientific visualization applications directly in the browser.
 
-It provides reusable visualization and interaction components for scientific web applications, including support for astronomical imagery and catalogues, spatial footprints, coordinate-aware navigation, Earth imagery, satellite observation geometry, and standards-based scientific data access.
+AstroViewer is developed from scratch without depending on visualization frameworks. It integrates astronomical standards and geospatial/Earth observation technologies within the same rendering environment.
 
-Current capabilities include support for technologies and standards such as:
+## Features
 
-- **HiPS** and **HEALPix** for hierarchical astronomical imagery and spatial indexing
-- **FITS** and astronomical coordinate transformations
-- **TAP**-based catalogue access and astronomical metadata
-- catalogue overlays and spatial footprints
-- **STC-S** geometry parsing
-- Earth visualization using tiled **XYZ** and **WMTS** imagery
-- satellite trajectories, observation tracks, footprints, and sensor geometry
-- WebGL-based 3D rendering, picking, camera navigation, and scientific overlays
+### Astronomy
 
-AstroViewer is the visualization engine used by **Astrobrowser**, but is designed as an independent npm library that can be embedded in other scientific web applications.
+- Interactive celestial sphere visualization
+- HiPS (Hierarchical Progressive Surveys)
+- Multiple simultaneous HiPS layers
+- Independent HiPS layer opacity
+- HiPS layer activation and removal
+- Runtime HiPS format switching
+- HiPS JPEG/PNG image tiles
+- HiPS FITS tiles
+- HiPS coverage handling
+- HEALPix hierarchical sky tessellation
+- FITS astronomical data support
+- Astronomical coordinate systems and transformations
+- Field-of-view calculations
+- Grid and coordinate visualization
+- TAP-based astronomical data access
 
-## Licensing
+### Earth Observation
 
-AstroViewer is dual-licensed under:
+- Interactive 3D Earth visualization
+- XYZ tiled maps
+- WMTS map services
+- GeoJSON geometries and overlays
+- Satellite tracks and observation geometry
+- Sensor footprints and cones
+- Earth-oriented coordinate and picking utilities
 
-- the **GNU Affero General Public License version 3 (AGPL-3.0)**; or
-- a separate **commercial license**.
+### 3D and Scientific Visualization
 
-The AGPL-3.0 option is an open-source license and may be used for both commercial and non-commercial purposes, provided that its requirements are satisfied.
-
-The commercial license is an alternative for organizations that want to integrate AstroViewer into proprietary products, services, or other software under terms that do not impose the AGPL-3.0 copyleft requirements.
-
-See:
-
-- `LICENSE.md` for an overview of the dual-license model
-- `LICENSE-AGPL.md` for the full AGPL-3.0 license text
-- `LICENSE-COMMERCIAL.md` for information about commercial licensing
-- `DEPENDENCY-LICENSING.md` for the licensing status of AstroViewer dependencies
-
----
-
-## 📦 Bundles
-
-AstroViewer builds the following bundles in the `dist/` directory:
-
-| File | Description |
-|------|--------------|
-| `astroviewer.js` | UMD bundle for browser environments |
-| `astroviewer.min.js` | Minified UMD bundle |
-| `astroviewer.cjs` | CommonJS build for Node.js |
-| `*.map` | Source maps for debugging |
+- WebGL2 rendering
+- Inside/outside sphere visualization
+- MeshHiPS OBJ tiled meshes
+- Runtime color maps
+- Interactive camera and navigation
+- Ray picking
+- Scientific overlays and geometries
+- Framework-independent architecture
 
 ---
 
-## 🪐 Quick Start (Browser)
+## Installation
 
-Copy the bundle into your project and link it in your HTML page:
-
-```html
-<script src="./javascripts/astroviewer.js"></script>
-```
-
-Then you can use the global `astroviewer` object directly.  
-Here is a minimal example that loads a HiPS survey and starts the viewer.
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>AstroViewer Demo</title>
-  <script src="./javascripts/astroviewer.js"></script>
-</head>
-<body onload="run();">
-  <canvas id="astrocanvas"></canvas>
-  <script>
-    let window.AstroAPI = undefined;
-
-    async function run() {
-      const AC = new astroviewer.AstroViewer();
-      window.AstroAPI = AC;
-
-      const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
-      const resp = await fetch(hipsUrl + "properties");
-      const propsText = await resp.text();
-
-      const desc = new astroviewer.HiPSDescriptor(propsText, hipsUrl);
-      window.AstroAPI.activateHiPS(desc);
-      window.AstroAPI.run();
-    }
-  </script>
-</body>
-</html>
-```
-
----
-
-## 🧩 Node.js / TypeScript Usage
-
-You can also use AstroViewer as a Node module:
+Install AstroViewer from npm:
 
 ```bash
 npm install astro-viewer
 ```
 
-Then import from your code:
+AstroViewer requires Node.js 22 or later for development and package tooling.
 
-```ts
-// ESM
-import { AstroViewer, HiPSDescriptor } from 'astro-viewer';
+The rendering engine itself runs in a browser-compatible environment with WebGL2 support.
 
-// or CommonJS
-const { AstroViewer, HiPSDescriptor } = require('astro-viewer');
+---
+
+## Quick Start
+
+### ES Modules
+
+```js
+import { AstroViewer } from "astro-viewer";
+
+const canvas = document.getElementById("astrocanvas");
+
+const viewer = new AstroViewer(canvas);
+```
+
+Example HTML:
+
+```html
+<canvas id="astrocanvas"></canvas>
+
+<script type="module">
+  import { AstroViewer } from "astro-viewer";
+
+  const canvas = document.getElementById("astrocanvas");
+  const viewer = new AstroViewer(canvas);
+</script>
 ```
 
 ---
 
-## 🧪 Development Web Interface
+## HiPS
 
-AstroViewer includes a development web UI to explore features such as HiPS loading, FoV control, catalogue management, and footprints.  
-You need **Node.js ≥ 22** installed.
+AstroViewer supports HiPS (Hierarchical Progressive Surveys) as native astronomical map layers.
 
-Clone this repository and run:
+A HiPS survey can be activated using a `HiPSDescriptor`:
+
+```js
+import { AstroViewer, HiPSDescriptor } from "astro-viewer";
+
+const canvas = document.getElementById("astrocanvas");
+const viewer = new AstroViewer(canvas);
+
+const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
+
+const response = await fetch(`${hipsUrl}properties`);
+const properties = await response.text();
+
+const descriptor = new HiPSDescriptor(properties, new URL(hipsUrl));
+
+viewer.activateHiPS(descriptor, false);
+```
+
+AstroViewer supports standard HiPS image tiles as well as FITS-based HiPS datasets.
+
+When a survey exposes multiple supported tile formats, the active format can be changed at runtime.
+
+---
+
+## Multiple HiPS Layers
+
+Multiple HiPS surveys can coexist within the same AstroViewer instance.
+
+```js
+const hips1 = await viewer.addHiPSFromUrl(
+  "https://alasky.cds.unistra.fr/DSS/DSSColor/",
+);
+
+const hips2 = await viewer.addHiPSFromUrl("https://example.org/another-hips/");
+```
+
+The currently loaded layers can be retrieved with:
+
+```js
+const layers = viewer.getActiveHiPSLayers();
+```
+
+The active HiPS layer can be changed without altering layer order:
+
+```js
+viewer.setActiveHiPS(hips1);
+```
+
+Individual layers can be removed:
+
+```js
+viewer.removeHiPS(hips2);
+```
+
+or all HiPS layers can be removed:
+
+```js
+viewer.removeAllHiPS();
+```
+
+### Layer Opacity
+
+Each HiPS layer has independent opacity:
+
+```js
+viewer.setHiPSOpacity(hips1, 0.4);
+viewer.setHiPSOpacity(hips2, 1.0);
+```
+
+Opacity values range from `0` (transparent) to `1` (fully opaque).
+
+This allows multiple astronomical surveys to be visually combined and compared.
+
+---
+
+## HiPS Formats
+
+The formats available for the active HiPS survey can be queried with:
+
+```js
+const formats = viewer.getActiveHiPSFormats();
+```
+
+The active format can then be changed at runtime:
+
+```js
+viewer.changeHiPSFormat("fits");
+```
+
+Supported formats depend on the HiPS dataset metadata.
+
+AstroViewer supports conventional image-based HiPS tiles and FITS HiPS tiles.
+
+---
+
+## HiPS Coverage
+
+AstroViewer supports survey coverage information associated with HiPS datasets.
+
+Coverage information is used by the tile rendering pipeline to avoid requesting and rendering HEALPix tiles outside the available survey region.
+
+This is particularly useful for partial-sky surveys.
+
+---
+
+## Earth Maps
+
+AstroViewer also supports tiled Earth observation maps.
+
+### XYZ
+
+XYZ tile services can be used as Earth map layers.
+
+Typical services use URL templates such as:
+
+```text
+https://tile.openstreetmap.org/{z}/{x}/{y}.png
+```
+
+AstroViewer automatically determines the appropriate tile level according to the current camera position and field of view.
+
+### WMTS
+
+WMTS services can also be integrated through the AstroViewer WMTS support.
+
+This allows standards-based Earth observation imagery to coexist with astronomical visualization functionality within the same rendering architecture.
+
+---
+
+## MeshHiPS
+
+AstroViewer includes support for hierarchical tiled 3D meshes through MeshHiPS.
+
+MeshHiPS can be used for progressively loading OBJ-based surface geometry according to the current field of view and camera distance.
+
+Typical use cases include planetary surfaces and other large hierarchical 3D datasets.
+
+---
+
+## Satellite and Observation Geometry
+
+AstroViewer provides primitives for representing Earth observation and satellite-related geometry, including:
+
+- satellite positions;
+- observation tracks;
+- ground footprints;
+- sensor cones;
+- GeoJSON regions and geometries.
+
+These components can be combined to build interactive Earth observation analysis workflows.
+
+---
+
+## API Overview
+
+The main entry point is:
+
+```ts
+AstroViewer;
+```
+
+Important APIs include:
+
+### HiPS
+
+```ts
+activateHiPS(...)
+addHiPS(...)
+addHiPSFromUrl(...)
+removeHiPS(...)
+removeAllHiPS()
+
+getActiveHiPS()
+getActiveHiPSLayers()
+setActiveHiPS(...)
+
+getActiveHiPSFormats()
+changeHiPSFormat(...)
+
+setHiPSOpacity(...)
+```
+
+### Maps and visualization
+
+AstroViewer also exposes functionality around:
+
+```text
+HiPS
+HiPSDescriptor
+XYZMap
+WMTSAdapter
+MeshHiPS
+GeoJSON
+ObservationTrack
+satellite and sensor geometry
+coordinate and picking utilities
+```
+
+See the TypeScript declarations distributed with the package for the complete public API.
+
+---
+
+## Package Formats
+
+AstroViewer is distributed through npm with both ES Module and CommonJS entry points.
+
+The package exposes:
+
+```text
+ESM     → lib-esm/index.js
+Types   → lib-esm/index.d.ts
+CJS     → dist/astroviewer.cjs
+Browser → dist/astroviewer.js
+```
+
+The package can therefore be consumed by modern JavaScript/TypeScript applications and bundlers.
+
+The AstroViewer rendering engine requires a browser-compatible DOM and WebGL2 environment. Importing the package from Node.js does not imply that the WebGL viewer itself can run in a headless Node environment.
+
+---
+
+## Development
+
+Clone the repository and install the dependencies:
 
 ```bash
-npm run all
+npm ci
 ```
 
-This command will:
-- Compile the TypeScript source
-- Build the bundles
-- Prepare the web testing interface
-- Start a local web server
+Run the test suite:
 
-You should see output similar to:
-
-```
-Serving HTTP on 0.0.0.0 port 8080
+```bash
+npm test
 ```
 
-Then open one of the links in your browser (e.g. [http://127.0.0.1:8080](http://127.0.0.1:8080)) to start exploring **AstroViewer**.
+Build the package:
 
----
-
-## 🛠️ Build Scripts
-
-| Command | Description |
-|----------|--------------|
-| `npm run clean` | Remove `dist` and `lib-esm` directories |
-| `npm run dev` | Build in development mode and watch for changes |
-| `npm run prod` | Production build (minified and with source maps) |
-| `npm run web` | Copy bundles and assets into the public folder |
-| `npm run all` | Full build + launch development web UI |
-
----
-
-## 📚 API Overview
-
-Main exported classes and utilities:
-
-- `AstroViewer` — main application controller  
-- `HiPSDescriptor` — handles HiPS metadata and configuration  
-- `FootprintSetGL` — renders observation footprints  
-- `CatalogueGL` — renders astronomical catalogues  
-- `FoV` and related geometry/color-map utilities — camera and rendering helpers  
-
----
-
-
----
-
-## 🔧 API Reference & Usage
-
-Below is a practical overview of the **most commonly exposed methods** via the UMD global `astroviewer` (browser) or the module exports (Node/ESM).  
-> **Note:** The bundles only include what is exported from `src/index.ts`. If your build exposes additional methods, follow the same patterns shown here.
-
-### Core Lifecycle
-
-#### `new AstroViewer(options?)`
-Create the viewer controller.
-
-```js
-// Browser (UMD)
-const AC = new astroviewer.AstroViewer({
-  canvas: document.getElementById('astrocanvas'), // optional; defaults to #astrocanvas
-  antialias: true                                  // optional
-});
+```bash
+npm run build
 ```
 
-```ts
-// Node/ESM
-import { AstroViewer } from 'astro-viewer';
-const AC = new AstroViewer();
+Run the development server:
+
+```bash
+npm start
 ```
 
-#### `run()`
-Start the render loop and event handling.
+Before publishing or merging a release, the package contents can be inspected with:
 
-```js
-AC.run();
-```
-
-### HiPS Datasets
-
-#### `activateHiPS(descriptor: HiPSDescriptor)`
-Activate a HiPS dataset for rendering.
-
-```js
-const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
-const props = await (await fetch(hipsUrl + "properties")).text();
-const desc = new astroviewer.HiPSDescriptor(props, hipsUrl);
-
-AC.activateHiPS(desc);
-```
-
-#### `toggleInsideSphere()`
-Toggle the point-of-view (outside vs inside the HiPS sphere).
-
-```js
-AC.toggleInsideSphere();   // outside <-> inside
+```bash
+npm pack --dry-run
 ```
 
 ---
 
-### Camera & Navigation
+## Continuous Integration
 
-#### `goTo(raDeg: number, decDeg: number)`
-Move the camera to a sky coordinate (ICRS).
+The CI pipeline validates:
 
-```js
-AC.goTo(287.0, 12.5);
+```text
+npm ci
+npm test
+npm run build
+npm pack --dry-run
 ```
 
+Release publishing is performed through GitHub Actions using npm Trusted Publishing and OpenID Connect (OIDC).
+
+No long-lived npm publishing token is required by the release workflow.
+
+See:
+
+```text
+ci-cd.md
+```
+
+for the complete development and release workflow.
 
 ---
 
-### Overlays & Grids
+## Browser Requirements
 
-#### `toggleHealpixGrid()`
-Show/hide the HEALPix grid overlay.
+AstroViewer relies on WebGL2 and modern browser APIs.
 
-```js
-AC.toggleHealpixGrid();
+A recent version of one of the major browsers is recommended:
+
+- Chrome / Chromium
+- Firefox
+- Safari
+- Edge
+
+WebGL2 must be available and enabled.
+
+---
+
+## Architecture
+
+AstroViewer follows a framework-independent architecture.
+
+The rendering and scientific functionality are implemented as reusable JavaScript/TypeScript components rather than being coupled to React, Angular, Vue, or another UI framework.
+
+This allows AstroViewer to be embedded in different applications and user-interface architectures while keeping the scientific visualization layer independent.
+
+The project integrates several lower-level scientific libraries developed within the AstroBrowser ecosystem, including functionality for FITS, WCS and HEALPix processing.
+
+---
+
+## Licensing
+
+AstroViewer is dual-licensed.
+
+### Open-source use
+
+AstroViewer is available under the:
+
+**GNU Affero General Public License v3.0 (AGPL-3.0)**
+
+See:
+
+```text
+LICENSE-AGPL.md
+```
+
+### Commercial use
+
+A separate commercial license is available for organizations and applications that do not wish to comply with the AGPL requirements.
+
+See:
+
+```text
+LICENSE-COMMERCIAL.md
+```
+
+The overall licensing terms are described in:
+
+```text
+LICENSE.md
+```
+
+Third-party dependency licensing information is documented in:
+
+```text
+DEPENDENCY-LICENSING.md
 ```
 
 ---
 
-### Catalogues
+## Project
 
-#### `showCatalogue(catalogue: CatalogueGL)`
-Render a catalogue layer.
+AstroViewer is part of the **AstroBrowser** ecosystem, a set of scientific visualization and data-analysis technologies designed to support both astronomical and Earth observation applications.
 
-```js
-AC.showCatalogue(cat);
-```
-
-#### `hideCatalogue(catalogue: CatalogueGL, isVisible: boolean)`
-Toggle visibility without removing it.
-
-```js
-AC.hideCatalogue(cat, false);  // hide
-AC.hideCatalogue(cat, true);   // show
-```
-
-#### `deleteCatalogue(catalogue: CatalogueGL)`
-Remove a catalogue layer completely.
-
-```js
-AC.deleteCatalogue(cat);
-```
-
-#### `changeCatalogueColor(catalogue: CatalogueGL, hexColor: string)`
-Change the colour of rendered catalogue points/sources.
-
-```js
-AC.changeCatalogueColor(cat, "#ff8800");
-```
+The project focuses on browser-native scientific visualization, interoperability with established scientific standards, and reusable components for building interactive data-analysis environments.
 
 ---
 
-### Footprints (Observations)
+## Author
 
-The following methods mirror the catalogue API, but for **observation footprints**.
+Copyright © Fabrizio Giordano.
 
-#### `showFootprintSet(footprintSet: FootprintSetGL)`
-```js
-const footprints = tapRepo.obsList.find(o => o.name === "observations.some_collection");
-AC.showFootprintSet(footprints);
+AstroViewer is released under:
+
+```text
+AGPL-3.0-only OR LicenseRef-AstroViewer-Commercial
 ```
-
-#### `hideFootprintSet(footprintSet: FootprintSetGL, isVisible: boolean)`
-```js
-AC.hideFootprintSet(footprints, false); // hide
-AC.hideFootprintSet(footprints, true);  // show
-```
-
-#### `deleteFootprintSet(footprintSet: FootprintSetGL)`
-```js
-AC.deleteFootprintSet(footprints);
-```
-
-#### `changeFootprintSetColor(footprintSet: FootprintSetGL, hexColor: string)`
-```js
-AC.changeFootprintSetColor(footprints, "#00ffaa");
-```
-
----
-
-### Events & Utilities (if exported)
-
-Depending on your build, you may also have helpers like:
-
-#### `getCenterCoordinates()`
-Return the current ICRS center of the viewport.
-
-```js
-const coords = AC.getCenterCoordinates();
-```
-
-#### `toggleInsideSphere()`
-```js
-AC.toggleInsideSphere();
-```
-
-> If a method above is not present in your build, it means it’s not exported by `src/index.ts`.  
-> To inspect what’s available in the UMD build, open your page and run:
->
-> ```js
-> console.log(Object.keys(astroviewer));
-> console.log(Object.getOwnPropertyNames(astroviewer.AstroViewer.prototype));
-> ```
-
-
-
-## 📜 License
-
-AstroViewer is dual-licensed under:
-
-- **GNU Affero General Public License version 3 (AGPL-3.0)**
-- **Commercial License**
-
-You may use AstroViewer under the AGPL-3.0, including in commercial contexts, provided that you comply with its terms.
-
-If the AGPL-3.0 requirements are not suitable for your project, a separate commercial license is available for proprietary integration and other use cases requiring alternative licensing terms.
-
-See `LICENSE.md`, `LICENSE-AGPL.md`, and `LICENSE-COMMERCIAL.md` for details.
-
----
-
-## 🔗 Links
-
-- 🏠 [GitHub Repository](https://github.com/fab77/astro-viewer)
-- 🪐 [HiPS Standard (IVOA)](https://www.ivoa.net/documents/HiPS/)
-- 🛰️ [ESA Sky TAP Service](https://sky.esa.int/esasky-tap/tap)
-- ✉️ [Report Issues](https://github.com/fab77/astro-viewer/issues)

@@ -27,6 +27,11 @@ import { ReadonlyMat4 } from "gl-matrix";
 import ColorMaps, { ColorMap, ColorMapName } from "./model/ColorMaps.js";
 import { HiPS } from "./model/hips/HiPS.js";
 import type {
+  HiPSFITSRangeMode,
+  HiPSFITSScaleFunction,
+  HiPSFITSStretch,
+} from "./model/hips/HiPS.js";
+import type {
   WMTSLayerConfig,
   XYZDebugStats,
   XYZLayerConfig,
@@ -458,6 +463,21 @@ export class AstroViewer {
 
   changeHiPSFormat(format: string): void {
     this.astroSphere.changeHiPSFormat(format);
+  }
+
+  setHiPSFITSScaleFunction(
+    scaleFunction: HiPSFITSScaleFunction,
+    scaleParam?: number,
+  ): void {
+    this.astroSphere.setHiPSFITSScaleFunction(scaleFunction, scaleParam);
+  }
+
+  getActiveHiPSFITSStretch(): HiPSFITSStretch | null {
+    return this.astroSphere.getActiveHiPSFITSStretch();
+  }
+
+  setHiPSFITSRangeMode(rangeMode: HiPSFITSRangeMode): void {
+    this.astroSphere.setHiPSFITSRangeMode(rangeMode);
   }
 
   getActiveHiPSFormats(): readonly string[] {
