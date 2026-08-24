@@ -10,7 +10,7 @@
  */
 
 import { wireHoveredFootprints } from "./hoveredFootprints.js";
-import { el, setStatus, minimisePanel, restorePanel } from "./ui.js";
+import { el, setStatus, minimisePanel, restorePanel, wireDevTabs } from "./ui.js";
 import { state, loadPersisted, persistBasic } from "./state.js";
 import { loadHiPS, wireHiPSControls } from "./hips.js";
 import { loadMeshHiPS } from "./meships.js";
@@ -168,6 +168,7 @@ async function bootstrap() {
 
     AC.run();
 
+    wireDevTabs();
     wireUI();
     renderCatalogueManager();
     wireCatalogueManagerControls();

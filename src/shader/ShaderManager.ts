@@ -137,7 +137,7 @@ export default class ShaderManager {
 
   static footprintVS(): GLSLSource {
     return `#version 300 es
-    precision highp float;
+    precision mediump float;
 
     layout(location = 0) in vec4 aCatPosition;
 
@@ -182,7 +182,7 @@ export default class ShaderManager {
 
   static hipsNativeFS(): GLSLSource {
     return `#version 300 es
-    precision mediump float;
+    precision highp float;
 
     in vec2 vTextureCoord;
 
@@ -249,7 +249,7 @@ export default class ShaderManager {
 
   static hipsGrayscaleFS(): GLSLSource {
     return `#version 300 es
-    precision mediump float;
+    precision highp float;
 
     in vec2 vTextureCoord;
 
@@ -324,7 +324,7 @@ export default class ShaderManager {
 
   static hipsColorMapFS(): GLSLSource {
     return `#version 300 es
-    precision mediump float;
+    precision highp float;
 
     uniform float uLayerOpacity;
 
@@ -430,6 +430,36 @@ export default class ShaderManager {
     uniform int uTextureMode${index};
     uniform float uDataMin${index};
     uniform float uDataMax${index};
+    uniform int uScaleFunction${index};
+    uniform float uScaleParam${index};
+
+    float asinhCompat${index}(float value) {
+      return log(value + sqrt(value * value + 1.0));
+    }
+
+    float applyFitsScale${index}(float normalized) {
+      float x = clamp(normalized, 0.0, 1.0);
+
+      if (uScaleFunction${index} == 1) {
+        return sqrt(x);
+      }
+
+      if (uScaleFunction${index} == 2) {
+        float strength = max(uScaleParam${index}, 1.0);
+        return log(1.0 + strength * x) / log(1.0 + strength);
+      }
+
+      if (uScaleFunction${index} == 3) {
+        float strength = max(uScaleParam${index}, 1.0);
+        return asinhCompat${index}(strength * x) / asinhCompat${index}(strength);
+      }
+
+      if (uScaleFunction${index} == 4) {
+        return pow(x, max(uScaleParam${index}, 0.0001));
+      }
+
+      return x;
+    }
 
     vec4 sampleHiPSTexture${index}(vec2 uv) {
       vec4 color = texture(uSampler${index}, uv);
@@ -453,10 +483,12 @@ export default class ShaderManager {
         1.0
       );
 
+      float scaled = applyFitsScale${index}(normalized);
+
       return vec4(
-        normalized,
-        normalized,
-        normalized,
+        scaled,
+        scaled,
+        scaled,
         1.0
       );
     }

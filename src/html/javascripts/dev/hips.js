@@ -69,6 +69,9 @@ export async function loadHiPS2(baseUrl) {
 
 export function wireHiPSControls() {
   wireHiPSFormatSelector();
+  wireHiPSColorMapSelector();
+  wireHiPSScaleControls();
+  wireHiPSRangeControls();
 
   el("btnAddHiPS")?.addEventListener("click", async () => {
     const url = el("hipsUrl")?.value.trim();
@@ -93,6 +96,96 @@ export function wireHiPSControls() {
   });
 
   refreshHiPSUI();
+}
+
+export function wireHiPSRangeControls() {
+  const select = el("hipsRangeMode");
+
+  if (!select) {
+    return;
+  }
+
+  select.addEventListener("change", () => {
+    const rangeMode = select.value;
+
+    if (!rangeMode) {
+      return;
+    }
+
+    try {
+      state.AstroAPI.setHiPSFITSRangeMode(rangeMode);
+      refreshHiPSUI();
+      setStatus(`✅ FITS range changed to ${getRangeModeLabel(rangeMode)}.`);
+    } catch (error) {
+      console.error(error);
+      setStatus(`❌ Unable to change FITS range: ${error.message}`);
+    }
+  });
+}
+
+export function wireHiPSScaleControls() {
+  const select = el("hipsScaleFunction");
+  const paramInput = el("hipsScaleParam");
+
+  if (!select) {
+    return;
+  }
+
+  const applyScale = () => {
+    const scaleFunction = select.value;
+    const requestedParam = Number(paramInput?.value ?? "1");
+    const scaleParam = Number.isFinite(requestedParam) && requestedParam > 0
+      ? requestedParam
+      : getDefaultScaleParam(scaleFunction);
+
+    if (!scaleFunction) {
+      return;
+    }
+
+    try {
+      state.AstroAPI.setHiPSFITSScaleFunction(scaleFunction, scaleParam);
+      refreshHiPSUI();
+      setStatus(`✅ FITS scale changed to ${scaleFunction}.`);
+    } catch (error) {
+      console.error(error);
+      setStatus(`❌ Unable to change FITS scale: ${error.message}`);
+    }
+  };
+
+  select.addEventListener("change", () => {
+    if (paramInput) {
+      paramInput.value = String(getDefaultScaleParam(select.value));
+    }
+
+    applyScale();
+  });
+
+  paramInput?.addEventListener("change", applyScale);
+}
+
+export function wireHiPSColorMapSelector() {
+  const select = el("hipsColorMap");
+
+  if (!select) {
+    return;
+  }
+
+  select.addEventListener("change", () => {
+    const colorMapName = select.value;
+
+    if (!colorMapName) {
+      return;
+    }
+
+    try {
+      state.AstroAPI.changeColorMap(colorMapName);
+      refreshHiPSUI();
+      setStatus(`✅ HiPS colormap changed to ${colorMapName}.`);
+    } catch (error) {
+      console.error(error);
+      setStatus(`❌ Unable to change HiPS colormap: ${error.message}`);
+    }
+  });
 }
 
 export function wireHiPSFormatSelector() {
@@ -124,7 +217,88 @@ export function wireHiPSFormatSelector() {
 
 export function refreshHiPSUI() {
   populateHiPSFormats();
+  populateHiPSColorMap();
+  populateHiPSScaleControls();
+  populateHiPSRangeControls();
   renderHiPSLayers();
+}
+
+function populateHiPSRangeControls() {
+  const select = el("hipsRangeMode");
+
+  if (!select) {
+    return;
+  }
+
+  const activeHiPS = state.AstroAPI?.getActiveHiPS?.() ?? null;
+  const activeFormat = activeHiPS?.format;
+  const stretch = state.AstroAPI?.getActiveHiPSFITSStretch?.() ?? null;
+  const isFits = activeFormat === "fits";
+
+  select.disabled = !activeHiPS || !isFits;
+  select.value = stretch?.rangeMode ?? "robust";
+}
+
+function populateHiPSScaleControls() {
+  const select = el("hipsScaleFunction");
+  const paramInput = el("hipsScaleParam");
+
+  if (!select) {
+    return;
+  }
+
+  const activeHiPS = state.AstroAPI?.getActiveHiPS?.() ?? null;
+  const activeFormat = activeHiPS?.format;
+  const stretch = state.AstroAPI?.getActiveHiPSFITSStretch?.() ?? null;
+  const isFits = activeFormat === "fits";
+
+  select.disabled = !activeHiPS || !isFits;
+  select.value = stretch?.scaleFunction ?? "linear";
+
+  if (paramInput) {
+    paramInput.disabled = !activeHiPS || !isFits || select.value === "linear" || select.value === "sqrt";
+    const scaleParam = stretch?.scaleParam ?? getDefaultScaleParam(select.value);
+    paramInput.value = String(scaleParam);
+  }
+}
+
+function getDefaultScaleParam(scaleFunction) {
+  switch (scaleFunction) {
+    case "log":
+      return 100;
+    case "asinh":
+      return 10;
+    case "gamma":
+      return 0.5;
+    default:
+      return 1;
+  }
+}
+
+function getRangeModeLabel(rangeMode) {
+  if (rangeMode === "tile") {
+    return "tile min/max";
+  }
+
+  if (rangeMode === "hips") {
+    return "HiPS data min/max";
+  }
+
+  return "robust percentile";
+}
+
+function populateHiPSColorMap() {
+  const select = el("hipsColorMap");
+
+  if (!select) {
+    return;
+  }
+
+  const activeColorMap = state.AstroAPI?.getActiveHiPS?.()?.colorMap?.name ?? "native";
+  const hasActiveHiPS = !!state.AstroAPI?.getActiveHiPS?.();
+
+  select.value = activeColorMap;
+  select.disabled = !hasActiveHiPS;
 }
 
 function populateHiPSFormats() {

@@ -411,8 +411,17 @@ export class HealpixGrid extends AbstractSkyEntity {
 
     const fovMin = (this.getMinFoV() * Math.PI) / 180 / 2;
 
+    const visibleHealpix = global.getHealpix(this._visibleorder);
+    const maxPixel = visibleHealpix.getNPix();
+
     for (let p = 0; p < pixels.length; p++) {
-      const pixCenter = (global.getHealpix(this._visibleorder).pix2vec(pixels[p]) as BoundVec);
+      const pixel = pixels[p];
+
+      if (!Number.isInteger(pixel) || pixel < 0 || pixel >= maxPixel) {
+        continue;
+      }
+
+      const pixCenter = (visibleHealpix.pix2vec(pixel) as BoundVec);
       // const pixCenter = (global.getHealpix(global.order).pix2vec(pixels[p]) as BoundVec);
 
       const point = new Point(

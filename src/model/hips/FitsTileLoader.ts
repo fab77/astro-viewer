@@ -17,7 +17,15 @@ export interface FitsTileData {
   pixels: Float32Array;
   dataMin: number | null;
   dataMax: number | null;
+  physicalMin: number | null;
+  physicalMax: number | null;
+  robustMin: number | null;
+  robustMax: number | null;
 }
+
+const ROBUST_SAMPLE_COUNT = 8192;
+const ROBUST_LOW_PERCENTILE = 0.005;
+const ROBUST_HIGH_PERCENTILE = 0.995;
 
 export async function loadFitsTile(url: string): Promise<FitsTileData> {
   const fitsFile = await FITSParser.loadFITSFile(url);
@@ -76,6 +84,10 @@ export async function loadFitsTile(url: string): Promise<FitsTileData> {
   );
 
   const pixels = new Float32Array(data.length);
+  let physicalMin: number | null = null;
+  let physicalMax: number | null = null;
+  const robustSamples: number[] = [];
+  const sampleStep = Math.max(1, Math.floor(data.length / ROBUST_SAMPLE_COUNT));
 
   for (let i = 0; i < data.length; i++) {
     const rawValue = data[i];
@@ -85,8 +97,22 @@ export async function loadFitsTile(url: string): Promise<FitsTileData> {
       continue;
     }
 
-    pixels[i] = rawValue * bscale + bzero;
+    const physicalValue = rawValue * bscale + bzero;
+    pixels[i] = physicalValue;
+
+    if (Number.isFinite(physicalValue)) {
+      physicalMin =
+        physicalMin === null ? physicalValue : Math.min(physicalMin, physicalValue);
+      physicalMax =
+        physicalMax === null ? physicalValue : Math.max(physicalMax, physicalValue);
+
+      if (i % sampleStep === 0) {
+        robustSamples.push(physicalValue);
+      }
+    }
   }
+
+  const robustRange = computeRobustRange(robustSamples);
 
   return {
     width,
@@ -94,7 +120,37 @@ export async function loadFitsTile(url: string): Promise<FitsTileData> {
     pixels,
     dataMin,
     dataMax,
+    physicalMin,
+    physicalMax,
+    robustMin: robustRange?.min ?? null,
+    robustMax: robustRange?.max ?? null,
   };
+}
+
+function computeRobustRange(samples: number[]): { min: number; max: number } | null {
+  if (samples.length === 0) {
+    return null;
+  }
+
+  samples.sort((a, b) => a - b);
+
+  const min = percentile(samples, ROBUST_LOW_PERCENTILE);
+  const max = percentile(samples, ROBUST_HIGH_PERCENTILE);
+
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+    return null;
+  }
+
+  return { min, max };
+}
+
+function percentile(sortedValues: number[], p: number): number {
+  const index = Math.min(
+    sortedValues.length - 1,
+    Math.max(0, Math.round((sortedValues.length - 1) * p)),
+  );
+
+  return sortedValues[index];
 }
 
 function getNumericHeaderValue(
