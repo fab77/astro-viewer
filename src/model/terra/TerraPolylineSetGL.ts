@@ -15,7 +15,6 @@ import MouseHelper from '../../utils/MouseHelper.js'
 import { colorHex2RGB } from '../../utils/Utils.js'
 import { MetadataManager } from '../MetadataManager.js'
 import { Point } from '../Point.js'
-import { VisibleTilesManager } from '../hips/VisibleTilesManager.js'
 
 export interface TerraPolylinePoint {
   readonly longitudeDeg: number
@@ -59,7 +58,6 @@ export class TerraPolylineSetGL {
     private _providerUrl: string,
     private _metadataManager: MetadataManager,
     private _webgl: WebGL2RenderingContext,
-    private _visibleTilesManager: VisibleTilesManager,
   ) {
     this._polylineShaderProgram = new FootprintShaderProgram(this._webgl)
   }

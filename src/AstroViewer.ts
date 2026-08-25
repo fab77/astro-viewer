@@ -167,7 +167,6 @@ export class AstroViewer {
       providerUrl,
       metadataManager,
       this.webgl,
-      this.astroSphere.healpixGrid.visibleTilesManager,
     );
   }
 
@@ -224,7 +223,6 @@ export class AstroViewer {
       providerUrl,
       metadataManager,
       this.webgl,
-      this.astroSphere.healpixGrid.visibleTilesManager,
     );
   }
 
@@ -252,7 +250,6 @@ export class AstroViewer {
       providerUrl,
       metadataManager,
       this.webgl,
-      this.astroSphere.healpixGrid.visibleTilesManager,
     );
   }
 

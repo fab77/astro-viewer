@@ -9,7 +9,8 @@
  * See LICENSE.md, LICENSE-AGPL.md, and LICENSE-COMMERCIAL.md for details.
  */
 
-import { wireHoveredFootprints } from "./hoveredFootprints.js";
+import { wireHoveredMetadata } from "./hoveredMetadata.js";
+import { wireAstronomyOverlayDemos } from "./astronomyOverlays.js";
 import { el, setStatus, minimisePanel, restorePanel, wireDevTabs } from "./ui.js";
 import { state, loadPersisted, persistBasic } from "./state.js";
 import { loadHiPS, wireHiPSControls } from "./hips.js";
@@ -176,7 +177,8 @@ async function bootstrap() {
     wireSatelliteFootprintDemo();
     wireGoto();
     wireCoords();
-    wireHoveredFootprints();
+    wireAstronomyOverlayDemos();
+    wireHoveredMetadata();
     wireXYZDiagnostics();
     wireHiPSDiagnostics();
 
