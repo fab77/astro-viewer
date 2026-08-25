@@ -20,12 +20,17 @@ import { HiPSShaderProgram } from "../../shader/HiPSShaderProgram.js";
 import Camera from "../../Camera.js";
 type GL = WebGLRenderingContext | WebGL2RenderingContext;
 
-interface VisibleTiles {
+export interface VisibleTiles {
   pixels: number[];
   order: number;
 }
 
-export class VisibleTilesManager {
+export interface HealpixVisibilityState {
+  readonly visibleTilesByOrder: VisibleTiles;
+  readonly ancestorsMap: Map<number, number[]>;
+}
+
+export class VisibleTilesManager implements HealpixVisibilityState {
   private _visibleTilesByOrder: VisibleTiles;
   private _ancestorsMap: Map<number, number[]>;
 

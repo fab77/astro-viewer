@@ -55,7 +55,8 @@ export class Source {
   }
   private computeHealpixPixel(): void {
     // Get Healpix instance from global
-    const healpix: Healpix = global.getHealpix(global.nsideForSelection);
+    // const healpix: Healpix = global.getHealpix(global.nsideForSelection);
+    const healpix: Healpix = global.getHealpix(global.selectionOrder);
     const vec3 = new Vec3(this._point.x, this._point.y, this._point.z);
     const ptg = new Pointing(vec3, false);
     this._h_pix = healpix.ang2pix(ptg, false);

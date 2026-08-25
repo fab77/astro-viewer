@@ -63,7 +63,8 @@ class MouseHelper {
   /** (Formerly `computeNpix256`) Uses global.nsideForSelection. */
   computeNpix(): number | null {
     if (!this._xyz) return null;
-    const hp: Healpix = global.getHealpix(global.nsideForSelection);
+    // const hp: Healpix = global.getHealpix(global.nsideForSelection);
+    const hp: Healpix = global.getHealpix(global.selectionOrder);
     const v = new Vec3(this._xyz[0], this._xyz[1], this._xyz[2]);
     const ptg = new Pointing(v, false);
     return hp.ang2pix(ptg, false);

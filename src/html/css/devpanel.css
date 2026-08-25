@@ -298,3 +298,8 @@ summary {
     z-index: 2;
     pointer-events: none;
 }
+
+.hover-metadata-table { display: grid; gap: 3px; margin-top: 6px; }
+.hover-metadata-row { display: grid; grid-template-columns: minmax(90px, 0.8fr) minmax(120px, 1.2fr); gap: 8px; font-size: 11px; }
+.hover-metadata-row span { opacity: 0.7; overflow-wrap: anywhere; }
+.hover-metadata-row strong { font-weight: 500; overflow-wrap: anywhere; }

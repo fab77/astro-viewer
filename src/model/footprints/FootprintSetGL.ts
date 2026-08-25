@@ -20,10 +20,8 @@ import GeomUtils from "../../utils/GeomUtils.js";
 import { CoordsType } from "../../utils/CoordsType.js";
 import { MetadataManager } from "../MetadataManager.js";
 import { MetadataColumn } from "../MetadataColumn.js";
-import { VisibleTilesManager } from "../hips/VisibleTilesManager.js";
 
 export interface HoveredFootprintDetail {
-  // metadata: TapMetadataList
   metadata: MetadataManager;
   footprints: Footprint[];
   tableName: string;
@@ -109,7 +107,6 @@ export class FootprintSetGL {
 
   _providerUrl: string;
   private _footprintShaderProgram: FootprintShaderProgram;
-  private _visibleTilesManager: VisibleTilesManager;
 
   constructor(
     fsetName: string,
@@ -117,11 +114,9 @@ export class FootprintSetGL {
     providerUrl: string,
     metadataManager: MetadataManager,
     webgl: WebGL2RenderingContext,
-    visibleTilesManager: VisibleTilesManager,
   ) {
     this._webgl = webgl;
     this._ready = false;
-    this._visibleTilesManager = visibleTilesManager;
 
     (this as any).TYPE = "FOOTPRINT_SET";
 
