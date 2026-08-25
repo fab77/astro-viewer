@@ -16,6 +16,13 @@ import { ParsedGeoJSONFeature } from '../../utils/GeoJSONParser.js'
 import { MetadataColumn } from '../MetadataColumn.js'
 import { MetadataManager } from '../MetadataManager.js'
 import { ColumnType } from '../MetadataColumn.js'
+import MouseHelper from '../../utils/MouseHelper.js'
+import { Point } from '../Point.js'
+import GeomUtils from '../../utils/GeomUtils.js'
+
+type FootprintHoverState = {
+  _hoveredFootprints: Footprint[]
+}
 
 export class TerraFootprintSetGL extends FootprintSetGL {
   _kind: string = 'TerraFootprintSetGL'
@@ -42,6 +49,30 @@ export class TerraFootprintSetGL extends FootprintSetGL {
 
     this._ready = true
     this._bufferInitialised = false
+  }
+
+  checkSelection(mouseHelper: MouseHelper): void {
+    if (mouseHelper.x == null || mouseHelper.y == null || mouseHelper.z == null) return
+
+    const hoverState = this as unknown as FootprintHoverState
+    hoverState._hoveredFootprints = []
+    this.totHoveredPoints = 0
+
+    const mousePoint = new Point(
+      { x: mouseHelper.x, y: mouseHelper.y, z: mouseHelper.z },
+      CoordsType.CARTESIAN,
+    )
+
+    for (const footprint of this.footprintPolygons) {
+      if (!footprint.selectionObj) continue
+
+      if (GeomUtils.checkPointInsidePolygon5(footprint.selectionObj, mousePoint)) {
+        hoverState._hoveredFootprints.push(footprint)
+        this.totHoveredPoints += footprint.totPoints
+      }
+    }
+
+    this.initHoveringBuffer()
   }
 
   private createGeoJSONMetadataColumns(features: ParsedGeoJSONFeature[]): MetadataColumn[] {
