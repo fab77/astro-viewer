@@ -16,8 +16,8 @@
     <meta charset="utf-8" />
     <title>Astro-Viewer – Dev Panel (lean)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="./javascripts/astroviewer.js"></script>
-    <script type="module" src="./javascripts/dev/boot.js"></script>
+    <script src="./javascripts/astroviewer.js?v=media-20260827-2"></script>
+    <script type="module" src="./javascripts/dev/boot.js?v=media-20260827-2"></script>
     <link rel="stylesheet" href="./css/devpanel.css" />
 
 </head>
@@ -124,7 +124,8 @@
 
                         <label for="hipsScaleParam">Scale strength</label>
                         <input id="hipsScaleParam" type="number" min="0.1" step="0.5" value="1" disabled />
-                        <div class="hint">FITS only. Robust percentile is the display default; HiPS min/max keeps the raw survey range.</div>
+                        <div class="hint">FITS only. Robust percentile is the display default; HiPS min/max keeps the
+                            raw survey range.</div>
                     </div>
                 </details>
             </div>
@@ -330,79 +331,242 @@
         </details>
 
 
+        <details id="earthImportPanel" style="margin-top:8px;">
+            <summary>GeoJSON importer</summary>
 
-
-        <details id="importPanel" style="margin-top:8px;">
-            <summary>Import controls</summary>
-            <!-- Importer controls (always visible) -->
             <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
-                <label>Import catalogue / footprint</label>
+                <label>Import geographic GeoJSON</label>
+
                 <div class="row">
-                    <input id="importFile" type="file"
-                        accept=".json,.geojson,.csv,application/json,application/geo+json,text/csv" />
-                    <select id="importType">
-                        <option value="catalogue">Catalogue (points table)</option>
-                        <option value="footprint">Footprint set</option>
+                    <input id="earthImportFile" type="file"
+                        accept=".json,.geojson,application/json,application/geo+json" />
+
+                    <select id="earthImportType">
                         <option value="geojson">GeoJSON footprint set</option>
                     </select>
-                    <button id="btnImport" class="secondary">Import</button>
-                    <button id="btnClearImports" class="secondary">Clear imports</button>
+
+                    <button id="btnEarthImport" class="secondary">
+                        Import
+                    </button>
+
+                    <button id="btnClearEarthImports" class="secondary">
+                        Clear imports
+                    </button>
                 </div>
-                <div style="margin-top:8px; display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
-                    <div>
-                        <label for="importMapRa">RA column</label>
-                        <select id="importMapRa">
-                            <option value="">— auto —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapDec">Dec column</label>
-                        <select id="importMapDec">
-                            <option value="">— auto —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapName">Name column</label>
-                        <select id="importMapName">
-                            <option value="">— auto —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapSize">Size column</label>
-                        <select id="importMapSize">
-                            <option value="">— none —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapHue">Hue column</label>
-                        <select id="importMapHue">
-                            <option value="">— none —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapOutline">Footprint / STCS column</label>
-                        <select id="importMapOutline">
-                            <option value="">— none —</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="hint">You can import a JSON array, CSV with headers, or GeoJSON FeatureCollection. For STCS
-                    footprints, use
-                    (e.g.,
-                    <code>POLYGON lon1 lat1 lon2 lat2 ...</code>). Choose mappings then click Import.
+
+                <div class="hint">
+                    Import a GeoJSON FeatureCollection as a geographic Earth Observation overlay.
                 </div>
             </div>
+
             <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                 <label>Satellite footprint demo</label>
+
                 <div class="row">
-                    <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">Load ISS Spain
-                        demo</button>
-                    <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>Play</button>
-                    <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>Pause</button>
+                    <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">
+                        Load ISS Spain demo
+                    </button>
+
+                    <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>
+                        Play
+                    </button>
+
+                    <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>
+                        Pause
+                    </button>
+
                     <input id="satelliteTimelineSeek" type="range" min="0" max="1000" value="0" disabled />
-                    <span id="satelliteTimelineTime" class="hint">Timeline not loaded</span>
-                    <span class="hint">Dev-only fixture: Spain GeoJSON, ISS footprint polygons, and ground-track
-                        line.</span>
+
+                    <span id="satelliteTimelineTime" class="hint">
+                        Timeline not loaded
+                    </span>
+
+                    <span class="hint">
+                        Dev-only fixture: Spain GeoJSON, ISS footprint polygons,
+                        and ground-track line.
+                    </span>
+                </div>
+            </div>
+        </details>
+
+
+        <details id="astronomyImportPanel" style="margin-top:8px;">
+            <summary>Catalogue / STCS importer</summary>
+
+            <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
+                <label>Import catalogue / observation footprints</label>
+
+                <div class="row">
+                    <input id="astronomyImportFile" type="file" accept=".json,.csv,application/json,text/csv" />
+
+                    <select id="astronomyImportType">
+                        <option value="catalogue">
+                            Catalogue (points table)
+                        </option>
+                        <option value="footprint">
+                            Footprint / STCS set
+                        </option>
+                    </select>
+
+                    <button id="btnAstronomyImport" class="secondary">
+                        Import
+                    </button>
+
+                    <button id="btnClearAstronomyImports" class="secondary">
+                        Clear imports
+                    </button>
+                </div>
+
+                <div style="
+                margin-top:8px;
+                display:grid;
+                grid-template-columns:repeat(3,1fr);
+                gap:6px;
+            ">
+                    <div>
+                        <label for="astronomyImportMapRa">RA column</label>
+                        <select id="astronomyImportMapRa">
+                            <option value="">— auto —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapDec">Dec column</label>
+                        <select id="astronomyImportMapDec">
+                            <option value="">— auto —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapName">Name column</label>
+                        <select id="astronomyImportMapName">
+                            <option value="">— auto —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapSize">Size column</label>
+                        <select id="astronomyImportMapSize">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapHue">Hue column</label>
+                        <select id="astronomyImportMapHue">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapOutline">
+                            Footprint / STCS column
+                        </label>
+                        <select id="astronomyImportMapOutline">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapMediaSrc">Media source column</label>
+                        <select id="astronomyImportMapMediaSrc">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapMediaType">Media type column</label>
+                        <select id="astronomyImportMapMediaType">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapMediaScale">Media scale column</label>
+                        <select id="astronomyImportMapMediaScale">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapMediaRotation">
+                            Media rotation column
+                        </label>
+                        <select id="astronomyImportMapMediaRotation">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="astronomyImportMapMediaOpacity">
+                            Media opacity column
+                        </label>
+                        <select id="astronomyImportMapMediaOpacity">
+                            <option value="">— none —</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="hint">
+                    Import a JSON array or CSV table. Catalogue rows use RA/Dec
+                    coordinates and may map numeric metadata to source size and hue.
+                    Observation footprints use an STCS column such as
+                    <code>POLYGON J2000 ra1 dec1 ra2 dec2 ...</code>.
+                </div>
+            </div>
+        </details>
+
+        <details id="catalogueManagerPanel" style="margin-top:8px;">
+            <summary>Catalogue manager</summary>
+
+            <div class="stack" style="margin-top:8px;">
+                <div class="row">
+                    <input id="catFilter" type="text" placeholder="Filter catalogues..." />
+
+                    <button id="btnShowAll" class="secondary" type="button">
+                        Show all
+                    </button>
+
+                    <button id="btnHideAll" class="secondary" type="button">
+                        Hide all
+                    </button>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table id="catTable"></table>
+                </div>
+
+                <div class="hint">
+                    Catalogue sources can be styled using metadata columns:
+                    Size by controls source radius, Hue by controls source hue,
+                    and Colour changes the catalogue base colour.
+                </div>
+            </div>
+        </details>
+
+        <details id="stcsManagerPanel" style="margin-top:8px;">
+            <summary>STCS manager</summary>
+
+            <div class="stack" style="margin-top:8px;">
+                <div class="row">
+                    <input id="fpFilter" type="text" placeholder="Filter footprint sets..." />
+
+                    <button id="btnShowAllFp" class="secondary" type="button">
+                        Show all
+                    </button>
+
+                    <button id="btnHideAllFp" class="secondary" type="button">
+                        Hide all
+                    </button>
+                </div>
+
+                <div style="overflow-x:auto;">
+                    <table id="fpTable"></table>
+                </div>
+
+                <div class="hint">
+                    Manage astronomical observation footprints imported from STCS data.
+                    Each footprint set can be shown, hidden, removed, or assigned a colour.
                 </div>
             </div>
         </details>

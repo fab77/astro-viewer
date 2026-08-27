@@ -22,6 +22,16 @@ export interface SourceDetail {
   unit?: string;
 }
 
+export type SourceMediaKind = 'circle' | 'icon' | 'sprite' | 'image' | 'model';
+
+export interface SourceMediaStyle {
+  kind: SourceMediaKind;
+  src?: string;
+  scale?: number;
+  rotationDeg?: number;
+  opacity?: number;
+}
+
 export class Source {
   private _point: Point;
   private _name?: string;
@@ -29,6 +39,7 @@ export class Source {
   private _h_pix!: number;
   private _shapesize: number;
   private _brightnessFactor: number;
+  private _mediaStyle?: SourceMediaStyle;
 
   /**
    * @param in_point Point.js (Cartesian/RA-Dec wrapper)
@@ -89,5 +100,13 @@ export class Source {
    */
   set brightnessFactor(factor: number) {
     this._brightnessFactor = factor;
+  }
+
+  get mediaStyle(): SourceMediaStyle | undefined {
+    return this._mediaStyle;
+  }
+
+  set mediaStyle(style: SourceMediaStyle | undefined) {
+    this._mediaStyle = style;
   }
 }

@@ -11,7 +11,13 @@
 
 import { wireHoveredMetadata } from "./hoveredMetadata.js";
 import { wireAstronomyOverlayDemos } from "./astronomyOverlays.js";
-import { el, setStatus, minimisePanel, restorePanel, wireDevTabs } from "./ui.js";
+import {
+  el,
+  setStatus,
+  minimisePanel,
+  restorePanel,
+  wireDevTabs,
+} from "./ui.js";
 import { state, loadPersisted, persistBasic } from "./state.js";
 import { loadHiPS, wireHiPSControls } from "./hips.js";
 import { loadMeshHiPS } from "./meships.js";
@@ -21,6 +27,10 @@ import {
   renderCatalogueManager,
   wireCatalogueManagerControls,
 } from "./catalogueManager.js";
+import {
+  renderFootprintManager,
+  wireFootprintManagerControls,
+} from "./footprintManager.js";
 import { wireGoto } from "./goto.js";
 import { wireCoords } from "./coords.js";
 import { wireXYZDiagnostics, wireHiPSDiagnostics } from "./xyzDiagnostics.js";
@@ -171,14 +181,22 @@ async function bootstrap() {
 
     wireDevTabs();
     wireUI();
+
     renderCatalogueManager();
     wireCatalogueManagerControls();
+
+    renderFootprintManager();
+    wireFootprintManagerControls();
+
     wireImporterControls();
     wireSatelliteFootprintDemo();
+
     wireGoto();
     wireCoords();
+
     wireAstronomyOverlayDemos();
     wireHoveredMetadata();
+
     wireXYZDiagnostics();
     wireHiPSDiagnostics();
 
@@ -194,22 +212,8 @@ function wireUI() {
 
   el("btnLoadHiPS")?.addEventListener("click", async () => {
     const url = el("hipsUrl").value.trim();
-
-    if (!url) {
-      return setStatus("Insert a HiPS URL.");
-    }
-
-    try {
-      await loadHiPS(url);
-      persistBasic();
-    } catch (e) {
-      setStatus("HiPS load error: " + (e.message || e));
-    }
-  });
-
-  el("btnLoadHiPS")?.addEventListener("click", async () => {
-    const url = el("hipsUrl").value.trim();
     if (!url) return setStatus("Insert a HiPS URL.");
+
     try {
       await loadHiPS(url);
       persistBasic();
