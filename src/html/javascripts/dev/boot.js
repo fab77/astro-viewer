@@ -66,6 +66,18 @@ const DEFAULT_MESH_HIPS = "/meships-local/mhips-moon/";
 async function activateDemoDomain(domain) {
   try {
     if (domain === "astronomy") {
+      if (
+        state.AstroAPI?.isLonLatGridVisible?.() &&
+        state.AstroAPI?.toggleLonLatGrid
+      ) {
+        state.AstroAPI.toggleLonLatGrid();
+      }
+
+      const lonLatChk = el("lonLatGridChk");
+      if (lonLatChk) {
+        lonLatChk.checked = false;
+      }
+
       const hipsInput = el("hipsUrl");
 
       if (hipsInput) {
@@ -73,36 +85,75 @@ async function activateDemoDomain(domain) {
       }
 
       await loadHiPS(DEFAULT_ASTRONOMY_HIPS);
+
       setStatus("Astronomy: DSS Color loaded.");
       return;
     }
 
     if (domain === "earth") {
-      applyWMTSPreset(DEFAULT_EARTH_PRESET);
+  applyWMTSPreset(DEFAULT_EARTH_PRESET);
 
-      const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
+  const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
 
-      loadWMTS({
-        baseUrl: preset.baseUrl,
-        urlTemplate: preset.urlTemplate || undefined,
-        layer: preset.preferredLayer,
-        tileMatrixSet: preset.tileMatrixSet,
-        style: preset.style,
-        format: preset.format,
-        requestEncoding: preset.requestEncoding,
-        dimensions: {},
-        minZoom: Number(el("xyzMinZoom")?.value ?? 0),
-        maxZoom: Number(el("xyzMaxZoom")?.value ?? 8),
-        segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
-        maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
-        maxConcurrentRequests: Number(
-          el("xyzMaxConcurrentRequests")?.value ?? 4,
-        ),
-      });
+  loadWMTS({
+    baseUrl: preset.baseUrl,
+    urlTemplate: preset.urlTemplate || undefined,
+    layer: preset.preferredLayer,
+    tileMatrixSet: preset.tileMatrixSet,
+    style: preset.style,
+    format: preset.format,
+    requestEncoding: preset.requestEncoding,
+    dimensions: {},
+    minZoom: Number(el("xyzMinZoom")?.value ?? 0),
+    maxZoom: Number(el("xyzMaxZoom")?.value ?? 8),
+    segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+    maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+    maxConcurrentRequests: Number(
+      el("xyzMaxConcurrentRequests")?.value ?? 4,
+    ),
+  });
 
-      setStatus("Earth Observation: Esri World Imagery loaded.");
-      return;
-    }
+  // The Earth layer activation may enable the geographic grid,
+  // therefore apply the demo grid policy after loading the layer.
+  if (
+    state.AstroAPI?.isHealpixGridVisible?.() &&
+    state.AstroAPI?.toggleHealpixGrid
+  ) {
+    state.AstroAPI.toggleHealpixGrid();
+  }
+
+  if (
+    state.AstroAPI?.isEquatorialGridVisible?.() &&
+    state.AstroAPI?.toggleEquatorialGrid
+  ) {
+    state.AstroAPI.toggleEquatorialGrid();
+  }
+
+  if (
+    state.AstroAPI?.isLonLatGridVisible?.() &&
+    state.AstroAPI?.toggleLonLatGrid
+  ) {
+    state.AstroAPI.toggleLonLatGrid();
+  }
+
+  const healpixChk = el("healpixGridChk");
+  if (healpixChk) {
+    healpixChk.checked = false;
+  }
+
+  const equatorialChk = el("equatorialGridChk");
+  if (equatorialChk) {
+    equatorialChk.checked = false;
+  }
+
+  const lonLatChk = el("lonLatGridChk");
+  if (lonLatChk) {
+    lonLatChk.checked = false;
+  }
+
+  setStatus("Earth Observation: Esri World Imagery loaded.");
+  return;
+}
 
     if (domain === "mesh") {
       const meshUrl = el("meshHipsUrl");
@@ -146,6 +197,7 @@ async function bootstrap() {
       const healpixChk = el("healpixGridChk");
       const equatChk = el("equatorialGridChk");
       const lonLatChk = el("lonLatGridChk");
+
       const lockEastWestChk = el("lockEastWestRotationChk");
       const lockNorthSouthChk = el("lockNorthSouthRotationChk");
       const keepNorthUpChk = el("keepCameraNorthUpChk");

@@ -146,6 +146,7 @@ export function wireDevTabs(onDomainChange) {
    * The remaining static panels are mounted here.
    */
   appendIfFound(astronomy, "astroPanel");
+  appendIfFound(astronomy, "astronomyNavigationPanel");
   appendIfFound(astronomy, "hoverPanel");
   appendIfFound(astronomy, "astronomyImportPanel");
   appendIfFound(astronomy, "catalogueManagerPanel");
@@ -156,12 +157,14 @@ export function wireDevTabs(onDomainChange) {
    * Earth Observation
    */
   appendIfFound(earth, "earthPanel");
+  appendIfFound(earth, "earthNavigationPanel");
   appendIfFound(earth, "earthImportPanel");
 
   /*
    * 3D / Mesh
    */
   const meshPanel = appendIfFound(mesh, "meshHipsPanel");
+  appendIfFound(mesh, "meshNavigationPanel");
 
   if (meshPanel) {
     meshPanel.open = true;

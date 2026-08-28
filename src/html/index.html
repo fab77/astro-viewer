@@ -37,38 +37,116 @@
             <div class="hint">Globals: <code>AstroAPI</code></div>
         </div>
 
-        <!-- Go To (RA, Dec) -->
-        <div class="stack" style="margin-top:8px;">
-            <label id="goToLabel" for="goRa">Go to (RA°, Dec°)</label>
-            <div class="row3">
-                <input id="goRa" type="number" step="0.0001" placeholder="RA 0–360">
-                <input id="goDec" type="number" step="0.0001" placeholder="Dec −90–+90">
-                <button id="btnGoTo">Go</button>
+        <!-- Astronomy navigation -->
+        <details id="astronomyNavigationPanel" open style="margin-top:8px;">
+            <summary>Navigation</summary>
+
+            <div class="stack" style="margin-top:8px;">
+                <label>Go to (RA°, Dec°)</label>
+
+                <div class="row3">
+                    <input id="astronomyGoRa" type="number" step="0.0001" placeholder="RA 0–360" />
+
+                    <input id="astronomyGoDec" type="number" step="0.0001" placeholder="Dec −90–+90" />
+
+                    <button id="btnAstronomyGoTo" type="button">Go</button>
+                </div>
+
+                <div class="row">
+                    <input id="astronomyCenterCoords" class="mono" type="text" readonly value="Center: —" />
+
+                    <button id="btnAstronomyRefreshCenter" class="secondary" type="button"
+                        title="Update center coordinates">
+                        Refresh
+                    </button>
+                </div>
+
+                <div class="row">
+                    <input id="astronomyHoverCoords" class="mono" type="text" readonly value="Hover: —" />
+
+                    <span class="hint">
+                        Move the mouse over the sphere
+                    </span>
+                </div>
             </div>
-        </div>
+        </details>
 
-        <!-- Coordinates readouts -->
-        <div class="stack" style="margin-top:8px;">
-            <label>Coordinates</label>
 
-            <div class="row">
-                <input id="centerCoords" class="mono" type="text" readonly value="Center: —" />
-                <button id="btnRefreshCenter" class="secondary" title="Update center coordinates">Refresh</button>
+        <!-- Earth Observation navigation -->
+        <details id="earthNavigationPanel" open style="margin-top:8px;">
+            <summary>Navigation</summary>
+
+            <div class="stack" style="margin-top:8px;">
+                <label>Go to (Longitude°, Latitude°)</label>
+
+                <div class="row3">
+                    <input id="earthGoLon" type="number" step="0.0001" placeholder="Lon −180–+180" />
+
+                    <input id="earthGoLat" type="number" step="0.0001" placeholder="Lat −90–+90" />
+
+                    <button id="btnEarthGoTo" type="button">Go</button>
+                </div>
+
+                <div class="row">
+                    <input id="earthCenterCoords" class="mono" type="text" readonly value="Center: —" />
+
+                    <button id="btnEarthRefreshCenter" class="secondary" type="button"
+                        title="Update center coordinates">
+                        Refresh
+                    </button>
+                </div>
+
+                <div class="row">
+                    <input id="earthHoverCoords" class="mono" type="text" readonly value="Hover: —" />
+
+                    <span class="hint">
+                        Move the mouse over the globe
+                    </span>
+                </div>
+
+                <div class="row">
+                    <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />
+
+                    <span class="hint">
+                        Field of view (diagonal) at the center point, in degrees.
+                    </span>
+                </div>
             </div>
+        </details>
 
-            <div class="row">
-                <input id="hoverCoords" class="mono" type="text" readonly value="Hover: —" />
-                <span class="hint">Move the mouse over the sphere</span>
+
+        <!-- 3D / Mesh navigation -->
+        <details id="meshNavigationPanel" open style="margin-top:8px;">
+            <summary>Navigation</summary>
+
+            <div class="stack" style="margin-top:8px;">
+                <label>Go to (Longitude°, Latitude°)</label>
+
+                <div class="row3">
+                    <input id="meshGoLon" type="number" step="0.0001" placeholder="Lon −180–+180" />
+
+                    <input id="meshGoLat" type="number" step="0.0001" placeholder="Lat −90–+90" />
+
+                    <button id="btnMeshGoTo" type="button">Go</button>
+                </div>
+
+                <div class="row">
+                    <input id="meshCenterCoords" class="mono" type="text" readonly value="Center: —" />
+
+                    <button id="btnMeshRefreshCenter" class="secondary" type="button" title="Update center coordinates">
+                        Refresh
+                    </button>
+                </div>
+
+                <div class="row">
+                    <input id="meshHoverCoords" class="mono" type="text" readonly value="Hover: —" />
+
+                    <span class="hint">
+                        Move the mouse over the body
+                    </span>
+                </div>
             </div>
-            <div class="row">
-                <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />
-                <span class="hint">Field of view (diagonal) at the center point, in degrees.</span>
-            </div>
-
-        </div>
-
-
-
+        </details>
 
         <!-- HiPS controls -->
         <details id="astroPanel" style="margin-top:8px;">
