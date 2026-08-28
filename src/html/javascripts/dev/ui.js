@@ -53,7 +53,7 @@ function makeDetails(id, summaryText, open = false, nested = false) {
   return details;
 }
 
-export function wireDevTabs() {
+export function wireDevTabs(onDomainChange) {
   const panel = el("devpanel");
   if (!panel || el("devTabs")) return;
 
@@ -204,25 +204,28 @@ export function wireDevTabs() {
 
   const panels = [astronomy, earth, mesh];
 
-  const activate = (tabName) => {
+  const activate = (tabName, notify = true) => {
     tabsButtons.forEach((tab) => {
       const active = tab.dataset.devTab === tabName;
 
       tab.classList.toggle("active", active);
-
       tab.setAttribute("aria-selected", active ? "true" : "false");
     });
 
     panels.forEach((tabPanel) => {
       tabPanel.hidden = tabPanel.dataset.devTabPanel !== tabName;
     });
+
+    if (notify && typeof onDomainChange === "function") {
+      onDomainChange(tabName);
+    }
   };
 
   tabsButtons.forEach((tab) => {
     tab.addEventListener("click", () => activate(tab.dataset.devTab));
   });
 
-  activate("astronomy");
+  activate("astronomy", false);
 }
 
 export function minimisePanel() {

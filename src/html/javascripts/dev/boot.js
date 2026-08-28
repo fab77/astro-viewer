@@ -57,6 +57,81 @@ import { wireSatelliteFootprintDemo } from "./satelliteFootprintDemo.js";
 
 window.addEventListener("load", bootstrap);
 
+const DEFAULT_ASTRONOMY_HIPS = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
+
+const DEFAULT_EARTH_PRESET = "esriWorldImagery";
+
+const DEFAULT_MESH_HIPS = "/meships-local/mhips-moon/";
+
+async function activateDemoDomain(domain) {
+  try {
+    if (domain === "astronomy") {
+      const hipsInput = el("hipsUrl");
+
+      if (hipsInput) {
+        hipsInput.value = DEFAULT_ASTRONOMY_HIPS;
+      }
+
+      await loadHiPS(DEFAULT_ASTRONOMY_HIPS);
+      setStatus("Astronomy: DSS Color loaded.");
+      return;
+    }
+
+    if (domain === "earth") {
+      applyWMTSPreset(DEFAULT_EARTH_PRESET);
+
+      const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
+
+      loadWMTS({
+        baseUrl: preset.baseUrl,
+        urlTemplate: preset.urlTemplate || undefined,
+        layer: preset.preferredLayer,
+        tileMatrixSet: preset.tileMatrixSet,
+        style: preset.style,
+        format: preset.format,
+        requestEncoding: preset.requestEncoding,
+        dimensions: {},
+        minZoom: Number(el("xyzMinZoom")?.value ?? 0),
+        maxZoom: Number(el("xyzMaxZoom")?.value ?? 8),
+        segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+        maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+        maxConcurrentRequests: Number(
+          el("xyzMaxConcurrentRequests")?.value ?? 4,
+        ),
+      });
+
+      setStatus("Earth Observation: Esri World Imagery loaded.");
+      return;
+    }
+
+    if (domain === "mesh") {
+      const meshUrl = el("meshHipsUrl");
+
+      if (meshUrl) {
+        meshUrl.value = DEFAULT_MESH_HIPS;
+      }
+
+      const orderRaw = el("meshHipsOrder")?.value.trim() ?? "";
+
+      await loadMeshHiPS(DEFAULT_MESH_HIPS, {
+        order: orderRaw === "" ? undefined : Number(orderRaw),
+
+        maxCachedTiles: Number(el("meshHipsMaxCachedTiles")?.value ?? 384),
+
+        color: parseHexColor(el("meshHipsColor")?.value ?? "#b8dbff"),
+
+        wireframe: !!el("meshHipsWireframe")?.checked,
+      });
+
+      setStatus("3D / Mesh: Moon MeshHiPS loaded.");
+    }
+  } catch (error) {
+    console.error(error);
+
+    setStatus(`Unable to activate ${domain}: ${error.message || error}`);
+  }
+}
+
 async function bootstrap() {
   try {
     loadPersisted();
@@ -123,7 +198,7 @@ async function bootstrap() {
     }
     // Fallback if AstroViewer didn’t return a valid URL
     if (!defaultHiPS) {
-      defaultHiPS = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
+      defaultHiPS = DEFAULT_ASTRONOMY_HIPS;
     }
     const hipsInput = el("hipsUrl");
     if (hipsInput) {
@@ -179,7 +254,7 @@ async function bootstrap() {
 
     AC.run();
 
-    wireDevTabs();
+    wireDevTabs(activateDemoDomain);
     wireUI();
 
     renderCatalogueManager();
