@@ -484,39 +484,53 @@ function tryCreateLiveFootprintSet(name, desc, columns, objects, mapping = {}) {
 
 function tryCreateLiveGeoJSONFootprintSet(name, geojson) {
   try {
-    if (
-      !state.AstroAPI ||
-      !window.astroviewer?.GeoJSONParser ||
-      !window.astroviewer.MetadataManager
-    )
-      return null;
-    if (typeof state.AstroAPI.createTerraFootprintSet !== "function")
-      return null;
+    console.time("[earth import] total");
 
-    const MetadataManager = window.astroviewer.MetadataManager;
+    console.time("[earth import] parseGeoJSON");
     const features = window.astroviewer.GeoJSONParser.parseGeoJSON(geojson);
+    console.timeEnd("[earth import] parseGeoJSON");
+
+    console.log(
+      "[earth import] features:",
+      features.length,
+      "points:",
+      features.reduce(
+        (total, feature) =>
+          total +
+          feature.polygons.reduce((sum, polygon) => sum + polygon.length, 0),
+        0,
+      ),
+    );
+
+    console.time("[earth import] createTerraFootprintSet");
     const fpSetGL = state.AstroAPI.createTerraFootprintSet(
       name,
       "",
       "",
-      new MetadataManager([]),
+      new window.astroviewer.MetadataManager([]),
     );
+    console.timeEnd("[earth import] createTerraFootprintSet");
 
-    if (typeof fpSetGL.addGeoJSONFeatures !== "function") return null;
+    console.time("[earth import] addGeoJSONFeatures");
     fpSetGL.addGeoJSONFeatures(features);
+    console.timeEnd("[earth import] addGeoJSONFeatures");
 
-    try {
-      state.AstroAPI.showTerraFootprintSet(fpSetGL);
-    } catch {}
+    console.time("[earth import] showTerraFootprintSet");
+    state.AstroAPI.showTerraFootprintSet(fpSetGL);
+    console.timeEnd("[earth import] showTerraFootprintSet");
 
     const center = firstGeoJSONCoordinate(features);
+
     if (center && typeof state.AstroAPI.goTo === "function") {
       state.AstroAPI.goTo(center.lonDeg, center.latDeg);
     }
 
+    console.timeEnd("[earth import] total");
+
     return fpSetGL;
   } catch (e) {
     console.error("[importer] live GeoJSON footprint import failed", e);
+
     return null;
   }
 }

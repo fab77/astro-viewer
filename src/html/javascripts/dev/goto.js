@@ -13,6 +13,8 @@ import { setStatus, el } from "./ui.js";
 import { state } from "./state.js";
 import { refreshCenter } from "./coords.js";
 
+const FLY_DURATION_MS = 1200;
+
 function normalizeRa(value) {
   return ((value % 360) + 360) % 360;
 }
@@ -29,6 +31,7 @@ function wireNavigation({
   firstInputId,
   secondInputId,
   buttonId,
+  flyButtonId,
   domain,
   firstLabel,
   secondLabel,
@@ -37,32 +40,39 @@ function wireNavigation({
   const firstInput = el(firstInputId);
   const secondInput = el(secondInputId);
   const button = el(buttonId);
+  const flyButton = el(flyButtonId);
 
   if (!button) return;
 
-  const goTo = () => {
+  const readCoordinates = () => {
     const first = Number(firstInput?.value);
     const second = Number(secondInput?.value);
 
     if (!Number.isFinite(first) || !Number.isFinite(second)) {
-      return setStatus(
-        `Enter valid ${firstLabel} and ${secondLabel} in degrees.`,
-      );
+      setStatus(`Enter valid ${firstLabel} and ${secondLabel} in degrees.`);
+      return null;
     }
+
+    return {
+      first: normalizeFirst(first),
+      second: clampLatitude(second),
+    };
+  };
+
+  const goTo = () => {
+    const coords = readCoordinates();
+    if (!coords) return;
 
     if (!state.AstroAPI?.goTo) {
       return setStatus("AstroAPI.goTo unavailable.");
     }
 
-    const firstNormalized = normalizeFirst(first);
-    const secondClamped = clampLatitude(second);
-
     try {
-      state.AstroAPI.goTo(firstNormalized, secondClamped);
+      state.AstroAPI.goTo(coords.first, coords.second);
 
       setStatus(
-        `➡️ ${domain}: ${firstLabel}=${firstNormalized.toFixed(5)}°, ` +
-          `${secondLabel}=${secondClamped.toFixed(5)}°`,
+        `➡️ ${domain}: ${firstLabel}=${coords.first.toFixed(5)}°, ` +
+          `${secondLabel}=${coords.second.toFixed(5)}°`,
       );
 
       refreshCenter();
@@ -71,7 +81,29 @@ function wireNavigation({
     }
   };
 
+  const flyTo = () => {
+    const coords = readCoordinates();
+    if (!coords) return;
+
+    if (!state.AstroAPI?.flyTo) {
+      return setStatus("AstroAPI.flyTo unavailable.");
+    }
+
+    try {
+      state.AstroAPI.flyTo(coords.first, coords.second, FLY_DURATION_MS);
+
+      setStatus(
+        `✈️ ${domain}: ${firstLabel}=${coords.first.toFixed(5)}°, ` +
+          `${secondLabel}=${coords.second.toFixed(5)}°`,
+      );
+    } catch (e) {
+      setStatus("flyTo error: " + (e.message || e));
+    }
+  };
+
   button.addEventListener("click", goTo);
+
+  flyButton?.addEventListener("click", flyTo);
 
   [firstInput, secondInput].forEach((input) => {
     input?.addEventListener("keydown", (event) => {
@@ -87,6 +119,7 @@ export function wireGoto() {
     firstInputId: "astronomyGoRa",
     secondInputId: "astronomyGoDec",
     buttonId: "btnAstronomyGoTo",
+    flyButtonId: "btnAstronomyFlyTo",
     domain: "Astronomy",
     firstLabel: "RA",
     secondLabel: "Dec",
@@ -97,6 +130,7 @@ export function wireGoto() {
     firstInputId: "earthGoLon",
     secondInputId: "earthGoLat",
     buttonId: "btnEarthGoTo",
+    flyButtonId: "btnEarthFlyTo",
     domain: "Earth",
     firstLabel: "Lon",
     secondLabel: "Lat",
@@ -107,6 +141,7 @@ export function wireGoto() {
     firstInputId: "meshGoLon",
     secondInputId: "meshGoLat",
     buttonId: "btnMeshGoTo",
+    flyButtonId: "btnMeshFlyTo",
     domain: "3D / Mesh",
     firstLabel: "Lon",
     secondLabel: "Lat",
