@@ -63,6 +63,20 @@ const DEFAULT_EARTH_PRESET = "esriWorldImagery";
 
 const DEFAULT_MESH_HIPS = "/meships-local/mhips-moon/";
 
+function setLonLatGridVisible(visible) {
+  const isVisible = !!state.AstroAPI?.isLonLatGridVisible?.();
+
+  if (isVisible !== visible && state.AstroAPI?.toggleLonLatGrid) {
+    state.AstroAPI.toggleLonLatGrid();
+  }
+
+  const checkbox = el("lonLatGridChk");
+
+  if (checkbox) {
+    checkbox.checked = visible;
+  }
+}
+
 async function activateDemoDomain(domain) {
   try {
     if (domain === "astronomy") {
@@ -113,8 +127,7 @@ async function activateDemoDomain(domain) {
         ),
       });
 
-      // The Earth layer activation may enable the geographic grid,
-      // therefore apply the demo grid policy after loading the layer.
+      // Earth demo starts with all grids disabled.
       if (
         state.AstroAPI?.isHealpixGridVisible?.() &&
         state.AstroAPI?.toggleHealpixGrid
@@ -129,12 +142,7 @@ async function activateDemoDomain(domain) {
         state.AstroAPI.toggleEquatorialGrid();
       }
 
-      if (
-        state.AstroAPI?.isLonLatGridVisible?.() &&
-        state.AstroAPI?.toggleLonLatGrid
-      ) {
-        state.AstroAPI.toggleLonLatGrid();
-      }
+      setLonLatGridVisible(false);
 
       const healpixChk = el("healpixGridChk");
       if (healpixChk) {
@@ -144,11 +152,6 @@ async function activateDemoDomain(domain) {
       const equatorialChk = el("equatorialGridChk");
       if (equatorialChk) {
         equatorialChk.checked = false;
-      }
-
-      const lonLatChk = el("lonLatGridChk");
-      if (lonLatChk) {
-        lonLatChk.checked = false;
       }
 
       setStatus("Earth Observation: Esri World Imagery loaded.");
@@ -394,6 +397,8 @@ function wireUI() {
     if (!Number.isFinite(maxConcurrentRequests) || maxConcurrentRequests < 1)
       return setStatus("Insert a valid XYZ max concurrent requests value.");
 
+    const lonLatGridWanted = !!el("lonLatGridChk")?.checked;
+
     try {
       loadXYZ(urlTemplate, {
         minZoom,
@@ -402,6 +407,8 @@ function wireUI() {
         maxCachedTiles,
         maxConcurrentRequests,
       });
+
+      setLonLatGridVisible(lonLatGridWanted);
     } catch (e) {
       setStatus("XYZ load error: " + (e.message || e));
     }
@@ -438,6 +445,8 @@ function wireUI() {
       }
     }
 
+    const lonLatGridWanted = !!el("lonLatGridChk")?.checked;
+
     try {
       loadWMTS({
         baseUrl,
@@ -456,6 +465,8 @@ function wireUI() {
         maxCachedTiles,
         maxConcurrentRequests,
       });
+
+      setLonLatGridVisible(lonLatGridWanted);
     } catch (e) {
       setStatus("WMTS load error: " + (e.message || e));
     }

@@ -11,212 +11,38 @@
 
 // ui.js
 export const el = (id) => document.getElementById(id);
-export const setStatus = (t) => {
-  const s = el("status");
-  if (s) s.textContent = t || "";
+
+export const setStatus = (text) => {
+  const status = el("status");
+
+  if (status) {
+    status.textContent = text || "";
+  }
 };
 
-function appendIfFound(parent, id) {
-  const node = el(id);
-  if (parent && node) parent.appendChild(node);
-  return node;
-}
-
-function moveLabelForInput(parent, inputId) {
-  const input = el(inputId);
-  const label = input?.closest("label");
-  if (parent && label) parent.appendChild(label);
-}
-
-function makeDetails(id, summaryText, open = false, nested = false) {
-  let details = el(id);
-  if (details) return details;
-
-  details = document.createElement("details");
-  details.id = id;
-
-  if (nested) {
-    details.className = "nested";
-  }
-
-  details.open = open;
-
-  const summary = document.createElement("summary");
-  summary.textContent = summaryText;
-  details.appendChild(summary);
-
-  const stack = document.createElement("div");
-  stack.className = "stack";
-  stack.style.marginTop = "8px";
-  details.appendChild(stack);
-
-  return details;
-}
-
 export function wireDevTabs(onDomainChange) {
-  const panel = el("devpanel");
-  if (!panel || el("devTabs")) return;
+  const tabs = el("devTabs");
 
-  const controlPanel = el("controlPanel");
-
-  const tabs = document.createElement("div");
-  tabs.id = "devTabs";
-  tabs.className = "dev-tabs";
-  tabs.setAttribute("role", "tablist");
-  tabs.setAttribute("aria-label", "Dev panel domains");
-
-  tabs.innerHTML = `
-    <button
-      class="dev-tab active"
-      type="button"
-      role="tab"
-      aria-selected="true"
-      data-dev-tab="astronomy"
-    >
-      Astronomy
-    </button>
-
-    <button
-      class="dev-tab"
-      type="button"
-      role="tab"
-      aria-selected="false"
-      data-dev-tab="earth"
-    >
-      Earth Observation
-    </button>
-
-    <button
-      class="dev-tab"
-      type="button"
-      role="tab"
-      aria-selected="false"
-      data-dev-tab="mesh"
-    >
-      3D / Mesh
-    </button>
-  `;
-
-  const astronomy = document.createElement("section");
-  astronomy.className = "tab-panel";
-  astronomy.dataset.devTabPanel = "astronomy";
-
-  const earth = document.createElement("section");
-  earth.className = "tab-panel";
-  earth.dataset.devTabPanel = "earth";
-  earth.hidden = true;
-
-  const mesh = document.createElement("section");
-  mesh.className = "tab-panel";
-  mesh.dataset.devTabPanel = "mesh";
-  mesh.hidden = true;
-
-  /*
-   * Common camera/navigation controls stay outside the domain tabs.
-   */
-  if (controlPanel) {
-    controlPanel.querySelector("summary").textContent = "Camera / navigation";
-
-    const resetButton = el("btnResetAxesOrientation");
-
-    if (resetButton && !el("btnCamInfo")) {
-      const camButton = document.createElement("button");
-      camButton.id = "btnCamInfo";
-      camButton.className = "secondary";
-      camButton.type = "button";
-      camButton.textContent = "Camera info";
-
-      resetButton.insertAdjacentElement("afterend", camButton);
-    }
-
-    panel.insertBefore(controlPanel, el("astroPanel"));
-    controlPanel.insertAdjacentElement("afterend", tabs);
-  } else {
-    panel.insertBefore(tabs, el("astroPanel"));
+  if (!tabs) {
+    return;
   }
 
-  tabs.insertAdjacentElement("afterend", astronomy);
-  astronomy.insertAdjacentElement("afterend", earth);
-  earth.insertAdjacentElement("afterend", mesh);
+  const tabButtons = Array.from(tabs.querySelectorAll("[data-dev-tab]"));
 
-  /*
-   * Astronomy
-   *
-   * Astronomy overlays are created dynamically by astronomyOverlays.js.
-   * The remaining static panels are mounted here.
-   */
-  appendIfFound(astronomy, "astroPanel");
-  appendIfFound(astronomy, "astronomyNavigationPanel");
-  appendIfFound(astronomy, "hoverPanel");
-  appendIfFound(astronomy, "astronomyImportPanel");
-  appendIfFound(astronomy, "catalogueManagerPanel");
-  appendIfFound(astronomy, "stcsManagerPanel");
-
-  /* poi astronomy.appendChild(astroGrid) */
-  /*
-   * Earth Observation
-   */
-  appendIfFound(earth, "earthPanel");
-  appendIfFound(earth, "earthNavigationPanel");
-  appendIfFound(earth, "earthImportPanel");
-
-  /*
-   * 3D / Mesh
-   */
-  const meshPanel = appendIfFound(mesh, "meshHipsPanel");
-  appendIfFound(mesh, "meshNavigationPanel");
-
-  if (meshPanel) {
-    meshPanel.open = true;
-    meshPanel.classList.add("nested");
-  }
-
-  /*
-   * Split the old mixed grid panel into the two domains.
-   */
-  const gridPanel = el("gridPanel");
-
-  if (gridPanel) {
-    const astroGrid = makeDetails("astroGridPanel", "Astronomy grids");
-    const astroStack = astroGrid.querySelector(".stack");
-
-    moveLabelForInput(astroStack, "healpixGridChk");
-    moveLabelForInput(astroStack, "equatorialGridChk");
-
-    /*
-     * Important:
-     * append at the end of Astronomy rather than inserting it
-     * before Hovered metadata.
-     */
-    astronomy.appendChild(astroGrid);
-
-    const earthGrid = makeDetails("earthGridPanel", "Earth grids");
-    const earthStack = earthGrid.querySelector(".stack");
-
-    moveLabelForInput(earthStack, "lonLatGridChk");
-
-    earth.appendChild(earthGrid);
-
-    gridPanel.remove();
-  }
-
-  /*
-   * Tab behaviour.
-   */
-  const tabsButtons = Array.from(tabs.querySelectorAll("[data-dev-tab]"));
-
-  const panels = [astronomy, earth, mesh];
+  const tabPanels = Array.from(
+    document.querySelectorAll("[data-dev-tab-panel]"),
+  );
 
   const activate = (tabName, notify = true) => {
-    tabsButtons.forEach((tab) => {
+    tabButtons.forEach((tab) => {
       const active = tab.dataset.devTab === tabName;
 
       tab.classList.toggle("active", active);
       tab.setAttribute("aria-selected", active ? "true" : "false");
     });
 
-    panels.forEach((tabPanel) => {
-      tabPanel.hidden = tabPanel.dataset.devTabPanel !== tabName;
+    tabPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.devTabPanel !== tabName;
     });
 
     if (notify && typeof onDomainChange === "function") {
@@ -224,31 +50,54 @@ export function wireDevTabs(onDomainChange) {
     }
   };
 
-  tabsButtons.forEach((tab) => {
-    tab.addEventListener("click", () => activate(tab.dataset.devTab));
+  tabButtons.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      activate(tab.dataset.devTab);
+    });
   });
 
+  /*
+   * Astronomy is already the initial domain loaded by boot.js.
+   * Do not notify here, otherwise its default layer would be
+   * activated a second time during boot.
+   */
   activate("astronomy", false);
 }
 
 export function minimisePanel() {
   const panel = el("devpanel");
-  if (!panel) return;
+
+  if (!panel) {
+    return;
+  }
+
   panel.dataset.min = "1";
   panel.style.height = "44px";
   panel.style.overflow = "hidden";
   panel.style.opacity = "0";
-  const rb = el("restoreBtn");
-  if (rb) rb.style.display = "inline-block";
+
+  const restoreButton = el("restoreBtn");
+
+  if (restoreButton) {
+    restoreButton.style.display = "inline-block";
+  }
 }
 
 export function restorePanel() {
   const panel = el("devpanel");
-  if (!panel) return;
+
+  if (!panel) {
+    return;
+  }
+
   panel.dataset.min = "0";
   panel.style.height = "";
   panel.style.overflow = "";
   panel.style.opacity = "1";
-  const rb = el("restoreBtn");
-  if (rb) rb.style.display = "none";
+
+  const restoreButton = el("restoreBtn");
+
+  if (restoreButton) {
+    restoreButton.style.display = "none";
+  }
 }
