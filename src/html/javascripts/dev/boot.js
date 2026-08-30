@@ -33,7 +33,7 @@ import {
 } from "./footprintManager.js";
 import { wireGoto } from "./goto.js";
 import { wireCoords } from "./coords.js";
-import { wireXYZDiagnostics, wireHiPSDiagnostics } from "./xyzDiagnostics.js";
+import { wireXYZDiagnostics, wireHiPSDiagnostics, wireMeshHiPSDiagnostics } from "./diagnostics.js";
 import {
   applyWMTSPreset,
   loadWMTSCapabilities,
@@ -329,6 +329,7 @@ async function bootstrap() {
 
     wireXYZDiagnostics();
     wireHiPSDiagnostics();
+    wireMeshHiPSDiagnostics();
 
     setStatus("App Ready - Panel loaded ✅");
   } catch (e) {

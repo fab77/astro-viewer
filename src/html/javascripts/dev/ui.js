@@ -20,6 +20,66 @@ export const setStatus = (text) => {
   }
 };
 
+let loadingReadyTimer = null;
+
+export function showLoading(message = "Loading…") {
+  const indicator = el("loadingIndicator");
+  const spinner = el("loadingSpinner");
+  const icon = el("loadingIcon");
+  const messageElement = el("loadingMessage");
+  if (!indicator || !messageElement) {
+    return;
+  }
+  if (loadingReadyTimer) {
+    window.clearTimeout(loadingReadyTimer);
+    loadingReadyTimer = null;
+  }
+  messageElement.textContent = message;
+  if (spinner) {
+    spinner.hidden = false;
+  }
+  if (icon) {
+    icon.hidden = true;
+  }
+  indicator.hidden = false;
+}
+
+export function showReady() {
+  const indicator = el("loadingIndicator");
+  const spinner = el("loadingSpinner");
+  const icon = el("loadingIcon");
+  const messageElement = el("loadingMessage");
+  if (!indicator || !messageElement) {
+    return;
+  }
+  if (loadingReadyTimer) {
+    window.clearTimeout(loadingReadyTimer);
+  }
+  if (spinner) {
+    spinner.hidden = true;
+  }
+  if (icon) {
+    icon.hidden = false;
+  }
+  messageElement.textContent = "Ready";
+  indicator.hidden = false;
+  loadingReadyTimer = window.setTimeout(() => {
+    indicator.hidden = true;
+    loadingReadyTimer = null;
+  }, 800);
+}
+
+export function hideLoading() {
+  const indicator = el("loadingIndicator");
+  if (loadingReadyTimer) {
+    window.clearTimeout(loadingReadyTimer);
+    loadingReadyTimer = null;
+  }
+  if (indicator) {
+    indicator.hidden = true;
+  }
+}
+
 export function wireDevTabs(onDomainChange) {
   const tabs = el("devTabs");
 
