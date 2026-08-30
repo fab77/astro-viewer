@@ -530,6 +530,7 @@ class AstroSphere {
     const handleMouseDown = (event: PointerEvent) => {
       canvas.setPointerCapture(event.pointerId);
       this.mouseDown = true;
+      this._camera.cancelFlyTo();
 
       const rect = canvas.getBoundingClientRect();
       this.lastMouseX = event.clientX - rect.left; // locale al canvas
@@ -714,6 +715,7 @@ class AstroSphere {
     const handleMouseWheel = (event: WheelEvent) => {
       const currentFov = this._healpixGrid.getMinFoV();
       const zoomStep = this.computeZoomStep(currentFov, event.deltaY);
+      this._camera.cancelFlyTo();
 
       // Apply wheel zoom immediately and discard any queued inertia so reversing
       // direction feels responsive instead of "buffered".
@@ -1140,6 +1142,10 @@ class AstroSphere {
     this._camera.goTo(raDeg, decDeg);
   }
 
+  flyTo(raDeg: number, decDeg: number, durationMs = 1200): void {
+    this._camera.flyTo(raDeg, decDeg, durationMs);
+  }
+
   getActiveCoordinateMode(): "equatorial" | "galactic" | "lonlat" {
     if (this._activeBaseLayer === "xyz") {
       return "lonlat";
@@ -1477,6 +1483,27 @@ class AstroSphere {
     this._webgl.clear(
       this._webgl.COLOR_BUFFER_BIT | this._webgl.DEPTH_BUFFER_BIT,
     );
+
+    const now = performance.now();
+    const cameraFlying = this._camera.updateFlyTo(now);
+
+    if (cameraFlying) {
+      this.inertiaX = 0;
+      this.inertiaY = 0;
+
+      this.lastCameraMotionAt = now;
+      this._cameraStatusChanged = true;
+
+      this.updateCentralPoint();
+
+      this._perspectiveMatrixManager.computePerspectiveMatrix(
+        canvas,
+        this._camera,
+        bootSetup.camera_fov_deg,
+        bootSetup.camera_near_plane,
+        global.insideSphere,
+      );
+    }
 
     // Zoom inertia
     if (this.zoomInertia !== 0) {

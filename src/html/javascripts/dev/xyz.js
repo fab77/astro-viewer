@@ -11,11 +11,14 @@
 
 import { setStatus } from './ui.js';
 import { state } from './state.js';
+import { markEarthInitialising } from './diagnostics.js';
 
 export function loadXYZ(urlTemplate, options = {}) {
   if (!state.AstroAPI?.activateXYZ2) {
     throw new Error('AstroAPI.activateXYZ2 unavailable')
   }
+
+  markEarthInitialising();
 
   if (Number.isFinite(options.maxConcurrentRequests) && state.AstroAPI?.setXYZMaxConcurrentRequests) {
     state.AstroAPI.setXYZMaxConcurrentRequests(options.maxConcurrentRequests)
@@ -44,6 +47,8 @@ export function loadWMTS(config = {}) {
   if (!state.AstroAPI?.activateWMTS) {
     throw new Error('AstroAPI.activateWMTS unavailable')
   }
+
+  markEarthInitialising();
 
   if (Number.isFinite(config.maxConcurrentRequests) && state.AstroAPI?.setXYZMaxConcurrentRequests) {
     state.AstroAPI.setXYZMaxConcurrentRequests(config.maxConcurrentRequests)

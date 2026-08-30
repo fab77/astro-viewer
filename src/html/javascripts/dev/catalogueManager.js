@@ -24,22 +24,34 @@ function sanitizeHex(v) {
 export function extractTapMetadataColumnNames(catalogue) {
   // Try common shapes; adjust if your TapMetadataList differs.
   const tml = catalogue?.catalogueProps?.tapMetadataList;
+  const metadataManager = catalogue?.metadataManager;
   const names = new Set();
 
   const add = (x) => { if (x && typeof x === 'string') names.add(x); };
 
-  if (!tml) return [];
-
-  // 1) Array of strings/objects
-  if (Array.isArray(tml)) {
-    tml.forEach(item => {
+  const addItems = (items) => {
+    if (Array.isArray(items)) {
+      items.forEach(item => {
       if (typeof item === 'string') add(item);
       else if (item) add(item.name || item.columnName || item.id || item.col || item.label);
-    });
-  }
+      });
+    }
+  };
+
+  addItems(metadataManager?.columns);
+  addItems(metadataManager?.shapeColumnList);
+  addItems(metadataManager?.hueColumnList);
+  addItems(tml);
 
   // 2) Common nested arrays
-  const arrays = [tml.columns, tml.items, tml.list, tml.metadata, tml.fields, tml.metadataList];
+  const arrays = [
+    tml?.columns,
+    tml?.items,
+    tml?.list,
+    tml?.metadata,
+    tml?.fields,
+    tml?.metadataList,
+  ];
   arrays.forEach(arr => {
     if (Array.isArray(arr)) {
       arr.forEach(item => {
@@ -100,7 +112,7 @@ export function renderCatalogueManager() {
 
       <td>
         <select class="hue-by sel-compact" ${columns.length ? "" : "disabled"}>
-          <option value="STANDARD_SIZE">— choose —</option>
+          <option value="STANDARD_HUE">— choose —</option>
           ${columns.map(col => `<option value="${col}" ${col === chosenHue ? "selected" : ""}>${col}</option>`).join('')}
         </select>
         ${!columns.length ? `<div class="hint">No TAP metadata</div>` : ""}

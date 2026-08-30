@@ -4,21 +4,26 @@
  * SPDX-License-Identifier: LicenseRef-AstroViewer-Dual-License
  */
 
-import { setStatus } from './ui.js'
-import { state } from './state.js'
+import { setStatus } from "./ui.js";
+import { state } from "./state.js";
+import { markMeshInitialising } from "./diagnostics.js";
 
 export async function loadMeshHiPS(baseUrl, options = {}) {
   if (!state.AstroAPI?.loadMeshHiPS) {
-    throw new Error('AstroAPI.loadMeshHiPS unavailable')
+    throw new Error("AstroAPI.loadMeshHiPS unavailable");
   }
+
+  markMeshInitialising();
 
   const name = await state.AstroAPI.loadMeshHiPS(baseUrl, {
     name: options.name || undefined,
     order: Number.isFinite(options.order) ? options.order : undefined,
-    maxCachedTiles: Number.isFinite(options.maxCachedTiles) ? options.maxCachedTiles : undefined,
+    maxCachedTiles: Number.isFinite(options.maxCachedTiles)
+      ? options.maxCachedTiles
+      : undefined,
     wireframe: !!options.wireframe,
     color: options.color,
-  })
+  });
 
-  setStatus(`MeshHiPS loaded: ${name}`)
+  setStatus(`MeshHiPS loaded: ${name}`);
 }

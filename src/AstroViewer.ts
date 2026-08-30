@@ -511,6 +511,10 @@ export class AstroViewer {
     this.astroSphere.goTo(raDeg, decDeg);
   }
 
+  flyTo(raDeg: number, decDeg: number, durationMs = 1200): void {
+    this.astroSphere.flyTo(raDeg, decDeg, durationMs);
+  }
+
   getActiveCoordinateMode(): "equatorial" | "galactic" | "lonlat" {
     return this.astroSphere.getActiveCoordinateMode();
   }

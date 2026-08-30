@@ -9,7 +9,7 @@
  * See LICENSE.md, LICENSE-AGPL.md, and LICENSE-COMMERCIAL.md for details.
  */
 
-import { Source } from "../Source.js";
+import { Source, SourceMediaKind, SourceMediaStyle } from "../Source.js";
 import { Point } from "../Point.js";
 import { CoordsType } from "../..//utils/CoordsType.js";
 import { colorHex2RGB } from "../../utils/Utils.js";
@@ -18,6 +18,8 @@ import { CatalogueShaderProgram } from "../../shader/CatalogueShaderProgram.js";
 import { MetadataManager } from "../MetadataManager.js";
 import { MetadataColumn } from "../MetadataColumn.js";
 import { VisibleTilesManager } from "../hips/VisibleTilesManager.js";
+import { mat4, vec3, vec4 } from "gl-matrix";
+import global from "../../Global.js";
 
 export type ClickedSourceState = {
   source: Source;
@@ -32,6 +34,18 @@ export type CatalogueClickResult = {
 export type CataloguePickResult = {
   sources: Source[];
   pickedIndexes: number[];
+};
+
+export type CatalogueMediaColumns = {
+  type?: string;
+  src?: string;
+  scale?: string;
+  rotation?: string;
+  opacity?: string;
+};
+
+export type CatalogueAddSourcesOptions = {
+  mediaColumns?: CatalogueMediaColumns;
 };
 
 export class CatalogueGL {
@@ -73,6 +87,9 @@ export class CatalogueGL {
   _providerUrl: string;
   _catalogueShaderProgram: CatalogueShaderProgram;
   private _visibleTilesManager: VisibleTilesManager;
+  private _mediaOverlayHost: HTMLDivElement | null = null;
+  private _mediaElements: HTMLImageElement[] = [];
+  private _svgMediaDataUrls = new Map<string, string>();
 
   constructor(
     catalogueName: string,
@@ -284,9 +301,14 @@ export class CatalogueGL {
    * @param in_data Rows of TAP results
    * @param columnsmeta TapMetadataList (unused here because `CatalogueProps` already holds indices)
    */
-  addSources(in_data: any[][], columnsmeta: MetadataColumn[]) {
+  addSources(
+    in_data: any[][],
+    columnsmeta: MetadataColumn[],
+    options: CatalogueAddSourcesOptions = {},
+  ) {
     this._ready = false;
     this._sources = [];
+    this.clearMediaOverlay();
 
     this._metadataManager = new MetadataManager(columnsmeta);
     // const raDataIndex = (this.catalogueProps.raColumn as any).index ?? (this.catalogueProps.raColumn as any)._index;
@@ -309,6 +331,14 @@ export class CatalogueGL {
       );
 
       const source = new Source(point, in_data[j]);
+      const mediaStyle = this.extractMediaStyle(
+        in_data[j],
+        columnsmeta,
+        options.mediaColumns,
+      );
+      if (mediaStyle) {
+        source.mediaStyle = mediaStyle;
+      }
 
       // Ensure optional fields exist
       source.shapeSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
@@ -334,11 +364,260 @@ export class CatalogueGL {
     this._bufferInitialised = false;
   }
 
+  private getColumnIndex(columnsmeta: MetadataColumn[], columnName?: string): number {
+    if (!columnName) return -1;
+    return columnsmeta.find((column) => column.name === columnName)?.index ?? -1;
+  }
+
+  private readCell(
+    row: any[],
+    columnsmeta: MetadataColumn[],
+    columnName?: string,
+  ): any {
+    const idx = this.getColumnIndex(columnsmeta, columnName);
+    return idx >= 0 ? row[idx] : undefined;
+  }
+
+  private extractMediaStyle(
+    row: any[],
+    columnsmeta: MetadataColumn[],
+    mediaColumns?: CatalogueMediaColumns,
+  ): SourceMediaStyle | undefined {
+    if (!mediaColumns?.src) return undefined;
+
+    const rawSrc = this.readCell(row, columnsmeta, mediaColumns.src);
+    const src = String(rawSrc ?? "").trim();
+    if (!src) return undefined;
+
+    const rawKind = String(
+      this.readCell(row, columnsmeta, mediaColumns.type) ?? "sprite",
+    ).trim().toLowerCase();
+    const kind: SourceMediaKind =
+      rawKind === "model"
+        ? "model"
+        : rawKind === "image"
+          ? "image"
+          : rawKind === "icon"
+            ? "icon"
+            : rawKind === "circle"
+              ? "circle"
+              : "sprite";
+    if (kind === "circle" || kind === "model") return undefined;
+
+    const scale = Number(this.readCell(row, columnsmeta, mediaColumns.scale));
+    const rotationDeg = Number(
+      this.readCell(row, columnsmeta, mediaColumns.rotation),
+    );
+    const opacity = Number(this.readCell(row, columnsmeta, mediaColumns.opacity));
+
+    return {
+      kind,
+      src,
+      scale: Number.isFinite(scale) && scale > 0 ? scale : undefined,
+      rotationDeg: Number.isFinite(rotationDeg) ? rotationDeg : undefined,
+      opacity: Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : undefined,
+    };
+  }
+
   clearSources() {
     this._sources = [];
     this.hoveredIndexes = [];
     this._healpixDensityMap.clear();
     this.vertexCataloguePosition = new Float32Array(0);
+    this.clearMediaOverlay();
+  }
+
+  private clearMediaOverlay(): void {
+    this._mediaElements.forEach((el) => el.remove());
+    this._mediaElements = [];
+    if (this._mediaOverlayHost) {
+      this._mediaOverlayHost.remove();
+      this._mediaOverlayHost = null;
+    }
+  }
+
+  private ensureMediaOverlayHost(): HTMLDivElement | null {
+    const canvas = this._webgl?.canvas as HTMLCanvasElement | undefined;
+    const parent = canvas?.parentElement;
+    if (!canvas || !parent) return null;
+
+    const parentStyle = window.getComputedStyle(parent);
+    if (parentStyle.position === "static") {
+      parent.style.position = "relative";
+    }
+
+    if (!this._mediaOverlayHost) {
+      const host = document.createElement("div");
+      host.dataset.astroCatalogueMedia = "true";
+      host.style.position = "absolute";
+      host.style.left = `${canvas.offsetLeft}px`;
+      host.style.top = `${canvas.offsetTop}px`;
+      host.style.width = `${canvas.clientWidth}px`;
+      host.style.height = `${canvas.clientHeight}px`;
+      host.style.pointerEvents = "none";
+      host.style.overflow = "hidden";
+      host.style.zIndex = "4";
+      canvas.style.position = canvas.style.position || "relative";
+      canvas.style.zIndex = canvas.style.zIndex || "0";
+      parent.appendChild(host);
+      this._mediaOverlayHost = host;
+    } else {
+      this._mediaOverlayHost.style.left = `${canvas.offsetLeft}px`;
+      this._mediaOverlayHost.style.top = `${canvas.offsetTop}px`;
+      this._mediaOverlayHost.style.width = `${canvas.clientWidth}px`;
+      this._mediaOverlayHost.style.height = `${canvas.clientHeight}px`;
+    }
+
+    return this._mediaOverlayHost;
+  }
+
+  private ensureMediaElement(index: number, style: SourceMediaStyle): HTMLImageElement {
+    let img = this._mediaElements[index];
+    if (!img) {
+      img = document.createElement("img");
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.style.position = "absolute";
+      img.style.objectFit = "contain";
+      img.style.pointerEvents = "none";
+      img.style.transformOrigin = "center center";
+      img.style.filter = "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.55))";
+      img.style.willChange = "transform, left, top";
+      this._mediaElements[index] = img;
+    }
+    const src = String(style.src ?? "").trim();
+    const resolvedSrc = src ? new URL(src, document.baseURI).href : "";
+    if (resolvedSrc && img.getAttribute("src") !== resolvedSrc) {
+      img.removeAttribute("data-astro-media-src-index");
+      img.removeAttribute("data-astro-media-loaded");
+      img.onerror = null;
+      img.onload = null;
+      img.setAttribute("src", resolvedSrc);
+      if (/\.svg(?:[?#].*)?$/i.test(resolvedSrc)) {
+        void this.loadSvgMediaAsDataUrl(img, resolvedSrc);
+      }
+    }
+    return img;
+  }
+
+  private async loadSvgMediaAsDataUrl(
+    img: HTMLImageElement,
+    resolvedSrc: string,
+  ): Promise<void> {
+    try {
+      let dataUrl = this._svgMediaDataUrls.get(resolvedSrc);
+      if (!dataUrl) {
+        const response = await fetch(resolvedSrc);
+        if (!response.ok) return;
+        const svg = await response.text();
+        if (!/^\s*<svg[\s>]/i.test(svg)) return;
+        dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+        this._svgMediaDataUrls.set(resolvedSrc, dataUrl);
+      }
+      if (img.getAttribute("src") === resolvedSrc) {
+        img.setAttribute("src", dataUrl);
+      }
+    } catch {
+      // Keep the direct image src; remote servers may already provide a valid MIME type.
+    }
+  }
+
+  private isSourceOnVisibleHemisphere(
+    source: Source,
+    in_mMatrix: Float32Array,
+    vMatrix: Float32Array,
+  ): boolean {
+    if (global.insideSphere) return true;
+
+    const invView = mat4.create();
+    if (!mat4.invert(invView, vMatrix)) return true;
+
+    const cameraPos = vec3.fromValues(invView[12], invView[13], invView[14]);
+    const worldPoint4 = vec4.fromValues(source.point.x, source.point.y, source.point.z, 1);
+    vec4.transformMat4(worldPoint4, worldPoint4, in_mMatrix);
+
+    const worldPoint = vec3.fromValues(worldPoint4[0], worldPoint4[1], worldPoint4[2]);
+    const normal = vec3.normalize(vec3.create(), worldPoint);
+    const toCamera = vec3.subtract(vec3.create(), cameraPos, worldPoint);
+
+    return vec3.dot(normal, toCamera) > 0;
+  }
+
+  private updateMediaOverlay(
+    in_mMatrix: Float32Array,
+    vMatrix: Float32Array,
+    pMatrix: Float32Array,
+  ): void {
+    const sourcesWithMedia = this._sources.filter((source) => !!source.mediaStyle?.src);
+    if (!sourcesWithMedia.length) {
+      this.clearMediaOverlay();
+      return;
+    }
+
+    const host = this.ensureMediaOverlayHost();
+    const canvas = this._webgl.canvas as HTMLCanvasElement;
+    if (!host || !canvas.clientWidth || !canvas.clientHeight) return;
+
+    const modelView = mat4.create();
+    const mvp = mat4.create();
+    mat4.multiply(modelView, vMatrix, in_mMatrix);
+    mat4.multiply(mvp, pMatrix, modelView);
+
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+
+    for (let i = 0; i < this._sources.length; i++) {
+      const source = this._sources[i];
+      const style = source.mediaStyle;
+      const img = this._mediaElements[i];
+      if (!style?.src) {
+        if (img) img.style.display = "none";
+        continue;
+      }
+      if (!this.isSourceOnVisibleHemisphere(source, in_mMatrix, vMatrix)) {
+        if (img) img.style.display = "none";
+        continue;
+      }
+
+      const projected = vec4.fromValues(source.point.x, source.point.y, source.point.z, 1);
+      vec4.transformMat4(projected, projected, mvp);
+      if (!projected[3]) {
+        if (img) img.style.display = "none";
+        continue;
+      }
+
+      const ndcX = projected[0] / projected[3];
+      const ndcY = projected[1] / projected[3];
+      const ndcZ = projected[2] / projected[3];
+      if (
+        ndcX < -1.15 ||
+        ndcX > 1.15 ||
+        ndcY < -1.15 ||
+        ndcY > 1.15 ||
+        ndcZ < -1.15 ||
+        ndcZ > 1.15
+      ) {
+        if (img) img.style.display = "none";
+        continue;
+      }
+
+      const mediaEl = this.ensureMediaElement(i, style);
+      if (!mediaEl.parentElement) host.appendChild(mediaEl);
+
+      const px = (ndcX * 0.5 + 0.5) * width;
+      const py = (1 - (ndcY * 0.5 + 0.5)) * height;
+      const baseSize = source.shapeSize || CatalogueGL.STANDARD_SHAPE_SIZE;
+      const size = Math.max(8, baseSize * (style.scale ?? 2.4));
+      const rotation = style.rotationDeg ?? 0;
+
+      mediaEl.style.display = "block";
+      mediaEl.style.left = `${px - size / 2}px`;
+      mediaEl.style.top = `${py - size / 2}px`;
+      mediaEl.style.width = `${size}px`;
+      mediaEl.style.height = `${size}px`;
+      mediaEl.style.opacity = `${style.opacity ?? 1}`;
+      mediaEl.style.transform = `rotate(${rotation}deg)`;
+    }
   }
 
   private sourceMatches(left: Source, right: Source): boolean {
@@ -791,6 +1070,7 @@ export class CatalogueGL {
     const numItems =
       this.vertexCataloguePosition.length / CatalogueGL.ELEM_SIZE;
     this._webgl.drawArrays(this._webgl.POINTS, 0, numItems);
+    this.updateMediaOverlay(in_mMatrix, vMatrix, pMatrix);
 
     this._oldMouseCoords = in_mouseHelper.xyz;
   }

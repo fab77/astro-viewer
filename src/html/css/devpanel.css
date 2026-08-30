@@ -299,7 +299,78 @@ summary {
     pointer-events: none;
 }
 
-.hover-metadata-table { display: grid; gap: 3px; margin-top: 6px; }
-.hover-metadata-row { display: grid; grid-template-columns: minmax(90px, 0.8fr) minmax(120px, 1.2fr); gap: 8px; font-size: 11px; }
-.hover-metadata-row span { opacity: 0.7; overflow-wrap: anywhere; }
-.hover-metadata-row strong { font-weight: 500; overflow-wrap: anywhere; }
+.hover-metadata-table {
+    display: grid;
+    gap: 3px;
+    margin-top: 6px;
+}
+
+.hover-metadata-row {
+    display: grid;
+    grid-template-columns: minmax(90px, 0.8fr) minmax(120px, 1.2fr);
+    gap: 8px;
+    font-size: 11px;
+}
+
+.hover-metadata-row span {
+    opacity: 0.7;
+    overflow-wrap: anywhere;
+}
+
+.hover-metadata-row strong {
+    font-weight: 500;
+    overflow-wrap: anywhere;
+}
+
+.loading-indicator {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 20;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 12px;
+
+    background: rgba(20, 20, 24, .88);
+    color: #eaeaea;
+
+    border: 1px solid #3a3a45;
+    border-radius: 10px;
+
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+    backdrop-filter: blur(3px);
+
+    font: 13px/1.2 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+
+    pointer-events: none;
+}
+
+.loading-indicator[hidden] {
+    display: none;
+}
+
+.loading-spinner {
+    width: 14px;
+    height: 14px;
+
+    border: 2px solid rgba(255, 255, 255, .3);
+    border-top-color: #fff;
+    border-radius: 50%;
+
+    animation: loading-spin .8s linear infinite;
+}
+
+.loading-icon {
+    width: 14px;
+    text-align: center;
+    font-weight: 700;
+}
+
+@keyframes loading-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

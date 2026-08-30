@@ -11,7 +11,13 @@
 
 import { wireHoveredMetadata } from "./hoveredMetadata.js";
 import { wireAstronomyOverlayDemos } from "./astronomyOverlays.js";
-import { el, setStatus, minimisePanel, restorePanel, wireDevTabs } from "./ui.js";
+import {
+  el,
+  setStatus,
+  minimisePanel,
+  restorePanel,
+  wireDevTabs,
+} from "./ui.js";
 import { state, loadPersisted, persistBasic } from "./state.js";
 import { loadHiPS, wireHiPSControls } from "./hips.js";
 import { loadMeshHiPS } from "./meships.js";
@@ -21,9 +27,13 @@ import {
   renderCatalogueManager,
   wireCatalogueManagerControls,
 } from "./catalogueManager.js";
+import {
+  renderFootprintManager,
+  wireFootprintManagerControls,
+} from "./footprintManager.js";
 import { wireGoto } from "./goto.js";
 import { wireCoords } from "./coords.js";
-import { wireXYZDiagnostics, wireHiPSDiagnostics } from "./xyzDiagnostics.js";
+import { wireXYZDiagnostics, wireHiPSDiagnostics, wireMeshHiPSDiagnostics } from "./diagnostics.js";
 import {
   applyWMTSPreset,
   loadWMTSCapabilities,
@@ -47,6 +57,135 @@ import { wireSatelliteFootprintDemo } from "./satelliteFootprintDemo.js";
 
 window.addEventListener("load", bootstrap);
 
+const DEFAULT_ASTRONOMY_HIPS = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
+
+const DEFAULT_EARTH_PRESET = "esriWorldImagery";
+
+const DEFAULT_MESH_HIPS = "/meships-local/mhips-moon/";
+
+function setLonLatGridVisible(visible) {
+  const isVisible = !!state.AstroAPI?.isLonLatGridVisible?.();
+
+  if (isVisible !== visible && state.AstroAPI?.toggleLonLatGrid) {
+    state.AstroAPI.toggleLonLatGrid();
+  }
+
+  const checkbox = el("lonLatGridChk");
+
+  if (checkbox) {
+    checkbox.checked = visible;
+  }
+}
+
+async function activateDemoDomain(domain) {
+  try {
+    if (domain === "astronomy") {
+      if (
+        state.AstroAPI?.isLonLatGridVisible?.() &&
+        state.AstroAPI?.toggleLonLatGrid
+      ) {
+        state.AstroAPI.toggleLonLatGrid();
+      }
+
+      const lonLatChk = el("lonLatGridChk");
+      if (lonLatChk) {
+        lonLatChk.checked = false;
+      }
+
+      const hipsInput = el("hipsUrl");
+
+      if (hipsInput) {
+        hipsInput.value = DEFAULT_ASTRONOMY_HIPS;
+      }
+
+      await loadHiPS(DEFAULT_ASTRONOMY_HIPS);
+
+      setStatus("Astronomy: DSS Color loaded.");
+      return;
+    }
+
+    if (domain === "earth") {
+      applyWMTSPreset(DEFAULT_EARTH_PRESET);
+
+      const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
+
+      loadWMTS({
+        baseUrl: preset.baseUrl,
+        urlTemplate: preset.urlTemplate || undefined,
+        layer: preset.preferredLayer,
+        tileMatrixSet: preset.tileMatrixSet,
+        style: preset.style,
+        format: preset.format,
+        requestEncoding: preset.requestEncoding,
+        dimensions: {},
+        minZoom: Number(el("xyzMinZoom")?.value ?? 0),
+        maxZoom: Number(el("xyzMaxZoom")?.value ?? 8),
+        segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+        maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+        maxConcurrentRequests: Number(
+          el("xyzMaxConcurrentRequests")?.value ?? 4,
+        ),
+      });
+
+      // Earth demo starts with all grids disabled.
+      if (
+        state.AstroAPI?.isHealpixGridVisible?.() &&
+        state.AstroAPI?.toggleHealpixGrid
+      ) {
+        state.AstroAPI.toggleHealpixGrid();
+      }
+
+      if (
+        state.AstroAPI?.isEquatorialGridVisible?.() &&
+        state.AstroAPI?.toggleEquatorialGrid
+      ) {
+        state.AstroAPI.toggleEquatorialGrid();
+      }
+
+      setLonLatGridVisible(false);
+
+      const healpixChk = el("healpixGridChk");
+      if (healpixChk) {
+        healpixChk.checked = false;
+      }
+
+      const equatorialChk = el("equatorialGridChk");
+      if (equatorialChk) {
+        equatorialChk.checked = false;
+      }
+
+      setStatus("Earth Observation: Esri World Imagery loaded.");
+      return;
+    }
+
+    if (domain === "mesh") {
+      const meshUrl = el("meshHipsUrl");
+
+      if (meshUrl) {
+        meshUrl.value = DEFAULT_MESH_HIPS;
+      }
+
+      const orderRaw = el("meshHipsOrder")?.value.trim() ?? "";
+
+      await loadMeshHiPS(DEFAULT_MESH_HIPS, {
+        order: orderRaw === "" ? undefined : Number(orderRaw),
+
+        maxCachedTiles: Number(el("meshHipsMaxCachedTiles")?.value ?? 384),
+
+        color: parseHexColor(el("meshHipsColor")?.value ?? "#b8dbff"),
+
+        wireframe: !!el("meshHipsWireframe")?.checked,
+      });
+
+      setStatus("3D / Mesh: Moon MeshHiPS loaded.");
+    }
+  } catch (error) {
+    console.error(error);
+
+    setStatus(`Unable to activate ${domain}: ${error.message || error}`);
+  }
+}
+
 async function bootstrap() {
   try {
     loadPersisted();
@@ -61,6 +200,7 @@ async function bootstrap() {
       const healpixChk = el("healpixGridChk");
       const equatChk = el("equatorialGridChk");
       const lonLatChk = el("lonLatGridChk");
+
       const lockEastWestChk = el("lockEastWestRotationChk");
       const lockNorthSouthChk = el("lockNorthSouthRotationChk");
       const keepNorthUpChk = el("keepCameraNorthUpChk");
@@ -113,7 +253,7 @@ async function bootstrap() {
     }
     // Fallback if AstroViewer didn’t return a valid URL
     if (!defaultHiPS) {
-      defaultHiPS = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
+      defaultHiPS = DEFAULT_ASTRONOMY_HIPS;
     }
     const hipsInput = el("hipsUrl");
     if (hipsInput) {
@@ -169,18 +309,27 @@ async function bootstrap() {
 
     AC.run();
 
-    wireDevTabs();
+    wireDevTabs(activateDemoDomain);
     wireUI();
+
     renderCatalogueManager();
     wireCatalogueManagerControls();
+
+    renderFootprintManager();
+    wireFootprintManagerControls();
+
     wireImporterControls();
     wireSatelliteFootprintDemo();
+
     wireGoto();
     wireCoords();
+
     wireAstronomyOverlayDemos();
     wireHoveredMetadata();
+
     wireXYZDiagnostics();
     wireHiPSDiagnostics();
+    wireMeshHiPSDiagnostics();
 
     setStatus("App Ready - Panel loaded ✅");
   } catch (e) {
@@ -194,22 +343,8 @@ function wireUI() {
 
   el("btnLoadHiPS")?.addEventListener("click", async () => {
     const url = el("hipsUrl").value.trim();
-
-    if (!url) {
-      return setStatus("Insert a HiPS URL.");
-    }
-
-    try {
-      await loadHiPS(url);
-      persistBasic();
-    } catch (e) {
-      setStatus("HiPS load error: " + (e.message || e));
-    }
-  });
-
-  el("btnLoadHiPS")?.addEventListener("click", async () => {
-    const url = el("hipsUrl").value.trim();
     if (!url) return setStatus("Insert a HiPS URL.");
+
     try {
       await loadHiPS(url);
       persistBasic();
@@ -263,6 +398,8 @@ function wireUI() {
     if (!Number.isFinite(maxConcurrentRequests) || maxConcurrentRequests < 1)
       return setStatus("Insert a valid XYZ max concurrent requests value.");
 
+    const lonLatGridWanted = !!el("lonLatGridChk")?.checked;
+
     try {
       loadXYZ(urlTemplate, {
         minZoom,
@@ -271,6 +408,8 @@ function wireUI() {
         maxCachedTiles,
         maxConcurrentRequests,
       });
+
+      setLonLatGridVisible(lonLatGridWanted);
     } catch (e) {
       setStatus("XYZ load error: " + (e.message || e));
     }
@@ -307,6 +446,8 @@ function wireUI() {
       }
     }
 
+    const lonLatGridWanted = !!el("lonLatGridChk")?.checked;
+
     try {
       loadWMTS({
         baseUrl,
@@ -325,6 +466,8 @@ function wireUI() {
         maxCachedTiles,
         maxConcurrentRequests,
       });
+
+      setLonLatGridVisible(lonLatGridWanted);
     } catch (e) {
       setStatus("WMTS load error: " + (e.message || e));
     }

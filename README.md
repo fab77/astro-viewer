@@ -21,8 +21,12 @@ AstroViewer is developed from scratch without depending on visualization framewo
 - HiPS coverage handling
 - HEALPix hierarchical sky tessellation
 - FITS astronomical data support
+- FITS display scaling (linear, sqrt, log, asinh, gamma)
+- FITS display range modes
+- Runtime color maps
 - Astronomical coordinate systems and transformations
 - Field-of-view calculations
+- Interactive navigation and animated Fly To
 - Grid and coordinate visualization
 - TAP-based astronomical data access
 
@@ -34,6 +38,7 @@ AstroViewer is developed from scratch without depending on visualization framewo
 - GeoJSON geometries and overlays
 - Satellite tracks and observation geometry
 - Sensor footprints and cones
+- Longitude/latitude navigation and animated Fly To
 - Earth-oriented coordinate and picking utilities
 
 ### 3D and Scientific Visualization
@@ -42,7 +47,7 @@ AstroViewer is developed from scratch without depending on visualization framewo
 - Inside/outside sphere visualization
 - MeshHiPS OBJ tiled meshes
 - Runtime color maps
-- Interactive camera and navigation
+- Interactive camera, navigation and animated Fly To
 - Ray picking
 - Scientific overlays and geometries
 - Framework-independent architecture
@@ -100,6 +105,7 @@ A HiPS survey can be activated using a `HiPSDescriptor`:
 import { AstroViewer, HiPSDescriptor } from "astro-viewer";
 
 const canvas = document.getElementById("astrocanvas");
+
 const viewer = new AstroViewer(canvas);
 
 const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
@@ -189,6 +195,26 @@ AstroViewer supports conventional image-based HiPS tiles and FITS HiPS tiles.
 
 ---
 
+## FITS HiPS Visualization
+
+AstroViewer can render FITS tiles directly as part of the HiPS rendering pipeline.
+
+FITS visualization supports multiple display scaling functions:
+
+```text
+linear
+sqrt
+log
+asinh
+gamma
+```
+
+The display range and scaling parameters can be changed at runtime, allowing scientific image data with different dynamic ranges to be explored interactively.
+
+Color maps can also be applied at runtime to FITS-based HiPS data.
+
+---
+
 ## HiPS Coverage
 
 AstroViewer supports survey coverage information associated with HiPS datasets.
@@ -196,6 +222,38 @@ AstroViewer supports survey coverage information associated with HiPS datasets.
 Coverage information is used by the tile rendering pipeline to avoid requesting and rendering HEALPix tiles outside the available survey region.
 
 This is particularly useful for partial-sky surveys.
+
+---
+
+## Navigation and Fly To
+
+AstroViewer provides immediate and animated camera navigation.
+
+The viewer can move directly to a target coordinate:
+
+```js
+viewer.goTo(firstDeg, secondDeg);
+```
+
+or smoothly animate the camera towards the target:
+
+```js
+viewer.flyTo(firstDeg, secondDeg);
+```
+
+An optional duration can be specified in milliseconds:
+
+```js
+viewer.flyTo(firstDeg, secondDeg, 1500);
+```
+
+The coordinate semantics depend on the active visualization domain:
+
+- Astronomy uses right ascension and declination.
+- Earth visualization uses longitude and latitude.
+- Planetary and MeshHiPS visualization uses longitude and latitude.
+
+Fly To uses spherical interpolation and integrates with the viewer rendering loop. User interaction interrupts an active Fly To operation, allowing normal interactive navigation to resume immediately.
 
 ---
 
@@ -265,15 +323,19 @@ addHiPS(...)
 addHiPSFromUrl(...)
 removeHiPS(...)
 removeAllHiPS()
-
 getActiveHiPS()
 getActiveHiPSLayers()
 setActiveHiPS(...)
-
 getActiveHiPSFormats()
 changeHiPSFormat(...)
-
 setHiPSOpacity(...)
+```
+
+### Navigation
+
+```ts
+goTo(...)
+flyTo(...)
 ```
 
 ### Maps and visualization

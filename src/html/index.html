@@ -16,8 +16,8 @@
     <meta charset="utf-8" />
     <title>Astro-Viewer – Dev Panel (lean)</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="./javascripts/astroviewer.js"></script>
-    <script type="module" src="./javascripts/dev/boot.js"></script>
+    <script src="./javascripts/astroviewer.js?v=media-20260827-2"></script>
+    <script type="module" src="./javascripts/dev/boot.js?v=media-20260827-2"></script>
     <link rel="stylesheet" href="./css/devpanel.css" />
 
 </head>
@@ -37,116 +37,681 @@
             <div class="hint">Globals: <code>AstroAPI</code></div>
         </div>
 
-        <!-- Go To (RA, Dec) -->
-        <div class="stack" style="margin-top:8px;">
-            <label id="goToLabel" for="goRa">Go to (RA°, Dec°)</label>
-            <div class="row3">
-                <input id="goRa" type="number" step="0.0001" placeholder="RA 0–360">
-                <input id="goDec" type="number" step="0.0001" placeholder="Dec −90–+90">
-                <button id="btnGoTo">Go</button>
-            </div>
-        </div>
+        <details id="controlPanel" style="margin-top:8px;">
+            <summary>Camera / navigation</summary>
 
-        <!-- Coordinates readouts -->
-        <div class="stack" style="margin-top:8px;">
-            <label>Coordinates</label>
-
-            <div class="row">
-                <input id="centerCoords" class="mono" type="text" readonly value="Center: —" />
-                <button id="btnRefreshCenter" class="secondary" title="Update center coordinates">Refresh</button>
-            </div>
-
-            <div class="row">
-                <input id="hoverCoords" class="mono" type="text" readonly value="Hover: —" />
-                <span class="hint">Move the mouse over the sphere</span>
-            </div>
-            <div class="row">
-                <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />
-                <span class="hint">Field of view (diagonal) at the center point, in degrees.</span>
-            </div>
-
-        </div>
-
-
-
-
-        <!-- HiPS controls -->
-        <details id="astroPanel" style="margin-top:8px;">
-            <summary>Astronomy - HiPS maps</summary>
             <div class="stack" style="margin-top:8px;">
-                <label for="hipsUrl">HiPS URL</label>
-                <div class="row">
-                    <input id="hipsUrl" type="url" value="https://alasky.cds.unistra.fr/DSS/DSSColor/"
-                        placeholder="https://…/HiPS/" />
-                    <button id="btnLoadHiPS">Load HiPS</button>
-                    <button id="btnAddHiPS">Add HiPS</button>
-                </div>
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="insideSphereChk" type="checkbox" />
+                    Inside sphere (toggle view)
+                </label>
+
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="viewfinderChk" type="checkbox" checked />
+                    Viewfinder
+                </label>
+            </div>
+
+            <div class="stack" style="margin-top:8px;">
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="lockEastWestRotationChk" type="checkbox" />
+                    Lock east-west rotation
+                </label>
+
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="lockNorthSouthRotationChk" type="checkbox" />
+                    Lock north-south rotation
+                </label>
+
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="keepCameraNorthUpChk" type="checkbox" checked />
+                    Keep north up while dragging
+                </label>
+
+                <button id="btnResetAxesOrientation" class="secondary" type="button">
+                    Reset axes
+                </button>
+
+                <button id="btnCamInfo" class="secondary" type="button">
+                    Camera info
+                </button>
+            </div>
+        </details>
+
+        <div id="devTabs" class="dev-tabs" role="tablist" aria-label="Dev panel domains">
+            <button class="dev-tab active" type="button" role="tab" aria-selected="true"
+                aria-controls="astronomyTabPanel" data-dev-tab="astronomy">
+                Astronomy
+            </button>
+
+            <button class="dev-tab" type="button" role="tab" aria-selected="false" aria-controls="earthTabPanel"
+                data-dev-tab="earth">
+                Earth Observation
+            </button>
+
+            <button class="dev-tab" type="button" role="tab" aria-selected="false" aria-controls="meshTabPanel"
+                data-dev-tab="mesh">
+                3D / Mesh
+            </button>
+        </div>
+
+
+        <section id="astronomyTabPanel" class="tab-panel" data-dev-tab-panel="astronomy">
+
+            <!-- Astronomy navigation -->
+            <details id="astronomyNavigationPanel" open style="margin-top:8px;">
+                <summary>Navigation</summary>
 
                 <div class="stack" style="margin-top:8px;">
+                    <label>Go to (RA°, Dec°)</label>
+
+                    <div class="row3">
+                        <input id="astronomyGoRa" type="number" step="0.0001" placeholder="RA 0–360" />
+
+                        <input id="astronomyGoDec" type="number" step="0.0001" placeholder="Dec −90–+90" />
+
+                        <button id="btnAstronomyGoTo" type="button">Go</button>
+                        <button id="btnAstronomyFlyTo" type="button">Fly</button>
+                    </div>
+
                     <div class="row">
-                        <strong>Active HiPS layers</strong>
-                        <button id="btnRemoveAllHiPS" type="button">Remove all</button>
+                        <input id="astronomyCenterCoords" class="mono" type="text" readonly value="Center: —" />
+
+                        <button id="btnAstronomyRefreshCenter" class="secondary" type="button"
+                            title="Update center coordinates">
+                            Refresh
+                        </button>
                     </div>
 
-                    <div id="hipsLayers"></div>
-                </div>
+                    <div class="row">
+                        <input id="astronomyHoverCoords" class="mono" type="text" readonly value="Hover: —" />
 
-                <details id="hipsRenderingPanel" open style="margin-top:8px; padding-left: 20px;">
-                    <summary>Rendering</summary>
-                    <div class="stack" style="margin-top:8px;">
-                        <label for="hipsColorMap">Colormap</label>
-                        <select id="hipsColorMap">
-                            <option value="native">Native</option>
-                            <option value="grayscale">Grayscale</option>
-                            <option value="planck">Planck</option>
-                            <option value="cmb">CMB</option>
-                            <option value="rainbow">Rainbow</option>
-                            <option value="eosb">EOSB</option>
-                            <option value="cubehelix">Cubehelix</option>
-                            <option value="hot">Hot</option>
-                            <option value="gray">Gray</option>
-                        </select>
-
-                        <label for="hipsScaleFunction">FITS scale function</label>
-                        <select id="hipsScaleFunction" disabled>
-                            <option value="linear">Linear</option>
-                            <option value="sqrt">Sqrt</option>
-                            <option value="log">Log1p</option>
-                            <option value="asinh">Asinh</option>
-                        </select>
-
-                        <label for="hipsRangeMode">FITS range</label>
-                        <select id="hipsRangeMode" disabled>
-                            <option value="robust">Robust percentile</option>
-                            <option value="hips">HiPS data min/max</option>
-                            <option value="tile">Tile min/max</option>
-                        </select>
-
-                        <label for="hipsScaleParam">Scale strength</label>
-                        <input id="hipsScaleParam" type="number" min="0.1" step="0.5" value="1" disabled />
-                        <div class="hint">FITS only. Robust percentile is the display default; HiPS min/max keeps the raw survey range.</div>
+                        <span class="hint">
+                            Move the mouse over the sphere
+                        </span>
                     </div>
-                </details>
-            </div>
-
-            <details id="hipsDiagnosticsPanel" open style="margin-top:8px; padding-left: 20px;">
-                <summary>HiPS diagnostics</summary>
-                <div class="stack">
-                    <!-- <input id="hipsDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
-                    <div id="hipsDiagSummary" class="div-text-wrapper">Mode: —</div>
-                    <div id="hipsDiagCache" class="div-text-wrapper">Cache: —</div>
-                    <div id="hipsDiagRequests" class="div-text-wrapper">Requests: —</div>
-                    <div id="hipsDiagBackoff" class="hint">Backoff: none</div>
-                </div>
-                <div class="row">
-                    <label for="hipsFormat">Format</label>
-                    <select id="hipsFormat" disabled>
-                        <option value="">—</option>
-                    </select>
                 </div>
             </details>
 
-            <details id="meshHipsPanel" style="margin-top:8px; padding-left: 20px;">
+
+
+            <!-- HiPS controls -->
+            <details id="astroPanel" style="margin-top:8px;">
+                <summary>Astronomy - HiPS maps</summary>
+                <div class="stack" style="margin-top:8px;">
+                    <label for="hipsPreset">Demo HiPS</label>
+                    <div class="row">
+                        <select id="hipsPreset">
+                            <option value="dss2">DSS2 Color — Optical</option>
+                            <option value="galexFuv">GALEX FUV — Ultraviolet [FITS]</option>
+                            <option value="sdssR">SDSS DR9 r — Optical [FITS]</option>
+                            <option value="panstarrsR">Pan-STARRS DR1 r — Optical [FITS]</option>
+                            <option value="2massH">2MASS H — Near infrared [FITS]</option>
+                            <option value="xmmRgb">XMM EPIC-RGB — X-ray</option>
+                            <option value="xmmEb2">XMM PN eb2 — X-ray [FITS]</option>
+                            <option value="herschelSpire250">Herschel SPIRE 250 µm — Far infrared [FITS]</option>
+                            <option value="planck143">Planck HFI 143 GHz — Microwave [FITS]</option>
+                            <option value="fermi1To3">Fermi 1–3 GeV — Gamma ray [FITS]</option>
+                        </select>
+
+                        <button id="btnLoadHiPSPreset" type="button">Load</button>
+                    </div>
+
+                    <label for="hipsUrl">Custom HiPS URL</label>
+                    <div class="row">
+                        <input id="hipsUrl" type="url" value="https://alasky.cds.unistra.fr/DSS/DSSColor/"
+                            placeholder="https://…/HiPS/" />
+                        <button id="btnLoadHiPS">Load HiPS</button>
+                        <button id="btnAddHiPS">Add HiPS</button>
+                    </div>
+
+                    <div class="stack" style="margin-top:8px;">
+                        <div class="row">
+                            <strong>Active HiPS layers</strong>
+                            <button id="btnRemoveAllHiPS" type="button">Remove all</button>
+                        </div>
+
+                        <div id="hipsLayers"></div>
+                    </div>
+
+                    <details id="hipsRenderingPanel" open style="margin-top:8px; padding-left: 20px;">
+                        <summary>Rendering</summary>
+                        <div class="stack" style="margin-top:8px;">
+                            <label for="hipsColorMap">Colormap</label>
+                            <select id="hipsColorMap">
+                                <option value="native">Native</option>
+                                <option value="grayscale">Grayscale</option>
+                                <option value="planck">Planck</option>
+                                <option value="cmb">CMB</option>
+                                <option value="rainbow">Rainbow</option>
+                                <option value="eosb">EOSB</option>
+                                <option value="cubehelix">Cubehelix</option>
+                                <option value="hot">Hot</option>
+                                <option value="gray">Gray</option>
+                            </select>
+
+                            <label for="hipsFitsPreset">FITS display preset</label>
+                            <select id="hipsFitsPreset" disabled>
+                                <option value="default">Default</option>
+                                <option value="faint">Faint structures</option>
+                                <option value="contrast">High contrast</option>
+                                <option value="gamma">Gamma</option>
+                                <option value="custom">Custom</option>
+                            </select>
+
+                            <label for="hipsScaleFunction">FITS scale function</label>
+                            <select id="hipsScaleFunction" disabled>
+                                <option value="linear">Linear</option>
+                                <option value="sqrt">Sqrt</option>
+                                <option value="log">Log1p</option>
+                                <option value="asinh">Asinh</option>
+                                <option value="gamma">Gamma</option>
+                            </select>
+
+                            <label for="hipsRangeMode">FITS range</label>
+                            <select id="hipsRangeMode" disabled>
+                                <option value="robust">Robust percentile</option>
+                                <option value="hips">HiPS data min/max</option>
+                                <option value="tile">Tile min/max</option>
+                            </select>
+
+                            <label for="hipsScaleParam">Scale strength</label>
+                            <input id="hipsScaleParam" type="number" min="0.1" step="0.5" value="1" disabled />
+                            <div class="hint">FITS only. Robust percentile is the display default; HiPS min/max keeps
+                                the
+                                raw survey range.</div>
+                        </div>
+                    </details>
+                </div>
+
+                <details id="hipsDiagnosticsPanel" open style="margin-top:8px; padding-left: 20px;">
+                    <summary>HiPS diagnostics</summary>
+                    <div class="stack">
+                        <!-- <input id="hipsDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
+                        <div id="hipsDiagSummary" class="div-text-wrapper">Mode: —</div>
+                        <div id="hipsDiagCache" class="div-text-wrapper">Cache: —</div>
+                        <div id="hipsDiagRequests" class="div-text-wrapper">Requests: —</div>
+                        <div id="hipsDiagBackoff" class="hint">Backoff: none</div>
+                    </div>
+                    <div class="row">
+                        <label for="hipsFormat">Format</label>
+                        <select id="hipsFormat" disabled>
+                            <option value="">—</option>
+                        </select>
+                    </div>
+                </details>
+
+
+            </details>
+
+            <details id="astronomyImportPanel" style="margin-top:8px;">
+                <summary>Catalogue / STCS importer</summary>
+
+                <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
+                    <label>Import catalogue / observation footprints</label>
+
+                    <div class="row">
+                        <input id="astronomyImportFile" type="file" accept=".json,.csv,application/json,text/csv" />
+
+                        <select id="astronomyImportType">
+                            <option value="catalogue">
+                                Catalogue (points table)
+                            </option>
+                            <option value="footprint">
+                                Footprint / STCS set
+                            </option>
+                        </select>
+
+                        <button id="btnAstronomyImport" class="secondary">
+                            Import
+                        </button>
+
+                        <button id="btnClearAstronomyImports" class="secondary">
+                            Clear imports
+                        </button>
+                    </div>
+
+                    <div style="
+                margin-top:8px;
+                display:grid;
+                grid-template-columns:repeat(3,1fr);
+                gap:6px;
+            ">
+                        <div>
+                            <label for="astronomyImportMapRa">RA column</label>
+                            <select id="astronomyImportMapRa">
+                                <option value="">— auto —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapDec">Dec column</label>
+                            <select id="astronomyImportMapDec">
+                                <option value="">— auto —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapName">Name column</label>
+                            <select id="astronomyImportMapName">
+                                <option value="">— auto —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapSize">Size column</label>
+                            <select id="astronomyImportMapSize">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapHue">Hue column</label>
+                            <select id="astronomyImportMapHue">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapOutline">
+                                Footprint / STCS column
+                            </label>
+                            <select id="astronomyImportMapOutline">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapMediaSrc">Media source column</label>
+                            <select id="astronomyImportMapMediaSrc">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapMediaType">Media type column</label>
+                            <select id="astronomyImportMapMediaType">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapMediaScale">Media scale column</label>
+                            <select id="astronomyImportMapMediaScale">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapMediaRotation">
+                                Media rotation column
+                            </label>
+                            <select id="astronomyImportMapMediaRotation">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label for="astronomyImportMapMediaOpacity">
+                                Media opacity column
+                            </label>
+                            <select id="astronomyImportMapMediaOpacity">
+                                <option value="">— none —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="hint">
+                        Import a JSON array or CSV table. Catalogue rows use RA/Dec
+                        coordinates and may map numeric metadata to source size and hue.
+                        Observation footprints use an STCS column such as
+                        <code>POLYGON J2000 ra1 dec1 ra2 dec2 ...</code>.
+                    </div>
+                </div>
+            </details>
+
+            <details id="catalogueManagerPanel" style="margin-top:8px;">
+                <summary>Catalogue manager</summary>
+
+                <div class="stack" style="margin-top:8px;">
+                    <div class="row">
+                        <input id="catFilter" type="text" placeholder="Filter catalogues..." />
+
+                        <button id="btnShowAll" class="secondary" type="button">
+                            Show all
+                        </button>
+
+                        <button id="btnHideAll" class="secondary" type="button">
+                            Hide all
+                        </button>
+                    </div>
+
+                    <div style="overflow-x:auto;">
+                        <table id="catTable"></table>
+                    </div>
+
+                    <div class="hint">
+                        Catalogue sources can be styled using metadata columns:
+                        Size by controls source radius, Hue by controls source hue,
+                        and Colour changes the catalogue base colour.
+                    </div>
+                </div>
+            </details>
+
+            <details id="stcsManagerPanel" style="margin-top:8px;">
+                <summary>STCS manager</summary>
+
+                <div class="stack" style="margin-top:8px;">
+                    <div class="row">
+                        <input id="fpFilter" type="text" placeholder="Filter footprint sets..." />
+
+                        <button id="btnShowAllFp" class="secondary" type="button">
+                            Show all
+                        </button>
+
+                        <button id="btnHideAllFp" class="secondary" type="button">
+                            Hide all
+                        </button>
+                    </div>
+
+                    <div style="overflow-x:auto;">
+                        <table id="fpTable"></table>
+                    </div>
+
+                    <div class="hint">
+                        Manage astronomical observation footprints imported from STCS data.
+                        Each footprint set can be shown, hidden, removed, or assigned a colour.
+                    </div>
+                </div>
+            </details>
+
+            <!-- Hovered footprints panel -->
+            <details id="hoverPanel" open style="margin-top:8px;">
+                <summary>Hovered metadata</summary>
+                <div id="hoverEmpty" class="hint">Move the mouse over a catalogue source or observation footprint…</div>
+                <div id="hoverList"></div>
+            </details>
+
+            <details id="astroGridPanel" style="margin-top:8px;">
+                <summary>Astronomy grids</summary>
+
+                <div class="stack" style="margin-top:8px;">
+                    <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                        <input id="healpixGridChk" type="checkbox" />
+                        Healpix grid
+                    </label>
+
+                    <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                        <input id="equatorialGridChk" type="checkbox" />
+                        Equatorial grid
+                    </label>
+                </div>
+            </details>
+
+        </section>
+
+
+
+        <section id="earthTabPanel" class="tab-panel" data-dev-tab-panel="earth" hidden>
+
+
+            <!-- Earth Observation navigation -->
+            <details id="earthNavigationPanel" open style="margin-top:8px;">
+                <summary>Navigation</summary>
+
+                <div class="stack" style="margin-top:8px;">
+                    <label>Go to (Longitude°, Latitude°)</label>
+
+                    <div class="row3">
+                        <input id="earthGoLon" type="number" step="0.0001" placeholder="Lon −180–+180" />
+
+                        <input id="earthGoLat" type="number" step="0.0001" placeholder="Lat −90–+90" />
+
+                        <button id="btnEarthGoTo" type="button">Go</button>
+                        <button id="btnEarthFlyTo" type="button">Fly</button>
+                    </div>
+
+                    <div class="row">
+                        <input id="earthCenterCoords" class="mono" type="text" readonly value="Center: —" />
+
+                        <button id="btnEarthRefreshCenter" class="secondary" type="button"
+                            title="Update center coordinates">
+                            Refresh
+                        </button>
+                    </div>
+
+                    <div class="row">
+                        <input id="earthHoverCoords" class="mono" type="text" readonly value="Hover: —" />
+
+                        <span class="hint">
+                            Move the mouse over the globe
+                        </span>
+                    </div>
+
+                    <div class="row">
+                        <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />
+
+                        <span class="hint">
+                            Field of view (diagonal) at the center point, in degrees.
+                        </span>
+                    </div>
+                </div>
+            </details>
+
+            <details id="earthPanel" style="margin-top:8px;">
+                <summary>Earth - XYZ / WMTS maps</summary>
+
+                <details id="xyzPanel" style="margin-top:8px; padding-left: 20px;">
+                    <summary>XYZ maps</summary>
+                    <div class="stack" style="margin-top:8px;">
+                        <label for="xyzUrlTemplate">XYZ URL Template</label>
+                        <div class="row">
+                            <input id="xyzUrlTemplate" type="url" value="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                placeholder="https://…/{z}/{x}/{y}.png" />
+                            <button id="btnLoadXYZ">Load XYZ</button>
+                        </div>
+                        <div class="row3">
+                            <input id="xyzMinZoom" type="number" min="0" max="22" step="1" value="0"
+                                placeholder="Min zoom" />
+                            <input id="xyzMaxZoom" type="number" min="0" max="22" step="1" value="8"
+                                placeholder="Max zoom" />
+                            <input id="xyzSegments" type="number" min="2" max="64" step="1" value="48"
+                                placeholder="Segments" />
+                        </div>
+                        <div class="row3">
+                            <input id="xyzMaxCachedTiles" type="number" min="32" max="4096" step="32" value="384"
+                                placeholder="Max cached tiles" />
+                            <input id="xyzMaxConcurrentRequests" type="number" min="1" max="16" step="1" value="4"
+                                placeholder="Max concurrent requests" />
+                            <span class="hint">Tune cache size and request parallelism for XYZ.</span>
+                        </div>
+                        <div class="hint">XYZ zoom is computed automatically from distance/FoV and clamped between
+                            min/max.
+                        </div>
+                    </div>
+                </details>
+
+                <details id="wmtsPanel" style="margin-top:8px; padding-left: 20px;">
+                    <summary>WMTS maps</summary>
+
+                    <div class="stack">
+                        <label for="wmtsPreset">WMTS preset</label>
+                        <div class="row">
+                            <select id="wmtsPreset">
+                                <option value="gibsBlueMarble">NASA GIBS Blue Marble</option>
+                                <option value="esriWorldImagery">Esri World Imagery</option>
+                            </select>
+                            <button id="btnLoadWMTSCapabilities" class="secondary">Read Capabilities</button>
+                        </div>
+                        <label for="wmtsCapabilitiesUrl">WMTS capabilities URL</label>
+                        <div class="row">
+                            <input id="wmtsCapabilitiesUrl" type="url" autocomplete="off"
+                                value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml"
+                                placeholder="https://…/WMTSCapabilities.xml" />
+                            <span class="hint">Auto-fills layer, matrix set, template and zoom range.</span>
+                        </div>
+                        <label for="wmtsBaseUrl">WMTS base URL</label>
+                        <div class="row">
+                            <input id="wmtsBaseUrl" type="url" autocomplete="off"
+                                value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
+                                placeholder="https://…/wmts" />
+                            <button id="btnLoadWMTS">Load WMTS</button>
+                        </div>
+                        <div class="row3">
+                            <input id="wmtsLayer" type="text" autocomplete="off"
+                                value="BlueMarble_ShadedRelief_Bathymetry" placeholder="Layer" />
+                            <input id="wmtsTileMatrixSet" type="text" autocomplete="off"
+                                value="GoogleMapsCompatible_Level8" placeholder="TileMatrixSet" />
+                            <select id="wmtsEncoding">
+                                <option value="rest" selected>REST</option>
+                                <option value="kvp">KVP</option>
+                            </select>
+                        </div>
+                        <div class="row3">
+                            <input id="wmtsStyle" type="text" autocomplete="off" value="default" placeholder="Style" />
+                            <input id="wmtsTime" type="text" autocomplete="off" value=""
+                                placeholder="Time (blank for static best layers)" />
+                            <input id="wmtsFormat" type="text" autocomplete="off" value="image/jpeg"
+                                placeholder="Format" />
+                        </div>
+                        <div class="row">
+                            <input id="wmtsDimensions" type="text" autocomplete="off" value="{}"
+                                placeholder='{"SomeDimension":"value"}' />
+                        </div>
+                        <div class="row">
+                            <input id="wmtsUrlTemplate" type="text" autocomplete="off"
+                                value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}"
+                                placeholder="REST template with {TileMatrix}/{TileRow}/{TileCol}" />
+                        </div>
+                        <div class="hint">WMTS currently reuses the XYZ renderer and assumes a Web Mercator-compatible
+                            tile
+                            matrix set.</div>
+                    </div>
+                </details>
+
+                <details id="xyzDiagnosticsPanel" open style="margin-top:8px; padding-left: 20px;">
+                    <summary>XYZ diagnostics</summary>
+                    <div class="stack">
+                        <!-- <input id="xyzDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
+                        <div id="xyzDiagSummary" class="div-text-wrapper">Mode: —</div>
+                        <div id="xyzDiagCache" class="div-text-wrapper">Cache: —</div>
+                        <div id="xyzDiagRequests" class="div-text-wrapper">Requests: —</div>
+                        <div id="xyzDiagBackoff" class="hint">Backoff: none</div>
+                    </div>
+                </details>
+
+            </details>
+
+            <details id="earthImportPanel" style="margin-top:8px;">
+                <summary>GeoJSON importer</summary>
+
+                <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
+                    <label>Import geographic GeoJSON</label>
+
+                    <div class="row">
+                        <input id="earthImportFile" type="file"
+                            accept=".json,.geojson,application/json,application/geo+json" />
+
+                        <select id="earthImportType">
+                            <option value="geojson">GeoJSON footprint set</option>
+                        </select>
+
+                        <button id="btnEarthImport" class="secondary">
+                            Import
+                        </button>
+
+                        <button id="btnClearEarthImports" class="secondary">
+                            Clear imports
+                        </button>
+                    </div>
+
+                    <div class="hint">
+                        Import a GeoJSON FeatureCollection as a geographic Earth Observation overlay.
+                    </div>
+                </div>
+
+                <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
+                    <label>Satellite footprint demo</label>
+
+                    <div class="row">
+                        <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">
+                            Load ISS Spain demo
+                        </button>
+
+                        <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>
+                            Play
+                        </button>
+
+                        <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>
+                            Pause
+                        </button>
+
+                        <input id="satelliteTimelineSeek" type="range" min="0" max="1000" value="0" disabled />
+
+                        <span id="satelliteTimelineTime" class="hint">
+                            Timeline not loaded
+                        </span>
+
+                        <span class="hint">
+                            Dev-only fixture: Spain GeoJSON, ISS footprint polygons,
+                            and ground-track line.
+                        </span>
+                    </div>
+                </div>
+            </details>
+
+            <details id="earthGridPanel" style="margin-top:8px;">
+                <summary>Earth grids</summary>
+
+                <div class="stack" style="margin-top:8px;">
+                    <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                        <input id="lonLatGridChk" type="checkbox" />
+                        Lon/Lat grid
+                    </label>
+                </div>
+            </details>
+
+        </section>
+
+
+        <section id="meshTabPanel" class="tab-panel" data-dev-tab-panel="mesh" hidden>
+
+            <!-- 3D / Mesh navigation -->
+            <details id="meshNavigationPanel" open style="margin-top:8px;">
+                <summary>Navigation</summary>
+
+                <div class="stack" style="margin-top:8px;">
+                    <label>Go to (Longitude°, Latitude°)</label>
+
+                    <div class="row3">
+                        <input id="meshGoLon" type="number" step="0.0001" placeholder="Lon −180–+180" />
+
+                        <input id="meshGoLat" type="number" step="0.0001" placeholder="Lat −90–+90" />
+
+                        <button id="btnMeshGoTo" type="button">Go</button>
+                        <button id="btnMeshFlyTo" type="button">Fly</button>
+                    </div>
+
+                    <div class="row">
+                        <input id="meshCenterCoords" class="mono" type="text" readonly value="Center: —" />
+
+                        <button id="btnMeshRefreshCenter" class="secondary" type="button"
+                            title="Update center coordinates">
+                            Refresh
+                        </button>
+                    </div>
+
+                    <div class="row">
+                        <input id="meshHoverCoords" class="mono" type="text" readonly value="Hover: —" />
+
+                        <span class="hint">
+                            Move the mouse over the body
+                        </span>
+                    </div>
+                </div>
+            </details>
+
+            <details id="meshHipsPanel" style="margin-top:8px;">
                 <summary>MeshHiPS OBJ tiles</summary>
                 <div class="stack" style="margin-top:8px;">
                     <label for="meshHipsUrl">MeshHiPS URL</label>
@@ -168,255 +733,21 @@
                     </label>
                 </div>
             </details>
-        </details>
 
-
-        <details id="earthPanel" style="margin-top:8px;">
-            <summary>Earth - XYZ / WMTS maps</summary>
-
-            <details id="xyzPanel" style="margin-top:8px; padding-left: 20px;">
-                <summary>XYZ maps</summary>
-                <div class="stack" style="margin-top:8px;">
-                    <label for="xyzUrlTemplate">XYZ URL Template</label>
-                    <div class="row">
-                        <input id="xyzUrlTemplate" type="url" value="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            placeholder="https://…/{z}/{x}/{y}.png" />
-                        <button id="btnLoadXYZ">Load XYZ</button>
-                    </div>
-                    <div class="row3">
-                        <input id="xyzMinZoom" type="number" min="0" max="22" step="1" value="0"
-                            placeholder="Min zoom" />
-                        <input id="xyzMaxZoom" type="number" min="0" max="22" step="1" value="8"
-                            placeholder="Max zoom" />
-                        <input id="xyzSegments" type="number" min="2" max="64" step="1" value="48"
-                            placeholder="Segments" />
-                    </div>
-                    <div class="row3">
-                        <input id="xyzMaxCachedTiles" type="number" min="32" max="4096" step="32" value="384"
-                            placeholder="Max cached tiles" />
-                        <input id="xyzMaxConcurrentRequests" type="number" min="1" max="16" step="1" value="4"
-                            placeholder="Max concurrent requests" />
-                        <span class="hint">Tune cache size and request parallelism for XYZ.</span>
-                    </div>
-                    <div class="hint">XYZ zoom is computed automatically from distance/FoV and clamped between min/max.
-                    </div>
-                </div>
-            </details>
-
-            <details id="wmtsPanel" style="margin-top:8px; padding-left: 20px;">
-                <summary>WMTS maps</summary>
-
-                <div class="stack">
-                    <label for="wmtsPreset">WMTS preset</label>
-                    <div class="row">
-                        <select id="wmtsPreset">
-                            <option value="gibsBlueMarble">NASA GIBS Blue Marble</option>
-                            <option value="esriWorldImagery">Esri World Imagery</option>
-                        </select>
-                        <button id="btnLoadWMTSCapabilities" class="secondary">Read Capabilities</button>
-                    </div>
-                    <label for="wmtsCapabilitiesUrl">WMTS capabilities URL</label>
-                    <div class="row">
-                        <input id="wmtsCapabilitiesUrl" type="url" autocomplete="off"
-                            value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml"
-                            placeholder="https://…/WMTSCapabilities.xml" />
-                        <span class="hint">Auto-fills layer, matrix set, template and zoom range.</span>
-                    </div>
-                    <label for="wmtsBaseUrl">WMTS base URL</label>
-                    <div class="row">
-                        <input id="wmtsBaseUrl" type="url" autocomplete="off"
-                            value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/" placeholder="https://…/wmts" />
-                        <button id="btnLoadWMTS">Load WMTS</button>
-                    </div>
-                    <div class="row3">
-                        <input id="wmtsLayer" type="text" autocomplete="off" value="BlueMarble_ShadedRelief_Bathymetry"
-                            placeholder="Layer" />
-                        <input id="wmtsTileMatrixSet" type="text" autocomplete="off" value="GoogleMapsCompatible_Level8"
-                            placeholder="TileMatrixSet" />
-                        <select id="wmtsEncoding">
-                            <option value="rest" selected>REST</option>
-                            <option value="kvp">KVP</option>
-                        </select>
-                    </div>
-                    <div class="row3">
-                        <input id="wmtsStyle" type="text" autocomplete="off" value="default" placeholder="Style" />
-                        <input id="wmtsTime" type="text" autocomplete="off" value=""
-                            placeholder="Time (blank for static best layers)" />
-                        <input id="wmtsFormat" type="text" autocomplete="off" value="image/jpeg" placeholder="Format" />
-                    </div>
-                    <div class="row">
-                        <input id="wmtsDimensions" type="text" autocomplete="off" value="{}"
-                            placeholder='{"SomeDimension":"value"}' />
-                    </div>
-                    <div class="row">
-                        <input id="wmtsUrlTemplate" type="text" autocomplete="off"
-                            value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}"
-                            placeholder="REST template with {TileMatrix}/{TileRow}/{TileCol}" />
-                    </div>
-                    <div class="hint">WMTS currently reuses the XYZ renderer and assumes a Web Mercator-compatible tile
-                        matrix set.</div>
-                </div>
-            </details>
-
-            <details id="xyzDiagnosticsPanel" open style="margin-top:8px; padding-left: 20px;">
-                <summary>XYZ diagnostics</summary>
-                <div class="stack">
-                    <!-- <input id="xyzDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
-                    <div id="xyzDiagSummary" class="div-text-wrapper">Mode: —</div>
-                    <div id="xyzDiagCache" class="div-text-wrapper">Cache: —</div>
-                    <div id="xyzDiagRequests" class="div-text-wrapper">Requests: —</div>
-                    <div id="xyzDiagBackoff" class="hint">Backoff: none</div>
-                </div>
-            </details>
-
-        </details>
-
-
-
-
-
-
-        <details id="controlPanel" style="margin-top:8px;">
-            <summary>View controls</summary>
-            <div class="stack" style="margin-top:8px;">
-                <!-- Inside/Outside sphere toggle -->
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="insideSphereChk" type="checkbox" />
-                    Inside sphere (toggle view)
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="viewfinderChk" type="checkbox" checked />
-                    Viewfinder
-                </label>
-            </div>
-            <!-- Navigation locks -->
-            <div class="stack" style="margin-top:8px;">
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="lockEastWestRotationChk" type="checkbox" />
-                    Lock east-west rotation (RA)
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="lockNorthSouthRotationChk" type="checkbox" />
-                    Lock north-south rotation (Dec)
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="keepCameraNorthUpChk" type="checkbox" checked />
-                    Keep north up while dragging
-                </label>
-                <button id="btnResetAxesOrientation" class="secondary" type="button">Reset axes</button>
-            </div>
-
-        </details>
-
-
-        <details id="gridPanel" style="margin-top:8px;">
-            <summary>Grid controls</summary>
-            <!-- Grid toggles -->
-            <div class="stack" style="margin-top:8px;">
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="healpixGridChk" type="checkbox" />
-                    Healpix grid
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="equatorialGridChk" type="checkbox" />
-                    Equatorial grid
-                </label>
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="lonLatGridChk" type="checkbox" />
-                    Lon/Lat grid
-                </label>
-            </div>
-
-        </details>
-
-
-
-
-        <details id="importPanel" style="margin-top:8px;">
-            <summary>Import controls</summary>
-            <!-- Importer controls (always visible) -->
-            <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
-                <label>Import catalogue / footprint</label>
-                <div class="row">
-                    <input id="importFile" type="file"
-                        accept=".json,.geojson,.csv,application/json,application/geo+json,text/csv" />
-                    <select id="importType">
-                        <option value="catalogue">Catalogue (points table)</option>
-                        <option value="footprint">Footprint set</option>
-                        <option value="geojson">GeoJSON footprint set</option>
-                    </select>
-                    <button id="btnImport" class="secondary">Import</button>
-                    <button id="btnClearImports" class="secondary">Clear imports</button>
-                </div>
-                <div style="margin-top:8px; display:grid; grid-template-columns:repeat(3,1fr); gap:6px;">
-                    <div>
-                        <label for="importMapRa">RA column</label>
-                        <select id="importMapRa">
-                            <option value="">— auto —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapDec">Dec column</label>
-                        <select id="importMapDec">
-                            <option value="">— auto —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapName">Name column</label>
-                        <select id="importMapName">
-                            <option value="">— auto —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapSize">Size column</label>
-                        <select id="importMapSize">
-                            <option value="">— none —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapHue">Hue column</label>
-                        <select id="importMapHue">
-                            <option value="">— none —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="importMapOutline">Footprint / STCS column</label>
-                        <select id="importMapOutline">
-                            <option value="">— none —</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="hint">You can import a JSON array, CSV with headers, or GeoJSON FeatureCollection. For STCS
-                    footprints, use
-                    (e.g.,
-                    <code>POLYGON lon1 lat1 lon2 lat2 ...</code>). Choose mappings then click Import.
-                </div>
-            </div>
-            <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
-                <label>Satellite footprint demo</label>
-                <div class="row">
-                    <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">Load ISS Spain
-                        demo</button>
-                    <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>Play</button>
-                    <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>Pause</button>
-                    <input id="satelliteTimelineSeek" type="range" min="0" max="1000" value="0" disabled />
-                    <span id="satelliteTimelineTime" class="hint">Timeline not loaded</span>
-                    <span class="hint">Dev-only fixture: Spain GeoJSON, ISS footprint polygons, and ground-track
-                        line.</span>
-                </div>
-            </div>
-        </details>
-
-        <!-- Hovered footprints panel -->
-        <details id="hoverPanel" open style="margin-top:8px;">
-            <summary>Hovered metadata</summary>
-            <div id="hoverEmpty" class="hint">Move the mouse over a catalogue source or observation footprint…</div>
-            <div id="hoverList"></div>
-        </details>
+        </section>
 
         <div style="margin-top:10px;">
-            <button id="btnTogglePanel" class="secondary">Minimise</button>
+            <button id="btnTogglePanel" class="secondary">
+                Minimise
+            </button>
         </div>
+
+    </div>
+
+    <div id="loadingIndicator" class="loading-indicator" hidden>
+        <span id="loadingSpinner" class="loading-spinner" aria-hidden="true"></span>
+        <span id="loadingIcon" class="loading-icon" hidden>✓</span>
+        <span id="loadingMessage">Loading…</span>
     </div>
 
     <div id="gridcoords"></div>

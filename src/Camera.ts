@@ -20,7 +20,7 @@ import {
   type SphericalCoords,
 } from "./utils/Utils.js";
 
-import global from './Global.js'
+import global from "./Global.js";
 
 type Vec3Tuple = [number, number, number];
 
@@ -29,28 +29,35 @@ interface CameraLike {
 }
 
 class Camera implements CameraLike {
-
   private insideSphere = false;
 
-  private cam_pos: vec3 = vec3.create();  // camera position
+  private cam_pos: vec3 = vec3.create(); // camera position
   private cam_speed = 1.0;
 
-  private vMatrix: mat4 = mat4.create();  // view matrix
-  private T: mat4 = mat4.create();        // translation matrix
-  private R: mat4 = mat4.create();        // rotation matrix
+  private vMatrix: mat4 = mat4.create(); // view matrix
+  private T: mat4 = mat4.create(); // translation matrix
+  private R: mat4 = mat4.create(); // rotation matrix
 
   // Optional state used in rotate helpers
   private FoV = 180.0;
   private previousFoV = 180.0;
   private move: vec3 = vec3.create();
-  private phi = 0;     // accumulated yaw (radians)
-  private theta = 0;   // accumulated pitch (radians)
-  private rotationSensitivity = 1.0
+  private phi = 0; // accumulated yaw (radians)
+  private theta = 0; // accumulated pitch (radians)
+  private rotationSensitivity = 1.0;
 
   // lock rotation around world axes
   private lockRotX = false;
   private lockRotY = false;
   private lockRotZ = false;
+
+  private flyToAnimation: {
+    startDirection: vec3;
+    targetDirection: vec3;
+    targetPosition: vec3;
+    startTime: number;
+    durationMs: number;
+  } | null = null;
 
   constructor(in_position: vec3, in_sphere: boolean) {
     this.init(in_position, in_sphere);
@@ -64,7 +71,11 @@ class Camera implements CameraLike {
     this.T = mat4.create();
     this.R = mat4.create();
 
-    mat4.translate(this.T, this.T, [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]]);
+    mat4.translate(this.T, this.T, [
+      this.cam_pos[0],
+      this.cam_pos[1],
+      this.cam_pos[2],
+    ]);
 
     // reset helpers
     this.FoV = this.previousFoV = 180.0;
@@ -76,22 +87,32 @@ class Camera implements CameraLike {
   }
 
   goTo(raDeg: number, decDeg: number): void {
+    this.cancelFlyTo();
     this.goToPhiTheta(astroDegToSpherical(raDeg, decDeg));
   }
 
   private goToPhiTheta(ptDeg: SphericalCoords): void {
     const xyz = sphericalToCartesian(ptDeg.phi, ptDeg.theta, this.cam_pos[2]);
-    const targetDirection = vec3.normalize(
-      vec3.create(),
-      vec3.fromValues(xyz[0], xyz[1], xyz[2])
-    );
+
+    this.applyCameraPosition(vec3.fromValues(xyz[0], xyz[1], xyz[2]));
+  }
+
+  private applyCameraPosition(cameraPosition: vec3): void {
+    const targetDirection = vec3.normalize(vec3.create(), cameraPosition);
+
     const celestialNorth = vec3.fromValues(0.0, 0.0, 1.0);
+
     const northProjection = vec3.scale(
       vec3.create(),
       targetDirection,
-      vec3.dot(celestialNorth, targetDirection)
+      vec3.dot(celestialNorth, targetDirection),
     );
-    const cameraUp = vec3.subtract(vec3.create(), celestialNorth, northProjection);
+
+    const cameraUp = vec3.subtract(
+      vec3.create(),
+      celestialNorth,
+      northProjection,
+    );
 
     if (vec3.length(cameraUp) < 1e-6) {
       vec3.set(cameraUp, 0.0, 1.0, 0.0);
@@ -100,10 +121,16 @@ class Camera implements CameraLike {
     }
 
     let cameraMatrix = mat4.create();
-    cameraMatrix = mat4.translate(cameraMatrix, cameraMatrix, vec3.fromValues(xyz[0], xyz[1], xyz[2]));
+
+    cameraMatrix = mat4.translate(cameraMatrix, cameraMatrix, cameraPosition);
 
     const focusPoint: Vec3Tuple = [0.0, 0.0, 0.0];
-    const cameraPos: Vec3Tuple = [cameraMatrix[12], cameraMatrix[13], cameraMatrix[14]];
+
+    const cameraPos: Vec3Tuple = [
+      cameraMatrix[12],
+      cameraMatrix[13],
+      cameraMatrix[14],
+    ];
 
     cameraMatrix = mat4.targetTo(cameraMatrix, cameraPos, focusPoint, cameraUp);
 
@@ -113,10 +140,130 @@ class Camera implements CameraLike {
     this.R[14] = 0;
 
     const viewMatrix = mat4.create();
+
     if (this.cam_pos[2] !== 0) {
       mat4.invert(viewMatrix, cameraMatrix);
     }
+
     this.vMatrix = viewMatrix;
+  }
+
+  flyTo(raDeg: number, decDeg: number, durationMs = 1200): void {
+    const targetSpherical = astroDegToSpherical(raDeg, decDeg);
+    const targetPositionValues = sphericalToCartesian(
+      targetSpherical.phi,
+      targetSpherical.theta,
+      this.cam_pos[2],
+    );
+
+    const targetPosition = vec3.fromValues(
+      targetPositionValues[0],
+      targetPositionValues[1],
+      targetPositionValues[2],
+    );
+
+    const currentPosition = this.getCameraPosition();
+    const startDirection = vec3.normalize(
+      vec3.create(),
+      vec3.fromValues(
+        currentPosition[0],
+        currentPosition[1],
+        currentPosition[2],
+      ),
+    );
+    const targetDirection = vec3.normalize(vec3.create(), targetPosition);
+    this.flyToAnimation = {
+      startDirection,
+      targetDirection,
+      targetPosition,
+      startTime: performance.now(),
+      durationMs: Math.max(1, durationMs),
+    };
+  }
+
+  updateFlyTo(now: number): boolean {
+    const animation = this.flyToAnimation;
+
+    if (!animation) {
+      return false;
+    }
+
+    const elapsed = now - animation.startTime;
+    const progress = Math.min(1, elapsed / animation.durationMs);
+    const easedProgress =
+      progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+    const direction = this.slerpDirection(
+      animation.startDirection,
+      animation.targetDirection,
+      easedProgress,
+    );
+
+    const radius = Math.abs(this.cam_pos[2]);
+    const cameraPosition = vec3.scale(vec3.create(), direction, radius);
+
+    this.applyCameraPosition(cameraPosition);
+
+    if (progress >= 1) {
+      this.applyCameraPosition(animation.targetPosition);
+      this.flyToAnimation = null;
+    }
+
+    return true;
+  }
+
+  private slerpDirection(start: vec3, end: vec3, t: number): vec3 {
+    const dot = Math.max(-1, Math.min(1, vec3.dot(start, end)));
+
+    /*
+     * For almost identical directions, normalized linear interpolation is
+     * numerically more stable than the general SLERP formula.
+     */
+    if (dot > 0.999999) {
+      const result = vec3.lerp(vec3.create(), start, end, t);
+
+      return vec3.normalize(result, result);
+    }
+
+    /*
+     * The normal SLERP formula becomes singular for antipodal vectors because
+     * sin(pi) = 0. In that case choose a stable vector orthogonal to start and
+     * rotate through that great circle.
+     */
+    if (dot < -0.999999) {
+      const referenceAxis =
+        Math.abs(start[0]) < 0.9
+          ? vec3.fromValues(1, 0, 0)
+          : vec3.fromValues(0, 1, 0);
+      const orthogonal = vec3.cross(vec3.create(), start, referenceAxis);
+
+      vec3.normalize(orthogonal, orthogonal);
+
+      const angle = Math.PI * t;
+      const result = vec3.create();
+
+      vec3.scale(result, start, Math.cos(angle));
+      vec3.scaleAndAdd(result, result, orthogonal, Math.sin(angle));
+
+      return vec3.normalize(result, result);
+    }
+
+    const angle = Math.acos(dot);
+    const sinAngle = Math.sin(angle);
+    const startWeight = Math.sin((1 - t) * angle) / sinAngle;
+    const endWeight = Math.sin(t * angle) / sinAngle;
+    const result = vec3.create();
+
+    result[0] = start[0] * startWeight + end[0] * endWeight;
+    result[1] = start[1] * startWeight + end[1] * endWeight;
+    result[2] = start[2] * startWeight + end[2] * endWeight;
+
+    return vec3.normalize(result, result);
+  }
+
+  cancelFlyTo(): void {
+    this.flyToAnimation = null;
   }
 
   toggleInsideSphere(): void {
@@ -164,7 +311,6 @@ class Camera implements CameraLike {
       } else {
         this.cam_pos[2] += this.move[2];
       }
-
     }
 
     const identity = mat4.create();
@@ -210,8 +356,7 @@ class Camera implements CameraLike {
   }
 
   translate(distance: number) {
-
-    this.cam_pos[2] = distance + 1
+    this.cam_pos[2] = distance + 1;
     const identity = mat4.create();
     mat4.translate(this.T, identity, this.cam_pos);
 
@@ -271,7 +416,9 @@ class Camera implements CameraLike {
     if (totRot === 0) return;
 
     const pos = this.getCameraPosition();
-    const dist2Center = Math.sqrt(pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2]);
+    const dist2Center = Math.sqrt(
+      pos[0] * pos[0] + pos[1] * pos[1] + pos[2] * pos[2],
+    );
     const distanceFromSurface = Math.max(dist2Center - 1, 1e-6);
     const normalizedDistance = Math.min(1, distanceFromSurface / 0.45);
     const distanceFactor = 0.02 + 0.98 * Math.pow(normalizedDistance, 1.55);
@@ -280,7 +427,8 @@ class Camera implements CameraLike {
     // at medium and wide fields of view.
     const normalizedFoV = Math.min(1, this.FoV / 18);
     const fovFactor = 0.06 + 1.55 * Math.pow(normalizedFoV, 0.52);
-    const usedRot = ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
+    const usedRot =
+      ((totRot * distanceFactor * fovFactor) / 1.9) * this.rotationSensitivity;
 
     let axisX = theta;
     let axisY = phi;
@@ -299,11 +447,11 @@ class Camera implements CameraLike {
   }
 
   setRotationSensitivity(value: number): void {
-    this.rotationSensitivity = Math.min(3, Math.max(0.2, value))
+    this.rotationSensitivity = Math.min(3, Math.max(0.2, value));
   }
 
   getRotationSensitivity(): number {
-    return this.rotationSensitivity
+    return this.rotationSensitivity;
   }
 
   // rotate(phi: number, theta: number): void {
@@ -336,7 +484,6 @@ class Camera implements CameraLike {
   //   mat4.rotate(this.R, this.R, -usedRot, [axisX, axisY, 0]);
   //   this.refreshViewMatrix();
   // }
-
 
   // rotate(phi: number, theta: number): void {
   //   const totRot = Math.sqrt(phi * phi + theta * theta);
@@ -379,13 +526,10 @@ class Camera implements CameraLike {
   }
 
   setCameraMatrix(viewMatrix: Float32Array<ArrayBufferLike>) {
-    this.vMatrix = viewMatrix
+    this.vMatrix = viewMatrix;
   }
 
-
   setCameraPosition(position: [number, number, number]): void {
-
-
     // Update authoritative position
     this.cam_pos = vec3.fromValues(position[0], position[1], position[2]);
 
@@ -421,9 +565,15 @@ class Camera implements CameraLike {
     this.lockRotX = this.lockRotY = this.lockRotZ = false;
   }
 
-  isRotationLockedX(): boolean { return this.lockRotX; }
-  isRotationLockedY(): boolean { return this.lockRotY; }
-  isRotationLockedZ(): boolean { return this.lockRotZ; }
+  isRotationLockedX(): boolean {
+    return this.lockRotX;
+  }
+  isRotationLockedY(): boolean {
+    return this.lockRotY;
+  }
+  isRotationLockedZ(): boolean {
+    return this.lockRotZ;
+  }
 }
 
 export default Camera;

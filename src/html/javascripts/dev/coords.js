@@ -9,103 +9,157 @@
  * See LICENSE.md, LICENSE-AGPL.md, and LICENSE-COMMERCIAL.md for details.
  */
 
-// coords.js
-import { el, setStatus } from './ui.js';
-import { state } from './state.js';
+import { el } from "./ui.js";
+import { state } from "./state.js";
 
-const fmt = (ra, dec) => `RA=${Number(ra).toFixed(5)}°, Dec=${Number(dec).toFixed(5)}°`;
-const fmtLonLat = (lon, lat) => `Lon=${Number(lon).toFixed(5)}°, Lat=${Number(lat).toFixed(5)}°`;
-
-function getMode() {
-    return state.AstroAPI?.getActiveCoordinateMode?.() ?? 'equatorial';
+function formatRaDec(ra, dec) {
+  return `RA=${Number(ra).toFixed(5)}°, Dec=${Number(dec).toFixed(5)}°`;
 }
 
-function formatCoords(coords) {
-    const mode = getMode();
-    if (mode === 'lonlat') {
-        const lon = coords.sphericalDeg?.phi > 180 ? coords.sphericalDeg.phi - 360 : coords.sphericalDeg?.phi;
-        const lat = 90 - coords.sphericalDeg?.theta;
-        return fmtLonLat(lon, lat);
-    }
+function formatLonLat(lon, lat) {
+  return `Lon=${Number(lon).toFixed(5)}°, Lat=${Number(lat).toFixed(5)}°`;
+}
 
-    const suffix = mode === 'galactic' ? ' (galactic HiPS view)' : '';
-    return `${fmt(coords.astroDeg.ra, coords.astroDeg.dec)}${suffix}`;
+function getLonLat(coords) {
+  const phi = coords?.sphericalDeg?.phi;
+  const theta = coords?.sphericalDeg?.theta;
+
+  if (!Number.isFinite(phi) || !Number.isFinite(theta)) {
+    return null;
+  }
+
+  return {
+    lon: phi > 180 ? phi - 360 : phi,
+    lat: 90 - theta,
+  };
+}
+
+function updateCoordinateReadouts(prefix, coords) {
+  const astronomyEl = el(`astronomy${prefix}Coords`);
+  const earthEl = el(`earth${prefix}Coords`);
+  const meshEl = el(`mesh${prefix}Coords`);
+
+  const label = prefix === "Center" ? "Center" : "Hover";
+
+  if (!coords?.astroDeg) {
+    if (astronomyEl) astronomyEl.value = `${label}: —`;
+    if (earthEl) earthEl.value = `${label}: —`;
+    if (meshEl) meshEl.value = `${label}: —`;
+    return;
+  }
+
+  if (astronomyEl) {
+    astronomyEl.value =
+      `${label}: ` + formatRaDec(coords.astroDeg.ra, coords.astroDeg.dec);
+  }
+
+  const lonLat = getLonLat(coords);
+
+  if (!lonLat) {
+    if (earthEl) earthEl.value = `${label}: —`;
+    if (meshEl) meshEl.value = `${label}: —`;
+    return;
+  }
+
+  const formattedLonLat = formatLonLat(lonLat.lon, lonLat.lat);
+
+  if (earthEl) {
+    earthEl.value = `${label}: ${formattedLonLat}`;
+  }
+
+  if (meshEl) {
+    meshEl.value = `${label}: ${formattedLonLat}`;
+  }
 }
 
 export function wireCoords() {
-    const centerEl = el('centerCoords');
-    const hoverEl = el('hoverCoords');
-    const btnRef = el('btnRefreshCenter');
-    const canvas = document.getElementById('astrocanvas');
+  const canvas = document.getElementById("astrocanvas");
 
-    // initial center update
-    refreshCenter();
+  refreshCenter();
 
-    // manual refresh button
-    btnRef?.addEventListener('click', refreshCenter);
+  el("btnAstronomyRefreshCenter")?.addEventListener("click", refreshCenter);
 
-    // auto-refresh center every ~1s (lightweight)
-    let centerTimer = setInterval(refreshCenter, 250);
+  el("btnEarthRefreshCenter")?.addEventListener("click", refreshCenter);
 
-    // pause when tab is hidden (optional, nicer on laptops)
-    document.addEventListener('visibilitychange', () => {
-        if (document.hidden) { clearInterval(centerTimer); centerTimer = null; }
-        else if (!centerTimer) { centerTimer = setInterval(refreshCenter, 250); }
-    });
+  el("btnMeshRefreshCenter")?.addEventListener("click", refreshCenter);
 
-    // hover tracking (throttled to animation frames)
-    if (canvas) {
-        let rafId = 0;
-        let pending = false;
+  /*
+   * Keep center coordinates synchronized with camera movement.
+   */
+  let centerTimer = window.setInterval(refreshCenter, 250);
 
-        const updateHover = () => {
-            rafId = 0;
-            pending = false;
-            try {
-                if (!state.AstroAPI?.getCoordinatesFromMouse) return;
-                const coords = state.AstroAPI.getCoordinatesFromMouse();
-                if (!coords || !coords.astroDeg) {
-                    if (hoverEl) hoverEl.value = "Hover: —";
-                    return;
-                }
-                if (hoverEl) hoverEl.value = `Hover: ${formatCoords(coords)}`;
-            } catch (e) {
-                // keep it silent to avoid spam
-            }
-        };
-
-        const onMove = () => {
-            if (pending) return;
-            pending = true;
-            rafId = requestAnimationFrame(updateHover);
-        };
-
-        canvas.addEventListener('mousemove', onMove);
-        canvas.addEventListener('mouseenter', onMove);
-        canvas.addEventListener('mouseleave', () => { if (hoverEl) hoverEl.value = "Hover: —"; });
-
-        // cleanup on unload
-        window.addEventListener('beforeunload', () => {
-            if (rafId) cancelAnimationFrame(rafId);
-            canvas.removeEventListener('mousemove', onMove);
-        });
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      window.clearInterval(centerTimer);
+      centerTimer = null;
+    } else if (!centerTimer) {
+      centerTimer = window.setInterval(refreshCenter, 250);
     }
+  });
+
+  if (!canvas) return;
+
+  let rafId = 0;
+  let pending = false;
+
+  const updateHover = () => {
+    rafId = 0;
+    pending = false;
+
+    try {
+      if (!state.AstroAPI?.getCoordinatesFromMouse) {
+        return;
+      }
+
+      const coords = state.AstroAPI.getCoordinatesFromMouse();
+
+      updateCoordinateReadouts("Hover", coords);
+    } catch {
+      // Hover updates are intentionally silent.
+    }
+  };
+
+  const onMove = () => {
+    if (pending) return;
+
+    pending = true;
+    rafId = requestAnimationFrame(updateHover);
+  };
+
+  const clearHover = () => {
+    updateCoordinateReadouts("Hover", null);
+  };
+
+  canvas.addEventListener("mousemove", onMove);
+  canvas.addEventListener("mouseenter", onMove);
+  canvas.addEventListener("mouseleave", clearHover);
+
+  window.addEventListener("beforeunload", () => {
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+    }
+
+    if (centerTimer) {
+      window.clearInterval(centerTimer);
+    }
+
+    canvas.removeEventListener("mousemove", onMove);
+    canvas.removeEventListener("mouseenter", onMove);
+    canvas.removeEventListener("mouseleave", clearHover);
+  });
 }
 
 export function refreshCenter() {
-    const centerEl = el('centerCoords');
-    try {
-        if (!state.AstroAPI?.getCenterCoordinates) {
-            if (centerEl) centerEl.value = "Center: (API not available)";
-            return;
-        }
-        const coords = state.AstroAPI.getCenterCoordinates();
-        if (!coords || !coords.astroDeg) {
-            if (centerEl) centerEl.value = "Center: —";
-            return;
-        }
-        if (centerEl) centerEl.value = `Center: ${formatCoords(coords)}`;
-    } catch (e) {
-        if (centerEl) centerEl.value = "Center: —";
+  try {
+    if (!state.AstroAPI?.getCenterCoordinates) {
+      updateCoordinateReadouts("Center", null);
+      return;
     }
+
+    const coords = state.AstroAPI.getCenterCoordinates();
+
+    updateCoordinateReadouts("Center", coords);
+  } catch {
+    updateCoordinateReadouts("Center", null);
+  }
 }
