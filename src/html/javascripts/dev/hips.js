@@ -70,6 +70,7 @@ export async function loadHiPS2(baseUrl) {
 export function wireHiPSControls() {
   wireHiPSFormatSelector();
   wireHiPSColorMapSelector();
+  wireHiPSPresetControls();
   wireHiPSScaleControls();
   wireHiPSRangeControls();
 
@@ -96,6 +97,68 @@ export function wireHiPSControls() {
   });
 
   refreshHiPSUI();
+}
+
+const FITS_PRESETS = {
+  default: {
+    rangeMode: "robust",
+    scaleFunction: "linear",
+    scaleParam: 1,
+  },
+  faint: {
+    rangeMode: "robust",
+    scaleFunction: "asinh",
+    scaleParam: 10,
+  },
+  contrast: {
+    rangeMode: "robust",
+    scaleFunction: "log",
+    scaleParam: 100,
+  },
+  gamma: {
+    rangeMode: "robust",
+    scaleFunction: "gamma",
+    scaleParam: 0.5,
+  },
+};
+
+export function wireHiPSPresetControls() {
+  const select = el("hipsFitsPreset");
+
+  if (!select) {
+    return;
+  }
+
+  select.addEventListener("change", () => {
+    const presetName = select.value;
+
+    if (presetName === "custom") {
+      return;
+    }
+
+    const preset = FITS_PRESETS[presetName];
+
+    if (!preset) {
+      return;
+    }
+
+    try {
+      state.AstroAPI.setHiPSFITSRangeMode(preset.rangeMode);
+      state.AstroAPI.setHiPSFITSScaleFunction(
+        preset.scaleFunction,
+        preset.scaleParam,
+      );
+
+      refreshHiPSUI();
+
+      setStatus(
+        `✅ FITS display preset changed to ${getFITSPresetLabel(presetName)}.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setStatus(`❌ Unable to change FITS display preset: ${error.message}`);
+    }
+  });
 }
 
 export function wireHiPSRangeControls() {
@@ -134,9 +197,10 @@ export function wireHiPSScaleControls() {
   const applyScale = () => {
     const scaleFunction = select.value;
     const requestedParam = Number(paramInput?.value ?? "1");
-    const scaleParam = Number.isFinite(requestedParam) && requestedParam > 0
-      ? requestedParam
-      : getDefaultScaleParam(scaleFunction);
+    const scaleParam =
+      Number.isFinite(requestedParam) && requestedParam > 0
+        ? requestedParam
+        : getDefaultScaleParam(scaleFunction);
 
     if (!scaleFunction) {
       return;
@@ -220,7 +284,30 @@ export function refreshHiPSUI() {
   populateHiPSColorMap();
   populateHiPSScaleControls();
   populateHiPSRangeControls();
+  populateHiPSPresetControls();
   renderHiPSLayers();
+}
+
+function populateHiPSPresetControls() {
+  const select = el("hipsFitsPreset");
+
+  if (!select) {
+    return;
+  }
+
+  const activeHiPS = state.AstroAPI?.getActiveHiPS?.() ?? null;
+  const activeFormat = activeHiPS?.format;
+  const stretch = state.AstroAPI?.getActiveHiPSFITSStretch?.() ?? null;
+  const isFits = activeFormat === "fits";
+
+  select.disabled = !activeHiPS || !isFits;
+
+  if (!stretch || !isFits) {
+    select.value = "default";
+    return;
+  }
+
+  select.value = findMatchingFITSPreset(stretch);
 }
 
 function populateHiPSRangeControls() {
@@ -256,9 +343,41 @@ function populateHiPSScaleControls() {
   select.value = stretch?.scaleFunction ?? "linear";
 
   if (paramInput) {
-    paramInput.disabled = !activeHiPS || !isFits || select.value === "linear" || select.value === "sqrt";
-    const scaleParam = stretch?.scaleParam ?? getDefaultScaleParam(select.value);
+    paramInput.disabled =
+      !activeHiPS ||
+      !isFits ||
+      select.value === "linear" ||
+      select.value === "sqrt";
+    const scaleParam =
+      stretch?.scaleParam ?? getDefaultScaleParam(select.value);
     paramInput.value = String(scaleParam);
+  }
+}
+
+function findMatchingFITSPreset(stretch) {
+  for (const [name, preset] of Object.entries(FITS_PRESETS)) {
+    if (
+      stretch.rangeMode === preset.rangeMode &&
+      stretch.scaleFunction === preset.scaleFunction &&
+      Number(stretch.scaleParam) === preset.scaleParam
+    ) {
+      return name;
+    }
+  }
+
+  return "custom";
+}
+
+function getFITSPresetLabel(presetName) {
+  switch (presetName) {
+    case "faint":
+      return "Faint structures";
+    case "contrast":
+      return "High contrast";
+    case "gamma":
+      return "Gamma";
+    default:
+      return "Default";
   }
 }
 
@@ -294,7 +413,8 @@ function populateHiPSColorMap() {
     return;
   }
 
-  const activeColorMap = state.AstroAPI?.getActiveHiPS?.()?.colorMap?.name ?? "native";
+  const activeColorMap =
+    state.AstroAPI?.getActiveHiPS?.()?.colorMap?.name ?? "native";
   const hasActiveHiPS = !!state.AstroAPI?.getActiveHiPS?.();
 
   select.value = activeColorMap;
