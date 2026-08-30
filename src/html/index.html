@@ -139,7 +139,25 @@
             <details id="astroPanel" style="margin-top:8px;">
                 <summary>Astronomy - HiPS maps</summary>
                 <div class="stack" style="margin-top:8px;">
-                    <label for="hipsUrl">HiPS URL</label>
+                    <label for="hipsPreset">Demo HiPS</label>
+                    <div class="row">
+                        <select id="hipsPreset">
+                            <option value="dss2">DSS2 Color — Optical</option>
+                            <option value="galexFuv">GALEX FUV — Ultraviolet [FITS]</option>
+                            <option value="sdssR">SDSS DR9 r — Optical [FITS]</option>
+                            <option value="panstarrsR">Pan-STARRS DR1 r — Optical [FITS]</option>
+                            <option value="2massH">2MASS H — Near infrared [FITS]</option>
+                            <option value="xmmRgb">XMM EPIC-RGB — X-ray</option>
+                            <option value="xmmEb2">XMM PN eb2 — X-ray [FITS]</option>
+                            <option value="herschelSpire250">Herschel SPIRE 250 µm — Far infrared [FITS]</option>
+                            <option value="planck143">Planck HFI 143 GHz — Microwave [FITS]</option>
+                            <option value="fermi1To3">Fermi 1–3 GeV — Gamma ray [FITS]</option>
+                        </select>
+
+                        <button id="btnLoadHiPSPreset" type="button">Load</button>
+                    </div>
+
+                    <label for="hipsUrl">Custom HiPS URL</label>
                     <div class="row">
                         <input id="hipsUrl" type="url" value="https://alasky.cds.unistra.fr/DSS/DSSColor/"
                             placeholder="https://…/HiPS/" />

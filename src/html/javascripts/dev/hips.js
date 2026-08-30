@@ -70,6 +70,7 @@ export async function loadHiPS2(baseUrl) {
 export function wireHiPSControls() {
   wireHiPSFormatSelector();
   wireHiPSColorMapSelector();
+  wireHiPSPresetSelector();
   wireHiPSPresetControls();
   wireHiPSScaleControls();
   wireHiPSRangeControls();
@@ -98,6 +99,48 @@ export function wireHiPSControls() {
 
   refreshHiPSUI();
 }
+
+const DEMO_HIPS = {
+  dss2: {
+    url: "https://alasky.cds.unistra.fr/DSS/DSSColor/",
+  },
+
+  galexFuv: {
+    url: "https://alasky.cds.unistra.fr/GALEX/GALEXGR6_7_FUV/",
+  },
+
+  sdssR: {
+    url: "https://alasky.cds.unistra.fr/SDSS/DR9/band-r/",
+  },
+
+  panstarrsR: {
+    url: "https://alasky.cds.unistra.fr/Pan-STARRS/DR1/r/",
+  },
+
+  "2massH": {
+    url: "https://alasky.cds.unistra.fr/2MASS/H/",
+  },
+
+  xmmRgb: {
+    url: "https://alasky.cds.unistra.fr/SSC/xcatdb_P_XMM_PN_color/",
+  },
+
+  xmmEb2: {
+    url: "https://alasky.cds.unistra.fr/SSC/xcatdb_P_XMM_PN_eb2/",
+  },
+
+  herschelSpire250: {
+    url: "https://skies.esac.esa.int/Herschel/SPIRE250/",
+  },
+
+  planck143: {
+    url: "https://alasky.cds.unistra.fr/ESAC/ESAVO_P_PLANCK_HFI-143/",
+  },
+
+  fermi1To3: {
+    url: "https://alasky.cds.unistra.fr/Fermi/1-3GeV/",
+  },
+};
 
 const FITS_PRESETS = {
   default: {
@@ -248,6 +291,36 @@ export function wireHiPSColorMapSelector() {
     } catch (error) {
       console.error(error);
       setStatus(`❌ Unable to change HiPS colormap: ${error.message}`);
+    }
+  });
+}
+
+export function wireHiPSPresetSelector() {
+  const select = el("hipsPreset");
+  const button = el("btnLoadHiPSPreset");
+
+  if (!select || !button) {
+    return;
+  }
+
+  button.addEventListener("click", async () => {
+    const preset = DEMO_HIPS[select.value];
+
+    if (!preset) {
+      return;
+    }
+
+    try {
+      await loadHiPS(preset.url);
+
+      const urlInput = el("hipsUrl");
+
+      if (urlInput) {
+        urlInput.value = preset.url;
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus(`❌ Unable to load demo HiPS: ${error.message}`);
     }
   });
 }
