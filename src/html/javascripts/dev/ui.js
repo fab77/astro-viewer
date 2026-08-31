@@ -126,36 +126,34 @@ export function wireDevTabs(onDomainChange) {
 
 export function minimisePanel() {
   const panel = el("devpanel");
+  const restoreButton = el("restoreBtn");
 
   if (!panel) {
     return;
   }
 
   panel.dataset.min = "1";
-  panel.style.height = "44px";
-  panel.style.overflow = "hidden";
-  panel.style.opacity = "0";
-
-  const restoreButton = el("restoreBtn");
+  panel.hidden = true;
+  document.body.classList.add("sidebar-collapsed");
 
   if (restoreButton) {
-    restoreButton.style.display = "inline-block";
+    restoreButton.style.display = "inline-flex";
+    restoreButton.style.alignItems = "center";
+    restoreButton.style.justifyContent = "center";
   }
 }
 
 export function restorePanel() {
   const panel = el("devpanel");
+  const restoreButton = el("restoreBtn");
 
   if (!panel) {
     return;
   }
 
   panel.dataset.min = "0";
-  panel.style.height = "";
-  panel.style.overflow = "";
-  panel.style.opacity = "1";
-
-  const restoreButton = el("restoreBtn");
+  panel.hidden = false;
+  document.body.classList.remove("sidebar-collapsed");
 
   if (restoreButton) {
     restoreButton.style.display = "none";

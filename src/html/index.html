@@ -14,7 +14,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Astro-Viewer – Dev Panel (lean)</title>
+    <title>AstroViewer — Scientific Visualization</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="./javascripts/astroviewer.js?v=media-20260827-2"></script>
     <script type="module" src="./javascripts/dev/boot.js?v=media-20260827-2"></script>
@@ -23,62 +23,16 @@
 </head>
 
 <body>
-    <!-- Restore button (shows only when minimised) -->
-    <button id="restoreBtn" title="Show Dev Panel">Dev Panel ▲</button>
-
-    <!-- Dev panel -->
-    <div id="devpanel" autocomplete="off">
-
-
-        <div id="status"></div>
-
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-weight:800;">Astro-Viewer – Dev Panel</div>
-            <div class="hint">Globals: <code>AstroAPI</code></div>
+    <header class="app-header">
+        <div class="brand" aria-label="AstroViewer">
+            <div class="brand-mark" aria-hidden="true">✦</div>
+            <div class="brand-copy">
+                <div class="brand-name">Astro<span>Viewer</span></div>
+                <div class="brand-subtitle">Scientific Visualization</div>
+            </div>
         </div>
 
-        <details id="controlPanel" style="margin-top:8px;">
-            <summary>Camera / navigation</summary>
-
-            <div class="stack" style="margin-top:8px;">
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="insideSphereChk" type="checkbox" />
-                    Inside sphere (toggle view)
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="viewfinderChk" type="checkbox" checked />
-                    Viewfinder
-                </label>
-            </div>
-
-            <div class="stack" style="margin-top:8px;">
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="lockEastWestRotationChk" type="checkbox" />
-                    Lock east-west rotation
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="lockNorthSouthRotationChk" type="checkbox" />
-                    Lock north-south rotation
-                </label>
-
-                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
-                    <input id="keepCameraNorthUpChk" type="checkbox" checked />
-                    Keep north up while dragging
-                </label>
-
-                <button id="btnResetAxesOrientation" class="secondary" type="button">
-                    Reset axes
-                </button>
-
-                <button id="btnCamInfo" class="secondary" type="button">
-                    Camera info
-                </button>
-            </div>
-        </details>
-
-        <div id="devTabs" class="dev-tabs" role="tablist" aria-label="Dev panel domains">
+        <div id="devTabs" class="dev-tabs" role="tablist" aria-label="Viewer domains">
             <button class="dev-tab active" type="button" role="tab" aria-selected="true"
                 aria-controls="astronomyTabPanel" data-dev-tab="astronomy">
                 Astronomy
@@ -94,13 +48,23 @@
                 3D / Mesh
             </button>
         </div>
+    </header>
+
+    <!-- Restore button (shows only when controls are collapsed) -->
+    <button id="restoreBtn" title="Show controls" aria-label="Show controls">›</button>
+
+    <aside id="devpanel" class="viewer-sidebar" autocomplete="off">
 
 
         <section id="astronomyTabPanel" class="tab-panel" data-dev-tab-panel="astronomy">
+            <div class="domain-intro">
+                <span class="domain-kicker">Astronomy</span>
+                <p>Explore the sky with HiPS surveys, catalogues, footprints and coordinate grids.</p>
+            </div>
 
             <!-- Astronomy navigation -->
             <details id="astronomyNavigationPanel" open style="margin-top:8px;">
-                <summary>Navigation</summary>
+                <summary>Navigate</summary>
 
                 <div class="stack" style="margin-top:8px;">
                     <label>Go to (RA°, Dec°)</label>
@@ -137,7 +101,7 @@
 
             <!-- HiPS controls -->
             <details id="astroPanel" style="margin-top:8px;">
-                <summary>Astronomy - HiPS maps</summary>
+                <summary>Surveys</summary>
                 <div class="stack" style="margin-top:8px;">
                     <label for="hipsPreset">Demo HiPS</label>
                     <div class="row">
@@ -245,7 +209,7 @@
             </details>
 
             <details id="astronomyImportPanel" style="margin-top:8px;">
-                <summary>Catalogue / STCS importer</summary>
+                <summary>Data importer</summary>
 
                 <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                     <label>Import catalogue / observation footprints</label>
@@ -433,7 +397,7 @@
             </details>
 
             <details id="astroGridPanel" style="margin-top:8px;">
-                <summary>Astronomy grids</summary>
+                <summary>Grids</summary>
 
                 <div class="stack" style="margin-top:8px;">
                     <label style="display:flex; align-items:center; gap:8px; user-select:none;">
@@ -453,11 +417,15 @@
 
 
         <section id="earthTabPanel" class="tab-panel" data-dev-tab-panel="earth" hidden>
+            <div class="domain-intro">
+                <span class="domain-kicker">Earth Observation</span>
+                <p>Explore tiled imagery, GeoJSON overlays and satellite footprint demonstrations.</p>
+            </div>
 
 
             <!-- Earth Observation navigation -->
             <details id="earthNavigationPanel" open style="margin-top:8px;">
-                <summary>Navigation</summary>
+                <summary>Navigate</summary>
 
                 <div class="stack" style="margin-top:8px;">
                     <label>Go to (Longitude°, Latitude°)</label>
@@ -499,7 +467,7 @@
             </details>
 
             <details id="earthPanel" style="margin-top:8px;">
-                <summary>Earth - XYZ / WMTS maps</summary>
+                <summary>Maps</summary>
 
                 <details id="xyzPanel" style="margin-top:8px; padding-left: 20px;">
                     <summary>XYZ maps</summary>
@@ -603,7 +571,7 @@
             </details>
 
             <details id="earthImportPanel" style="margin-top:8px;">
-                <summary>GeoJSON importer</summary>
+                <summary>Data & satellite</summary>
 
                 <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                     <label>Import geographic GeoJSON</label>
@@ -661,7 +629,7 @@
             </details>
 
             <details id="earthGridPanel" style="margin-top:8px;">
-                <summary>Earth grids</summary>
+                <summary>Grids</summary>
 
                 <div class="stack" style="margin-top:8px;">
                     <label style="display:flex; align-items:center; gap:8px; user-select:none;">
@@ -675,10 +643,14 @@
 
 
         <section id="meshTabPanel" class="tab-panel" data-dev-tab-panel="mesh" hidden>
+            <div class="domain-intro">
+                <span class="domain-kicker">3D / Mesh</span>
+                <p>Explore planetary surfaces through tiled MeshHiPS geometry.</p>
+            </div>
 
             <!-- 3D / Mesh navigation -->
             <details id="meshNavigationPanel" open style="margin-top:8px;">
-                <summary>Navigation</summary>
+                <summary>Navigate</summary>
 
                 <div class="stack" style="margin-top:8px;">
                     <label>Go to (Longitude°, Latitude°)</label>
@@ -712,7 +684,7 @@
             </details>
 
             <details id="meshHipsPanel" style="margin-top:8px;">
-                <summary>MeshHiPS OBJ tiles</summary>
+                <summary>Surface</summary>
                 <div class="stack" style="margin-top:8px;">
                     <label for="meshHipsUrl">MeshHiPS URL</label>
                     <div class="row">
@@ -736,13 +708,60 @@
 
         </section>
 
-        <div style="margin-top:10px;">
-            <button id="btnTogglePanel" class="secondary">
-                Minimise
+        <details id="controlPanel" class="advanced-panel">
+            <summary>Advanced viewer controls</summary>
+
+            <div class="stack" style="margin-top:8px;">
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="insideSphereChk" type="checkbox" />
+                    Inside sphere (toggle view)
+                </label>
+
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="viewfinderChk" type="checkbox" checked />
+                    Viewfinder
+                </label>
+            </div>
+
+            <div class="stack" style="margin-top:8px;">
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="lockEastWestRotationChk" type="checkbox" />
+                    Lock east-west rotation
+                </label>
+
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="lockNorthSouthRotationChk" type="checkbox" />
+                    Lock north-south rotation
+                </label>
+
+                <label style="display:flex; align-items:center; gap:8px; user-select:none;">
+                    <input id="keepCameraNorthUpChk" type="checkbox" checked />
+                    Keep north up while dragging
+                </label>
+
+                <button id="btnResetAxesOrientation" class="secondary" type="button">
+                    Reset axes
+                </button>
+
+                <button id="btnCamInfo" class="secondary" type="button">
+                    Camera info
+                </button>
+            </div>
+        </details>
+
+
+        <div class="sidebar-footer">
+            <button id="btnTogglePanel" class="secondary sidebar-collapse" type="button">
+                ‹ Collapse controls
             </button>
         </div>
 
-    </div>
+    </aside>
+
+    <footer class="app-statusbar">
+        <span id="status" aria-live="polite"></span>
+        <span class="status-product">AstroViewer demo</span>
+    </footer>
 
     <div id="loadingIndicator" class="loading-indicator" hidden>
         <span id="loadingSpinner" class="loading-spinner" aria-hidden="true"></span>
