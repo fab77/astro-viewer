@@ -48,7 +48,14 @@ export async function loadHiPS(baseUrl) {
 }
 
 export async function addHiPS(baseUrl) {
+  const existingLayers = state.AstroAPI?.getActiveHiPSLayers?.() ?? [];
   const hips = await state.AstroAPI.addHiPSFromUrl(baseUrl);
+
+  // "Add HiPS" means overlay in the demo. Keep the first layer opaque,
+  // but make subsequent layers immediately visible as a composition.
+  if (existingLayers.length > 0) {
+    state.AstroAPI.setHiPSOpacity(hips, 0.65);
+  }
 
   refreshHiPSUI();
 
@@ -89,7 +96,7 @@ export function wireHiPSControls() {
     const url = el("hipsUrl")?.value.trim();
 
     if (!url) {
-      setStatus("Insert a HiPS URL.");
+      setStatus("Insert a custom HiPS URL.");
       return;
     }
 
@@ -97,7 +104,7 @@ export function wireHiPSControls() {
       await addHiPS(url);
     } catch (error) {
       console.error(error);
-      setStatus(`❌ Unable to add HiPS: ${error.message}`);
+      setStatus(`❌ Unable to add custom HiPS: ${error.message}`);
     }
   });
 
@@ -307,14 +314,17 @@ export function wireHiPSColorMapSelector() {
 
 export function wireHiPSPresetSelector() {
   const select = el("hipsPreset");
-  const button = el("btnLoadHiPSPreset");
+  const loadButton = el("btnLoadHiPSPreset");
+  const addButton = el("btnAddHiPSPreset");
 
-  if (!select || !button) {
+  if (!select || !loadButton || !addButton) {
     return;
   }
 
-  button.addEventListener("click", async () => {
-    const preset = DEMO_HIPS[select.value];
+  const getSelectedPreset = () => DEMO_HIPS[select.value];
+
+  loadButton.addEventListener("click", async () => {
+    const preset = getSelectedPreset();
 
     if (!preset) {
       return;
@@ -322,15 +332,24 @@ export function wireHiPSPresetSelector() {
 
     try {
       await loadHiPS(preset.url);
-
-      const urlInput = el("hipsUrl");
-
-      if (urlInput) {
-        urlInput.value = preset.url;
-      }
     } catch (error) {
       console.error(error);
-      setStatus(`❌ Unable to load demo HiPS: ${error.message}`);
+      setStatus(`❌ Unable to load survey: ${error.message}`);
+    }
+  });
+
+  addButton.addEventListener("click", async () => {
+    const preset = getSelectedPreset();
+
+    if (!preset) {
+      return;
+    }
+
+    try {
+      await addHiPS(preset.url);
+    } catch (error) {
+      console.error(error);
+      setStatus(`❌ Unable to add survey: ${error.message}`);
     }
   });
 }
@@ -368,7 +387,31 @@ export function refreshHiPSUI() {
   populateHiPSScaleControls();
   populateHiPSRangeControls();
   populateHiPSPresetControls();
+  updateHiPSDisplayVisibility();
+  updateHiPSDisplayLayerLabel();
   renderHiPSLayers();
+}
+
+function updateHiPSDisplayLayerLabel() {
+  const label = el("hipsDisplayLayer");
+
+  if (!label) {
+    return;
+  }
+
+  const active = state.AstroAPI?.getActiveHiPS?.() ?? null;
+  label.textContent = active ? `Editing: ${getHiPSLabel(active)}` : "No layer selected";
+}
+
+function updateHiPSDisplayVisibility() {
+  const fitsControls = el("hipsFitsControls");
+
+  if (!fitsControls) {
+    return;
+  }
+
+  const activeFormat = state.AstroAPI?.getActiveHiPS?.()?.format;
+  fitsControls.hidden = activeFormat !== "fits";
 }
 
 function populateHiPSPresetControls() {
@@ -547,7 +590,6 @@ function renderHiPSLayers() {
   }
 
   const layers = state.AstroAPI?.getActiveHiPSLayers?.() ?? [];
-
   const active = state.AstroAPI?.getActiveHiPS?.() ?? null;
 
   container.replaceChildren();
@@ -560,29 +602,48 @@ function renderHiPSLayers() {
     return;
   }
 
-  layers.forEach((hips, index) => {
-    const row = document.createElement("div");
-    row.className = "row";
+  layers.forEach((hips) => {
+    const card = document.createElement("div");
+    card.className = "hips-layer-card";
+
+    const isActive = hips === active;
+    if (isActive) {
+      card.classList.add("active");
+    }
+
+    const header = document.createElement("div");
+    header.className = "hips-layer-header";
 
     const selectButton = document.createElement("button");
     selectButton.type = "button";
-
-    const isActive = hips === active;
-
-    selectButton.textContent = `${isActive ? "● " : ""}${index + 1}. ${getHiPSLabel(hips)}`;
-
+    selectButton.className = "hips-layer-select";
+    selectButton.textContent = `${isActive ? "● " : ""}${getHiPSLabel(hips)}`;
     selectButton.title = hips.baseURL;
-
     selectButton.addEventListener("click", () => {
       state.AstroAPI.setActiveHiPS(hips);
       refreshHiPSUI();
-
       setStatus(`✅ Active HiPS: ${getHiPSLabel(hips)}`);
     });
 
-    const info = document.createElement("span");
-    info.className = "hint";
-    info.textContent = `${hips.format.toUpperCase()} · ${hips.isGalacticHips ? "Galactic" : "Equatorial"}`;
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.className = "secondary hips-layer-remove";
+    removeButton.textContent = "Remove";
+    removeButton.addEventListener("click", () => {
+      state.AstroAPI.removeHiPS(hips);
+      refreshHiPSUI();
+      setStatus(`✅ HiPS removed: ${getHiPSLabel(hips)}`);
+    });
+
+    header.append(selectButton, removeButton);
+
+    const meta = document.createElement("div");
+    meta.className = "hips-layer-meta";
+    meta.textContent = `${hips.format.toUpperCase()} · ${hips.isGalacticHips ? "Galactic" : "Equatorial"}`;
+    meta.title = hips.baseURL;
+
+    const opacityRow = document.createElement("div");
+    opacityRow.className = "hips-layer-opacity";
 
     const opacity = document.createElement("input");
     opacity.type = "range";
@@ -593,32 +654,19 @@ function renderHiPSLayers() {
     opacity.title = `Opacity ${Math.round(hips.opacity * 100)}%`;
 
     const opacityValue = document.createElement("span");
-    opacityValue.className = "mono";
+    opacityValue.className = "mono hips-layer-opacity-value";
     opacityValue.textContent = `${Math.round(hips.opacity * 100)}%`;
 
     opacity.addEventListener("input", () => {
       const value = Number(opacity.value);
-
       state.AstroAPI.setHiPSOpacity(hips, value);
-
       opacityValue.textContent = `${Math.round(value * 100)}%`;
       opacity.title = `Opacity ${Math.round(value * 100)}%`;
     });
 
-    const removeButton = document.createElement("button");
-    removeButton.type = "button";
-    removeButton.textContent = "Remove";
-
-    removeButton.addEventListener("click", () => {
-      state.AstroAPI.removeHiPS(hips);
-      refreshHiPSUI();
-
-      setStatus(`✅ HiPS removed: ${getHiPSLabel(hips)}`);
-    });
-
-    row.append(selectButton, info, opacity, opacityValue, removeButton);
-
-    container.appendChild(row);
+    opacityRow.append(opacity, opacityValue);
+    card.append(header, meta, opacityRow);
+    container.appendChild(card);
   });
 }
 

@@ -92,12 +92,6 @@ async function activateDemoDomain(domain) {
         lonLatChk.checked = false;
       }
 
-      const hipsInput = el("hipsUrl");
-
-      if (hipsInput) {
-        hipsInput.value = DEFAULT_ASTRONOMY_HIPS;
-      }
-
       await loadHiPS(DEFAULT_ASTRONOMY_HIPS);
 
       setStatus("Astronomy: DSS Color loaded.");

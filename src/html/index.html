@@ -62,8 +62,17 @@
                 <p>Explore the sky with HiPS surveys, catalogues, footprints and coordinate grids.</p>
             </div>
 
+            <nav class="section-nav" aria-label="Astronomy tools">
+                <button class="section-nav-button active" type="button" data-ui-domain="astronomy" data-ui-section="navigate">Navigate</button>
+                <button class="section-nav-button" type="button" data-ui-domain="astronomy" data-ui-section="surveys">Surveys</button>
+                <button class="section-nav-button" type="button" data-ui-domain="astronomy" data-ui-section="data">Data</button>
+                <button class="section-nav-button" type="button" data-ui-domain="astronomy" data-ui-section="overlays">Overlays</button>
+                <button class="section-nav-button" type="button" data-ui-domain="astronomy" data-ui-section="grids">Grids</button>
+                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="astronomy" data-ui-section="advanced">Advanced</button>
+            </nav>
+
             <!-- Astronomy navigation -->
-            <details id="astronomyNavigationPanel" open style="margin-top:8px;">
+            <details id="astronomyNavigationPanel" open data-ui-panel="astronomy:navigate">
                 <summary>Navigate</summary>
 
                 <div class="stack" style="margin-top:8px;">
@@ -74,7 +83,7 @@
 
                         <input id="astronomyGoDec" type="number" step="0.0001" placeholder="Dec −90–+90" />
 
-                        <button id="btnAstronomyGoTo" type="button">Go</button>
+                        <button id="btnAstronomyGoTo" class="secondary" type="button">Go</button>
                         <button id="btnAstronomyFlyTo" type="button">Fly</button>
                     </div>
 
@@ -100,10 +109,10 @@
 
 
             <!-- HiPS controls -->
-            <details id="astroPanel" style="margin-top:8px;">
+            <details id="astroPanel" open data-ui-panel="astronomy:surveys">
                 <summary>Surveys</summary>
                 <div class="stack" style="margin-top:8px;">
-                    <label for="hipsPreset">Demo HiPS</label>
+                    <label for="hipsPreset">Survey catalog</label>
                     <div class="row">
                         <select id="hipsPreset">
                             <option value="dss2">DSS2 Color — Optical</option>
@@ -118,20 +127,23 @@
                             <option value="fermi1To3">Fermi 1–3 GeV — Gamma ray [FITS]</option>
                         </select>
 
-                        <button id="btnLoadHiPSPreset" type="button">Load</button>
+                        <button id="btnLoadHiPSPreset" type="button">Load survey</button>
+                        <button id="btnAddHiPSPreset" type="button" class="secondary">Add to layers</button>
                     </div>
 
-                    <label for="hipsUrl">Custom HiPS URL</label>
-                    <div class="row">
-                        <input id="hipsUrl" type="url" value="https://alasky.cds.unistra.fr/DSS/DSSColor/"
+                    <div class="stack survey-custom-block">
+                        <label for="hipsUrl">Custom survey</label>
+                        <input id="hipsUrl" type="url" value=""
                             placeholder="https://…/HiPS/" />
-                        <button id="btnLoadHiPS">Load HiPS</button>
-                        <button id="btnAddHiPS">Add HiPS</button>
+                        <div class="row">
+                            <button id="btnLoadHiPS">Load custom</button>
+                            <button id="btnAddHiPS" type="button" class="secondary">Add custom</button>
+                        </div>
                     </div>
 
                     <div class="stack" style="margin-top:8px;">
                         <div class="row">
-                            <strong>Active HiPS layers</strong>
+                            <strong>Active layers</strong>
                             <button id="btnRemoveAllHiPS" type="button">Remove all</button>
                         </div>
 
@@ -139,8 +151,15 @@
                     </div>
 
                     <details id="hipsRenderingPanel" open style="margin-top:8px; padding-left: 20px;">
-                        <summary>Rendering</summary>
+                        <summary>Display</summary>
                         <div class="stack" style="margin-top:8px;">
+                            <div id="hipsDisplayLayer" class="display-layer-label">No layer selected</div>
+
+                            <label for="hipsFormat">Format</label>
+                            <select id="hipsFormat" disabled>
+                                <option value="">—</option>
+                            </select>
+
                             <label for="hipsColorMap">Colormap</label>
                             <select id="hipsColorMap">
                                 <option value="native">Native</option>
@@ -154,61 +173,48 @@
                                 <option value="gray">Gray</option>
                             </select>
 
-                            <label for="hipsFitsPreset">FITS display preset</label>
-                            <select id="hipsFitsPreset" disabled>
-                                <option value="default">Default</option>
-                                <option value="faint">Faint structures</option>
-                                <option value="contrast">High contrast</option>
-                                <option value="gamma">Gamma</option>
-                                <option value="custom">Custom</option>
-                            </select>
+                            <div id="hipsFitsControls" class="stack fits-display-controls" hidden>
+                                <div class="section-label">FITS display</div>
 
-                            <label for="hipsScaleFunction">FITS scale function</label>
-                            <select id="hipsScaleFunction" disabled>
-                                <option value="linear">Linear</option>
-                                <option value="sqrt">Sqrt</option>
-                                <option value="log">Log1p</option>
-                                <option value="asinh">Asinh</option>
-                                <option value="gamma">Gamma</option>
-                            </select>
+                                <label for="hipsFitsPreset">Preset</label>
+                                <select id="hipsFitsPreset" disabled>
+                                    <option value="default">Default</option>
+                                    <option value="faint">Faint structures</option>
+                                    <option value="contrast">High contrast</option>
+                                    <option value="gamma">Gamma</option>
+                                    <option value="custom">Custom</option>
+                                </select>
 
-                            <label for="hipsRangeMode">FITS range</label>
-                            <select id="hipsRangeMode" disabled>
-                                <option value="robust">Robust percentile</option>
-                                <option value="hips">HiPS data min/max</option>
-                                <option value="tile">Tile min/max</option>
-                            </select>
+                                <label for="hipsScaleFunction">Scale function</label>
+                                <select id="hipsScaleFunction" disabled>
+                                    <option value="linear">Linear</option>
+                                    <option value="sqrt">Sqrt</option>
+                                    <option value="log">Log1p</option>
+                                    <option value="asinh">Asinh</option>
+                                    <option value="gamma">Gamma</option>
+                                </select>
 
-                            <label for="hipsScaleParam">Scale strength</label>
-                            <input id="hipsScaleParam" type="number" min="0.1" step="0.5" value="1" disabled />
-                            <div class="hint">FITS only. Robust percentile is the display default; HiPS min/max keeps
-                                the
-                                raw survey range.</div>
+                                <label for="hipsRangeMode">Range</label>
+                                <select id="hipsRangeMode" disabled>
+                                    <option value="robust">Robust percentile</option>
+                                    <option value="hips">HiPS data min/max</option>
+                                    <option value="tile">Tile min/max</option>
+                                </select>
+
+                                <label for="hipsScaleParam">Scale strength</label>
+                                <input id="hipsScaleParam" type="number" min="0.1" step="0.5" value="1" disabled />
+                                <div class="hint">Robust percentile is the display default; HiPS min/max keeps the raw survey range.</div>
+                            </div>
                         </div>
                     </details>
                 </div>
 
-                <details id="hipsDiagnosticsPanel" open style="margin-top:8px; padding-left: 20px;">
-                    <summary>HiPS diagnostics</summary>
-                    <div class="stack">
-                        <!-- <input id="hipsDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
-                        <div id="hipsDiagSummary" class="div-text-wrapper">Mode: —</div>
-                        <div id="hipsDiagCache" class="div-text-wrapper">Cache: —</div>
-                        <div id="hipsDiagRequests" class="div-text-wrapper">Requests: —</div>
-                        <div id="hipsDiagBackoff" class="hint">Backoff: none</div>
-                    </div>
-                    <div class="row">
-                        <label for="hipsFormat">Format</label>
-                        <select id="hipsFormat" disabled>
-                            <option value="">—</option>
-                        </select>
-                    </div>
-                </details>
+
 
 
             </details>
 
-            <details id="astronomyImportPanel" style="margin-top:8px;">
+            <details id="astronomyImportPanel" open data-ui-panel="astronomy:data">
                 <summary>Data importer</summary>
 
                 <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
@@ -226,7 +232,7 @@
                             </option>
                         </select>
 
-                        <button id="btnAstronomyImport" class="secondary">
+                        <button id="btnAstronomyImport">
                             Import
                         </button>
 
@@ -334,7 +340,7 @@
                 </div>
             </details>
 
-            <details id="catalogueManagerPanel" style="margin-top:8px;">
+            <details id="catalogueManagerPanel" open data-ui-panel="astronomy:data">
                 <summary>Catalogue manager</summary>
 
                 <div class="stack" style="margin-top:8px;">
@@ -362,7 +368,7 @@
                 </div>
             </details>
 
-            <details id="stcsManagerPanel" style="margin-top:8px;">
+            <details id="stcsManagerPanel" open data-ui-panel="astronomy:overlays">
                 <summary>STCS manager</summary>
 
                 <div class="stack" style="margin-top:8px;">
@@ -390,13 +396,24 @@
             </details>
 
             <!-- Hovered footprints panel -->
-            <details id="hoverPanel" open style="margin-top:8px;">
+            <details id="hoverPanel" open data-ui-panel="astronomy:overlays">
                 <summary>Hovered metadata</summary>
                 <div id="hoverEmpty" class="hint">Move the mouse over a catalogue source or observation footprint…</div>
                 <div id="hoverList"></div>
             </details>
 
-            <details id="astroGridPanel" style="margin-top:8px;">
+            <details id="hipsDiagnosticsPanel" open data-ui-panel="astronomy:advanced">
+                    <summary>HiPS diagnostics</summary>
+                    <div class="stack">
+                        <!-- <input id="hipsDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
+                        <div id="hipsDiagSummary" class="div-text-wrapper">Mode: —</div>
+                        <div id="hipsDiagCache" class="div-text-wrapper">Cache: —</div>
+                        <div id="hipsDiagRequests" class="div-text-wrapper">Requests: —</div>
+                        <div id="hipsDiagBackoff" class="hint">Backoff: none</div>
+                    </div>
+                </details>
+
+            <details id="astroGridPanel" open data-ui-panel="astronomy:grids">
                 <summary>Grids</summary>
 
                 <div class="stack" style="margin-top:8px;">
@@ -422,9 +439,18 @@
                 <p>Explore tiled imagery, GeoJSON overlays and satellite footprint demonstrations.</p>
             </div>
 
+            <nav class="section-nav" aria-label="Earth Observation tools">
+                <button class="section-nav-button active" type="button" data-ui-domain="earth" data-ui-section="navigate">Navigate</button>
+                <button class="section-nav-button" type="button" data-ui-domain="earth" data-ui-section="maps">Maps</button>
+                <button class="section-nav-button" type="button" data-ui-domain="earth" data-ui-section="data">Data</button>
+                <button class="section-nav-button" type="button" data-ui-domain="earth" data-ui-section="satellite">Satellite</button>
+                <button class="section-nav-button" type="button" data-ui-domain="earth" data-ui-section="grids">Grids</button>
+                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="earth" data-ui-section="advanced">Advanced</button>
+            </nav>
+
 
             <!-- Earth Observation navigation -->
-            <details id="earthNavigationPanel" open style="margin-top:8px;">
+            <details id="earthNavigationPanel" open data-ui-panel="earth:navigate">
                 <summary>Navigate</summary>
 
                 <div class="stack" style="margin-top:8px;">
@@ -435,7 +461,7 @@
 
                         <input id="earthGoLat" type="number" step="0.0001" placeholder="Lat −90–+90" />
 
-                        <button id="btnEarthGoTo" type="button">Go</button>
+                        <button id="btnEarthGoTo" class="secondary" type="button">Go</button>
                         <button id="btnEarthFlyTo" type="button">Fly</button>
                     </div>
 
@@ -466,7 +492,7 @@
                 </div>
             </details>
 
-            <details id="earthPanel" style="margin-top:8px;">
+            <details id="earthPanel" open data-ui-panel="earth:maps">
                 <summary>Maps</summary>
 
                 <details id="xyzPanel" style="margin-top:8px; padding-left: 20px;">
@@ -477,24 +503,6 @@
                             <input id="xyzUrlTemplate" type="url" value="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
                                 placeholder="https://…/{z}/{x}/{y}.png" />
                             <button id="btnLoadXYZ">Load XYZ</button>
-                        </div>
-                        <div class="row3">
-                            <input id="xyzMinZoom" type="number" min="0" max="22" step="1" value="0"
-                                placeholder="Min zoom" />
-                            <input id="xyzMaxZoom" type="number" min="0" max="22" step="1" value="8"
-                                placeholder="Max zoom" />
-                            <input id="xyzSegments" type="number" min="2" max="64" step="1" value="48"
-                                placeholder="Segments" />
-                        </div>
-                        <div class="row3">
-                            <input id="xyzMaxCachedTiles" type="number" min="32" max="4096" step="32" value="384"
-                                placeholder="Max cached tiles" />
-                            <input id="xyzMaxConcurrentRequests" type="number" min="1" max="16" step="1" value="4"
-                                placeholder="Max concurrent requests" />
-                            <span class="hint">Tune cache size and request parallelism for XYZ.</span>
-                        </div>
-                        <div class="hint">XYZ zoom is computed automatically from distance/FoV and clamped between
-                            min/max.
                         </div>
                     </div>
                 </details>
@@ -525,39 +533,66 @@
                                 placeholder="https://…/wmts" />
                             <button id="btnLoadWMTS">Load WMTS</button>
                         </div>
-                        <div class="row3">
-                            <input id="wmtsLayer" type="text" autocomplete="off"
-                                value="BlueMarble_ShadedRelief_Bathymetry" placeholder="Layer" />
-                            <input id="wmtsTileMatrixSet" type="text" autocomplete="off"
-                                value="GoogleMapsCompatible_Level8" placeholder="TileMatrixSet" />
-                            <select id="wmtsEncoding">
-                                <option value="rest" selected>REST</option>
-                                <option value="kvp">KVP</option>
-                            </select>
-                        </div>
-                        <div class="row3">
-                            <input id="wmtsStyle" type="text" autocomplete="off" value="default" placeholder="Style" />
-                            <input id="wmtsTime" type="text" autocomplete="off" value=""
-                                placeholder="Time (blank for static best layers)" />
-                            <input id="wmtsFormat" type="text" autocomplete="off" value="image/jpeg"
-                                placeholder="Format" />
-                        </div>
-                        <div class="row">
-                            <input id="wmtsDimensions" type="text" autocomplete="off" value="{}"
-                                placeholder='{"SomeDimension":"value"}' />
-                        </div>
-                        <div class="row">
-                            <input id="wmtsUrlTemplate" type="text" autocomplete="off"
-                                value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}"
-                                placeholder="REST template with {TileMatrix}/{TileRow}/{TileCol}" />
-                        </div>
-                        <div class="hint">WMTS currently reuses the XYZ renderer and assumes a Web Mercator-compatible
-                            tile
-                            matrix set.</div>
                     </div>
                 </details>
 
-                <details id="xyzDiagnosticsPanel" open style="margin-top:8px; padding-left: 20px;">
+
+
+            </details>
+
+            <details id="earthXyzAdvancedPanel" open data-ui-panel="earth:advanced">
+                <summary>XYZ loading</summary>
+                <div class="stack" style="margin-top:8px;">
+                    <label>Zoom and geometry</label>
+                    <div class="row3">
+                        <input id="xyzMinZoom" type="number" min="0" max="22" step="1" value="0"
+                            placeholder="Min zoom" />
+                        <input id="xyzMaxZoom" type="number" min="0" max="22" step="1" value="8"
+                            placeholder="Max zoom" />
+                        <input id="xyzSegments" type="number" min="2" max="64" step="1" value="48"
+                            placeholder="Segments" />
+                    </div>
+                    <label>Cache and requests</label>
+                    <div class="row">
+                        <input id="xyzMaxCachedTiles" type="number" min="32" max="4096" step="32" value="384"
+                            placeholder="Max cached tiles" />
+                        <input id="xyzMaxConcurrentRequests" type="number" min="1" max="16" step="1" value="4"
+                            placeholder="Max concurrent requests" />
+                    </div>
+                    <div class="hint">XYZ zoom is computed from distance/FoV and clamped to this range.</div>
+                </div>
+            </details>
+
+            <details id="earthWmtsAdvancedPanel" open data-ui-panel="earth:advanced">
+                <summary>WMTS request</summary>
+                <div class="stack" style="margin-top:8px;">
+                    <div class="row3">
+                        <input id="wmtsLayer" type="text" autocomplete="off"
+                            value="BlueMarble_ShadedRelief_Bathymetry" placeholder="Layer" />
+                        <input id="wmtsTileMatrixSet" type="text" autocomplete="off"
+                            value="GoogleMapsCompatible_Level8" placeholder="TileMatrixSet" />
+                        <select id="wmtsEncoding">
+                            <option value="rest" selected>REST</option>
+                            <option value="kvp">KVP</option>
+                        </select>
+                    </div>
+                    <div class="row3">
+                        <input id="wmtsStyle" type="text" autocomplete="off" value="default" placeholder="Style" />
+                        <input id="wmtsTime" type="text" autocomplete="off" value=""
+                            placeholder="Time" />
+                        <input id="wmtsFormat" type="text" autocomplete="off" value="image/jpeg"
+                            placeholder="Format" />
+                    </div>
+                    <input id="wmtsDimensions" type="text" autocomplete="off" value="{}"
+                        placeholder='{"SomeDimension":"value"}' />
+                    <input id="wmtsUrlTemplate" type="text" autocomplete="off"
+                        value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}"
+                        placeholder="REST template with {TileMatrix}/{TileRow}/{TileCol}" />
+                    <div class="hint">WMTS currently reuses the XYZ renderer and assumes a Web Mercator-compatible tile matrix set.</div>
+                </div>
+            </details>
+
+            <details id="xyzDiagnosticsPanel" open data-ui-panel="earth:advanced">
                     <summary>XYZ diagnostics</summary>
                     <div class="stack">
                         <!-- <input id="xyzDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
@@ -568,10 +603,8 @@
                     </div>
                 </details>
 
-            </details>
-
-            <details id="earthImportPanel" style="margin-top:8px;">
-                <summary>Data & satellite</summary>
+            <details id="earthImportPanel" open data-ui-panel="earth:data">
+                <summary>GeoJSON data</summary>
 
                 <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                     <label>Import geographic GeoJSON</label>
@@ -584,7 +617,7 @@
                             <option value="geojson">GeoJSON footprint set</option>
                         </select>
 
-                        <button id="btnEarthImport" class="secondary">
+                        <button id="btnEarthImport">
                             Import
                         </button>
 
@@ -598,11 +631,16 @@
                     </div>
                 </div>
 
+
+            </details>
+
+            <details id="earthSatellitePanel" open data-ui-panel="earth:satellite">
+                <summary>Satellite footprint</summary>
                 <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                     <label>Satellite footprint demo</label>
 
                     <div class="row">
-                        <button id="btnLoadSatelliteFootprintDemo" class="secondary" type="button">
+                        <button id="btnLoadSatelliteFootprintDemo" type="button">
                             Load ISS Spain demo
                         </button>
 
@@ -628,7 +666,7 @@
                 </div>
             </details>
 
-            <details id="earthGridPanel" style="margin-top:8px;">
+            <details id="earthGridPanel" open data-ui-panel="earth:grids">
                 <summary>Grids</summary>
 
                 <div class="stack" style="margin-top:8px;">
@@ -648,8 +686,15 @@
                 <p>Explore planetary surfaces through tiled MeshHiPS geometry.</p>
             </div>
 
+            <nav class="section-nav" aria-label="3D / Mesh tools">
+                <button class="section-nav-button active" type="button" data-ui-domain="mesh" data-ui-section="navigate">Navigate</button>
+                <button class="section-nav-button" type="button" data-ui-domain="mesh" data-ui-section="surface">Surface</button>
+                <button class="section-nav-button" type="button" data-ui-domain="mesh" data-ui-section="display">Display</button>
+                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="mesh" data-ui-section="advanced">Advanced</button>
+            </nav>
+
             <!-- 3D / Mesh navigation -->
-            <details id="meshNavigationPanel" open style="margin-top:8px;">
+            <details id="meshNavigationPanel" open data-ui-panel="mesh:navigate">
                 <summary>Navigate</summary>
 
                 <div class="stack" style="margin-top:8px;">
@@ -660,7 +705,7 @@
 
                         <input id="meshGoLat" type="number" step="0.0001" placeholder="Lat −90–+90" />
 
-                        <button id="btnMeshGoTo" type="button">Go</button>
+                        <button id="btnMeshGoTo" class="secondary" type="button">Go</button>
                         <button id="btnMeshFlyTo" type="button">Fly</button>
                     </div>
 
@@ -683,7 +728,7 @@
                 </div>
             </details>
 
-            <details id="meshHipsPanel" style="margin-top:8px;">
+            <details id="meshHipsPanel" open data-ui-panel="mesh:surface">
                 <summary>Surface</summary>
                 <div class="stack" style="margin-top:8px;">
                     <label for="meshHipsUrl">MeshHiPS URL</label>
@@ -692,13 +737,14 @@
                             placeholder="/meships-local/mhips-moon/" />
                         <button id="btnLoadMeshHiPS">Load MeshHiPS</button>
                     </div>
-                    <div class="row3">
-                        <input id="meshHipsOrder" type="number" min="0" max="16" step="1" value=""
-                            placeholder="Auto order" />
-                        <input id="meshHipsMaxCachedTiles" type="number" min="12" max="4096" step="12" value="384"
-                            placeholder="Max cached tiles" />
-                        <input id="meshHipsColor" type="color" value="#b8dbff" title="Mesh color" />
-                    </div>
+                </div>
+            </details>
+
+            <details id="meshDisplayPanel" open data-ui-panel="mesh:display">
+                <summary>Display</summary>
+                <div class="stack" style="margin-top:8px;">
+                    <label for="meshHipsColor">Surface colour</label>
+                    <input id="meshHipsColor" type="color" value="#b8dbff" title="Mesh color" />
                     <label style="display:flex; align-items:center; gap:8px; user-select:none;">
                         <input id="meshHipsWireframe" type="checkbox" />
                         Wireframe
@@ -706,9 +752,21 @@
                 </div>
             </details>
 
+            <details id="meshAdvancedPanel" open data-ui-panel="mesh:advanced">
+                <summary>Mesh loading</summary>
+                <div class="stack" style="margin-top:8px;">
+                    <label for="meshHipsOrder">HiPS order</label>
+                    <input id="meshHipsOrder" type="number" min="0" max="16" step="1" value=""
+                        placeholder="Auto order" />
+                    <label for="meshHipsMaxCachedTiles">Maximum cached tiles</label>
+                    <input id="meshHipsMaxCachedTiles" type="number" min="12" max="4096" step="12" value="384"
+                        placeholder="Max cached tiles" />
+                </div>
+            </details>
+
         </section>
 
-        <details id="controlPanel" class="advanced-panel">
+        <details id="controlPanel" class="advanced-panel" open data-ui-shared-panel="advanced">
             <summary>Advanced viewer controls</summary>
 
             <div class="stack" style="margin-top:8px;">

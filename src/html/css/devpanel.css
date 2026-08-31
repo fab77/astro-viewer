@@ -706,3 +706,178 @@ body.sidebar-collapsed #gridhpx {
     }
 
 }
+
+/* Phase 2: domain information architecture */
+.section-nav {
+    display: grid;
+    gap: 3px;
+    margin: 0 0 14px;
+    padding: 4px;
+    background: rgba(2, 6, 13, .38);
+    border: 1px solid var(--av-border);
+    border-radius: 10px;
+}
+
+.section-nav-button {
+    width: 100%;
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 11px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--av-text-secondary);
+    font-size: 12px;
+    font-weight: 550;
+    text-align: left;
+    box-shadow: none;
+}
+
+.section-nav-button:hover {
+    color: var(--av-text);
+    background: rgba(148, 163, 184, .07);
+    border-color: transparent;
+}
+
+.section-nav-button.active {
+    color: var(--av-accent);
+    background: rgba(56, 189, 248, .10);
+    border-color: rgba(56, 189, 248, .18);
+    box-shadow: inset 2px 0 0 var(--av-accent);
+}
+
+.section-nav-advanced {
+    margin-top: 5px;
+    padding-top: 1px;
+    border-top-color: var(--av-border);
+}
+
+[data-ui-panel],
+[data-ui-shared-panel] {
+    margin-top: 0 !important;
+}
+
+[data-ui-panel] + [data-ui-panel],
+[data-ui-panel] + #astronomyOverlayDemo,
+#astronomyOverlayDemo + [data-ui-panel] {
+    margin-top: 9px !important;
+}
+
+[data-ui-panel] > summary,
+[data-ui-shared-panel] > summary,
+#astronomyOverlayDemo > summary {
+    font-size: 12px;
+    font-weight: 650;
+    letter-spacing: .01em;
+}
+
+#astronomyOverlayDemo {
+    display: none;
+    margin-top: 9px;
+}
+
+#astronomyOverlayDemo.ui-section-visible {
+    display: block;
+}
+
+#controlPanel[data-ui-shared-panel] {
+    margin-top: 9px !important;
+}
+
+/* Astronomy / HiPS display controls */
+.fits-display-controls {
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--av-border);
+}
+
+.fits-display-controls[hidden] {
+    display: none;
+}
+
+.section-label {
+    color: var(--av-accent);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.survey-custom-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--av-border);
+}
+
+.display-layer-label {
+  padding: 8px 10px;
+  border: 1px solid var(--av-border);
+  border-radius: 8px;
+  background: var(--av-surface-raised);
+  color: var(--av-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Compact HiPS layer cards keep each layer visually self-contained. */
+#hipsLayers {
+  display: grid;
+  gap: 8px;
+}
+
+.hips-layer-card {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--av-border);
+  border-radius: 8px;
+  background: var(--av-surface-raised);
+}
+
+.hips-layer-card.active {
+  border-color: var(--av-accent);
+}
+
+.hips-layer-header,
+.hips-layer-opacity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hips-layer-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.hips-layer-remove {
+  flex: 0 0 auto;
+  width: auto;
+  padding-inline: 9px;
+}
+
+.hips-layer-meta {
+  overflow: hidden;
+  color: var(--av-text-muted);
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hips-layer-opacity input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hips-layer-opacity-value {
+  flex: 0 0 42px;
+  text-align: right;
+}

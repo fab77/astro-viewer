@@ -22,6 +22,78 @@ export const setStatus = (text) => {
 
 let loadingReadyTimer = null;
 
+const DEFAULT_SECTIONS = {
+  astronomy: "navigate",
+  earth: "navigate",
+  mesh: "navigate",
+};
+
+const activeSections = { ...DEFAULT_SECTIONS };
+let activeDomain = "astronomy";
+let sectionNavigationWired = false;
+
+function setSectionPanelVisible(panel, visible) {
+  panel.hidden = !visible;
+
+  if (visible && panel.tagName === "DETAILS") {
+    panel.open = true;
+  }
+}
+
+function activateSection(domain, section) {
+  activeSections[domain] = section;
+
+  document
+    .querySelectorAll(`[data-ui-domain="${domain}"][data-ui-section]`)
+    .forEach((button) => {
+      const active = button.dataset.uiSection === section;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-current", active ? "page" : "false");
+    });
+
+  document
+    .querySelectorAll(`[data-ui-panel^="${domain}:"]`)
+    .forEach((panel) => {
+      setSectionPanelVisible(
+        panel,
+        panel.dataset.uiPanel === `${domain}:${section}`,
+      );
+    });
+
+  const overlayDemo = el("astronomyOverlayDemo");
+  if (overlayDemo) {
+    overlayDemo.classList.toggle(
+      "ui-section-visible",
+      domain === "astronomy" && section === "overlays",
+    );
+  }
+
+  document.querySelectorAll("[data-ui-shared-panel]").forEach((panel) => {
+    setSectionPanelVisible(
+      panel,
+      domain === activeDomain && panel.dataset.uiSharedPanel === section,
+    );
+  });
+}
+
+function wireSectionNavigation() {
+  if (sectionNavigationWired) {
+    return;
+  }
+
+  sectionNavigationWired = true;
+
+  document.querySelectorAll("[data-ui-domain][data-ui-section]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activateSection(button.dataset.uiDomain, button.dataset.uiSection);
+    });
+  });
+
+  Object.entries(DEFAULT_SECTIONS).forEach(([domain, section]) => {
+    activateSection(domain, section);
+  });
+}
+
 export function showLoading(message = "Loading…") {
   const indicator = el("loadingIndicator");
   const spinner = el("loadingSpinner");
@@ -93,7 +165,11 @@ export function wireDevTabs(onDomainChange) {
     document.querySelectorAll("[data-dev-tab-panel]"),
   );
 
+  wireSectionNavigation();
+
   const activate = (tabName, notify = true) => {
+    activeDomain = tabName;
+
     tabButtons.forEach((tab) => {
       const active = tab.dataset.devTab === tabName;
 
@@ -104,6 +180,8 @@ export function wireDevTabs(onDomainChange) {
     tabPanels.forEach((panel) => {
       panel.hidden = panel.dataset.devTabPanel !== tabName;
     });
+
+    activateSection(tabName, activeSections[tabName] || DEFAULT_SECTIONS[tabName]);
 
     if (notify && typeof onDomainChange === "function") {
       onDomainChange(tabName);
