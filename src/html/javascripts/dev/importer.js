@@ -86,6 +86,7 @@ function guessColumnType(name, sampleValues) {
 }
 
 let lastAstronomyParsed = null;
+let lastAstronomyFootprintParsed = null;
 let lastEarthParsed = null;
 
 function isGeoJSON(value) {
@@ -204,18 +205,12 @@ function applyAstronomyDefaultMappings(columns) {
   setSelectValue("astronomyImportMapRa", mapping.ra);
   setSelectValue("astronomyImportMapDec", mapping.dec);
   setSelectValue("astronomyImportMapName", mapping.name);
-  setSelectValue("astronomyImportMapOutline", mapping.outline);
   setSelectValue("astronomyImportMapMediaSrc", mapping.mediaSrc);
   setSelectValue("astronomyImportMapMediaType", mapping.mediaType);
   setSelectValue("astronomyImportMapMediaScale", mapping.mediaScale);
   setSelectValue("astronomyImportMapMediaRotation", mapping.mediaRotation);
   setSelectValue("astronomyImportMapMediaOpacity", mapping.mediaOpacity);
 
-  const typeEl = el("astronomyImportType");
-
-  if (typeEl && mapping.outline) {
-    typeEl.value = "footprint";
-  }
 
   return mapping;
 }
@@ -227,7 +222,6 @@ function populateAstronomyMappingSelects(columns) {
     "astronomyImportMapName",
     "astronomyImportMapSize",
     "astronomyImportMapHue",
-    "astronomyImportMapOutline",
     "astronomyImportMapMediaSrc",
     "astronomyImportMapMediaType",
     "astronomyImportMapMediaScale",
@@ -247,7 +241,6 @@ function populateAstronomyMappingSelects(columns) {
     empty.textContent =
       id === "astronomyImportMapSize" ||
       id === "astronomyImportMapHue" ||
-      id === "astronomyImportMapOutline" ||
       id.startsWith("astronomyImportMapMedia")
         ? "— none —"
         : "— auto —";
@@ -261,6 +254,43 @@ function populateAstronomyMappingSelects(columns) {
       sel.appendChild(option);
     });
   });
+}
+
+function populateFootprintMappingSelects(columns) {
+  const ids = [
+    "astronomyFootprintMapRa",
+    "astronomyFootprintMapDec",
+    "astronomyFootprintMapName",
+    "astronomyFootprintMapOutline",
+  ];
+
+  ids.forEach((id) => {
+    const sel = el(id);
+    if (!sel) return;
+
+    sel.innerHTML = "";
+
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "— auto —";
+    sel.appendChild(empty);
+
+    columns.forEach((column) => {
+      const option = document.createElement("option");
+      option.value = column;
+      option.textContent = column;
+      sel.appendChild(option);
+    });
+  });
+}
+
+function applyFootprintDefaultMappings(columns) {
+  const mapping = findDefaultMapping(columns);
+  setSelectValue("astronomyFootprintMapRa", mapping.ra);
+  setSelectValue("astronomyFootprintMapDec", mapping.dec);
+  setSelectValue("astronomyFootprintMapName", mapping.name);
+  setSelectValue("astronomyFootprintMapOutline", mapping.outline);
+  return mapping;
 }
 
 function firstFootprintCoordinate(objects, columns, outlineColumn) {
@@ -537,12 +567,12 @@ function tryCreateLiveGeoJSONFootprintSet(name, geojson) {
 
 export function wireImporterControls() {
   wireAstronomyImporter();
+  wireAstronomyFootprintImporter();
   wireEarthImporter();
 }
 
 function wireAstronomyImporter() {
   const fileEl = el("astronomyImportFile");
-  const typeEl = el("astronomyImportType");
   const btn = el("btnAstronomyImport");
   const btnClear = el("btnClearAstronomyImports");
 
@@ -593,12 +623,8 @@ function wireAstronomyImporter() {
 
       const defaults = applyAstronomyDefaultMappings(columns);
 
-      const detected = defaults.outline
-        ? " Detected STCS footprint column."
-        : "";
-
       setStatus(
-        `Astronomy file parsed: ${file.name} (${objects.length} rows).${detected} Choose mappings then click Import.`,
+        `Astronomy catalogue parsed: ${file.name} (${objects.length} rows). Choose mappings then click Import.`,
       );
     };
 
@@ -616,15 +642,12 @@ function wireAstronomyImporter() {
 
     const fileName = lastAstronomyParsed.filename || "Imported astronomy file";
 
-    const type = typeEl?.value || "catalogue";
-
     const mapping = {
       ra: el("astronomyImportMapRa")?.value || "",
       dec: el("astronomyImportMapDec")?.value || "",
       name: el("astronomyImportMapName")?.value || "",
       size: el("astronomyImportMapSize")?.value || "",
       hue: el("astronomyImportMapHue")?.value || "",
-      outline: el("astronomyImportMapOutline")?.value || "",
       mediaSrc: el("astronomyImportMapMediaSrc")?.value || "",
       mediaType: el("astronomyImportMapMediaType")?.value || "",
       mediaScale: el("astronomyImportMapMediaScale")?.value || "",
@@ -633,11 +656,7 @@ function wireAstronomyImporter() {
     };
 
     try {
-      if (type === "catalogue") {
-        importAstronomyCatalogue(fileName, lastAstronomyParsed, mapping);
-      } else {
-        importAstronomyFootprints(fileName, lastAstronomyParsed, mapping);
-      }
+      importAstronomyCatalogue(fileName, lastAstronomyParsed, mapping);
     } catch (e) {
       setStatus("Astronomy import error: " + (e.message || e));
     }
@@ -649,18 +668,117 @@ function wireAstronomyImporter() {
         !(catalogue.id && String(catalogue.id).startsWith("import-cat-")),
     );
 
+    lastAstronomyParsed = null;
+
+    renderCatalogueManager();
+    persistBasic();
+
+    setStatus("Cleared imported astronomy catalogues.");
+  });
+}
+
+function wireAstronomyFootprintImporter() {
+  const fileEl = el("astronomyFootprintImportFile");
+  const btn = el("btnAstronomyFootprintImport");
+  const btnClear = el("btnClearAstronomyFootprintImports");
+
+  fileEl?.addEventListener("change", () => {
+    const files = fileEl.files;
+    if (!files?.length) {
+      return setStatus("Select an STCS file to import.");
+    }
+
+    const file = files[0];
+    const reader = new FileReader();
+
+    reader.onload = (ev) => {
+      const text = String(ev.target.result || "");
+      const parsedJSON = tryParseJSON(text);
+
+      let columns = [];
+      let objects = [];
+
+      if (parsedJSON == null) {
+        const csv = parseCSV(text);
+        objects = csv.rows;
+        columns = csv.columns;
+      } else {
+        if (isGeoJSON(parsedJSON)) {
+          return setStatus("GeoJSON belongs to the Earth Observation importer.");
+        }
+        objects = Array.isArray(parsedJSON) ? parsedJSON : [parsedJSON];
+        columns = objects.length ? Object.keys(objects[0]) : [];
+      }
+
+      if (!objects.length) {
+        return setStatus("Parsed STCS file but no rows found.");
+      }
+
+      lastAstronomyFootprintParsed = {
+        filename: file.name || "",
+        columns,
+        objects,
+      };
+
+      populateFootprintMappingSelects(columns);
+      const defaults = applyFootprintDefaultMappings(columns);
+
+      setStatus(
+        `STCS file parsed: ${file.name} (${objects.length} rows).${defaults.outline ? " Detected footprint column." : ""} Choose mappings then click Import.`,
+      );
+    };
+
+    reader.onerror = () => setStatus("STCS file read error.");
+    reader.readAsText(file);
+  });
+
+  btn?.addEventListener("click", () => {
+    if (!lastAstronomyFootprintParsed) {
+      return setStatus("Select and parse an STCS file first.");
+    }
+
+    const mapping = {
+      ra: el("astronomyFootprintMapRa")?.value || "",
+      dec: el("astronomyFootprintMapDec")?.value || "",
+      name: el("astronomyFootprintMapName")?.value || "",
+      outline: el("astronomyFootprintMapOutline")?.value || "",
+    };
+
+    try {
+      importAstronomyFootprints(
+        lastAstronomyFootprintParsed.filename || "Imported STCS file",
+        lastAstronomyFootprintParsed,
+        mapping,
+      );
+    } catch (e) {
+      setStatus("STCS import error: " + (e.message || e));
+    }
+  });
+
+  btnClear?.addEventListener("click", () => {
+    const imported = state.FP_LIST.filter(
+      (footprint) =>
+        footprint.id && String(footprint.id).startsWith("import-fp-"),
+    );
+
+    for (const footprint of imported) {
+      try {
+        state.AstroAPI?.deleteFootprintSet?.(footprint);
+      } catch {}
+      const key = footprint.name || String(footprint.id) || footprint.table || JSON.stringify(footprint);
+      state.FP_VIS.delete(key);
+      state.FP_COLOR.delete(key);
+    }
+
     state.FP_LIST = state.FP_LIST.filter(
       (footprint) =>
         !(footprint.id && String(footprint.id).startsWith("import-fp-")),
     );
 
-    lastAstronomyParsed = null;
-
-    renderCatalogueManager();
+    lastAstronomyFootprintParsed = null;
     renderFootprintManager();
     persistBasic();
-
-    setStatus("Cleared imported astronomy catalogues and footprints.");
+    setStatus("Cleared imported astronomy footprints.");
   });
 }
 
@@ -791,6 +909,14 @@ function importAstronomyFootprints(fileName, parsed, mapping) {
 
   if (live) {
     state.FP_LIST.push(live);
+
+    const key = live.name || String(live.id) || live.table || JSON.stringify(live);
+    const initialColor = "#ffaa00";
+    state.FP_VIS.set(key, true);
+    state.FP_COLOR.set(key, initialColor);
+    try {
+      state.AstroAPI?.changeFootprintSetColor?.(live, initialColor);
+    } catch {}
 
     renderFootprintManager();
     persistBasic();

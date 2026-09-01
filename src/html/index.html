@@ -215,127 +215,63 @@
             </details>
 
             <details id="astronomyImportPanel" open data-ui-panel="astronomy:data">
-                <summary>Data importer</summary>
+                <summary>Catalogue importer</summary>
 
-                <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
-                    <label>Import catalogue / observation footprints</label>
+                <div class="stack" style="margin-top:8px;">
+                    <label>Import catalogue</label>
 
                     <div class="row">
                         <input id="astronomyImportFile" type="file" accept=".json,.csv,application/json,text/csv" />
-
-                        <select id="astronomyImportType">
-                            <option value="catalogue">
-                                Catalogue (points table)
-                            </option>
-                            <option value="footprint">
-                                Footprint / STCS set
-                            </option>
-                        </select>
-
-                        <button id="btnAstronomyImport">
-                            Import
-                        </button>
-
-                        <button id="btnClearAstronomyImports" class="secondary">
-                            Clear imports
-                        </button>
+                        <button id="btnAstronomyImport">Import</button>
+                        <button id="btnClearAstronomyImports" class="secondary">Clear imports</button>
                     </div>
 
-                    <div style="
-                margin-top:8px;
-                display:grid;
-                grid-template-columns:repeat(3,1fr);
-                gap:6px;
-            ">
+                    <div class="import-mapping-grid">
                         <div>
                             <label for="astronomyImportMapRa">RA column</label>
-                            <select id="astronomyImportMapRa">
-                                <option value="">— auto —</option>
-                            </select>
+                            <select id="astronomyImportMapRa"><option value="">— auto —</option></select>
                         </div>
-
                         <div>
                             <label for="astronomyImportMapDec">Dec column</label>
-                            <select id="astronomyImportMapDec">
-                                <option value="">— auto —</option>
-                            </select>
+                            <select id="astronomyImportMapDec"><option value="">— auto —</option></select>
                         </div>
-
                         <div>
                             <label for="astronomyImportMapName">Name column</label>
-                            <select id="astronomyImportMapName">
-                                <option value="">— auto —</option>
-                            </select>
+                            <select id="astronomyImportMapName"><option value="">— auto —</option></select>
                         </div>
-
                         <div>
                             <label for="astronomyImportMapSize">Size column</label>
-                            <select id="astronomyImportMapSize">
-                                <option value="">— none —</option>
-                            </select>
+                            <select id="astronomyImportMapSize"><option value="">— none —</option></select>
                         </div>
-
                         <div>
                             <label for="astronomyImportMapHue">Hue column</label>
-                            <select id="astronomyImportMapHue">
-                                <option value="">— none —</option>
-                            </select>
+                            <select id="astronomyImportMapHue"><option value="">— none —</option></select>
                         </div>
-
-                        <div>
-                            <label for="astronomyImportMapOutline">
-                                Footprint / STCS column
-                            </label>
-                            <select id="astronomyImportMapOutline">
-                                <option value="">— none —</option>
-                            </select>
-                        </div>
-
                         <div>
                             <label for="astronomyImportMapMediaSrc">Media source column</label>
-                            <select id="astronomyImportMapMediaSrc">
-                                <option value="">— none —</option>
-                            </select>
+                            <select id="astronomyImportMapMediaSrc"><option value="">— none —</option></select>
                         </div>
-
                         <div>
                             <label for="astronomyImportMapMediaType">Media type column</label>
-                            <select id="astronomyImportMapMediaType">
-                                <option value="">— none —</option>
-                            </select>
+                            <select id="astronomyImportMapMediaType"><option value="">— none —</option></select>
                         </div>
-
                         <div>
                             <label for="astronomyImportMapMediaScale">Media scale column</label>
-                            <select id="astronomyImportMapMediaScale">
-                                <option value="">— none —</option>
-                            </select>
+                            <select id="astronomyImportMapMediaScale"><option value="">— none —</option></select>
                         </div>
-
                         <div>
-                            <label for="astronomyImportMapMediaRotation">
-                                Media rotation column
-                            </label>
-                            <select id="astronomyImportMapMediaRotation">
-                                <option value="">— none —</option>
-                            </select>
+                            <label for="astronomyImportMapMediaRotation">Media rotation column</label>
+                            <select id="astronomyImportMapMediaRotation"><option value="">— none —</option></select>
                         </div>
-
                         <div>
-                            <label for="astronomyImportMapMediaOpacity">
-                                Media opacity column
-                            </label>
-                            <select id="astronomyImportMapMediaOpacity">
-                                <option value="">— none —</option>
-                            </select>
+                            <label for="astronomyImportMapMediaOpacity">Media opacity column</label>
+                            <select id="astronomyImportMapMediaOpacity"><option value="">— none —</option></select>
                         </div>
                     </div>
 
                     <div class="hint">
-                        Import a JSON array or CSV table. Catalogue rows use RA/Dec
-                        coordinates and may map numeric metadata to source size and hue.
-                        Observation footprints use an STCS column such as
-                        <code>POLYGON J2000 ra1 dec1 ra2 dec2 ...</code>.
+                        Import a JSON array or CSV table. Catalogue rows use RA/Dec coordinates
+                        and may map numeric metadata to source size and hue.
                     </div>
                 </div>
             </details>
@@ -356,14 +292,51 @@
                         </button>
                     </div>
 
-                    <div style="overflow-x:auto;">
-                        <table id="catTable"></table>
-                    </div>
+                    <div id="catTable" class="catalogue-list"></div>
 
                     <div class="hint">
                         Catalogue sources can be styled using metadata columns:
                         Size by controls source radius, Hue by controls source hue,
                         and Colour changes the catalogue base colour.
+                    </div>
+                </div>
+            </details>
+
+            <details id="astronomyFootprintImportPanel" open data-ui-panel="astronomy:overlays">
+                <summary>STCS importer</summary>
+
+                <div class="stack" style="margin-top:8px;">
+                    <label>Import observation footprints</label>
+
+                    <div class="row">
+                        <input id="astronomyFootprintImportFile" type="file"
+                            accept=".json,.csv,application/json,text/csv" />
+                        <button id="btnAstronomyFootprintImport">Import</button>
+                        <button id="btnClearAstronomyFootprintImports" class="secondary">Clear imports</button>
+                    </div>
+
+                    <div class="import-mapping-grid">
+                        <div>
+                            <label for="astronomyFootprintMapRa">RA column</label>
+                            <select id="astronomyFootprintMapRa"><option value="">— auto —</option></select>
+                        </div>
+                        <div>
+                            <label for="astronomyFootprintMapDec">Dec column</label>
+                            <select id="astronomyFootprintMapDec"><option value="">— auto —</option></select>
+                        </div>
+                        <div>
+                            <label for="astronomyFootprintMapName">Name column</label>
+                            <select id="astronomyFootprintMapName"><option value="">— auto —</option></select>
+                        </div>
+                        <div>
+                            <label for="astronomyFootprintMapOutline">Footprint / STCS column</label>
+                            <select id="astronomyFootprintMapOutline"><option value="">— auto —</option></select>
+                        </div>
+                    </div>
+
+                    <div class="hint">
+                        Import a JSON array or CSV table containing an STCS column such as
+                        <code>POLYGON J2000 ra1 dec1 ra2 dec2 ...</code>.
                     </div>
                 </div>
             </details>
@@ -384,22 +357,13 @@
                         </button>
                     </div>
 
-                    <div style="overflow-x:auto;">
-                        <table id="fpTable"></table>
-                    </div>
+                    <div id="fpTable" class="catalogue-list"></div>
 
                     <div class="hint">
                         Manage astronomical observation footprints imported from STCS data.
                         Each footprint set can be shown, hidden, removed, or assigned a colour.
                     </div>
                 </div>
-            </details>
-
-            <!-- Hovered footprints panel -->
-            <details id="hoverPanel" open data-ui-panel="astronomy:overlays">
-                <summary>Hovered metadata</summary>
-                <div id="hoverEmpty" class="hint">Move the mouse over a catalogue source or observation footprint…</div>
-                <div id="hoverList"></div>
             </details>
 
             <details id="hipsDiagnosticsPanel" open data-ui-panel="astronomy:advanced">
@@ -826,6 +790,15 @@
         <span id="loadingIcon" class="loading-icon" hidden>✓</span>
         <span id="loadingMessage">Loading…</span>
     </div>
+
+    <aside id="hoverInspector" class="hover-inspector" hidden aria-live="polite">
+        <div class="hover-inspector-header">
+            <span class="hover-inspector-kicker">Inspector</span>
+            <span class="hover-inspector-title">Hovered object</span>
+        </div>
+        <div id="hoverEmpty" class="hint" hidden></div>
+        <div id="hoverList" class="hover-inspector-content"></div>
+    </aside>
 
     <div id="gridcoords"></div>
     <div id="gridhpx"></div>

@@ -52,7 +52,7 @@ export class CatalogueGL {
   _kind: string = "CatalogueGL";
   static ELEM_SIZE: number = 6;
   static BYTES_X_ELEM: number = new Float32Array().BYTES_PER_ELEMENT;
-  static STANDARD_SHAPE_SIZE: number = 10.0;
+  static STANDARD_SHAPE_SIZE: number = 16.0;
   static STANDARD_SHAPE_HUE: number = 3.0;
 
   _ready: boolean;

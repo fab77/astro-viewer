@@ -57,9 +57,10 @@ function refreshFootprints() {
 }
 
 function renderCombined(footprintSets = currentFootprintSets()) {
+  const inspectorEl = el('hoverInspector');
   const emptyEl = el('hoverEmpty');
   const listEl = el('hoverList');
-  if (!listEl || !emptyEl) return;
+  if (!inspectorEl || !listEl || !emptyEl) return;
 
   const sourceCard = renderSourceCard(hoveredSourceDetail);
   const footprintCards = renderFootprintCards(footprintSets);
@@ -68,8 +69,9 @@ function renderCombined(footprintSets = currentFootprintSets()) {
   if (sig === lastSignature) return;
   lastSignature = sig;
 
-  emptyEl.style.display = html ? 'none' : '';
   listEl.innerHTML = html;
+  emptyEl.hidden = true;
+  inspectorEl.hidden = !html;
 }
 
 function currentFootprintSets() {

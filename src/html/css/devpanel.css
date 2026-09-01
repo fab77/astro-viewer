@@ -881,3 +881,225 @@ body.sidebar-collapsed #gridhpx {
   flex: 0 0 42px;
   text-align: right;
 }
+
+/* Contextual viewport inspector ------------------------------------------------ */
+.hover-inspector {
+    position: fixed;
+    right: 14px;
+    bottom: calc(var(--av-status-height) + 14px);
+    z-index: 35;
+    width: min(330px, calc(100vw - var(--av-sidebar-width) - 42px));
+    max-height: min(46vh, 420px);
+    overflow: auto;
+    padding: 0;
+    color: var(--av-text);
+    background: rgba(6, 14, 24, .92);
+    border: 1px solid var(--av-border-strong);
+    border-radius: 12px;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .34);
+    backdrop-filter: blur(14px);
+    pointer-events: none;
+}
+
+.hover-inspector[hidden] {
+    display: none;
+}
+
+.hover-inspector-header {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 9px 11px 8px;
+    border-bottom: 1px solid var(--av-border);
+}
+
+.hover-inspector-kicker {
+    color: var(--av-accent);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .10em;
+    text-transform: uppercase;
+}
+
+.hover-inspector-title {
+    color: var(--av-text-secondary);
+    font-size: 10px;
+    font-weight: 550;
+}
+
+.hover-inspector-content {
+    display: grid;
+    gap: 7px;
+    padding: 8px;
+}
+
+.hover-inspector .hover-card {
+    margin-top: 0;
+    padding: 8px 9px;
+    background: rgba(2, 8, 15, .58);
+    border-color: rgba(148, 163, 184, .13);
+}
+
+.hover-inspector .hover-card h4 {
+    margin-bottom: 6px;
+    color: var(--av-text);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
+.hover-inspector .hover-metadata-table {
+    gap: 4px;
+}
+
+.hover-inspector .hover-metadata-row {
+    grid-template-columns: minmax(76px, .8fr) minmax(100px, 1.2fr);
+    gap: 9px;
+    font-size: 9.5px;
+}
+
+body.sidebar-collapsed .hover-inspector {
+    width: min(330px, calc(100vw - var(--av-sidebar-rail-width) - 42px));
+}
+
+@media (max-width: 760px) {
+    .hover-inspector,
+    body.sidebar-collapsed .hover-inspector {
+        right: 8px;
+        bottom: calc(var(--av-status-height) + 8px);
+        width: min(320px, calc(100vw - 16px));
+        max-height: 40vh;
+    }
+}
+
+/* Catalogue manager ---------------------------------------------------------- */
+.catalogue-list {
+    display: grid;
+    gap: 9px;
+    min-width: 0;
+}
+
+.catalogue-empty {
+    padding: 8px 2px;
+}
+
+.catalogue-card {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding: 10px;
+    background: rgba(7, 17, 29, .72);
+    border: 1px solid var(--av-border);
+    border-radius: 9px;
+    transition: border-color .14s ease, opacity .14s ease;
+}
+
+.catalogue-card:hover {
+    border-color: var(--av-border-strong);
+}
+
+.catalogue-card.is-hidden {
+    opacity: .68;
+}
+
+.catalogue-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.catalogue-card-heading {
+    min-width: 0;
+}
+
+.catalogue-card-title {
+    color: var(--av-text);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.35;
+}
+
+.catalogue-row-count {
+    margin-left: 4px;
+    color: var(--av-text-muted);
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.catalogue-card-key {
+    margin-top: 2px;
+    overflow: hidden;
+    color: var(--av-text-muted);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.catalogue-visibility {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    user-select: none;
+}
+
+.catalogue-style-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+}
+
+.catalogue-field {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.catalogue-field select {
+    width: 100%;
+    max-width: none;
+}
+
+.catalogue-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.catalogue-colour {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.catalogue-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.catalogue-card-actions button {
+    width: auto;
+    padding-inline: 8px;
+}
+
+/* Astronomy data importers --------------------------------------------------- */
+.import-mapping-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.import-mapping-grid > div {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.import-mapping-grid select {
+    width: 100%;
+    max-width: none;
+}

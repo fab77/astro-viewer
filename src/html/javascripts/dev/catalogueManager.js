@@ -65,28 +65,20 @@ export function extractTapMetadataColumnNames(catalogue) {
 }
 
 export function renderCatalogueManager() {
-  const table = el('catTable');
-  if (!table) return;
+  const container = el('catTable');
+  if (!container) return;
   const filterInput = el('catFilter');
   const filter = (filterInput?.value || '').trim().toLowerCase();
-  table.innerHTML = "";
+  container.innerHTML = "";
 
-  const thead = document.createElement('thead');
-  thead.innerHTML = `
-      <tr>
-        <th style="width:32%;">Name</th>
-        <th style="width:18%;">Size by</th>
-        <th style="width:18%;">Hue by</th>
-        <th style="width:10%;">Visible</th>
-        <th style="width:10%;">Status</th>
-        <th>Actions</th>
-      </tr>`;
-  table.appendChild(thead);
-
-  const tbody = document.createElement('tbody');
   const rows = state.CAT_LIST
     .map((c, idx) => ({ c, idx, key: catalogueKey(c) }))
     .filter(({ c }) => !filter || (c.name?.toLowerCase().includes(filter) || c.table?.toLowerCase().includes(filter)));
+
+  if (!rows.length) {
+    container.innerHTML = `<div class="catalogue-empty hint">No catalogues${filter ? " match the current filter" : " loaded"}.</div>`;
+    return;
+  }
 
   rows.forEach(({ c, idx, key }) => {
     const vis = state.CAT_VIS.has(key) ? state.CAT_VIS.get(key) : true;
@@ -94,48 +86,55 @@ export function renderCatalogueManager() {
     const chosen = state.CAT_SIZEBY.get(key) || "";
     const chosenHue = state.CAT_HUEBY.get(key) || "";
 
-    const tr = document.createElement('tr');
-    tr.dataset.idx = String(idx);
-    tr.innerHTML = `
-      <td>
-        <div>${c.name || c.table || c.id || "(unnamed)"}${c.rowCount ? ` <span class="hint">(${c.rowCount})</span>` : ""}</div>
-        <div class="hint mono">${key}</div>
-      </td>
-
-      <td>
-        <select class="size-by sel-compact" ${columns.length ? "" : "disabled"}>
-          <option value="STANDARD_SIZE">— choose —</option>
-          ${columns.map(col => `<option value="${col}" ${col === chosen ? "selected" : ""}>${col}</option>`).join('')}
-        </select>
-        ${!columns.length ? `<div class="hint">No TAP metadata</div>` : ""}
-      </td>
-
-      <td>
-        <select class="hue-by sel-compact" ${columns.length ? "" : "disabled"}>
-          <option value="STANDARD_HUE">— choose —</option>
-          ${columns.map(col => `<option value="${col}" ${col === chosenHue ? "selected" : ""}>${col}</option>`).join('')}
-        </select>
-        ${!columns.length ? `<div class="hint">No TAP metadata</div>` : ""}
-      </td>
-
-      <td style="text-align:center;">
-        <input type="checkbox" class="cat-vis" ${vis ? "checked" : ""} />
-      </td>
-
-      <td><span class="tag">${vis ? "visible" : "hidden"}</span></td>
-     
-      <td>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <button class="row-show">Load/Show</button>
-          <button class="row-del secondary" title="Remove from engine (keep in list)">Delete</button>
-          <input type="color" class="row-color" title="Change colour"
-               value="${sanitizeHex(state.CAT_COLOR.get(key)) || '#00ffff'}" />
+    const card = document.createElement('article');
+    card.className = `catalogue-card${vis ? "" : " is-hidden"}`;
+    card.dataset.idx = String(idx);
+    card.innerHTML = `
+      <div class="catalogue-card-header">
+        <div class="catalogue-card-heading">
+          <div class="catalogue-card-title">
+            ${c.name || c.table || c.id || "(unnamed)"}
+            ${c.rowCount ? `<span class="catalogue-row-count">${c.rowCount}</span>` : ""}
+          </div>
+          <div class="catalogue-card-key mono" title="${key}">${key}</div>
         </div>
-      </td>`;
-    tbody.appendChild(tr);
-  });
+        <label class="catalogue-visibility">
+          <input type="checkbox" class="cat-vis" ${vis ? "checked" : ""} />
+          <span class="catalogue-visibility-text">${vis ? "Visible" : "Hidden"}</span>
+        </label>
+      </div>
 
-  table.appendChild(tbody);
+      <div class="catalogue-style-grid">
+        <label class="catalogue-field">
+          <span>Size by</span>
+          <select class="size-by sel-compact" ${columns.length ? "" : "disabled"}>
+            <option value="STANDARD_SIZE" ${!chosen ? "selected" : ""}>— default —</option>
+            ${columns.map(col => `<option value="${col}" ${col === chosen ? "selected" : ""}>${col}</option>`).join('')}
+          </select>
+        </label>
+        <label class="catalogue-field">
+          <span>Hue by</span>
+          <select class="hue-by sel-compact" ${columns.length ? "" : "disabled"}>
+            <option value="STANDARD_HUE" ${!chosenHue ? "selected" : ""}>— default —</option>
+            ${columns.map(col => `<option value="${col}" ${col === chosenHue ? "selected" : ""}>${col}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+
+      ${!columns.length ? `<div class="hint">No TAP metadata available for styling.</div>` : ""}
+
+      <div class="catalogue-card-footer">
+        <label class="catalogue-colour">
+          <span>Colour</span>
+          <input type="color" class="row-color" title="Change colour"
+                 value="${sanitizeHex(c.shapeColor) || sanitizeHex(state.CAT_COLOR.get(key)) || '#8F00FF'}" />
+        </label>
+        <div class="catalogue-card-actions">
+          <button class="row-del secondary" title="Remove from engine and catalogue manager">Delete</button>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
 }
 
 let wired = false;
@@ -147,51 +146,28 @@ export function wireCatalogueManagerControls() {
   el('btnHideAll')?.addEventListener('click', () => batchSetVisibility(false));
 
   el('catTable')?.addEventListener('click', (ev) => {
-    const tr = ev.target.closest('tr'); if (!tr) return;
+    const tr = ev.target.closest('.catalogue-card'); if (!tr) return;
     const idx = Number(tr.dataset.idx);
     const cat = state.CAT_LIST[idx]; if (!cat) return;
     const key = catalogueKey(cat);
 
-    if (ev.target.classList.contains('row-show')) {
-      try {
-        state.AstroAPI?.showCatalogue?.(cat);
-        state.CAT_VIS.set(key, true);
-
-        // re-apply remembered size-by
-        const remembered = state.CAT_SIZEBY.get(key);
-        if (remembered && state.AstroAPI?.setCatalogueShapeSize) {
-          state.AstroAPI.setCatalogueShapeSize(cat, remembered);
-        }
-
-        const rememberedHue = state.CAT_HUEBY.get(key);
-        if (rememberedHue && state.AstroAPI?.setCatalogueShapeHue) {
-          state.AstroAPI.setCatalogueShapeHue(cat, rememberedHue);
-        }
-
-        const rememberedColor = state.CAT_COLOR.get(key);
-        if (rememberedColor && state.AstroAPI?.changeCatalogueColor) {
-          state.AstroAPI.changeCatalogueColor(cat, sanitizeHex(rememberedColor));
-        }
-
-        renderCatalogueManager();
-        persistBasic();
-        setStatus(`📡 Catalogue loaded: ${cat.name || cat.id || cat.table}`);
-      } catch (e) { setStatus("Show error: " + (e.message || e)); }
-    }
-
     if (ev.target.classList.contains('row-del')) {
       try {
         state.AstroAPI?.deleteCatalogue?.(cat);
-        state.CAT_VIS.set(key, false);
+        state.CAT_LIST.splice(idx, 1);
+        state.CAT_VIS.delete(key);
+        state.CAT_SIZEBY.delete(key);
+        state.CAT_HUEBY.delete(key);
+        state.CAT_COLOR.delete(key);
         renderCatalogueManager();
         persistBasic();
-        setStatus(`🗑️ Catalogue removed from engine: ${cat.name || cat.id || cat.table}`);
+        setStatus(`🗑️ Catalogue deleted: ${cat.name || cat.id || cat.table}`);
       } catch (e) { setStatus("Delete error: " + (e.message || e)); }
     }
   });
 
   el('catTable')?.addEventListener('change', (ev) => {
-    const tr = ev.target.closest('tr'); if (!tr) return;
+    const tr = ev.target.closest('.catalogue-card'); if (!tr) return;
     const idx = Number(tr.dataset.idx);
     const cat = state.CAT_LIST[idx]; if (!cat) return;
     const key = catalogueKey(cat);
@@ -201,7 +177,9 @@ export function wireCatalogueManagerControls() {
       try {
         state.AstroAPI?.hideCatalogue?.(cat, isVisible);
         state.CAT_VIS.set(key, isVisible);
-        tr.querySelector('.tag').textContent = isVisible ? "visible" : "hidden";
+        tr.classList.toggle('is-hidden', !isVisible);
+        const visibilityText = tr.querySelector('.catalogue-visibility-text');
+        if (visibilityText) visibilityText.textContent = isVisible ? "Visible" : "Hidden";
         persistBasic();
         setStatus(`${isVisible ? "👁️ Visible" : "🙈 Hidden"} → ${cat.name || cat.id || cat.table}`);
       } catch (e) { setStatus("Visibility error: " + (e.message || e)); }
@@ -210,19 +188,17 @@ export function wireCatalogueManagerControls() {
 
     if (ev.target.classList.contains('size-by')) {
       const column = String(ev.target.value || "");
-      if (!column) {
-        state.CAT_SIZEBY.delete(key);
-        persistBasic();
-        setStatus(`Size by cleared for ${cat.name || cat.id || cat.table}`);
-        return;
-      }
-      state.CAT_SIZEBY.set(key, column);
+      const isDefault = column === "STANDARD_SIZE";
+      if (isDefault) state.CAT_SIZEBY.delete(key);
+      else state.CAT_SIZEBY.set(key, column);
       persistBasic();
 
       // apply only if visible; otherwise it will apply on next Show
       const isVisible = !!(tr.querySelector('.cat-vis')?.checked);
       if (!isVisible) {
-        setStatus(`Saved "Size by: ${column}" (applies when visible).`);
+        setStatus(isDefault
+          ? `Size by reset to default for ${cat.name || cat.id || cat.table}.`
+          : `Saved "Size by: ${column}" (applies when visible).`);
         return;
       }
       if (!state.AstroAPI?.setCatalogueShapeSize) {
@@ -231,25 +207,25 @@ export function wireCatalogueManagerControls() {
       }
       try {
         state.AstroAPI.setCatalogueShapeSize(cat, column);
-        setStatus(`🎛️ Size by → ${column} for ${cat.name || cat.id || cat.table}`);
+        setStatus(isDefault
+          ? `Size by reset to default for ${cat.name || cat.id || cat.table}.`
+          : `🎛️ Size by → ${column} for ${cat.name || cat.id || cat.table}`);
       } catch (e) { setStatus("Size-by error: " + (e.message || e)); }
     }
 
     if (ev.target.classList.contains('hue-by')) {
       const column = String(ev.target.value || "");
-      if (!column) {
-        state.CAT_HUEBY.delete(key);
-        persistBasic();
-        setStatus(`Hue by cleared for ${cat.name || cat.id || cat.table}`);
-        return;
-      }
-      state.CAT_HUEBY.set(key, column);
+      const isDefault = column === "STANDARD_HUE";
+      if (isDefault) state.CAT_HUEBY.delete(key);
+      else state.CAT_HUEBY.set(key, column);
       persistBasic();
 
       // apply only if visible; otherwise apply on next Show
       const isVisible = !!(tr.querySelector('.cat-vis')?.checked);
       if (!isVisible) {
-        setStatus(`Saved "Hue by: ${column}" (applies when visible).`);
+        setStatus(isDefault
+          ? `Hue by reset to default for ${cat.name || cat.id || cat.table}.`
+          : `Saved "Hue by: ${column}" (applies when visible).`);
         return;
       }
       if (!state.AstroAPI?.setCatalogueShapeHue) {
@@ -258,7 +234,9 @@ export function wireCatalogueManagerControls() {
       }
       try {
         state.AstroAPI.setCatalogueShapeHue(cat, column);
-        setStatus(`🎨 Hue by → ${column} for ${cat.name || cat.id || cat.table}`);
+        setStatus(isDefault
+          ? `Hue by reset to default for ${cat.name || cat.id || cat.table}.`
+          : `🎨 Hue by → ${column} for ${cat.name || cat.id || cat.table}`);
       } catch (e) { setStatus("Hue-by error: " + (e.message || e)); }
     }
 
