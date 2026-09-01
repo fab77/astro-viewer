@@ -273,7 +273,7 @@ function findCatalogueMapping(columns) {
 
 function findFootprintMapping(columns) {
   return {
-    outline: findExactColumn(columns, ["s_region"]),
+    outline: findExactColumn(columns, ["s_region", "stcs"]),
     name: findExactColumn(columns, ["name", "obs_id"]),
   };
 }
@@ -704,7 +704,7 @@ function wireAstronomyFootprintImporter() {
       if (!mapping.outline) {
         lastAstronomyFootprintParsed = null;
         return setStatus(
-          `STCS import requires an s_region column: ${file.name}`,
+          `STCS import requires an s_region or stcs column: ${file.name}`,
         );
       }
 
