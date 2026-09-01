@@ -58,6 +58,10 @@ export type {
 export { MetadataManager } from './model/MetadataManager.js'
 export { MetadataColumn, MetadataInit, ColumnType } from './model/MetadataColumn.js'
 export { Point, SphericalOpts, AstroOpts, PointInitOpts, CartesianOpts } from './model/Point.js'
+export {
+  raHMSToDeg,
+  decDMSToDeg,
+} from './utils/Utils.js'
 export { FoVUtils } from './utils/FoVUtils.js'
 export { CoordsType } from './utils/CoordsType.js'
 export { default as GeoJSONParser } from './utils/GeoJSONParser.js'

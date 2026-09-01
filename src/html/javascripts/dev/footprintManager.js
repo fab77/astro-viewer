@@ -25,6 +25,15 @@ export function footprintKey(fp) {
   return fp?.name || String(fp?.id) || fp?.table || JSON.stringify(fp);
 }
 
+function extractMetadataColumnNames(footprintSet) {
+  const columns = footprintSet?.metadataManager?.columns;
+  if (!Array.isArray(columns)) return [];
+  return columns
+    .map((column) => typeof column === 'string' ? column : column?.name)
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b));
+}
+
 export function renderFootprintManager() {
   const list = el('fpTable');
   if (!list) return;
@@ -47,6 +56,8 @@ export function renderFootprintManager() {
 
   rows.forEach(({ f, idx, key }) => {
     const vis = state.FP_VIS.has(key) ? state.FP_VIS.get(key) : true;
+    const columns = extractMetadataColumnNames(f);
+    const chosenName = f?.metadataManager?.selectedNameColumn?.name || '';
     const currentColor = sanitizeHex(state.FP_COLOR.get(key)) || '#ffaa00';
 
     const card = document.createElement('div');
@@ -63,6 +74,18 @@ export function renderFootprintManager() {
           <span>Visible</span>
         </label>
       </div>
+
+      <div class="catalogue-style-grid">
+        <label class="catalogue-field">
+          <span>Name</span>
+          <select class="fp-name-by sel-compact" ${columns.length ? "" : "disabled"}>
+            <option value="" ${!chosenName ? "selected" : ""}>— none —</option>
+            ${columns.map(col => `<option value="${col}" ${col === chosenName ? "selected" : ""}>${col}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+
+      ${!columns.length ? `<div class="hint">No metadata available for name selection.</div>` : ""}
 
       <div class="catalogue-card-footer">
         <label class="catalogue-colour">
@@ -121,6 +144,23 @@ export function wireFootprintManagerControls() {
         persistBasic();
         setStatus(`${isVisible ? "👁️ Visible" : "🙈 Hidden"} → ${fp.name || fp.id || fp.table}`);
       } catch (e) { setStatus("Visibility error: " + (e.message || e)); }
+      return;
+    }
+
+    if (ev.target.classList.contains('fp-name-by')) {
+      const column = String(ev.target.value || '');
+      const metadataManager = fp?.metadataManager;
+      if (!metadataManager) {
+        setStatus("Metadata manager not available for this footprint set.");
+        return;
+      }
+      try {
+        metadataManager.selectedNameColumn = column;
+        persistBasic();
+        setStatus(column
+          ? `Name → ${column} for ${fp.name || fp.id || fp.table}`
+          : `Name reset for ${fp.name || fp.id || fp.table}.`);
+      } catch (e) { setStatus("Name-column error: " + (e.message || e)); }
       return;
     }
 

@@ -4,7 +4,7 @@
  * Note: Footprint column should contain STCS format (e.g., POLYGON lon1 lat1 lon2 lat2 ...)
  */
 import { el, setStatus } from "./ui.js";
-import { state, persistBasic } from "./state.js";
+import { state, catalogueKey, persistBasic } from "./state.js";
 import { renderCatalogueManager } from "./catalogueManager.js";
 import { renderFootprintManager } from "./footprintManager.js";
 
@@ -56,21 +56,7 @@ function makeCatalogueDescriptor(parsed, name) {
   };
 }
 
-function guessColumnType(name, sampleValues) {
-  const n = String(name || "").toLowerCase();
-  if (/\bra\b|^ra$|radeg/.test(n))
-    return window.astroviewer && window.astroviewer.ColumnType
-      ? window.astroviewer.ColumnType.GEOM_RA
-      : "GEOM_RA";
-  if (/\bdec\b|^dec$|decdeg/.test(n))
-    return window.astroviewer && window.astroviewer.ColumnType
-      ? window.astroviewer.ColumnType.GEOM_DEC
-      : "GEOM_DEC";
-  if (/^stcs?$|footprint|wkt|shape|outline|geometry|^geom$|polygon$/i.test(n))
-    return window.astroviewer && window.astroviewer.ColumnType
-      ? window.astroviewer.ColumnType.GEOM_FOOTPRINT
-      : "GEOM_FOOTPRINT";
-  // numeric?
+function guessColumnType(sampleValues) {
   if (Array.isArray(sampleValues) && sampleValues.length) {
     const ok = sampleValues.every(
       (v) => v === null || v === "" || !Number.isNaN(Number(v)),
@@ -131,38 +117,88 @@ function findColumn(columns, patterns) {
   );
 }
 
-function setSelectValue(id, value) {
-  const sel = el(id);
-  if (sel && value) sel.value = value;
+function findExactColumn(columns, candidates) {
+  for (const candidate of candidates) {
+    const match = columns.find(
+      (column) => String(column || "").toLowerCase() === candidate.toLowerCase(),
+    );
+    if (match) return match;
+  }
+  return "";
 }
 
-function findDefaultMapping(columns) {
+function parseSexagesimal(value) {
+  const parts = String(value ?? "")
+    .trim()
+    .split(/[:\s]+/)
+    .filter(Boolean);
+
+  if (parts.length !== 3) return null;
+
+  const firstText = parts[0];
+  const first = Number(firstText);
+  const minutes = Number(parts[1]);
+  const seconds = Number(parts[2]);
+
+  if (
+    !Number.isFinite(first) ||
+    !Number.isFinite(minutes) ||
+    !Number.isFinite(seconds) ||
+    minutes < 0 ||
+    minutes >= 60 ||
+    seconds < 0 ||
+    seconds >= 60
+  ) {
+    return null;
+  }
+
+  return { first, firstText, minutes, seconds };
+}
+
+function parseRaHms(value) {
+  const parsed = parseSexagesimal(value);
+
+  if (
+    !parsed ||
+    parsed.first < 0 ||
+    parsed.first > 24 ||
+    (parsed.first === 24 &&
+      (parsed.minutes !== 0 || parsed.seconds !== 0))
+  ) {
+    return null;
+  }
+
   return {
-    ra: findColumn(columns, [
-      /^ra$/i,
-      /ra_?deg/i,
-      /right_?ascension/i,
-      /^lon$/i,
-      /longitude/i,
-    ]),
-    dec: findColumn(columns, [/^dec$/i, /dec_?deg/i, /^lat$/i, /latitude/i]),
-    name: findColumn(columns, [
-      /^name$/i,
-      /nome/i,
-      /denominazione/i,
-      /label/i,
-      /title/i,
-    ]),
-    outline: findColumn(columns, [
-      /^stcs?$/i,
-      /footprint/i,
-      /outline/i,
-      /geometry/i,
-      /^geom$/i,
-      /^polygon$/i,
-      /wkt/i,
-      /shape/i,
-    ]),
+    h: parsed.first,
+    m: parsed.minutes,
+    s: parsed.seconds,
+  };
+}
+
+function parseDecDms(value) {
+  const parsed = parseSexagesimal(value);
+
+  if (
+    !parsed ||
+    Math.abs(parsed.first) > 90 ||
+    (Math.abs(parsed.first) === 90 &&
+      (parsed.minutes !== 0 || parsed.seconds !== 0))
+  ) {
+    return null;
+  }
+
+  const negative =
+    parsed.first < 0 || /^-0(?:\.0*)?$/.test(parsed.firstText);
+
+  return {
+    d: negative ? -Math.abs(parsed.first) : Math.abs(parsed.first),
+    m: parsed.minutes,
+    s: parsed.seconds,
+  };
+}
+
+function findMediaMapping(columns) {
+  return {
     mediaSrc: findColumn(columns, [
       /^media_?src$/i,
       /^media_?url$/i,
@@ -199,102 +235,51 @@ function findDefaultMapping(columns) {
   };
 }
 
-function applyAstronomyDefaultMappings(columns) {
-  const mapping = findDefaultMapping(columns);
+function findCatalogueMapping(columns) {
+  const raDeg = findExactColumn(columns, ["ra_deg"]);
+  const decDeg = findExactColumn(columns, ["dec_deg"]);
 
-  setSelectValue("astronomyImportMapRa", mapping.ra);
-  setSelectValue("astronomyImportMapDec", mapping.dec);
-  setSelectValue("astronomyImportMapName", mapping.name);
-  setSelectValue("astronomyImportMapMediaSrc", mapping.mediaSrc);
-  setSelectValue("astronomyImportMapMediaType", mapping.mediaType);
-  setSelectValue("astronomyImportMapMediaScale", mapping.mediaScale);
-  setSelectValue("astronomyImportMapMediaRotation", mapping.mediaRotation);
-  setSelectValue("astronomyImportMapMediaOpacity", mapping.mediaOpacity);
+  if (raDeg && decDeg) {
+    return {
+      ra: raDeg,
+      dec: decDeg,
+      coordinateFormat: "degrees",
+      name: findExactColumn(columns, ["name", "source_id"]),
+      ...findMediaMapping(columns),
+    };
+  }
 
+  const raHms = findExactColumn(columns, ["ra_hms"]);
+  const decDms = findExactColumn(columns, ["dec_dms"]);
 
-  return mapping;
+  if (raHms && decDms) {
+    return {
+      ra: raHms,
+      dec: decDms,
+      coordinateFormat: "sexagesimal",
+      name: findExactColumn(columns, ["name", "source_id"]),
+      ...findMediaMapping(columns),
+    };
+  }
+
+  return {
+    ra: findExactColumn(columns, ["ra"]),
+    dec: findExactColumn(columns, ["dec"]),
+    coordinateFormat: "degrees",
+    name: findExactColumn(columns, ["name", "source_id"]),
+    ...findMediaMapping(columns),
+  };
 }
 
-function populateAstronomyMappingSelects(columns) {
-  const ids = [
-    "astronomyImportMapRa",
-    "astronomyImportMapDec",
-    "astronomyImportMapName",
-    "astronomyImportMapSize",
-    "astronomyImportMapHue",
-    "astronomyImportMapMediaSrc",
-    "astronomyImportMapMediaType",
-    "astronomyImportMapMediaScale",
-    "astronomyImportMapMediaRotation",
-    "astronomyImportMapMediaOpacity",
-  ];
-
-  ids.forEach((id) => {
-    const sel = el(id);
-    if (!sel) return;
-
-    sel.innerHTML = "";
-
-    const empty = document.createElement("option");
-    empty.value = "";
-
-    empty.textContent =
-      id === "astronomyImportMapSize" ||
-      id === "astronomyImportMapHue" ||
-      id.startsWith("astronomyImportMapMedia")
-        ? "— none —"
-        : "— auto —";
-
-    sel.appendChild(empty);
-
-    columns.forEach((column) => {
-      const option = document.createElement("option");
-      option.value = column;
-      option.textContent = column;
-      sel.appendChild(option);
-    });
-  });
-}
-
-function populateFootprintMappingSelects(columns) {
-  const ids = [
-    "astronomyFootprintMapRa",
-    "astronomyFootprintMapDec",
-    "astronomyFootprintMapName",
-    "astronomyFootprintMapOutline",
-  ];
-
-  ids.forEach((id) => {
-    const sel = el(id);
-    if (!sel) return;
-
-    sel.innerHTML = "";
-
-    const empty = document.createElement("option");
-    empty.value = "";
-    empty.textContent = "— auto —";
-    sel.appendChild(empty);
-
-    columns.forEach((column) => {
-      const option = document.createElement("option");
-      option.value = column;
-      option.textContent = column;
-      sel.appendChild(option);
-    });
-  });
-}
-
-function applyFootprintDefaultMappings(columns) {
-  const mapping = findDefaultMapping(columns);
-  setSelectValue("astronomyFootprintMapRa", mapping.ra);
-  setSelectValue("astronomyFootprintMapDec", mapping.dec);
-  setSelectValue("astronomyFootprintMapName", mapping.name);
-  setSelectValue("astronomyFootprintMapOutline", mapping.outline);
-  return mapping;
+function findFootprintMapping(columns) {
+  return {
+    outline: findExactColumn(columns, ["s_region"]),
+    name: findExactColumn(columns, ["name", "obs_id"]),
+  };
 }
 
 function firstFootprintCoordinate(objects, columns, outlineColumn) {
-  const column = outlineColumn || findDefaultMapping(columns).outline;
+  const column = outlineColumn;
   if (!column) return null;
 
   for (const obj of objects) {
@@ -350,15 +335,9 @@ function tryCreateLiveCatalogue(name, desc, columns, objects, mapping = {}) {
       if (mapping.ra && mapping.ra === colName) colType = ColumnType.GEOM_RA;
       else if (mapping.dec && mapping.dec === colName)
         colType = ColumnType.GEOM_DEC;
-      else if (mapping.outline && mapping.outline === colName)
-        colType = ColumnType.GEOM_FOOTPRINT;
-      else if (mapping.size && mapping.size === colName)
-        colType = ColumnType.NUMBER;
-      else if (mapping.hue && mapping.hue === colName)
-        colType = ColumnType.NUMBER;
       else if (mapping.name && mapping.name === colName)
         colType = ColumnType.MAIN_NAME;
-      else colType = guessColumnType(colName, samples);
+      else colType = guessColumnType(samples);
       return new MetadataColumn({
         index: idx,
         name: colName,
@@ -376,12 +355,6 @@ function tryCreateLiveCatalogue(name, desc, columns, objects, mapping = {}) {
       if (mapping.dec) mm.selectedDecColumn = mapping.dec;
     } catch {}
     try {
-      if (mapping.size) mm.selectedShapeColumn = mapping.size;
-    } catch {}
-    try {
-      if (mapping.hue) mm.selectedHueColumn = mapping.hue;
-    } catch {}
-    try {
       if (mapping.name) mm.selectedNameColumn = mapping.name;
     } catch {}
     const catGL = state.AstroAPI.createCatalogue(
@@ -391,9 +364,34 @@ function tryCreateLiveCatalogue(name, desc, columns, objects, mapping = {}) {
       mm,
     );
     // prepare rows as arrays
-    const rows = objects.map((o) =>
+    const rows = objects.map((o, rowIndex) =>
       columns.map((k) => {
         const v = o[k];
+
+        if (mapping.coordinateFormat === "sexagesimal") {
+          if (k === mapping.ra) {
+            const hms = parseRaHms(v);
+            if (!hms) {
+              throw new Error(
+                `Invalid ra_hms value at row ${rowIndex + 1}: ${v}`,
+              );
+            }
+
+            return window.astroviewer.raHMSToDeg(hms);
+          }
+
+          if (k === mapping.dec) {
+            const dms = parseDecDms(v);
+            if (!dms) {
+              throw new Error(
+                `Invalid dec_dms value at row ${rowIndex + 1}: ${v}`,
+              );
+            }
+
+            return window.astroviewer.decDMSToDeg(dms);
+          }
+        }
+
         const n = Number(v);
         return typeof v === "number" ||
           (String(v).trim() !== "" && !Number.isNaN(n))
@@ -452,14 +450,11 @@ function tryCreateLiveFootprintSet(name, desc, columns, objects, mapping = {}) {
       const samples = objects.slice(0, 10).map((o) => o[colName]);
       // prefer explicit mapping
       let colType;
-      if (mapping.ra && mapping.ra === colName) colType = ColumnType.GEOM_RA;
-      else if (mapping.dec && mapping.dec === colName)
-        colType = ColumnType.GEOM_DEC;
-      else if (mapping.outline && mapping.outline === colName)
+      if (mapping.outline && mapping.outline === colName)
         colType = ColumnType.GEOM_FOOTPRINT;
       else if (mapping.name && mapping.name === colName)
         colType = ColumnType.MAIN_NAME;
-      else colType = guessColumnType(colName, samples);
+      else colType = guessColumnType(samples);
       return new MetadataColumn({
         index: idx,
         name: colName,
@@ -470,12 +465,6 @@ function tryCreateLiveFootprintSet(name, desc, columns, objects, mapping = {}) {
 
     const mm = new MetadataManager(colsMeta);
     // apply mapping preferences
-    try {
-      if (mapping.ra) mm.selectedRaColumn = mapping.ra;
-    } catch {}
-    try {
-      if (mapping.dec) mm.selectedDecColumn = mapping.dec;
-    } catch {}
     try {
       if (mapping.outline) mm.selectedOutlineColumn = mapping.outline;
     } catch {}
@@ -613,18 +602,24 @@ function wireAstronomyImporter() {
         return setStatus("Parsed astronomy file but no rows found.");
       }
 
+      const mapping = findCatalogueMapping(columns);
+      if (!mapping.ra || !mapping.dec) {
+        lastAstronomyParsed = null;
+        return setStatus(
+          `Catalogue import requires ra_deg + dec_deg, ra_hms + dec_dms, or ra + dec columns: ${file.name}`,
+        );
+      }
+
       lastAstronomyParsed = {
         filename: file.name || "",
         columns,
         objects,
+        mapping,
       };
 
-      populateAstronomyMappingSelects(columns);
-
-      const defaults = applyAstronomyDefaultMappings(columns);
-
+      const nameInfo = mapping.name ? ` Name: ${mapping.name}.` : "";
       setStatus(
-        `Astronomy catalogue parsed: ${file.name} (${objects.length} rows). Choose mappings then click Import.`,
+        `Astronomy catalogue parsed: ${file.name} (${objects.length} rows). Coordinates: ${mapping.ra}/${mapping.dec}.${nameInfo} Click Import.`,
       );
     };
 
@@ -642,21 +637,12 @@ function wireAstronomyImporter() {
 
     const fileName = lastAstronomyParsed.filename || "Imported astronomy file";
 
-    const mapping = {
-      ra: el("astronomyImportMapRa")?.value || "",
-      dec: el("astronomyImportMapDec")?.value || "",
-      name: el("astronomyImportMapName")?.value || "",
-      size: el("astronomyImportMapSize")?.value || "",
-      hue: el("astronomyImportMapHue")?.value || "",
-      mediaSrc: el("astronomyImportMapMediaSrc")?.value || "",
-      mediaType: el("astronomyImportMapMediaType")?.value || "",
-      mediaScale: el("astronomyImportMapMediaScale")?.value || "",
-      mediaRotation: el("astronomyImportMapMediaRotation")?.value || "",
-      mediaOpacity: el("astronomyImportMapMediaOpacity")?.value || "",
-    };
-
     try {
-      importAstronomyCatalogue(fileName, lastAstronomyParsed, mapping);
+      importAstronomyCatalogue(
+        fileName,
+        lastAstronomyParsed,
+        lastAstronomyParsed.mapping,
+      );
     } catch (e) {
       setStatus("Astronomy import error: " + (e.message || e));
     }
@@ -714,17 +700,24 @@ function wireAstronomyFootprintImporter() {
         return setStatus("Parsed STCS file but no rows found.");
       }
 
+      const mapping = findFootprintMapping(columns);
+      if (!mapping.outline) {
+        lastAstronomyFootprintParsed = null;
+        return setStatus(
+          `STCS import requires an s_region column: ${file.name}`,
+        );
+      }
+
       lastAstronomyFootprintParsed = {
         filename: file.name || "",
         columns,
         objects,
+        mapping,
       };
 
-      populateFootprintMappingSelects(columns);
-      const defaults = applyFootprintDefaultMappings(columns);
-
+      const nameInfo = mapping.name ? ` Name: ${mapping.name}.` : "";
       setStatus(
-        `STCS file parsed: ${file.name} (${objects.length} rows).${defaults.outline ? " Detected footprint column." : ""} Choose mappings then click Import.`,
+        `STCS file parsed: ${file.name} (${objects.length} rows). Geometry: ${mapping.outline}.${nameInfo} Click Import.`,
       );
     };
 
@@ -737,18 +730,11 @@ function wireAstronomyFootprintImporter() {
       return setStatus("Select and parse an STCS file first.");
     }
 
-    const mapping = {
-      ra: el("astronomyFootprintMapRa")?.value || "",
-      dec: el("astronomyFootprintMapDec")?.value || "",
-      name: el("astronomyFootprintMapName")?.value || "",
-      outline: el("astronomyFootprintMapOutline")?.value || "",
-    };
-
     try {
       importAstronomyFootprints(
         lastAstronomyFootprintParsed.filename || "Imported STCS file",
         lastAstronomyFootprintParsed,
-        mapping,
+        lastAstronomyFootprintParsed.mapping,
       );
     } catch (e) {
       setStatus("STCS import error: " + (e.message || e));
@@ -874,6 +860,13 @@ function importAstronomyCatalogue(fileName, parsed, mapping) {
 
   if (live) {
     state.CAT_LIST.push(live);
+
+    // A new import starts with the standard visual styling, even when a
+    // catalogue with the same name was configured in an earlier session.
+    const key = catalogueKey(live);
+    state.CAT_SIZEBY.delete(key);
+    state.CAT_HUEBY.delete(key);
+
     renderCatalogueManager();
     persistBasic();
 

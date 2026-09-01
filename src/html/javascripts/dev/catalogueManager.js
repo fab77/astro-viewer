@@ -64,6 +64,24 @@ export function extractTapMetadataColumnNames(catalogue) {
   return [...names].sort((a, b) => a.localeCompare(b));
 }
 
+function extractNumericMetadataColumnNames(catalogue) {
+  const metadataManager = catalogue?.metadataManager;
+  const names = new Set();
+
+  const addItems = (items) => {
+    if (!Array.isArray(items)) return;
+    items.forEach((item) => {
+      if (typeof item === 'string') names.add(item);
+      else if (item?.name) names.add(item.name);
+    });
+  };
+
+  addItems(metadataManager?.shapeColumnList);
+  addItems(metadataManager?.hueColumnList);
+
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
 export function renderCatalogueManager() {
   const container = el('catTable');
   if (!container) return;
@@ -83,6 +101,8 @@ export function renderCatalogueManager() {
   rows.forEach(({ c, idx, key }) => {
     const vis = state.CAT_VIS.has(key) ? state.CAT_VIS.get(key) : true;
     const columns = extractTapMetadataColumnNames(c);
+    const numericColumns = extractNumericMetadataColumnNames(c);
+    const chosenName = c?.metadataManager?.selectedNameColumn?.name || "";
     const chosen = state.CAT_SIZEBY.get(key) || "";
     const chosenHue = state.CAT_HUEBY.get(key) || "";
 
@@ -106,22 +126,29 @@ export function renderCatalogueManager() {
 
       <div class="catalogue-style-grid">
         <label class="catalogue-field">
+          <span>Name</span>
+          <select class="name-by sel-compact" ${columns.length ? "" : "disabled"}>
+            <option value="" ${!chosenName ? "selected" : ""}>— none —</option>
+            ${columns.map(col => `<option value="${col}" ${col === chosenName ? "selected" : ""}>${col}</option>`).join('')}
+          </select>
+        </label>
+        <label class="catalogue-field">
           <span>Size by</span>
-          <select class="size-by sel-compact" ${columns.length ? "" : "disabled"}>
+          <select class="size-by sel-compact" ${numericColumns.length ? "" : "disabled"}>
             <option value="STANDARD_SIZE" ${!chosen ? "selected" : ""}>— default —</option>
-            ${columns.map(col => `<option value="${col}" ${col === chosen ? "selected" : ""}>${col}</option>`).join('')}
+            ${numericColumns.map(col => `<option value="${col}" ${col === chosen ? "selected" : ""}>${col}</option>`).join('')}
           </select>
         </label>
         <label class="catalogue-field">
           <span>Hue by</span>
-          <select class="hue-by sel-compact" ${columns.length ? "" : "disabled"}>
+          <select class="hue-by sel-compact" ${numericColumns.length ? "" : "disabled"}>
             <option value="STANDARD_HUE" ${!chosenHue ? "selected" : ""}>— default —</option>
-            ${columns.map(col => `<option value="${col}" ${col === chosenHue ? "selected" : ""}>${col}</option>`).join('')}
+            ${numericColumns.map(col => `<option value="${col}" ${col === chosenHue ? "selected" : ""}>${col}</option>`).join('')}
           </select>
         </label>
       </div>
 
-      ${!columns.length ? `<div class="hint">No TAP metadata available for styling.</div>` : ""}
+      ${!columns.length ? `<div class="hint">No metadata available for catalogue configuration.</div>` : ""}
 
       <div class="catalogue-card-footer">
         <label class="catalogue-colour">
@@ -183,6 +210,23 @@ export function wireCatalogueManagerControls() {
         persistBasic();
         setStatus(`${isVisible ? "👁️ Visible" : "🙈 Hidden"} → ${cat.name || cat.id || cat.table}`);
       } catch (e) { setStatus("Visibility error: " + (e.message || e)); }
+      return;
+    }
+
+    if (ev.target.classList.contains('name-by')) {
+      const column = String(ev.target.value || "");
+      const metadataManager = cat?.metadataManager;
+      if (!metadataManager) {
+        setStatus("Metadata manager not available for this catalogue.");
+        return;
+      }
+      try {
+        metadataManager.selectedNameColumn = column;
+        persistBasic();
+        setStatus(column
+          ? `Name → ${column} for ${cat.name || cat.id || cat.table}`
+          : `Name reset for ${cat.name || cat.id || cat.table}.`);
+      } catch (e) { setStatus("Name-column error: " + (e.message || e)); }
       return;
     }
 

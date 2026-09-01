@@ -226,52 +226,10 @@
                         <button id="btnClearAstronomyImports" class="secondary">Clear imports</button>
                     </div>
 
-                    <div class="import-mapping-grid">
-                        <div>
-                            <label for="astronomyImportMapRa">RA column</label>
-                            <select id="astronomyImportMapRa"><option value="">— auto —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapDec">Dec column</label>
-                            <select id="astronomyImportMapDec"><option value="">— auto —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapName">Name column</label>
-                            <select id="astronomyImportMapName"><option value="">— auto —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapSize">Size column</label>
-                            <select id="astronomyImportMapSize"><option value="">— none —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapHue">Hue column</label>
-                            <select id="astronomyImportMapHue"><option value="">— none —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapMediaSrc">Media source column</label>
-                            <select id="astronomyImportMapMediaSrc"><option value="">— none —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapMediaType">Media type column</label>
-                            <select id="astronomyImportMapMediaType"><option value="">— none —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapMediaScale">Media scale column</label>
-                            <select id="astronomyImportMapMediaScale"><option value="">— none —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapMediaRotation">Media rotation column</label>
-                            <select id="astronomyImportMapMediaRotation"><option value="">— none —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyImportMapMediaOpacity">Media opacity column</label>
-                            <select id="astronomyImportMapMediaOpacity"><option value="">— none —</option></select>
-                        </div>
-                    </div>
-
                     <div class="hint">
-                        Import a JSON array or CSV table. Catalogue rows use RA/Dec coordinates
-                        and may map numeric metadata to source size and hue.
+                        Import a JSON array or CSV table using <code>ra_deg</code> + <code>dec_deg</code>
+                        or <code>ra</code> + <code>dec</code> coordinates in degrees. The manager can
+                        configure Name, Size by and Hue by after import.
                     </div>
                 </div>
             </details>
@@ -295,9 +253,9 @@
                     <div id="catTable" class="catalogue-list"></div>
 
                     <div class="hint">
-                        Catalogue sources can be styled using metadata columns:
-                        Size by controls source radius, Hue by controls source hue,
-                        and Colour changes the catalogue base colour.
+                        Configure the catalogue name column and visual styling from the loaded metadata.
+                        Size by controls source radius, Hue by controls source hue, and Colour changes
+                        the catalogue base colour.
                     </div>
                 </div>
             </details>
@@ -315,28 +273,9 @@
                         <button id="btnClearAstronomyFootprintImports" class="secondary">Clear imports</button>
                     </div>
 
-                    <div class="import-mapping-grid">
-                        <div>
-                            <label for="astronomyFootprintMapRa">RA column</label>
-                            <select id="astronomyFootprintMapRa"><option value="">— auto —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyFootprintMapDec">Dec column</label>
-                            <select id="astronomyFootprintMapDec"><option value="">— auto —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyFootprintMapName">Name column</label>
-                            <select id="astronomyFootprintMapName"><option value="">— auto —</option></select>
-                        </div>
-                        <div>
-                            <label for="astronomyFootprintMapOutline">Footprint / STCS column</label>
-                            <select id="astronomyFootprintMapOutline"><option value="">— auto —</option></select>
-                        </div>
-                    </div>
-
                     <div class="hint">
-                        Import a JSON array or CSV table containing an STCS column such as
-                        <code>POLYGON J2000 ra1 dec1 ra2 dec2 ...</code>.
+                        Import a JSON array or CSV table containing the STCS geometry in
+                        <code>s_region</code>. The manager can configure Name after import.
                     </div>
                 </div>
             </details>
@@ -361,7 +300,8 @@
 
                     <div class="hint">
                         Manage astronomical observation footprints imported from STCS data.
-                        Each footprint set can be shown, hidden, removed, or assigned a colour.
+                        Name can be selected from the loaded metadata; each set can also be shown,
+                        hidden, removed, or assigned a colour.
                     </div>
                 </div>
             </details>
