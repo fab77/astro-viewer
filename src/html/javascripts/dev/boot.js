@@ -21,7 +21,7 @@ import {
 import { state, loadPersisted, persistBasic } from "./state.js";
 import { loadHiPS, wireHiPSControls } from "./hips.js";
 import { loadMeshHiPS } from "./meships.js";
-import { loadWMTS, loadXYZ } from "./xyz.js";
+import { addWMTSRasterOverlay, addXYZRasterOverlay, loadWMTS, loadXYZ } from "./xyz.js";
 import { loadTapRepo, showFootprint, hideFootprints } from "./tap.js";
 import {
   renderCatalogueManager,
@@ -398,6 +398,119 @@ function loadEarthMapPreset(presetKey) {
   });
 }
 
+function addEarthRasterOverlayPreset(presetKey) {
+  const preset = getEarthMapPreset(presetKey);
+  if (!preset) {
+    throw new Error(`Unknown Earth raster overlay preset: ${presetKey}`);
+  }
+
+  const commonOptions = {
+    minZoom: preset.minZoom ?? Number(el("xyzMinZoom")?.value ?? 0),
+    maxZoom: preset.maxZoom ?? Number(el("xyzMaxZoom")?.value ?? 8),
+    segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+    maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+  };
+
+  if (preset.type === "xyz") {
+    addXYZRasterOverlay(preset.urlTemplate, {
+      name: preset.label,
+      ...commonOptions,
+    });
+  } else {
+    addWMTSRasterOverlay({
+      baseUrl: preset.baseUrl,
+      urlTemplate: preset.urlTemplate || undefined,
+      layer: preset.preferredLayer,
+      tileMatrixSet: preset.tileMatrixSet,
+      style: preset.style,
+      format: preset.format,
+      requestEncoding: preset.requestEncoding,
+      dimensions: {},
+      ...commonOptions,
+    });
+  }
+
+  renderEarthRasterOverlays();
+}
+
+function renderEarthRasterOverlays() {
+  const container = el("earthRasterOverlays");
+  if (!container) return;
+
+  const overlays = state.AstroAPI?.getEarthRasterOverlays?.() ?? [];
+  container.replaceChildren();
+
+  const removeAllButton = el("btnRemoveAllEarthRasterOverlays");
+  if (removeAllButton) removeAllButton.disabled = overlays.length === 0;
+
+  if (overlays.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "No raster overlays.";
+    container.appendChild(empty);
+    return;
+  }
+
+  for (const overlay of overlays) {
+    const card = document.createElement("div");
+    card.className = "earth-raster-card";
+
+    const header = document.createElement("div");
+    header.className = "earth-raster-header";
+
+    const visible = document.createElement("input");
+    visible.type = "checkbox";
+    visible.checked = overlay.visible;
+    visible.title = "Visible";
+    visible.addEventListener("change", () => {
+      state.AstroAPI.setEarthRasterOverlayVisible(overlay.id, visible.checked);
+    });
+
+    const name = document.createElement("strong");
+    name.className = "earth-raster-name";
+    name.textContent = overlay.name;
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      state.AstroAPI.removeEarthRasterOverlay(overlay.id);
+      renderEarthRasterOverlays();
+    });
+
+    header.append(visible, name, remove);
+
+    const meta = document.createElement("div");
+    meta.className = "earth-raster-meta";
+    meta.textContent = overlay.sourceType.toUpperCase();
+
+    const opacityRow = document.createElement("div");
+    opacityRow.className = "earth-raster-opacity";
+
+    const opacity = document.createElement("input");
+    opacity.type = "range";
+    opacity.min = "0";
+    opacity.max = "1";
+    opacity.step = "0.05";
+    opacity.value = String(overlay.opacity);
+
+    const opacityValue = document.createElement("span");
+    opacityValue.className = "earth-raster-opacity-value mono";
+    opacityValue.textContent = `${Math.round(overlay.opacity * 100)}%`;
+
+    opacity.addEventListener("input", () => {
+      const value = Number(opacity.value);
+      state.AstroAPI.setEarthRasterOverlayOpacity(overlay.id, value);
+      opacityValue.textContent = `${Math.round(value * 100)}%`;
+    });
+
+    opacityRow.append(opacity, opacityValue);
+    card.append(header, meta, opacityRow);
+    container.appendChild(card);
+  }
+}
+
 function showEarthMapMetadata(presetKey) {
   const preset = getEarthMapPreset(presetKey);
   if (!preset) {
@@ -466,6 +579,26 @@ function wireUI() {
     const presetKey = el("earthMapPreset")?.value;
     if (presetKey) showEarthMapMetadata(presetKey);
   });
+
+  el("btnAddEarthRasterOverlay")?.addEventListener("click", () => {
+    const presetKey = el("earthRasterOverlayPreset")?.value;
+    if (!presetKey) return;
+
+    try {
+      addEarthRasterOverlayPreset(presetKey);
+      setStatus("Earth raster overlay added.");
+    } catch (e) {
+      setStatus("Earth raster overlay error: " + (e.message || e));
+    }
+  });
+
+  el("btnRemoveAllEarthRasterOverlays")?.addEventListener("click", () => {
+    state.AstroAPI?.removeAllEarthRasterOverlays?.();
+    renderEarthRasterOverlays();
+    setStatus("Earth raster overlays removed.");
+  });
+
+  renderEarthRasterOverlays();
 
   el("btnCloseEarthMapMetadata")?.addEventListener("click", () => {
     el("earthMapMetadataDialog")?.close();

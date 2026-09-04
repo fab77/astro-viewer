@@ -95,6 +95,18 @@ export type AstroSphereOptions = {
   gridLabelContainers?: GridLabelContainers;
 };
 
+export type EarthRasterOverlayInfo = {
+  id: string;
+  name: string;
+  sourceType: "xyz" | "wmts";
+  visible: boolean;
+  opacity: number;
+};
+
+type EarthRasterOverlay = EarthRasterOverlayInfo & {
+  map: XYZMap;
+};
+
 /**
  * AstroSphere — main WebGL scene controller (TS port)
  */
@@ -128,6 +140,8 @@ class AstroSphere {
   private _activeHiPSLayers: HiPS[] = [];
 
   private _activeXYZ2: XYZMap | null = null;
+  private _earthRasterOverlays: EarthRasterOverlay[] = [];
+  private _earthRasterOverlaySequence = 0;
   private _activeMeshHiPS: MeshHiPS | null = null;
   private _activeBaseLayer: "hips" | "xyz" | "meships" | null = null;
 
@@ -1084,6 +1098,89 @@ class AstroSphere {
     this._activeBaseLayer = "xyz";
   }
 
+  addXYZRasterOverlay(config: XYZMapDescriptor): EarthRasterOverlayInfo {
+    const map = new XYZMap(
+      1,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      config,
+      this._webgl,
+      this.gridLabelContainers,
+    );
+    return this.addEarthRasterOverlay(config.name, "xyz", map);
+  }
+
+  addWMTSRasterOverlay(config: WMTSLayerConfig): EarthRasterOverlayInfo {
+    const adapter = new WMTSAdapter(config);
+    const xyzConfig = adapter.toXYZLayerConfig();
+    const name = config.layer ? `WMTS ${config.layer}` : "WMTS Earth Raster Overlay";
+    const map = new XYZMap(
+      1,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      new XYZMapDescriptor(
+        name,
+        xyzConfig.urlTemplate,
+        xyzConfig.minZoom ?? 0,
+        xyzConfig.maxZoom ?? 8,
+        xyzConfig.segmentsPerSide ?? 48,
+        xyzConfig.maxCachedTiles ?? 384,
+        8,
+        xyzConfig.urlResolver,
+      ),
+      this._webgl,
+      this.gridLabelContainers,
+    );
+    return this.addEarthRasterOverlay(name, "wmts", map);
+  }
+
+  getEarthRasterOverlays(): EarthRasterOverlayInfo[] {
+    return this._earthRasterOverlays.map(({ map: _map, ...overlay }) => ({ ...overlay }));
+  }
+
+  setEarthRasterOverlayOpacity(id: string, opacity: number): void {
+    const overlay = this._earthRasterOverlays.find((entry) => entry.id === id);
+    if (!overlay) return;
+
+    overlay.opacity = Math.min(1, Math.max(0, opacity));
+    overlay.map.setOpacity(overlay.opacity);
+  }
+
+  setEarthRasterOverlayVisible(id: string, visible: boolean): void {
+    const overlay = this._earthRasterOverlays.find((entry) => entry.id === id);
+    if (overlay) overlay.visible = visible;
+  }
+
+  removeEarthRasterOverlay(id: string): void {
+    this._earthRasterOverlays = this._earthRasterOverlays.filter((entry) => entry.id !== id);
+  }
+
+  removeAllEarthRasterOverlays(): void {
+    this._earthRasterOverlays = [];
+  }
+
+  private addEarthRasterOverlay(
+    name: string,
+    sourceType: "xyz" | "wmts",
+    map: XYZMap,
+  ): EarthRasterOverlayInfo {
+    const overlay: EarthRasterOverlay = {
+      id: `earth-raster-${++this._earthRasterOverlaySequence}`,
+      name,
+      sourceType,
+      visible: true,
+      opacity: 0.65,
+      map,
+    };
+    map.setOpacity(overlay.opacity);
+    this._earthRasterOverlays.push(overlay);
+
+    const { map: _map, ...info } = overlay;
+    return { ...info };
+  }
+
   // Catalogue section
   async showCatalogue(cat: CatalogueGL) {
     // console.log(cat)
@@ -1708,6 +1805,11 @@ class AstroSphere {
 
     if (this._activeBaseLayer === "xyz") {
       this._activeXYZ2?.draw(skyEntityDrawInput);
+      for (const overlay of this._earthRasterOverlays) {
+        if (overlay.visible) {
+          overlay.map.draw(skyEntityDrawInput, true);
+        }
+      }
     }
     if (this._activeBaseLayer === "meships") {
       this._activeMeshHiPS?.draw(skyEntityDrawInput);

@@ -423,6 +423,23 @@
                             <button id="btnLoadXYZ" type="button">Load custom map</button>
                         </div>
                     </div>
+
+                    <div class="stack earth-raster-overlays-block">
+                        <div class="row">
+                            <strong>Raster overlays</strong>
+                            <button id="btnRemoveAllEarthRasterOverlays" class="secondary" type="button">Remove all</button>
+                        </div>
+                        <div class="row">
+                            <select id="earthRasterOverlayPreset">
+                                <option value="osm">OpenStreetMap — XYZ</option>
+                                <option value="openTopoMap">OpenTopoMap — XYZ</option>
+                                <option value="gibsBlueMarble" selected>NASA GIBS Blue Marble — WMTS</option>
+                                <option value="esriWorldImagery">Esri World Imagery — WMTS</option>
+                            </select>
+                            <button id="btnAddEarthRasterOverlay" type="button">Add overlay</button>
+                        </div>
+                        <div id="earthRasterOverlays"></div>
+                    </div>
                 </div>
 
                 <dialog id="earthMapMetadataDialog" class="metadata-dialog">

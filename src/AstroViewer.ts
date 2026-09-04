@@ -15,7 +15,7 @@ import { HiPSDescriptor } from "./model/hips/HiPSDescriptor.js";
 import { SphereFoV } from "./model/SphereFoV.js";
 import { Point } from "./model/Point.js";
 import { CatalogueGL } from "./model/catalogues/CatalogueGL.js";
-import type { CameraChangedDetail, PointCoordinates } from "./AstroSphere.js";
+import type { CameraChangedDetail, EarthRasterOverlayInfo, PointCoordinates } from "./AstroSphere.js";
 import {
   FootprintSetGL,
   HoveredFootprintDetail,
@@ -343,6 +343,44 @@ export class AstroViewer {
 
   activateWMTS(config: WMTSLayerConfig): void {
     this.astroSphere.activateWMTS(config);
+  }
+
+  addXYZRasterOverlay(config: XYZLayerConfig & { name?: string }): EarthRasterOverlayInfo {
+    const descriptor = new XYZMapDescriptor(
+      config.name ?? "XYZ Earth Raster Overlay",
+      config.urlTemplate,
+      config.minZoom ?? 0,
+      config.maxZoom ?? 8,
+      config.segmentsPerSide ?? 48,
+      config.maxCachedTiles ?? 384,
+      8,
+      config.urlResolver,
+    );
+    return this.astroSphere.addXYZRasterOverlay(descriptor);
+  }
+
+  addWMTSRasterOverlay(config: WMTSLayerConfig): EarthRasterOverlayInfo {
+    return this.astroSphere.addWMTSRasterOverlay(config);
+  }
+
+  getEarthRasterOverlays(): EarthRasterOverlayInfo[] {
+    return this.astroSphere.getEarthRasterOverlays();
+  }
+
+  setEarthRasterOverlayOpacity(id: string, opacity: number): void {
+    this.astroSphere.setEarthRasterOverlayOpacity(id, opacity);
+  }
+
+  setEarthRasterOverlayVisible(id: string, visible: boolean): void {
+    this.astroSphere.setEarthRasterOverlayVisible(id, visible);
+  }
+
+  removeEarthRasterOverlay(id: string): void {
+    this.astroSphere.removeEarthRasterOverlay(id);
+  }
+
+  removeAllEarthRasterOverlays(): void {
+    this.astroSphere.removeAllEarthRasterOverlays();
   }
 
   activateMeshHiPS(config: MeshHiPSConfig): void {

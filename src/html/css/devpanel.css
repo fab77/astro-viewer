@@ -1159,3 +1159,54 @@ body.sidebar-collapsed .hover-inspector {
     width: 100%;
     max-width: none;
 }
+
+
+/* Earth raster overlays ------------------------------------------------------ */
+.earth-raster-overlays-block {
+  margin-top: 10px;
+}
+
+#earthRasterOverlays {
+  display: grid;
+  gap: 8px;
+}
+
+.earth-raster-card {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--av-border);
+  border-radius: 8px;
+  background: var(--av-surface-raised);
+}
+
+.earth-raster-header,
+.earth-raster-opacity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.earth-raster-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.earth-raster-meta {
+  color: var(--av-text-muted);
+  font-size: 11px;
+}
+
+.earth-raster-opacity input[type="range"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.earth-raster-opacity-value {
+  flex: 0 0 42px;
+  text-align: right;
+}

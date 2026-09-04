@@ -36,6 +36,7 @@ export class XYZMap extends AbstractSkyEntity {
   private _latLonGrid: LatLonGrid
   private _colorMapIdx = 0
   private _colorMap = ColorMaps['native']
+  private _opacity = 1
 
 
   constructor(
@@ -64,6 +65,11 @@ export class XYZMap extends AbstractSkyEntity {
     const fov = 180
     this._zoom = xyzFovHelper.getZoom(fov)
 
+  }
+
+  setOpacity(opacity: number): void {
+    this._opacity = Math.min(1, Math.max(0, opacity))
+    this._xyzShaderProgram.setOpacity(this._opacity)
   }
 
   changeColorMap(colorMap: ColorMap): void {
@@ -135,7 +141,7 @@ export class XYZMap extends AbstractSkyEntity {
 
 
 
-  draw(input: SkyEntityDrawInput): void {
+  draw(input: SkyEntityDrawInput, asOverlay = false): void {
     const vMatrix = input.camera.getCameraMatrix() as Float32Array
     if (!vMatrix) return
 
@@ -146,6 +152,20 @@ export class XYZMap extends AbstractSkyEntity {
 
     const mMatrix = this.getModelMatrix() as Float32Array
     this._xyzShaderProgram.setRuntimeColorMap(this._colorMap)
+    this._xyzShaderProgram.setOpacity(this._opacity)
+
+    const depthTestWasEnabled = this._webgl.isEnabled(this._webgl.DEPTH_TEST)
+    const blendWasEnabled = this._webgl.isEnabled(this._webgl.BLEND)
+    const blendSrcRgb = this._webgl.getParameter(this._webgl.BLEND_SRC_RGB)
+    const blendDstRgb = this._webgl.getParameter(this._webgl.BLEND_DST_RGB)
+    const blendSrcAlpha = this._webgl.getParameter(this._webgl.BLEND_SRC_ALPHA)
+    const blendDstAlpha = this._webgl.getParameter(this._webgl.BLEND_DST_ALPHA)
+    if (asOverlay) {
+      this._webgl.disable(this._webgl.DEPTH_TEST)
+      this._webgl.enable(this._webgl.BLEND)
+      this._webgl.blendFunc(this._webgl.SRC_ALPHA, this._webgl.ONE_MINUS_SRC_ALPHA)
+    }
+
     const tileSelection = this._visibleTilesManager.computeVisibleTiles(
       this._zoom,
       this,
@@ -185,7 +205,21 @@ export class XYZMap extends AbstractSkyEntity {
       )
     }
 
-    this._latLonGrid.draw(input)
+    if (asOverlay) {
+      if (depthTestWasEnabled) this._webgl.enable(this._webgl.DEPTH_TEST)
+      else this._webgl.disable(this._webgl.DEPTH_TEST)
+
+      this._webgl.blendFuncSeparate(
+        blendSrcRgb,
+        blendDstRgb,
+        blendSrcAlpha,
+        blendDstAlpha,
+      )
+      if (blendWasEnabled) this._webgl.enable(this._webgl.BLEND)
+      else this._webgl.disable(this._webgl.BLEND)
+    } else {
+      this._latLonGrid.draw(input)
+    }
 
   }
 

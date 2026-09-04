@@ -453,3 +453,81 @@ describe("AstroSphere HiPS layers", () => {
     expect(hips2.opacity).toBe(1);
   });
 });
+
+describe("Earth raster overlays", () => {
+  function createEarthRasterSubject() {
+    const firstMap = { setOpacity: jest.fn() };
+    const secondMap = { setOpacity: jest.fn() };
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, any>;
+
+    Object.assign(subject, {
+      _earthRasterOverlays: [
+        {
+          id: "earth-raster-1",
+          name: "Overlay one",
+          sourceType: "xyz",
+          visible: true,
+          opacity: 0.65,
+          map: firstMap,
+        },
+        {
+          id: "earth-raster-2",
+          name: "Overlay two",
+          sourceType: "wmts",
+          visible: true,
+          opacity: 0.65,
+          map: secondMap,
+        },
+      ],
+    });
+
+    return { subject, firstMap, secondMap };
+  }
+
+  it("returns overlay metadata without exposing the renderer", () => {
+    const { subject } = createEarthRasterSubject();
+
+    expect(subject.getEarthRasterOverlays()).toEqual([
+      {
+        id: "earth-raster-1",
+        name: "Overlay one",
+        sourceType: "xyz",
+        visible: true,
+        opacity: 0.65,
+      },
+      {
+        id: "earth-raster-2",
+        name: "Overlay two",
+        sourceType: "wmts",
+        visible: true,
+        opacity: 0.65,
+      },
+    ]);
+  });
+
+  it("updates overlay visibility and clamps opacity", () => {
+    const { subject, firstMap } = createEarthRasterSubject();
+
+    subject.setEarthRasterOverlayVisible("earth-raster-1", false);
+    subject.setEarthRasterOverlayOpacity("earth-raster-1", 1.5);
+
+    expect(subject.getEarthRasterOverlays()[0]).toMatchObject({
+      visible: false,
+      opacity: 1,
+    });
+    expect(firstMap.setOpacity).toHaveBeenCalledWith(1);
+  });
+
+  it("removes one or all overlays", () => {
+    const { subject } = createEarthRasterSubject();
+
+    subject.removeEarthRasterOverlay("earth-raster-1");
+    expect(subject.getEarthRasterOverlays().map((overlay) => overlay.id)).toEqual([
+      "earth-raster-2",
+    ]);
+
+    subject.removeAllEarthRasterOverlays();
+    expect(subject.getEarthRasterOverlays()).toEqual([]);
+  });
+});
