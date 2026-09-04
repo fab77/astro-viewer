@@ -22,6 +22,8 @@ export const WMTS_PRESETS = {
     style: 'default',
     format: 'image/jpeg',
     requestEncoding: 'rest',
+    minZoom: 0,
+    maxZoom: 8,
     urlTemplate: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}',
   },
   esriWorldImagery: {
@@ -33,6 +35,8 @@ export const WMTS_PRESETS = {
     style: 'default',
     format: 'image/jpeg',
     requestEncoding: 'kvp',
+    minZoom: 0,
+    maxZoom: 8,
     urlTemplate: '',
   },
 };

@@ -61,6 +61,24 @@ const DEFAULT_ASTRONOMY_HIPS = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
 
 const DEFAULT_EARTH_PRESET = "esriWorldImagery";
 
+const XYZ_PRESETS = {
+  osm: {
+    label: "OpenStreetMap",
+    type: "xyz",
+    urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    minZoom: 0,
+    maxZoom: 19,
+  },
+  openTopoMap: {
+    label: "OpenTopoMap",
+    type: "xyz",
+    urlTemplate: "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+    minZoom: 0,
+    maxZoom: 17,
+  },
+};
+
+
 const DEFAULT_MESH_HIPS = "/meships-local/mhips-moon/";
 
 function setLonLatGridVisible(visible) {
@@ -330,8 +348,128 @@ async function bootstrap() {
   }
 }
 
+function getEarthMapPreset(presetKey) {
+  const xyzPreset = XYZ_PRESETS[presetKey];
+  if (xyzPreset) {
+    return xyzPreset;
+  }
+
+  const wmtsPreset = WMTS_PRESETS[presetKey];
+  if (!wmtsPreset) {
+    return null;
+  }
+
+  return {
+    ...wmtsPreset,
+    type: "wmts",
+  };
+}
+
+function loadEarthMapPreset(presetKey) {
+  const preset = getEarthMapPreset(presetKey);
+  if (!preset) {
+    throw new Error(`Unknown Earth map preset: ${presetKey}`);
+  }
+
+  const commonOptions = {
+    minZoom: preset.minZoom ?? Number(el("xyzMinZoom")?.value ?? 0),
+    maxZoom: preset.maxZoom ?? Number(el("xyzMaxZoom")?.value ?? 8),
+    segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+    maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+    maxConcurrentRequests: Number(el("xyzMaxConcurrentRequests")?.value ?? 4),
+  };
+
+  if (preset.type === "xyz") {
+    loadXYZ(preset.urlTemplate, commonOptions);
+    return;
+  }
+
+  applyWMTSPreset(presetKey);
+  loadWMTS({
+    baseUrl: preset.baseUrl,
+    urlTemplate: preset.urlTemplate || undefined,
+    layer: preset.preferredLayer,
+    tileMatrixSet: preset.tileMatrixSet,
+    style: preset.style,
+    format: preset.format,
+    requestEncoding: preset.requestEncoding,
+    dimensions: {},
+    ...commonOptions,
+  });
+}
+
+function showEarthMapMetadata(presetKey) {
+  const preset = getEarthMapPreset(presetKey);
+  if (!preset) {
+    return;
+  }
+
+  const title = el("earthMapMetadataTitle");
+  const body = el("earthMapMetadataBody");
+  const dialog = el("earthMapMetadataDialog");
+  if (!title || !body || !dialog) {
+    return;
+  }
+
+  title.textContent = preset.label;
+
+  const rows = preset.type === "xyz"
+    ? [
+        ["Protocol", "XYZ"],
+        ["URL template", preset.urlTemplate],
+        ["Zoom", `${preset.minZoom}-${preset.maxZoom}`],
+      ]
+    : [
+        ["Protocol", "WMTS"],
+        ["Layer", preset.preferredLayer],
+        ["TileMatrixSet", preset.tileMatrixSet],
+        ["Style", preset.style],
+        ["Format", preset.format],
+        ["Encoding", preset.requestEncoding.toUpperCase()],
+        ["Zoom", `${preset.minZoom}-${preset.maxZoom}`],
+        ["Capabilities", preset.capabilitiesUrl],
+      ];
+
+  body.replaceChildren();
+  for (const [label, value] of rows) {
+    const labelEl = document.createElement("div");
+    labelEl.className = "metadata-label";
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement("div");
+    valueEl.className = "metadata-value mono";
+    valueEl.textContent = value || "—";
+
+    body.append(labelEl, valueEl);
+  }
+
+  dialog.showModal();
+}
+
 function wireUI() {
   wireHiPSControls();
+
+  el("btnLoadEarthMap")?.addEventListener("click", () => {
+    const presetKey = el("earthMapPreset")?.value;
+    if (!presetKey) return;
+
+    const lonLatGridWanted = !!el("lonLatGridChk")?.checked;
+    try {
+      loadEarthMapPreset(presetKey);
+      setLonLatGridVisible(lonLatGridWanted);
+    } catch (e) {
+      setStatus("Earth map load error: " + (e.message || e));
+    }
+  });
+
+  el("btnEarthMapMetadata")?.addEventListener("click", () => {
+    const presetKey = el("earthMapPreset")?.value;
+    if (presetKey) showEarthMapMetadata(presetKey);
+  });
+
+  el("btnCloseEarthMapMetadata")?.addEventListener("click", () => {
+    el("earthMapMetadataDialog")?.close();
+  });
 
   el("btnLoadHiPS")?.addEventListener("click", async () => {
     const url = el("hipsUrl").value.trim();

@@ -224,6 +224,12 @@ body {
     padding: 16px 4px 12px;
 }
 
+.domain-kicker-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .domain-kicker {
     display: block;
     color: var(--av-accent);
@@ -231,6 +237,56 @@ body {
     font-weight: 700;
     letter-spacing: .12em;
     text-transform: uppercase;
+}
+
+.domain-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    border: 1px solid var(--av-border);
+    border-radius: 50%;
+    color: var(--av-text-secondary);
+    font-size: 10px;
+    line-height: 1;
+    cursor: help;
+}
+
+.metadata-dialog {
+    width: min(420px, calc(100vw - 32px));
+    border: 1px solid var(--av-border);
+    border-radius: 8px;
+    background: var(--av-surface-raised);
+    color: var(--av-text);
+    padding: 14px;
+}
+
+.metadata-dialog::backdrop {
+    background: rgba(0, 0, 0, .45);
+}
+
+.metadata-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.metadata-grid {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 7px 12px;
+    font-size: 11px;
+}
+
+.metadata-grid .metadata-label {
+    color: var(--av-text-muted);
+}
+
+.metadata-grid .metadata-value {
+    overflow-wrap: anywhere;
 }
 
 .domain-intro p {

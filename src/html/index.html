@@ -341,7 +341,11 @@
 
         <section id="earthTabPanel" class="tab-panel" data-dev-tab-panel="earth" hidden>
             <div class="domain-intro">
-                <span class="domain-kicker">Earth Observation</span>
+                <div class="domain-kicker-row">
+                    <span class="domain-kicker">Earth Observation</span>
+                    <span class="domain-help" tabindex="0" aria-label="WMTS support information"
+                        title="WMTS support currently reuses the XYZ renderer and is limited to Web Mercator-compatible TileMatrixSets. Generic WMTS TileMatrixSet geometries and arbitrary CRS are not supported yet.">?</span>
+                </div>
                 <p>Explore tiled imagery, GeoJSON overlays and satellite footprint demonstrations.</p>
             </div>
 
@@ -398,46 +402,36 @@
             <details id="earthPanel" open data-ui-panel="earth:maps">
                 <summary>Maps</summary>
 
-                <details id="xyzPanel" style="margin-top:8px; padding-left: 20px;">
-                    <summary>XYZ maps</summary>
-                    <div class="stack" style="margin-top:8px;">
-                        <label for="xyzUrlTemplate">XYZ URL Template</label>
+                <div class="stack" style="margin-top:8px;">
+                    <label for="earthMapPreset">Base map</label>
+                    <div class="row">
+                        <select id="earthMapPreset">
+                            <option value="osm">OpenStreetMap — XYZ</option>
+                            <option value="openTopoMap">OpenTopoMap — XYZ</option>
+                            <option value="gibsBlueMarble">NASA GIBS Blue Marble — WMTS</option>
+                            <option value="esriWorldImagery" selected>Esri World Imagery — WMTS</option>
+                        </select>
+                        <button id="btnLoadEarthMap" type="button">Load map</button>
+                        <button id="btnEarthMapMetadata" class="secondary" type="button">Metadata</button>
+                    </div>
+
+                    <div class="stack survey-custom-block">
+                        <label for="xyzUrlTemplate">Custom XYZ map</label>
+                        <input id="xyzUrlTemplate" type="url" value="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            placeholder="https://…/{z}/{x}/{y}.png" />
                         <div class="row">
-                            <input id="xyzUrlTemplate" type="url" value="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                placeholder="https://…/{z}/{x}/{y}.png" />
-                            <button id="btnLoadXYZ">Load XYZ</button>
+                            <button id="btnLoadXYZ" type="button">Load custom map</button>
                         </div>
                     </div>
-                </details>
+                </div>
 
-                <details id="wmtsPanel" style="margin-top:8px; padding-left: 20px;">
-                    <summary>WMTS maps</summary>
-
-                    <div class="stack">
-                        <label for="wmtsPreset">WMTS preset</label>
-                        <div class="row">
-                            <select id="wmtsPreset">
-                                <option value="gibsBlueMarble">NASA GIBS Blue Marble</option>
-                                <option value="esriWorldImagery">Esri World Imagery</option>
-                            </select>
-                            <button id="btnLoadWMTSCapabilities" class="secondary">Read Capabilities</button>
-                        </div>
-                        <label for="wmtsCapabilitiesUrl">WMTS capabilities URL</label>
-                        <div class="row">
-                            <input id="wmtsCapabilitiesUrl" type="url" autocomplete="off"
-                                value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml"
-                                placeholder="https://…/WMTSCapabilities.xml" />
-                            <span class="hint">Auto-fills layer, matrix set, template and zoom range.</span>
-                        </div>
-                        <label for="wmtsBaseUrl">WMTS base URL</label>
-                        <div class="row">
-                            <input id="wmtsBaseUrl" type="url" autocomplete="off"
-                                value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/"
-                                placeholder="https://…/wmts" />
-                            <button id="btnLoadWMTS">Load WMTS</button>
-                        </div>
+                <dialog id="earthMapMetadataDialog" class="metadata-dialog">
+                    <div class="metadata-dialog-header">
+                        <strong id="earthMapMetadataTitle">Map metadata</strong>
+                        <button id="btnCloseEarthMapMetadata" class="secondary" type="button">Close</button>
                     </div>
-                </details>
+                    <div id="earthMapMetadataBody" class="metadata-grid"></div>
+                </dialog>
 
 
 
@@ -469,6 +463,11 @@
             <details id="earthWmtsAdvancedPanel" open data-ui-panel="earth:advanced">
                 <summary>WMTS request</summary>
                 <div class="stack" style="margin-top:8px;">
+                    <input id="wmtsCapabilitiesUrl" type="url" autocomplete="off"
+                        value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/1.0.0/WMTSCapabilities.xml"
+                        placeholder="Capabilities URL" />
+                    <input id="wmtsBaseUrl" type="url" autocomplete="off"
+                        value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/" placeholder="Base URL" />
                     <div class="row3">
                         <input id="wmtsLayer" type="text" autocomplete="off" value="BlueMarble_ShadedRelief_Bathymetry"
                             placeholder="Layer" />
