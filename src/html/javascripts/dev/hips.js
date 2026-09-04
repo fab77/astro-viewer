@@ -51,8 +51,8 @@ export async function addHiPS(baseUrl) {
   const existingLayers = state.AstroAPI?.getActiveHiPSLayers?.() ?? [];
   const hips = await state.AstroAPI.addHiPSFromUrl(baseUrl);
 
-  // "Add HiPS" means overlay in the demo. Keep the first layer opaque,
-  // but make subsequent layers immediately visible as a composition.
+  // The first stacked layer replaces any standalone base layer. Additional
+  // stacked layers start semi-transparent so the composition is visible.
   if (existingLayers.length > 0) {
     state.AstroAPI.setHiPSOpacity(hips, 0.65);
   }
@@ -389,7 +389,28 @@ export function refreshHiPSUI() {
   populateHiPSPresetControls();
   updateHiPSDisplayVisibility();
   updateHiPSDisplayLayerLabel();
+  updateHiPSModeControls();
   renderHiPSLayers();
+}
+
+function updateHiPSModeControls() {
+  const hasStackedLayers =
+    (state.AstroAPI?.getActiveHiPSLayers?.().length ?? 0) > 0;
+
+  for (const id of ["btnLoadHiPSPreset", "btnLoadHiPS"]) {
+    const button = el(id);
+    if (button) {
+      button.disabled = hasStackedLayers;
+      button.title = hasStackedLayers
+        ? "Remove all stacked layers before loading a base layer."
+        : "";
+    }
+  }
+
+  const removeAllButton = el("btnRemoveAllHiPS");
+  if (removeAllButton) {
+    removeAllButton.disabled = !hasStackedLayers;
+  }
 }
 
 function updateHiPSDisplayLayerLabel() {
@@ -597,7 +618,7 @@ function renderHiPSLayers() {
   if (layers.length === 0) {
     const empty = document.createElement("div");
     empty.className = "hint";
-    empty.textContent = "No HiPS layers loaded.";
+    empty.textContent = "No stacked HiPS layers.";
     container.appendChild(empty);
     return;
   }

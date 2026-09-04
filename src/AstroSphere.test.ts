@@ -304,6 +304,35 @@ describe("AstroSphere HiPS layers", () => {
     expect(subject.activeHiPS).toBe(hipsB);
   });
 
+  it("clears the HiPS base layer when the last HiPS is removed", () => {
+    const hips = { baseURL: "https://example.org/hips/" };
+
+    const tileBuffer = {
+      removeHiPS: jest.fn(),
+    };
+
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+
+    Object.assign(subject, {
+      _activeHiPS: hips,
+      _activeHiPSLayers: [hips],
+      _activeBaseLayer: "hips",
+      _healpixGrid: {
+        visibleTilesManager: {
+          tileBuffer,
+        },
+      },
+    });
+
+    subject.removeHiPS(hips as never);
+
+    expect(tileBuffer.removeHiPS).toHaveBeenCalledWith(hips);
+    expect(subject.activeHiPSLayers).toEqual([]);
+    expect(subject.activeHiPS).toBeNull();
+    expect((subject as any)._activeBaseLayer).toBeNull();
+  });
+
   it("removes all HiPS layers", () => {
     const hipsA = { baseURL: "https://example.org/a/" };
     const hipsB = { baseURL: "https://example.org/b/" };
@@ -334,6 +363,44 @@ describe("AstroSphere HiPS layers", () => {
 
     expect(subject.activeHiPSLayers).toEqual([]);
     expect(subject.activeHiPS).toBeNull();
+  });
+
+  it("loads a standalone HiPS without adding it to the stack", () => {
+    const subject = createHiPSLayersSubject();
+    const descriptor = createHiPSDescriptor("https://example.test/base/");
+
+    const base = subject.activateHiPS(descriptor);
+
+    expect(subject.activeHiPS).toBe(base);
+    expect(subject.activeHiPSLayers).toEqual([]);
+  });
+
+  it("does not allow loading a base HiPS while stacked layers are active", () => {
+    const subject = createHiPSLayersSubject();
+    subject.addHiPS(createHiPSDescriptor("https://example.test/stack/"));
+
+    expect(() =>
+      subject.activateHiPS(createHiPSDescriptor("https://example.test/base/")),
+    ).toThrow("Cannot load a HiPS base layer while stacked layers are active.");
+  });
+
+  it("discards the standalone base HiPS when entering stack mode", () => {
+    const subject = createHiPSLayersSubject();
+    const base = subject.activateHiPS(
+      createHiPSDescriptor("https://example.test/base/"),
+    );
+
+    const stacked = subject.addHiPS(
+      createHiPSDescriptor("https://example.test/stack/"),
+    );
+
+    const tileBuffer = (subject as unknown as {
+      _healpixGrid: { visibleTilesManager: { tileBuffer: { removeHiPS: jest.Mock } } };
+    })._healpixGrid.visibleTilesManager.tileBuffer;
+
+    expect(tileBuffer.removeHiPS).toHaveBeenCalledWith(base);
+    expect(subject.activeHiPSLayers).toEqual([stacked]);
+    expect(subject.activeHiPS).toBe(stacked);
   });
 
   it("changes the active HiPS without changing layer order", () => {

@@ -496,8 +496,7 @@ class AstroSphere {
   }
 
   private emitCameraChanged(reason: string) {
-    // avoid dispatch before scene is ready
-    if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS) return;
+    // Camera interaction remains meaningful even when no base layer is active.
     if (!(this._healpixGrid as any)?.fovObj) return;
 
     const detail = this.getCurrentStatus();
@@ -912,17 +911,20 @@ class AstroSphere {
   }
 
   activateHiPS(hipsDescriptor: HiPSDescriptor): HiPS {
-    const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
-
-    for (const hips of this._activeHiPSLayers) {
-      tileBuffer.removeHiPS(hips);
+    if (this._activeHiPSLayers.length > 0) {
+      throw new Error(
+        "Cannot load a HiPS base layer while stacked layers are active.",
+      );
     }
 
-    this._activeHiPSLayers = [];
+    const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+
+    if (this._activeHiPS) {
+      tileBuffer.removeHiPS(this._activeHiPS);
+    }
 
     const hips = this.createHiPS(hipsDescriptor);
 
-    this._activeHiPSLayers.push(hips);
     this._activeHiPS = hips;
     this._activeBaseLayer = "hips";
 
@@ -930,7 +932,10 @@ class AstroSphere {
   }
 
   setHiPSOpacity(hips: HiPS, opacity: number): void {
-    if (!this._activeHiPSLayers.includes(hips)) {
+    const isBaseLayer =
+      this._activeHiPSLayers.length === 0 && this._activeHiPS === hips;
+
+    if (!isBaseLayer && !this._activeHiPSLayers.includes(hips)) {
       throw new Error("HiPS layer is not active in this AstroSphere.");
     }
 
@@ -942,6 +947,15 @@ class AstroSphere {
       String(url).replace(/\/+$/, "");
 
     const descriptorURL = normalizeURL(hipsDescriptor.url);
+
+    // Entering stack mode discards the standalone base HiPS. Base mode and
+    // stack mode are intentionally mutually exclusive.
+    if (this._activeHiPSLayers.length === 0 && this._activeHiPS) {
+      const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+
+      tileBuffer.removeHiPS(this._activeHiPS);
+      this._activeHiPS = null;
+    }
 
     const existing = this._activeHiPSLayers.find(
       (hips) => normalizeURL(hips.baseURL) === descriptorURL,
@@ -989,8 +1003,12 @@ class AstroSphere {
   removeAllHiPS(): void {
     const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
 
-    for (const hips of this._activeHiPSLayers) {
-      tileBuffer.removeHiPS(hips);
+    if (this._activeHiPSLayers.length === 0 && this._activeHiPS) {
+      tileBuffer.removeHiPS(this._activeHiPS);
+    } else {
+      for (const hips of this._activeHiPSLayers) {
+        tileBuffer.removeHiPS(hips);
+      }
     }
 
     this._activeHiPSLayers = [];
@@ -1452,7 +1470,6 @@ class AstroSphere {
   draw(canvas: HTMLCanvasElement) {
     if (this._refreshingStatus) return;
     if (!this._webgl) return;
-    if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS) return;
 
     if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
       return;
@@ -1628,10 +1645,11 @@ class AstroSphere {
       this._webgl.ONE_MINUS_SRC_ALPHA,
     );
 
-    if (this._activeBaseLayer === "hips" && this._activeHiPSLayers.length > 0) {
-      const maxHiPSOrder = Math.max(
-        ...this._activeHiPSLayers.map((hips) => hips.maxOrder),
-      );
+    if (this._activeBaseLayer === "hips" && this._activeHiPS) {
+      const maxHiPSOrder =
+        this._activeHiPSLayers.length > 0
+          ? Math.max(...this._activeHiPSLayers.map((hips) => hips.maxOrder))
+          : this._activeHiPS.maxOrder;
 
       const visibleOrder = Math.min(
         this._healpixGrid.visibleorder,
@@ -1722,7 +1740,8 @@ class AstroSphere {
       const activeModelMatrix =
         this._activeHiPS?.getModelMatrix() ??
         this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
+        this._activeMeshHiPS?.getModelMatrix() ??
+        this._healpixGrid.getModelMatrix();
       if (activeModelMatrix) {
         cat.draw(
           activeModelMatrix as Float32Array,
@@ -1739,7 +1758,8 @@ class AstroSphere {
       const activeModelMatrix =
         this._activeHiPS?.getModelMatrix() ??
         this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
+        this._activeMeshHiPS?.getModelMatrix() ??
+        this._healpixGrid.getModelMatrix();
       if (activeModelMatrix) {
         fst.draw(
           activeModelMatrix as Float32Array,
@@ -1754,7 +1774,8 @@ class AstroSphere {
       const activeModelMatrix =
         this._activeHiPS?.getModelMatrix() ??
         this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
+        this._activeMeshHiPS?.getModelMatrix() ??
+        this._healpixGrid.getModelMatrix();
       if (activeModelMatrix) {
         polylineSet.draw(
           activeModelMatrix as Float32Array,
@@ -1769,7 +1790,8 @@ class AstroSphere {
       const activeModelMatrix =
         this._activeHiPS?.getModelMatrix() ??
         this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
+        this._activeMeshHiPS?.getModelMatrix() ??
+        this._healpixGrid.getModelMatrix();
       if (activeModelMatrix) {
         sensorCone.draw(
           this._perspectiveMatrixManager.pMatrix as Float32Array,
@@ -1783,7 +1805,8 @@ class AstroSphere {
       const activeModelMatrix =
         this._activeHiPS?.getModelMatrix() ??
         this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
+        this._activeMeshHiPS?.getModelMatrix() ??
+        this._healpixGrid.getModelMatrix();
       if (activeModelMatrix) {
         satelliteObject.draw(
           this._perspectiveMatrixManager.pMatrix as Float32Array,

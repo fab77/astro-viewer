@@ -89,19 +89,11 @@
 
                     <div class="row">
                         <input id="astronomyCenterCoords" class="mono" type="text" readonly value="Center: —" />
-
-                        <button id="btnAstronomyRefreshCenter" class="secondary" type="button"
-                            title="Update center coordinates">
-                            Refresh
-                        </button>
                     </div>
 
+                    <label for="astronomyHoverCoords">Move the mouse over the sphere</label>
                     <div class="row">
                         <input id="astronomyHoverCoords" class="mono" type="text" readonly value="Hover: —" />
-
-                        <span class="hint">
-                            Move the mouse over the sphere
-                        </span>
                     </div>
                 </div>
             </details>
@@ -127,8 +119,8 @@
                             <option value="fermi1To3">Fermi 1–3 GeV — Gamma ray [FITS]</option>
                         </select>
 
-                        <button id="btnLoadHiPSPreset" type="button">Load survey</button>
-                        <button id="btnAddHiPSPreset" type="button" class="secondary">Add to layers</button>
+                        <button id="btnLoadHiPSPreset" type="button">Load layer</button>
+                        <button id="btnAddHiPSPreset" type="button" class="secondary">Add to stack</button>
                     </div>
 
                     <div class="stack survey-custom-block">
@@ -136,14 +128,14 @@
                         <input id="hipsUrl" type="url" value=""
                             placeholder="https://…/HiPS/" />
                         <div class="row">
-                            <button id="btnLoadHiPS">Load custom</button>
-                            <button id="btnAddHiPS" type="button" class="secondary">Add custom</button>
+                            <button id="btnLoadHiPS">Load custom layer</button>
+                            <button id="btnAddHiPS" type="button" class="secondary">Add custom to stack</button>
                         </div>
                     </div>
 
                     <div class="stack" style="margin-top:8px;">
                         <div class="row">
-                            <strong>Active layers</strong>
+                            <strong>Stacked layers</strong>
                             <button id="btnRemoveAllHiPS" type="button">Remove all</button>
                         </div>
 
@@ -372,25 +364,16 @@
                     <div class="row">
                         <input id="earthCenterCoords" class="mono" type="text" readonly value="Center: —" />
 
-                        <button id="btnEarthRefreshCenter" class="secondary" type="button"
-                            title="Update center coordinates">
-                            Refresh
-                        </button>
                     </div>
 
+                    <label for="earthHoverCoords">Move the mouse over the globe</label>
                     <div class="row">
                         <input id="earthHoverCoords" class="mono" type="text" readonly value="Hover: —" />
-
-                        <span class="hint">
-                            Move the mouse over the globe
-                        </span>
                     </div>
 
+                    <label for="xyzDiagFoV">Field of view (diagonal) at the center point, in degrees.</label>
                     <div class="row">
-                        <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />
-
-                        <span class="hint">
-                            Field of view (diagonal) at the center point, in degrees.
+                        <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />        
                         </span>
                     </div>
                 </div>

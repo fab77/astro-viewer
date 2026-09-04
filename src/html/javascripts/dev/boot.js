@@ -92,9 +92,7 @@ async function activateDemoDomain(domain) {
         lonLatChk.checked = false;
       }
 
-      await loadHiPS(DEFAULT_ASTRONOMY_HIPS);
-
-      setStatus("Astronomy: DSS Color loaded.");
+      setStatus("Astronomy ready. Load a layer or add surveys to the stack.");
       return;
     }
 
@@ -298,9 +296,9 @@ async function bootstrap() {
     if (xyzMaxZoomInput) {
       xyzMaxZoomInput.value = "8";
     }
-    // Load HiPS using resolved URL
+    
+    // Load the default Astronomy HiPS as the initial base layer.
     await loadHiPS(defaultHiPS.trim());
-
     AC.run();
 
     wireDevTabs(activateDemoDomain);
