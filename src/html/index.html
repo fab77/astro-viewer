@@ -63,12 +63,18 @@
             </div>
 
             <nav class="section-nav" aria-label="Astronomy tools">
-                <button class="section-nav-button active" type="button" data-ui-domain="astronomy" data-ui-section="navigate">Navigate</button>
-                <button class="section-nav-button" type="button" data-ui-domain="astronomy" data-ui-section="surveys">Surveys</button>
-                <button class="section-nav-button" type="button" data-ui-domain="astronomy" data-ui-section="data">Data</button>
-                <button class="section-nav-button" type="button" data-ui-domain="astronomy" data-ui-section="overlays">Overlays</button>
-                <button class="section-nav-button" type="button" data-ui-domain="astronomy" data-ui-section="grids">Grids</button>
-                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="astronomy" data-ui-section="advanced">Advanced</button>
+                <button class="section-nav-button active" type="button" data-ui-domain="astronomy"
+                    data-ui-section="navigate">Navigate</button>
+                <button class="section-nav-button" type="button" data-ui-domain="astronomy"
+                    data-ui-section="surveys">Surveys</button>
+                <button class="section-nav-button" type="button" data-ui-domain="astronomy"
+                    data-ui-section="data">Data</button>
+                <button class="section-nav-button" type="button" data-ui-domain="astronomy"
+                    data-ui-section="overlays">Overlays</button>
+                <button class="section-nav-button" type="button" data-ui-domain="astronomy"
+                    data-ui-section="grids">Grids</button>
+                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="astronomy"
+                    data-ui-section="advanced">Advanced</button>
             </nav>
 
             <!-- Astronomy navigation -->
@@ -89,6 +95,10 @@
 
                     <div class="row">
                         <input id="astronomyCenterCoords" class="mono" type="text" readonly value="Center: —" />
+                    </div>
+
+                    <div class="row">
+                        <input id="astronomyFoV" class="mono" type="text" readonly value="FoV: —" />
                     </div>
 
                     <label for="astronomyHoverCoords">Move the mouse over the sphere</label>
@@ -125,8 +135,7 @@
 
                     <div class="stack survey-custom-block">
                         <label for="hipsUrl">Custom survey</label>
-                        <input id="hipsUrl" type="url" value=""
-                            placeholder="https://…/HiPS/" />
+                        <input id="hipsUrl" type="url" value="" placeholder="https://…/HiPS/" />
                         <div class="row">
                             <button id="btnLoadHiPS">Load custom layer</button>
                             <button id="btnAddHiPS" type="button" class="secondary">Add custom to stack</button>
@@ -195,7 +204,8 @@
 
                                 <label for="hipsScaleParam">Scale strength</label>
                                 <input id="hipsScaleParam" type="number" min="0.1" step="0.5" value="1" disabled />
-                                <div class="hint">Robust percentile is the display default; HiPS min/max keeps the raw survey range.</div>
+                                <div class="hint">Robust percentile is the display default; HiPS min/max keeps the raw
+                                    survey range.</div>
                             </div>
                         </div>
                     </details>
@@ -299,15 +309,15 @@
             </details>
 
             <details id="hipsDiagnosticsPanel" open data-ui-panel="astronomy:advanced">
-                    <summary>HiPS diagnostics</summary>
-                    <div class="stack">
-                        <!-- <input id="hipsDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
-                        <div id="hipsDiagSummary" class="div-text-wrapper">Mode: —</div>
-                        <div id="hipsDiagCache" class="div-text-wrapper">Cache: —</div>
-                        <div id="hipsDiagRequests" class="div-text-wrapper">Requests: —</div>
-                        <div id="hipsDiagBackoff" class="hint">Backoff: none</div>
-                    </div>
-                </details>
+                <summary>HiPS diagnostics</summary>
+                <div class="stack">
+                    <!-- <input id="hipsDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
+                    <div id="hipsDiagSummary" class="div-text-wrapper">Mode: —</div>
+                    <div id="hipsDiagCache" class="div-text-wrapper">Cache: —</div>
+                    <div id="hipsDiagRequests" class="div-text-wrapper">Requests: —</div>
+                    <div id="hipsDiagBackoff" class="hint">Backoff: none</div>
+                </div>
+            </details>
 
             <details id="astroGridPanel" open data-ui-panel="astronomy:grids">
                 <summary>Grids</summary>
@@ -336,12 +346,18 @@
             </div>
 
             <nav class="section-nav" aria-label="Earth Observation tools">
-                <button class="section-nav-button active" type="button" data-ui-domain="earth" data-ui-section="navigate">Navigate</button>
-                <button class="section-nav-button" type="button" data-ui-domain="earth" data-ui-section="maps">Maps</button>
-                <button class="section-nav-button" type="button" data-ui-domain="earth" data-ui-section="data">Data</button>
-                <button class="section-nav-button" type="button" data-ui-domain="earth" data-ui-section="satellite">Satellite</button>
-                <button class="section-nav-button" type="button" data-ui-domain="earth" data-ui-section="grids">Grids</button>
-                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="earth" data-ui-section="advanced">Advanced</button>
+                <button class="section-nav-button active" type="button" data-ui-domain="earth"
+                    data-ui-section="navigate">Navigate</button>
+                <button class="section-nav-button" type="button" data-ui-domain="earth"
+                    data-ui-section="maps">Maps</button>
+                <button class="section-nav-button" type="button" data-ui-domain="earth"
+                    data-ui-section="data">Data</button>
+                <button class="section-nav-button" type="button" data-ui-domain="earth"
+                    data-ui-section="satellite">Satellite</button>
+                <button class="section-nav-button" type="button" data-ui-domain="earth"
+                    data-ui-section="grids">Grids</button>
+                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="earth"
+                    data-ui-section="advanced">Advanced</button>
             </nav>
 
 
@@ -373,7 +389,7 @@
 
                     <label for="xyzDiagFoV">Field of view (diagonal) at the center point, in degrees.</label>
                     <div class="row">
-                        <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />        
+                        <input id="xyzDiagFoV" class="mono" type="text" readonly value="FoV: —" />
                         </span>
                     </div>
                 </div>
@@ -454,10 +470,10 @@
                 <summary>WMTS request</summary>
                 <div class="stack" style="margin-top:8px;">
                     <div class="row3">
-                        <input id="wmtsLayer" type="text" autocomplete="off"
-                            value="BlueMarble_ShadedRelief_Bathymetry" placeholder="Layer" />
-                        <input id="wmtsTileMatrixSet" type="text" autocomplete="off"
-                            value="GoogleMapsCompatible_Level8" placeholder="TileMatrixSet" />
+                        <input id="wmtsLayer" type="text" autocomplete="off" value="BlueMarble_ShadedRelief_Bathymetry"
+                            placeholder="Layer" />
+                        <input id="wmtsTileMatrixSet" type="text" autocomplete="off" value="GoogleMapsCompatible_Level8"
+                            placeholder="TileMatrixSet" />
                         <select id="wmtsEncoding">
                             <option value="rest" selected>REST</option>
                             <option value="kvp">KVP</option>
@@ -465,30 +481,29 @@
                     </div>
                     <div class="row3">
                         <input id="wmtsStyle" type="text" autocomplete="off" value="default" placeholder="Style" />
-                        <input id="wmtsTime" type="text" autocomplete="off" value=""
-                            placeholder="Time" />
-                        <input id="wmtsFormat" type="text" autocomplete="off" value="image/jpeg"
-                            placeholder="Format" />
+                        <input id="wmtsTime" type="text" autocomplete="off" value="" placeholder="Time" />
+                        <input id="wmtsFormat" type="text" autocomplete="off" value="image/jpeg" placeholder="Format" />
                     </div>
                     <input id="wmtsDimensions" type="text" autocomplete="off" value="{}"
                         placeholder='{"SomeDimension":"value"}' />
                     <input id="wmtsUrlTemplate" type="text" autocomplete="off"
                         value="https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{Layer}/{Style}/{TileMatrixSet}/{TileMatrix}/{TileRow}/{TileCol}.{TileFormatExtension}"
                         placeholder="REST template with {TileMatrix}/{TileRow}/{TileCol}" />
-                    <div class="hint">WMTS currently reuses the XYZ renderer and assumes a Web Mercator-compatible tile matrix set.</div>
+                    <div class="hint">WMTS currently reuses the XYZ renderer and assumes a Web Mercator-compatible tile
+                        matrix set.</div>
                 </div>
             </details>
 
             <details id="xyzDiagnosticsPanel" open data-ui-panel="earth:advanced">
-                    <summary>XYZ diagnostics</summary>
-                    <div class="stack">
-                        <!-- <input id="xyzDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
-                        <div id="xyzDiagSummary" class="div-text-wrapper">Mode: —</div>
-                        <div id="xyzDiagCache" class="div-text-wrapper">Cache: —</div>
-                        <div id="xyzDiagRequests" class="div-text-wrapper">Requests: —</div>
-                        <div id="xyzDiagBackoff" class="hint">Backoff: none</div>
-                    </div>
-                </details>
+                <summary>XYZ diagnostics</summary>
+                <div class="stack">
+                    <!-- <input id="xyzDiagSummary" class="mono" type="text" readonly value="Mode: —" /> -->
+                    <div id="xyzDiagSummary" class="div-text-wrapper">Mode: —</div>
+                    <div id="xyzDiagCache" class="div-text-wrapper">Cache: —</div>
+                    <div id="xyzDiagRequests" class="div-text-wrapper">Requests: —</div>
+                    <div id="xyzDiagBackoff" class="hint">Backoff: none</div>
+                </div>
+            </details>
 
             <details id="earthImportPanel" open data-ui-panel="earth:data">
                 <summary>GeoJSON data</summary>
@@ -574,10 +589,14 @@
             </div>
 
             <nav class="section-nav" aria-label="3D / Mesh tools">
-                <button class="section-nav-button active" type="button" data-ui-domain="mesh" data-ui-section="navigate">Navigate</button>
-                <button class="section-nav-button" type="button" data-ui-domain="mesh" data-ui-section="surface">Surface</button>
-                <button class="section-nav-button" type="button" data-ui-domain="mesh" data-ui-section="display">Display</button>
-                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="mesh" data-ui-section="advanced">Advanced</button>
+                <button class="section-nav-button active" type="button" data-ui-domain="mesh"
+                    data-ui-section="navigate">Navigate</button>
+                <button class="section-nav-button" type="button" data-ui-domain="mesh"
+                    data-ui-section="surface">Surface</button>
+                <button class="section-nav-button" type="button" data-ui-domain="mesh"
+                    data-ui-section="display">Display</button>
+                <button class="section-nav-button section-nav-advanced" type="button" data-ui-domain="mesh"
+                    data-ui-section="advanced">Advanced</button>
             </nav>
 
             <!-- 3D / Mesh navigation -->
