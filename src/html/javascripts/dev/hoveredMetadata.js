@@ -109,7 +109,7 @@ function renderFootprintCards(sets) {
       const details = Array.isArray(footprint?.details) ? footprint.details : [];
       const columns = set?.metadata?.columns || [];
       const rows = columns
-        .map((column, index) => metadataRow(column?.name, details[index], column?.unit))
+        .map((column, index) => metadataRow(column?.name, footprintDetailValue(details[index]), column?.unit))
         .filter(Boolean)
         .join('');
       cards.push(`
@@ -120,6 +120,18 @@ function renderFootprintCards(sets) {
     }
   }
   return cards;
+}
+
+function footprintDetailValue(detail) {
+  if (
+    detail &&
+    typeof detail === 'object' &&
+    Object.prototype.hasOwnProperty.call(detail, 'value')
+  ) {
+    return detail.value;
+  }
+
+  return detail;
 }
 
 function metadataRow(key, value, unit) {

@@ -531,3 +531,66 @@ describe("Earth raster overlays", () => {
     expect(subject.getEarthRasterOverlays()).toEqual([]);
   });
 });
+
+describe("AstroSphere domain ownership", () => {
+  function createDomainSubject() {
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+
+    Object.assign(subject, {
+      _activeDomain: "astronomy",
+      _activeBaseLayer: "hips",
+      _activeHiPS: { getModelMatrix: jest.fn() },
+      _activeXYZ2: { getModelMatrix: jest.fn() },
+      _activeMeshHiPS: { getModelMatrix: jest.fn() },
+      astronomyCatalogues: [],
+      earthPointSets: [],
+      astronomyFootprintSets: [],
+      earthFootprintSets: [],
+      lastHoveredSource: null,
+      lastHoveredCatalogue: null,
+    });
+
+    return subject;
+  }
+
+  it("restores the existing base-layer kind when switching domains", () => {
+    const subject = createDomainSubject();
+
+    subject.setActiveDomain("earth");
+    expect((subject as any)._activeBaseLayer).toBe("xyz");
+
+    subject.setActiveDomain("mesh");
+    expect((subject as any)._activeBaseLayer).toBe("meships");
+
+    subject.setActiveDomain("astronomy");
+    expect((subject as any)._activeBaseLayer).toBe("hips");
+  });
+
+  it("keeps Astronomy and Earth point ownership separate", async () => {
+    const subject = createDomainSubject();
+    const astronomyCatalogue = {} as any;
+    const earthPointSet = {} as any;
+
+    await subject.showCatalogue(astronomyCatalogue);
+    await subject.showTerraPointSet(earthPointSet);
+
+    expect((subject as any).astronomyCatalogues).toEqual([astronomyCatalogue]);
+    expect((subject as any).earthPointSets).toEqual([earthPointSet]);
+  });
+
+  it("returns hovered footprints only from the active domain", async () => {
+    const subject = createDomainSubject();
+    const astronomyFootprintSet = { hoveredFootprints: { domain: "astronomy" } } as any;
+    const earthFootprintSet = { hoveredFootprints: { domain: "earth" } } as any;
+
+    await subject.showFootprintSet(astronomyFootprintSet);
+    await subject.showTerraFootprintSet(earthFootprintSet);
+
+    subject.setActiveDomain("astronomy");
+    expect(subject.getHoveredFootprints()).toEqual([{ domain: "astronomy" }]);
+
+    subject.setActiveDomain("earth");
+    expect(subject.getHoveredFootprints()).toEqual([{ domain: "earth" }]);
+  });
+});

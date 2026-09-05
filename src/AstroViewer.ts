@@ -15,7 +15,12 @@ import { HiPSDescriptor } from "./model/hips/HiPSDescriptor.js";
 import { SphereFoV } from "./model/SphereFoV.js";
 import { Point } from "./model/Point.js";
 import { CatalogueGL } from "./model/catalogues/CatalogueGL.js";
-import type { CameraChangedDetail, EarthRasterOverlayInfo, PointCoordinates } from "./AstroSphere.js";
+import type {
+  CameraChangedDetail,
+  EarthRasterOverlayInfo,
+  PointCoordinates,
+  ViewerDomain,
+} from "./AstroSphere.js";
 import {
   FootprintSetGL,
   HoveredFootprintDetail,
@@ -200,7 +205,7 @@ export class AstroViewer {
   }
 
   showTerraPointSet(pointSet: TerraPointSetGL) {
-    this.astroSphere.showCatalogue(pointSet);
+    this.astroSphere.showTerraPointSet(pointSet);
   }
 
   hideTerraPointSet(pointSet: TerraPointSetGL, isVisible: boolean) {
@@ -208,7 +213,7 @@ export class AstroViewer {
   }
 
   deleteTerraPointSet(pointSet: TerraPointSetGL) {
-    this.astroSphere.deleteCatalogue(pointSet);
+    this.astroSphere.deleteTerraPointSet(pointSet);
   }
 
   createTerraFootprintSet(
@@ -227,7 +232,7 @@ export class AstroViewer {
   }
 
   showTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
-    this.astroSphere.showFootprintSet(footprintSet);
+    this.astroSphere.showTerraFootprintSet(footprintSet);
   }
 
   hideTerraFootprintSet(footprintSet: TerraFootprintSetGL, isVisible: boolean) {
@@ -235,7 +240,7 @@ export class AstroViewer {
   }
 
   deleteTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
-    this.astroSphere.deleteFootprintSet(footprintSet);
+    this.astroSphere.deleteTerraFootprintSet(footprintSet);
   }
 
   createTerraPolylineSet(
@@ -317,6 +322,14 @@ export class AstroViewer {
   // HIPS
   getDefaultHiPSURL(): string {
     return bootSetup.defaultHipsUrl;
+  }
+
+  setActiveDomain(domain: ViewerDomain): void {
+    this.astroSphere.setActiveDomain(domain);
+  }
+
+  getActiveDomain(): ViewerDomain {
+    return this.astroSphere.activeDomain;
   }
 
   activateHiPS(hipsDescriptor: HiPSDescriptor): void {

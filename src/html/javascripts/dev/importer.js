@@ -7,6 +7,11 @@ import { el, setStatus } from "./ui.js";
 import { state, catalogueKey, persistBasic } from "./state.js";
 import { renderCatalogueManager } from "./catalogueManager.js";
 import { renderFootprintManager } from "./footprintManager.js";
+import {
+  addEarthGeoJSONOverlay,
+  clearEarthGeoJSONOverlays,
+  renderEarthGeoJSONManager,
+} from "./earthGeoJSONManager.js";
 
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length);
@@ -827,10 +832,13 @@ function wireEarthImporter() {
         return setStatus(`GeoJSON import failed: ${fileName}`);
       }
 
-      state.FP_LIST.push(live);
+      addEarthGeoJSONOverlay(
+        fileName,
+        live,
+        geoJSONFeatureCount(lastEarthParsed.geojson),
+      );
 
-      renderFootprintManager();
-      persistBasic();
+      renderEarthGeoJSONManager();
 
       setStatus(
         `Imported Earth GeoJSON: ${fileName} (${geoJSONFeatureCount(lastEarthParsed.geojson)} features)`,
@@ -841,9 +849,11 @@ function wireEarthImporter() {
   });
 
   btnClear?.addEventListener("click", () => {
+    clearEarthGeoJSONOverlays();
     lastEarthParsed = null;
+    if (fileEl) fileEl.value = "";
 
-    setStatus("Cleared Earth importer selection.");
+    setStatus("Cleared imported Earth GeoJSON overlays.");
   });
 }
 

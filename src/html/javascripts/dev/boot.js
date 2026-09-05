@@ -41,6 +41,10 @@ import {
 } from "./wmtsCapabilities.js";
 import { wireImporterControls } from "./importer.js";
 import { wireSatelliteFootprintDemo } from "./satelliteFootprintDemo.js";
+import {
+  renderEarthGeoJSONManager,
+  wireEarthGeoJSONManagerControls,
+} from "./earthGeoJSONManager.js";
 
 (function applyFixedProxy() {
   const FIXED_PROXY_BASE = ""; // set if needed
@@ -98,6 +102,7 @@ function setLonLatGridVisible(visible) {
 async function activateDemoDomain(domain) {
   try {
     if (domain === "astronomy") {
+      state.AstroAPI?.setActiveDomain?.("astronomy");
       if (
         state.AstroAPI?.isLonLatGridVisible?.() &&
         state.AstroAPI?.toggleLonLatGrid
@@ -115,6 +120,7 @@ async function activateDemoDomain(domain) {
     }
 
     if (domain === "earth") {
+      state.AstroAPI?.setActiveDomain?.("earth");
       applyWMTSPreset(DEFAULT_EARTH_PRESET);
 
       const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
@@ -169,6 +175,7 @@ async function activateDemoDomain(domain) {
     }
 
     if (domain === "mesh") {
+      state.AstroAPI?.setActiveDomain?.("mesh");
       const meshUrl = el("meshHipsUrl");
 
       if (meshUrl) {
@@ -327,6 +334,9 @@ async function bootstrap() {
 
     renderFootprintManager();
     wireFootprintManagerControls();
+
+    renderEarthGeoJSONManager();
+    wireEarthGeoJSONManagerControls();
 
     wireImporterControls();
     wireSatelliteFootprintDemo();

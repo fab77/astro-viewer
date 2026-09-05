@@ -35,6 +35,7 @@ export const state = {
   CAT_COLOR: new Map(),   // catalogueKey -> "#RRGGBB"
   FP_VIS: new Map(),     // footprintKey -> boolean
   FP_COLOR: new Map(),   // footprintKey -> "#RRGGBB"
+  EARTH_GEOJSON_LIST: [],
 };
 
 export function catalogueKey(c) {

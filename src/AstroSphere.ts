@@ -91,6 +91,8 @@ export type CameraChangedDetail = {
   getFoVPolygon: Point[];
 };
 
+export type ViewerDomain = "astronomy" | "earth" | "mesh";
+
 export type AstroSphereOptions = {
   gridLabelContainers?: GridLabelContainers;
 };
@@ -144,13 +146,16 @@ class AstroSphere {
   private _earthRasterOverlaySequence = 0;
   private _activeMeshHiPS: MeshHiPS | null = null;
   private _activeBaseLayer: "hips" | "xyz" | "meships" | null = null;
+  private _activeDomain: ViewerDomain = "astronomy";
 
   private startup = true;
 
   private fov: SphereFoV;
 
-  private activeCatalogues: CatalogueGL[] = [];
-  private activeFootprintSets: FootprintSetGL[] = [];
+  private astronomyCatalogues: CatalogueGL[] = [];
+  private earthPointSets: CatalogueGL[] = [];
+  private astronomyFootprintSets: FootprintSetGL[] = [];
+  private earthFootprintSets: FootprintSetGL[] = [];
   private activePolylineSets: TerraPolylineSetGL[] = [];
   private activeSensorCones: SensorConeGL[] = [];
   private activeSatelliteObjects: SatelliteObjectGL[] = [];
@@ -612,7 +617,7 @@ class AstroSphere {
           this.mouseHelper.update(mousePoint);
           this.updateLastMousePoint();
 
-          for (const cat of this.activeCatalogues) {
+          for (const cat of this.getActivePointSets()) {
             const clickResult = cat.selectPrimarySourceFromClick(
               this.mouseHelper,
             );
@@ -630,7 +635,7 @@ class AstroSphere {
             );
           }
 
-          for (const fset of this.activeFootprintSets) {
+          for (const fset of this.getActiveFootprintSets()) {
             const clickResult = fset.selectPrimaryFootprintFromClick(
               this.mouseHelper,
             );
@@ -770,7 +775,7 @@ class AstroSphere {
       this.mouseHelper.update(mousePoint);
       this.updateLastMousePoint();
 
-      for (const cat of this.activeCatalogues) {
+      for (const cat of this.getActivePointSets()) {
         const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
         if (!pickResult?.sources.length) continue;
 
@@ -789,7 +794,7 @@ class AstroSphere {
         break;
       }
 
-      for (const fset of this.activeFootprintSets) {
+      for (const fset of this.getActiveFootprintSets()) {
         const pickResult = fset.getFootprintsFromPointer(this.mouseHelper);
         if (!pickResult?.footprints.length) continue;
 
@@ -940,6 +945,7 @@ class AstroSphere {
     const hips = this.createHiPS(hipsDescriptor);
 
     this._activeHiPS = hips;
+    this._activeDomain = "astronomy";
     this._activeBaseLayer = "hips";
 
     return hips;
@@ -983,6 +989,7 @@ class AstroSphere {
 
     this._activeHiPSLayers.push(hips);
     this._activeHiPS = hips;
+    this._activeDomain = "astronomy";
     this._activeBaseLayer = "hips";
 
     return hips;
@@ -1049,6 +1056,7 @@ class AstroSphere {
     this._activeBaseLayer = "xyz";
   }
   activateXYZ2(config: XYZMapDescriptor) {
+    this._activeDomain = "earth";
     this._activeXYZ2 = new XYZMap(
       1,
       [0.0, 0.0, 0.0],
@@ -1062,6 +1070,7 @@ class AstroSphere {
   }
 
   activateMeshHiPS(descriptor: MeshHiPSDescriptor) {
+    this._activeDomain = "mesh";
     this._activeMeshHiPS = new MeshHiPS(
       descriptor.meshRadius,
       [0.0, 0.0, 0.0],
@@ -1075,6 +1084,7 @@ class AstroSphere {
   }
 
   activateWMTS(config: WMTSLayerConfig) {
+    this._activeDomain = "earth";
     const adapter = new WMTSAdapter(config);
     const xyzConfig = adapter.toXYZLayerConfig();
     this._activeXYZ2 = new XYZMap(
@@ -1181,29 +1191,90 @@ class AstroSphere {
     return { ...info };
   }
 
-  // Catalogue section
+  setActiveDomain(domain: ViewerDomain): void {
+    this._activeDomain = domain;
+
+    if (domain === "astronomy") {
+      this._activeBaseLayer = this._activeHiPS ? "hips" : null;
+    } else if (domain === "earth") {
+      this._activeBaseLayer = this._activeXYZ2 ? "xyz" : null;
+    } else {
+      this._activeBaseLayer = this._activeMeshHiPS ? "meships" : null;
+    }
+
+    // A hover from the previous vertical must not leak into the new one.
+    this.lastHoveredSource = null;
+    this.lastHoveredCatalogue = null;
+  }
+
+  get activeDomain(): ViewerDomain {
+    return this._activeDomain;
+  }
+
+  private getActivePointSets(): CatalogueGL[] {
+    if (this._activeDomain === "astronomy") return this.astronomyCatalogues;
+    if (this._activeDomain === "earth") return this.earthPointSets;
+    return [];
+  }
+
+  private getActiveFootprintSets(): FootprintSetGL[] {
+    if (this._activeDomain === "astronomy") return this.astronomyFootprintSets;
+    if (this._activeDomain === "earth") return this.earthFootprintSets;
+    return [];
+  }
+
+  // Astronomy catalogue ownership
   async showCatalogue(cat: CatalogueGL) {
-    // console.log(cat)
-    if (cat) this.activeCatalogues.push(cat);
+    if (cat && !this.astronomyCatalogues.includes(cat)) {
+      this.astronomyCatalogues.push(cat);
+    }
     return cat;
   }
 
   deleteCatalogue(catalogue: CatalogueGL) {
-    this.activeCatalogues = this.activeCatalogues.filter(
+    this.astronomyCatalogues = this.astronomyCatalogues.filter(
       (c) => c !== catalogue,
     );
   }
-  // End Catalogue section
 
-  // Footprint section
+  // Earth point-set ownership. TerraPointSetGL still extends CatalogueGL in
+  // 3.12, but it no longer shares the Astronomy lifecycle collection.
+  async showTerraPointSet(pointSet: CatalogueGL) {
+    if (pointSet && !this.earthPointSets.includes(pointSet)) {
+      this.earthPointSets.push(pointSet);
+    }
+    return pointSet;
+  }
+
+  deleteTerraPointSet(pointSet: CatalogueGL) {
+    this.earthPointSets = this.earthPointSets.filter((set) => set !== pointSet);
+  }
+
+  // Astronomy footprint ownership
   async showFootprintSet(fset: FootprintSetGL) {
-    // console.log(fset)
-    if (fset) this.activeFootprintSets.push(fset);
+    if (fset && !this.astronomyFootprintSets.includes(fset)) {
+      this.astronomyFootprintSets.push(fset);
+    }
     return fset;
   }
 
   deleteFootprintSet(footprintSet: FootprintSetGL) {
-    this.activeFootprintSets = this.activeFootprintSets.filter(
+    this.astronomyFootprintSets = this.astronomyFootprintSets.filter(
+      (fst) => fst !== footprintSet,
+    );
+  }
+
+  // Earth footprint ownership. TerraFootprintSetGL still reuses the common
+  // FootprintSetGL rendering implementation, but has an independent lifecycle.
+  async showTerraFootprintSet(footprintSet: FootprintSetGL) {
+    if (footprintSet && !this.earthFootprintSets.includes(footprintSet)) {
+      this.earthFootprintSets.push(footprintSet);
+    }
+    return footprintSet;
+  }
+
+  deleteTerraFootprintSet(footprintSet: FootprintSetGL) {
+    this.earthFootprintSets = this.earthFootprintSets.filter(
       (fst) => fst !== footprintSet,
     );
   }
@@ -1245,8 +1316,8 @@ class AstroSphere {
   }
 
   getHoveredFootprints(): HoveredFootprintDetail[] {
-    let footprintsHovered: HoveredFootprintDetail[] = [];
-    this.activeFootprintSets.forEach((fset) => {
+    const footprintsHovered: HoveredFootprintDetail[] = [];
+    this.getActiveFootprintSets().forEach((fset) => {
       footprintsHovered.push(fset.hoveredFootprints);
     });
     return footprintsHovered;
@@ -1838,12 +1909,8 @@ class AstroSphere {
       });
     }
 
-    this.activeCatalogues.forEach((cat) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix() ??
-        this._healpixGrid.getModelMatrix();
+    this.getActivePointSets().forEach((cat) => {
+      const activeModelMatrix = this.getActiveDomainModelMatrix();
       if (activeModelMatrix) {
         cat.draw(
           activeModelMatrix as Float32Array,
@@ -1856,12 +1923,8 @@ class AstroSphere {
 
     this.emitHoveredSourceIfChanged();
 
-    this.activeFootprintSets.forEach((fst) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix() ??
-        this._healpixGrid.getModelMatrix();
+    this.getActiveFootprintSets().forEach((fst) => {
+      const activeModelMatrix = this.getActiveDomainModelMatrix();
       if (activeModelMatrix) {
         fst.draw(
           activeModelMatrix as Float32Array,
@@ -1872,58 +1935,64 @@ class AstroSphere {
       }
     });
 
-    this.activePolylineSets.forEach((polylineSet) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix() ??
-        this._healpixGrid.getModelMatrix();
-      if (activeModelMatrix) {
-        polylineSet.draw(
-          activeModelMatrix as Float32Array,
-          this.mouseHelper,
-          this._camera.getCameraMatrix() as Float32Array,
-          this._perspectiveMatrixManager.pMatrix as Float32Array,
-        );
-      }
-    });
+    if (this._activeDomain === "earth") {
+      this.activePolylineSets.forEach((polylineSet) => {
+        const activeModelMatrix = this.getActiveDomainModelMatrix();
+        if (activeModelMatrix) {
+          polylineSet.draw(
+            activeModelMatrix as Float32Array,
+            this.mouseHelper,
+            this._camera.getCameraMatrix() as Float32Array,
+            this._perspectiveMatrixManager.pMatrix as Float32Array,
+          );
+        }
+      });
 
-    this.activeSensorCones.forEach((sensorCone) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix() ??
-        this._healpixGrid.getModelMatrix();
-      if (activeModelMatrix) {
-        sensorCone.draw(
-          this._perspectiveMatrixManager.pMatrix as Float32Array,
-          this._camera.getCameraMatrix() as Float32Array,
-          activeModelMatrix as Float32Array,
-        );
-      }
-    });
+      this.activeSensorCones.forEach((sensorCone) => {
+        const activeModelMatrix = this.getActiveDomainModelMatrix();
+        if (activeModelMatrix) {
+          sensorCone.draw(
+            this._perspectiveMatrixManager.pMatrix as Float32Array,
+            this._camera.getCameraMatrix() as Float32Array,
+            activeModelMatrix as Float32Array,
+          );
+        }
+      });
 
-    this.activeSatelliteObjects.forEach((satelliteObject) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix() ??
-        this._healpixGrid.getModelMatrix();
-      if (activeModelMatrix) {
-        satelliteObject.draw(
-          this._perspectiveMatrixManager.pMatrix as Float32Array,
-          this._camera.getCameraMatrix() as Float32Array,
-          activeModelMatrix as Float32Array,
-        );
-      }
-    });
+      this.activeSatelliteObjects.forEach((satelliteObject) => {
+        const activeModelMatrix = this.getActiveDomainModelMatrix();
+        if (activeModelMatrix) {
+          satelliteObject.draw(
+            this._perspectiveMatrixManager.pMatrix as Float32Array,
+            this._camera.getCameraMatrix() as Float32Array,
+            activeModelMatrix as Float32Array,
+          );
+        }
+      });
+    }
+  }
+
+  private getActiveDomainModelMatrix(): Float32Array | null {
+    if (this._activeDomain === "astronomy") {
+      return (
+        this._activeHiPS?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
+      ) as Float32Array;
+    }
+    if (this._activeDomain === "earth") {
+      return (
+        this._activeXYZ2?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
+      ) as Float32Array;
+    }
+    return (
+      this._activeMeshHiPS?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
+    ) as Float32Array;
   }
 
   private emitHoveredSourceIfChanged() {
     let nextHoveredSource: Source | null = null;
     let nextHoveredCatalogue: CatalogueGL | null = null;
 
-    for (const cat of this.activeCatalogues) {
+    for (const cat of this.getActivePointSets()) {
       const hovered = cat.getPrimaryHoveredSource();
       if (!hovered) continue;
       nextHoveredSource = hovered;
