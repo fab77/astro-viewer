@@ -91,6 +91,14 @@ const domainInitializationState = {
   mesh: false,
 };
 
+function syncResetNorthUpButton() {
+  const keepNorthUpChk = el("keepCameraNorthUpChk");
+  const resetNorthUpBtn = el("btnResetAxesOrientation");
+  if (resetNorthUpBtn && keepNorthUpChk) {
+    resetNorthUpBtn.disabled = keepNorthUpChk.checked;
+  }
+}
+
 function setLonLatGridVisible(visible) {
   const isVisible = !!state.AstroAPI?.isLonLatGridVisible?.();
 
@@ -233,6 +241,7 @@ async function bootstrap() {
       if (keepNorthUpChk && typeof AC.isKeepCameraNorthUp === "function") {
         keepNorthUpChk.checked = !!AC.isKeepCameraNorthUp();
       }
+      syncResetNorthUpButton();
       if (viewfinderChk && typeof AC.isViewfinderVisible === "function") {
         viewfinderChk.checked = !!AC.isViewfinderVisible();
       }
@@ -821,12 +830,7 @@ function wireUI() {
     }
   });
 
-  // camera + minimise
-  el("btnCamInfo")?.addEventListener("click", () => {
-    const p = state.AstroAPI?.camera?.getCameraPosition?.();
-    if (!p) return setStatus("Camera API unavailable.");
-    setStatus(`Camera @ [${p.map((n) => n.toFixed(3)).join(", ")}]`);
-  });
+  // minimise
   el("btnTogglePanel")?.addEventListener("click", minimisePanel);
   el("restoreBtn")?.addEventListener("click", restorePanel);
 
@@ -877,6 +881,8 @@ function wireUI() {
       ev.target.checked = !!state.AstroAPI?.isKeepCameraNorthUp?.();
     } catch (e) {
       ev.target.checked = !ev.target.checked;
+    } finally {
+      syncResetNorthUpButton();
     }
   });
 
