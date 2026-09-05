@@ -320,6 +320,32 @@ body {
     gap: 7px;
 }
 
+.satellite-demo-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 7px;
+}
+
+.satellite-demo-controls > button,
+.satellite-demo-controls > input {
+    width: 100%;
+}
+
+.satellite-demo-playback {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+}
+
+.satellite-demo-playback button {
+    width: 100%;
+}
+
+.satellite-demo-time {
+    font-family: var(--av-font-mono);
+}
+
 input,
 button,
 select {

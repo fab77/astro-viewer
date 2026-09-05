@@ -562,22 +562,24 @@
                 <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                     <label>Satellite footprint demo</label>
 
-                    <div class="row">
+                    <div class="satellite-demo-controls">
                         <button id="btnLoadSatelliteFootprintDemo" type="button">
                             Load ISS Spain demo
                         </button>
 
-                        <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>
-                            Play
-                        </button>
+                        <div class="satellite-demo-playback">
+                            <button id="btnSatelliteTimelinePlay" class="secondary" type="button" disabled>
+                                Play
+                            </button>
 
-                        <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>
-                            Pause
-                        </button>
+                            <button id="btnSatelliteTimelinePause" class="secondary" type="button" disabled>
+                                Pause
+                            </button>
+                        </div>
 
                         <input id="satelliteTimelineSeek" type="range" min="0" max="1000" value="0" disabled />
 
-                        <span id="satelliteTimelineTime" class="hint">
+                        <span id="satelliteTimelineTime" class="hint satellite-demo-time">
                             Timeline not loaded
                         </span>
 
