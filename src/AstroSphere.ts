@@ -10,7 +10,7 @@
  */
 
 import { bootSetup } from "./Config.js";
-import Camera from "./Camera.js";
+import Camera, { type CameraViewState } from "./Camera.js";
 import RayPickingUtils from "./utils/RayPickingUtils.js";
 import global from "./Global.js";
 import MouseHelper from "./utils/MouseHelper.js";
@@ -147,6 +147,7 @@ class AstroSphere {
   private _activeMeshHiPS: MeshHiPS | null = null;
   private _activeBaseLayer: "hips" | "xyz" | "meships" | null = null;
   private _activeDomain: ViewerDomain = "astronomy";
+  private domainCameraStates: Partial<Record<ViewerDomain, CameraViewState>> = {};
 
   private startup = true;
 
@@ -1192,6 +1193,21 @@ class AstroSphere {
   }
 
   setActiveDomain(domain: ViewerDomain): void {
+    if (domain !== this._activeDomain) {
+      this.clearGridLabelsForDomain(this._activeDomain);
+      this.domainCameraStates[this._activeDomain] = this._camera.getViewState();
+
+      const targetCameraState = this.domainCameraStates[domain];
+      if (targetCameraState) {
+        this._camera.restoreViewState(targetCameraState);
+      }
+
+      this.inertiaX = 0;
+      this.inertiaY = 0;
+      this.zoomInertia = 0;
+      this._cameraStatusChanged = true;
+    }
+
     this._activeDomain = domain;
 
     if (domain === "astronomy") {
@@ -1205,6 +1221,18 @@ class AstroSphere {
     // A hover from the previous vertical must not leak into the new one.
     this.lastHoveredSource = null;
     this.lastHoveredCatalogue = null;
+  }
+
+  private clearGridLabelsForDomain(domain: ViewerDomain): void {
+    if (domain === "astronomy") {
+      this._healpixGrid.clearLabels();
+      this._equatorialGrid.clearLabels();
+      return;
+    }
+
+    if (domain === "earth") {
+      this._activeXYZ2?.clearLonLatGridLabels();
+    }
   }
 
   get activeDomain(): ViewerDomain {
@@ -1886,8 +1914,10 @@ class AstroSphere {
       this._activeMeshHiPS?.draw(skyEntityDrawInput);
     }
 
-    this._healpixGrid.draw(skyEntityDrawInput);
-    this._equatorialGrid.draw(skyEntityDrawInput);
+    if (this._activeDomain === "astronomy") {
+      this._healpixGrid.draw(skyEntityDrawInput);
+      this._equatorialGrid.draw(skyEntityDrawInput);
+    }
 
     this._webgl.enable(this._webgl.DEPTH_TEST);
     this._webgl.disable(this._webgl.CULL_FACE);

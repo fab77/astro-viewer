@@ -455,6 +455,10 @@ export class HealpixGrid extends AbstractSkyEntity {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
   }
 
+  clearLabels(): void {
+    this.gridText.resetDivSets();
+  }
+
   get visibleorder(): number {
     return this._visibleorder;
   }

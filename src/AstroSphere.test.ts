@@ -543,6 +543,14 @@ describe("AstroSphere domain ownership", () => {
       _activeHiPS: { getModelMatrix: jest.fn() },
       _activeXYZ2: { getModelMatrix: jest.fn() },
       _activeMeshHiPS: { getModelMatrix: jest.fn() },
+      _camera: {
+        getViewState: jest.fn(() => ({ domain: (subject as any)._activeDomain })),
+        restoreViewState: jest.fn(),
+      },
+      domainCameraStates: {},
+      inertiaX: 0,
+      inertiaY: 0,
+      zoomInertia: 0,
       astronomyCatalogues: [],
       earthPointSets: [],
       astronomyFootprintSets: [],
@@ -565,6 +573,21 @@ describe("AstroSphere domain ownership", () => {
 
     subject.setActiveDomain("astronomy");
     expect((subject as any)._activeBaseLayer).toBe("hips");
+  });
+
+  it("restores the camera view saved for each domain", () => {
+    const subject = createDomainSubject();
+    const camera = (subject as any)._camera;
+
+    subject.setActiveDomain("earth");
+    expect((subject as any).domainCameraStates.astronomy).toEqual({
+      domain: "astronomy",
+    });
+    expect(camera.restoreViewState).not.toHaveBeenCalled();
+
+    subject.setActiveDomain("astronomy");
+    expect((subject as any).domainCameraStates.earth).toEqual({ domain: "earth" });
+    expect(camera.restoreViewState).toHaveBeenCalledWith({ domain: "astronomy" });
   });
 
   it("keeps Astronomy and Earth point ownership separate", async () => {

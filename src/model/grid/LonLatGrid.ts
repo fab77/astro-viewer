@@ -265,6 +265,10 @@ export class LatLonGrid extends AbstractSkyEntity {
     }
   }
 
+  clearLabels(): void {
+    this.gridText.resetDivSets();
+  }
+
   draw(input: SkyEntityDrawInput): void {
     if (!this._showGrid) {
       this.gridText.resetDivSets();

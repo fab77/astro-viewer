@@ -109,18 +109,6 @@ async function activateDemoDomain(domain) {
   try {
     if (domain === "astronomy") {
       state.AstroAPI?.setActiveDomain?.("astronomy");
-      if (
-        state.AstroAPI?.isLonLatGridVisible?.() &&
-        state.AstroAPI?.toggleLonLatGrid
-      ) {
-        state.AstroAPI.toggleLonLatGrid();
-      }
-
-      const lonLatChk = el("lonLatGridChk");
-      if (lonLatChk) {
-        lonLatChk.checked = false;
-      }
-
       setStatus("Astronomy ready. Load a layer or add surveys to the stack.");
       return;
     }
@@ -151,32 +139,10 @@ async function activateDemoDomain(domain) {
           ),
         });
 
-        // Earth demo starts with all grids disabled.
-        if (
-          state.AstroAPI?.isHealpixGridVisible?.() &&
-          state.AstroAPI?.toggleHealpixGrid
-        ) {
-          state.AstroAPI.toggleHealpixGrid();
-        }
-
-        if (
-          state.AstroAPI?.isEquatorialGridVisible?.() &&
-          state.AstroAPI?.toggleEquatorialGrid
-        ) {
-          state.AstroAPI.toggleEquatorialGrid();
-        }
-
+        // Earth starts with its own lon/lat grid disabled. Astronomy grid
+        // visibility is domain-owned and must not be changed here.
         setLonLatGridVisible(false);
 
-        const healpixChk = el("healpixGridChk");
-        if (healpixChk) {
-          healpixChk.checked = false;
-        }
-
-        const equatorialChk = el("equatorialGridChk");
-        if (equatorialChk) {
-          equatorialChk.checked = false;
-        }
 
         domainInitializationState.earth = true;
         setStatus("Earth Observation: Esri World Imagery loaded.");

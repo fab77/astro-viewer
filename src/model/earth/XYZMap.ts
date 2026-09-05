@@ -121,6 +121,10 @@ export class XYZMap extends AbstractSkyEntity {
     this._xyzShaderProgram.enableProgram()
   }
 
+  clearLonLatGridLabels(): void {
+    this._latLonGrid.clearLabels();
+  }
+
   isLonLatGridVisible(): boolean {
     return this._latLonGrid.isVisible()
   }
