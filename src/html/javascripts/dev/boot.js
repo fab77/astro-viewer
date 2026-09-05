@@ -85,6 +85,12 @@ const XYZ_PRESETS = {
 
 const DEFAULT_MESH_HIPS = "/meships-local/mhips-moon/";
 
+const domainInitializationState = {
+  astronomy: false,
+  earth: false,
+  mesh: false,
+};
+
 function setLonLatGridVisible(visible) {
   const isVisible = !!state.AstroAPI?.isLonLatGridVisible?.();
 
@@ -121,80 +127,94 @@ async function activateDemoDomain(domain) {
 
     if (domain === "earth") {
       state.AstroAPI?.setActiveDomain?.("earth");
-      applyWMTSPreset(DEFAULT_EARTH_PRESET);
 
-      const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
+      if (!domainInitializationState.earth) {
+        applyWMTSPreset(DEFAULT_EARTH_PRESET);
 
-      loadWMTS({
-        baseUrl: preset.baseUrl,
-        urlTemplate: preset.urlTemplate || undefined,
-        layer: preset.preferredLayer,
-        tileMatrixSet: preset.tileMatrixSet,
-        style: preset.style,
-        format: preset.format,
-        requestEncoding: preset.requestEncoding,
-        dimensions: {},
-        minZoom: Number(el("xyzMinZoom")?.value ?? 0),
-        maxZoom: Number(el("xyzMaxZoom")?.value ?? 8),
-        segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
-        maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
-        maxConcurrentRequests: Number(
-          el("xyzMaxConcurrentRequests")?.value ?? 4,
-        ),
-      });
+        const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
 
-      // Earth demo starts with all grids disabled.
-      if (
-        state.AstroAPI?.isHealpixGridVisible?.() &&
-        state.AstroAPI?.toggleHealpixGrid
-      ) {
-        state.AstroAPI.toggleHealpixGrid();
+        loadWMTS({
+          baseUrl: preset.baseUrl,
+          urlTemplate: preset.urlTemplate || undefined,
+          layer: preset.preferredLayer,
+          tileMatrixSet: preset.tileMatrixSet,
+          style: preset.style,
+          format: preset.format,
+          requestEncoding: preset.requestEncoding,
+          dimensions: {},
+          minZoom: Number(el("xyzMinZoom")?.value ?? 0),
+          maxZoom: Number(el("xyzMaxZoom")?.value ?? 8),
+          segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+          maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+          maxConcurrentRequests: Number(
+            el("xyzMaxConcurrentRequests")?.value ?? 4,
+          ),
+        });
+
+        // Earth demo starts with all grids disabled.
+        if (
+          state.AstroAPI?.isHealpixGridVisible?.() &&
+          state.AstroAPI?.toggleHealpixGrid
+        ) {
+          state.AstroAPI.toggleHealpixGrid();
+        }
+
+        if (
+          state.AstroAPI?.isEquatorialGridVisible?.() &&
+          state.AstroAPI?.toggleEquatorialGrid
+        ) {
+          state.AstroAPI.toggleEquatorialGrid();
+        }
+
+        setLonLatGridVisible(false);
+
+        const healpixChk = el("healpixGridChk");
+        if (healpixChk) {
+          healpixChk.checked = false;
+        }
+
+        const equatorialChk = el("equatorialGridChk");
+        if (equatorialChk) {
+          equatorialChk.checked = false;
+        }
+
+        domainInitializationState.earth = true;
+        setStatus("Earth Observation: Esri World Imagery loaded.");
+        return;
       }
 
-      if (
-        state.AstroAPI?.isEquatorialGridVisible?.() &&
-        state.AstroAPI?.toggleEquatorialGrid
-      ) {
-        state.AstroAPI.toggleEquatorialGrid();
-      }
-
-      setLonLatGridVisible(false);
-
-      const healpixChk = el("healpixGridChk");
-      if (healpixChk) {
-        healpixChk.checked = false;
-      }
-
-      const equatorialChk = el("equatorialGridChk");
-      if (equatorialChk) {
-        equatorialChk.checked = false;
-      }
-
-      setStatus("Earth Observation: Esri World Imagery loaded.");
+      setStatus("Earth Observation ready.");
       return;
     }
 
     if (domain === "mesh") {
       state.AstroAPI?.setActiveDomain?.("mesh");
-      const meshUrl = el("meshHipsUrl");
 
-      if (meshUrl) {
-        meshUrl.value = DEFAULT_MESH_HIPS;
+      if (!domainInitializationState.mesh) {
+        const meshUrl = el("meshHipsUrl");
+
+        if (meshUrl) {
+          meshUrl.value = DEFAULT_MESH_HIPS;
+        }
+
+        const orderRaw = el("meshHipsOrder")?.value.trim() ?? "";
+
+        await loadMeshHiPS(DEFAULT_MESH_HIPS, {
+          order: orderRaw === "" ? undefined : Number(orderRaw),
+
+          maxCachedTiles: Number(el("meshHipsMaxCachedTiles")?.value ?? 384),
+
+          color: parseHexColor(el("meshHipsColor")?.value ?? "#b8dbff"),
+
+          wireframe: !!el("meshHipsWireframe")?.checked,
+        });
+
+        domainInitializationState.mesh = true;
+        setStatus("3D / Mesh: Moon MeshHiPS loaded.");
+        return;
       }
 
-      const orderRaw = el("meshHipsOrder")?.value.trim() ?? "";
-
-      await loadMeshHiPS(DEFAULT_MESH_HIPS, {
-        order: orderRaw === "" ? undefined : Number(orderRaw),
-
-        maxCachedTiles: Number(el("meshHipsMaxCachedTiles")?.value ?? 384),
-
-        color: parseHexColor(el("meshHipsColor")?.value ?? "#b8dbff"),
-
-        wireframe: !!el("meshHipsWireframe")?.checked,
-      });
-
-      setStatus("3D / Mesh: Moon MeshHiPS loaded.");
+      setStatus("3D / Mesh ready.");
     }
   } catch (error) {
     console.error(error);
@@ -324,6 +344,7 @@ async function bootstrap() {
     
     // Load the default Astronomy HiPS as the initial base layer.
     await loadHiPS(defaultHiPS.trim());
+    domainInitializationState.astronomy = true;
     AC.run();
 
     wireDevTabs(activateDemoDomain);
