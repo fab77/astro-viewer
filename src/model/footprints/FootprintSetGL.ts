@@ -388,6 +388,11 @@ export class FootprintSetGL {
     return clickedIndexes;
   }
 
+  public clearSelection(): void {
+    this.selectedIndexes = [];
+    this.refreshSelectedFootprints();
+  }
+
   private setSelectedIndexes(selectedIndex: number[]) {
     selectedIndex.forEach((idx) => {
       if (idx < 0 || idx >= this.footprintPolygons.length) return;

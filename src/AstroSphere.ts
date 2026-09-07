@@ -619,8 +619,13 @@ class AstroSphere {
           this.updateLastMousePoint();
 
           for (const cat of this.getActivePointSets()) {
+            const activeModelMatrix = this.getActiveDomainModelMatrix();
+            if (!activeModelMatrix) continue;
             const clickResult = cat.selectPrimarySourceFromClick(
               this.mouseHelper,
+              activeModelMatrix,
+              this._camera.getCameraMatrix() as Float32Array,
+              this._perspectiveMatrixManager.pMatrix as Float32Array,
             );
             if (!clickResult?.sources.length) continue;
             this._webgl.canvas.dispatchEvent(
@@ -777,7 +782,14 @@ class AstroSphere {
       this.updateLastMousePoint();
 
       for (const cat of this.getActivePointSets()) {
-        const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
+        const activeModelMatrix = this.getActiveDomainModelMatrix();
+        if (!activeModelMatrix) continue;
+        const pickResult = cat.getSourcesFromPointer(
+          this.mouseHelper,
+          activeModelMatrix,
+          this._camera.getCameraMatrix() as Float32Array,
+          this._perspectiveMatrixManager.pMatrix as Float32Array,
+        );
         if (!pickResult?.sources.length) continue;
 
         this._webgl.canvas.dispatchEvent(
@@ -1225,13 +1237,13 @@ class AstroSphere {
 
   private clearGridLabelsForDomain(domain: ViewerDomain): void {
     if (domain === "astronomy") {
-      this._healpixGrid.clearLabels();
-      this._equatorialGrid.clearLabels();
+      this._healpixGrid?.clearLabels();
+      this._equatorialGrid?.clearLabels();
       return;
     }
 
     if (domain === "earth") {
-      this._activeXYZ2?.clearLonLatGridLabels();
+      this._activeXYZ2?.clearLonLatGridLabels?.();
     }
   }
 

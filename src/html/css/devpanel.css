@@ -987,12 +987,40 @@ body.sidebar-collapsed #gridhpx {
     display: none;
 }
 
+.hover-inspector.has-selection {
+    pointer-events: auto;
+}
+
 .hover-inspector-header {
     display: flex;
     align-items: baseline;
     gap: 8px;
     padding: 9px 11px 8px;
     border-bottom: 1px solid var(--av-border);
+}
+
+.hover-inspector-title {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.hover-inspector-close {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    color: var(--av-text-secondary);
+    background: transparent;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.hover-inspector-close:hover {
+    color: var(--av-text);
+    background: rgba(148, 163, 184, .10);
 }
 
 .hover-inspector-kicker {
@@ -1013,6 +1041,28 @@ body.sidebar-collapsed #gridhpx {
     display: grid;
     gap: 7px;
     padding: 8px;
+}
+
+.inspector-section {
+    display: grid;
+    gap: 7px;
+}
+
+.inspector-section + .inspector-section {
+    padding-top: 8px;
+    border-top: 1px solid var(--av-border);
+}
+
+.inspector-section-title {
+    color: var(--av-text-muted);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.hover-inspector .hover-card.is-selected {
+    border-color: rgba(56, 189, 248, .30);
 }
 
 .hover-inspector .hover-card {
@@ -1037,6 +1087,16 @@ body.sidebar-collapsed #gridhpx {
     grid-template-columns: minmax(76px, .8fr) minmax(100px, 1.2fr);
     gap: 9px;
     font-size: 9.5px;
+}
+
+.hover-metadata-link {
+    color: var(--av-accent);
+    text-decoration: none;
+    pointer-events: auto;
+}
+
+.hover-metadata-link:hover {
+    text-decoration: underline;
 }
 
 body.sidebar-collapsed .hover-inspector {
