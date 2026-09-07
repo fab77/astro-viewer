@@ -10,17 +10,55 @@ import { state } from './state.js';
 const DEFAULT_COLOR = '#00fff2';
 let nextOverlayId = 1;
 
-export function addEarthGeoJSONOverlay(name, footprintSet, featureCount) {
+
+function overlayLabel(kind) {
+  if (kind === 'points') return 'Points';
+  if (kind === 'lines') return 'Lines';
+  return 'Polygons';
+}
+
+function changeOverlayColor(entry, color) {
+  if (entry.kind === 'points') {
+    state.AstroAPI?.changeCatalogueColor?.(entry.overlay, color);
+  } else if (entry.kind === 'lines') {
+    state.AstroAPI?.changeTerraPolylineSetColor?.(entry.overlay, color);
+  } else {
+    state.AstroAPI?.changeFootprintSetColor?.(entry.overlay, color);
+  }
+}
+
+function setOverlayVisible(entry, visible) {
+  if (entry.kind === 'points') {
+    state.AstroAPI?.hideTerraPointSet?.(entry.overlay, visible);
+  } else if (entry.kind === 'lines') {
+    state.AstroAPI?.hideTerraPolylineSet?.(entry.overlay, visible);
+  } else {
+    state.AstroAPI?.hideTerraFootprintSet?.(entry.overlay, visible);
+  }
+}
+
+function deleteOverlay(entry) {
+  if (entry.kind === 'points') {
+    state.AstroAPI?.deleteTerraPointSet?.(entry.overlay);
+  } else if (entry.kind === 'lines') {
+    state.AstroAPI?.deleteTerraPolylineSet?.(entry.overlay);
+  } else {
+    state.AstroAPI?.deleteTerraFootprintSet?.(entry.overlay);
+  }
+}
+
+export function addEarthGeoJSONOverlay(name, overlay, featureCount, kind = 'polygons') {
   const entry = {
     id: `earth-geojson-${nextOverlayId++}`,
     name: name || 'Imported GeoJSON',
     featureCount: Number(featureCount) || 0,
-    footprintSet,
+    overlay,
+    kind,
     visible: true,
     color: DEFAULT_COLOR,
   };
 
-  state.AstroAPI?.changeFootprintSetColor?.(footprintSet, entry.color);
+  changeOverlayColor(entry, entry.color);
   state.EARTH_GEOJSON_LIST.push(entry);
   return entry;
 }
@@ -44,7 +82,7 @@ export function renderEarthGeoJSONManager() {
       <div class="catalogue-card-header">
         <div class="catalogue-card-heading">
           <div class="catalogue-card-title">${entry.name}</div>
-          <div class="catalogue-card-key mono">GeoJSON · ${entry.featureCount} feature${entry.featureCount === 1 ? '' : 's'}</div>
+          <div class="catalogue-card-key mono">${overlayLabel(entry.kind)} · ${entry.featureCount} feature${entry.featureCount === 1 ? '' : 's'}</div>
         </div>
         <label class="catalogue-visibility">
           <input type="checkbox" class="earth-geojson-vis" ${entry.visible ? 'checked' : ''} />
@@ -81,7 +119,7 @@ export function wireEarthGeoJSONManagerControls() {
     if (!entry) return;
 
     try {
-      state.AstroAPI?.deleteTerraFootprintSet?.(entry.footprintSet);
+      deleteOverlay(entry);
       state.EARTH_GEOJSON_LIST.splice(idx, 1);
       renderEarthGeoJSONManager();
       setStatus(`Deleted Earth GeoJSON overlay: ${entry.name}`);
@@ -101,7 +139,7 @@ export function wireEarthGeoJSONManagerControls() {
     if (ev.target.classList.contains('earth-geojson-vis')) {
       const visible = !!ev.target.checked;
       try {
-        state.AstroAPI?.hideTerraFootprintSet?.(entry.footprintSet, visible);
+        setOverlayVisible(entry, visible);
         entry.visible = visible;
         card.classList.toggle('is-hidden', !visible);
         setStatus(`${visible ? 'Visible' : 'Hidden'} Earth GeoJSON overlay: ${entry.name}`);
@@ -114,7 +152,7 @@ export function wireEarthGeoJSONManagerControls() {
     if (ev.target.classList.contains('earth-geojson-color')) {
       const color = String(ev.target.value || '');
       try {
-        state.AstroAPI?.changeFootprintSetColor?.(entry.footprintSet, color);
+        changeOverlayColor(entry, color);
         entry.color = color;
         setStatus(`Colour ${color} for Earth GeoJSON overlay: ${entry.name}`);
       } catch (e) {
@@ -127,7 +165,7 @@ export function wireEarthGeoJSONManagerControls() {
 export function clearEarthGeoJSONOverlays() {
   for (const entry of state.EARTH_GEOJSON_LIST) {
     try {
-      state.AstroAPI?.deleteTerraFootprintSet?.(entry.footprintSet);
+      deleteOverlay(entry);
     } catch {}
   }
 

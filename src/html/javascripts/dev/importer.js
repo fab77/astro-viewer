@@ -89,6 +89,10 @@ function isGeoJSON(value) {
       [
         "FeatureCollection",
         "Feature",
+        "Point",
+        "MultiPoint",
+        "LineString",
+        "MultiLineString",
         "Polygon",
         "MultiPolygon",
         "GeometryCollection",
@@ -506,56 +510,247 @@ function tryCreateLiveFootprintSet(name, desc, columns, objects, mapping = {}) {
   }
 }
 
-function tryCreateLiveGeoJSONFootprintSet(name, geojson) {
+function collectEarthGeoJSONGeometry(geojson) {
+  const groups = {
+    points: [],
+    lines: [],
+    polygons: [],
+  };
+
+  const visitGeometry = (geometry, properties = {}, id) => {
+    if (!geometry || typeof geometry !== "object") return;
+
+    const type = geometry.type;
+    const coordinates = geometry.coordinates;
+
+    if (type === "Point") {
+      groups.points.push({ id, properties, coordinates });
+      return;
+    }
+
+    if (type === "MultiPoint") {
+      for (const point of Array.isArray(coordinates) ? coordinates : []) {
+        groups.points.push({ id, properties, coordinates: point });
+      }
+      return;
+    }
+
+    if (type === "LineString") {
+      groups.lines.push({ id, properties, coordinates });
+      return;
+    }
+
+    if (type === "MultiLineString") {
+      for (const line of Array.isArray(coordinates) ? coordinates : []) {
+        groups.lines.push({ id, properties, coordinates: line });
+      }
+      return;
+    }
+
+    if (type === "Polygon" || type === "MultiPolygon") {
+      groups.polygons.push({
+        type: "Feature",
+        id,
+        properties,
+        geometry,
+      });
+      return;
+    }
+
+    if (type === "GeometryCollection") {
+      for (const child of geometry.geometries || []) {
+        visitGeometry(child, properties, id);
+      }
+    }
+  };
+
+  const visit = (value, properties = {}, id) => {
+    if (!value || typeof value !== "object") return;
+
+    if (value.type === "FeatureCollection") {
+      for (const feature of value.features || []) visit(feature);
+      return;
+    }
+
+    if (value.type === "Feature") {
+      visitGeometry(value.geometry, value.properties || {}, value.id);
+      return;
+    }
+
+    visitGeometry(value, properties, id);
+  };
+
+  visit(geojson);
+  return groups;
+}
+
+function firstRawGeoJSONCoordinate(groups) {
+  const point = groups.points[0]?.coordinates;
+  if (Array.isArray(point) && Number.isFinite(Number(point[0])) && Number.isFinite(Number(point[1]))) {
+    return { lonDeg: Number(point[0]), latDeg: Number(point[1]) };
+  }
+
+  const linePoint = groups.lines[0]?.coordinates?.[0];
+  if (Array.isArray(linePoint) && Number.isFinite(Number(linePoint[0])) && Number.isFinite(Number(linePoint[1]))) {
+    return { lonDeg: Number(linePoint[0]), latDeg: Number(linePoint[1]) };
+  }
+
+  const geometry = groups.polygons[0]?.geometry;
+  const polygonPoint = geometry?.type === "Polygon"
+    ? geometry.coordinates?.[0]?.[0]
+    : geometry?.coordinates?.[0]?.[0]?.[0];
+  if (Array.isArray(polygonPoint) && Number.isFinite(Number(polygonPoint[0])) && Number.isFinite(Number(polygonPoint[1]))) {
+    return { lonDeg: Number(polygonPoint[0]), latDeg: Number(polygonPoint[1]) };
+  }
+
+  return null;
+}
+
+function createEarthPointOverlay(name, points) {
+  if (!points.length) return null;
+
+  const MetadataColumn = window.astroviewer.MetadataColumn;
+  const MetadataManager = window.astroviewer.MetadataManager;
+  const ColumnType = window.astroviewer.ColumnType;
+
+  const propertyNames = Array.from(
+    new Set(points.flatMap((entry) => Object.keys(entry.properties || {}))),
+  );
+  const hasId = points.some((entry) => entry.id !== undefined && entry.id !== null);
+  const nameProperty = propertyNames.find((key) => key.toLowerCase() === "name");
+
+  const columnNames = ["longitudeDeg", "latitudeDeg"];
+  if (hasId && !propertyNames.includes("id")) columnNames.push("id");
+  columnNames.push(...propertyNames);
+
+  const columns = columnNames.map((columnName, index) => {
+    let columnType = ColumnType.STRING;
+    if (columnName === "longitudeDeg") columnType = ColumnType.GEOM_RA;
+    else if (columnName === "latitudeDeg") columnType = ColumnType.GEOM_DEC;
+    else if (columnName === nameProperty || (!nameProperty && columnName === "id")) {
+      columnType = ColumnType.MAIN_NAME;
+    } else {
+      const samples = points.map((entry) => entry.properties?.[columnName]);
+      columnType = guessColumnType(samples);
+    }
+
+    return new MetadataColumn({
+      index,
+      name: columnName,
+      columnType,
+      unit: columnName === "longitudeDeg" || columnName === "latitudeDeg" ? "deg" : "",
+    });
+  });
+
+  const rows = points.map((entry) => {
+    const [lon, lat] = Array.isArray(entry.coordinates) ? entry.coordinates : [];
+    return columnNames.map((columnName) => {
+      if (columnName === "longitudeDeg") return Number(lon);
+      if (columnName === "latitudeDeg") return Number(lat);
+      if (columnName === "id" && !propertyNames.includes("id")) return entry.id ?? "";
+      const value = entry.properties?.[columnName];
+      if (value == null) return "";
+      if (typeof value === "object") return JSON.stringify(value);
+      return value;
+    });
+  });
+
+  const pointSet = state.AstroAPI.createTerraPointSet(
+    name,
+    "Imported GeoJSON Point/MultiPoint features",
+    "",
+    new MetadataManager(columns),
+  );
+  pointSet.addSources(rows, columns);
+  state.AstroAPI.showTerraPointSet(pointSet);
+
+  return {
+    kind: "points",
+    overlay: pointSet,
+    featureCount: points.length,
+  };
+}
+
+function createEarthLineOverlay(name, lines) {
+  if (!lines.length) return null;
+
+  const lineSet = state.AstroAPI.createTerraPolylineSet(
+    name,
+    "Imported GeoJSON LineString/MultiLineString features",
+    "",
+    new window.astroviewer.MetadataManager([]),
+  );
+
+  for (const entry of lines) {
+    const points = (Array.isArray(entry.coordinates) ? entry.coordinates : [])
+      .filter((position) => Array.isArray(position) && position.length >= 2)
+      .map((position) => ({
+        longitudeDeg: Number(position[0]),
+        latitudeDeg: Number(position[1]),
+      }))
+      .filter((point) => Number.isFinite(point.longitudeDeg) && Number.isFinite(point.latitudeDeg));
+
+    if (points.length >= 2) {
+      lineSet.addPath(points, {
+        ...(entry.properties || {}),
+        ...(entry.id !== undefined ? { id: entry.id } : {}),
+      });
+    }
+  }
+
+  state.AstroAPI.showTerraPolylineSet(lineSet);
+
+  return {
+    kind: "lines",
+    overlay: lineSet,
+    featureCount: lines.length,
+  };
+}
+
+function createEarthPolygonOverlay(name, polygonFeatures) {
+  if (!polygonFeatures.length) return null;
+
+  const geojson = {
+    type: "FeatureCollection",
+    features: polygonFeatures,
+  };
+  const features = window.astroviewer.GeoJSONParser.parseGeoJSON(geojson);
+  if (!features.length) return null;
+
+  const footprintSet = state.AstroAPI.createTerraFootprintSet(
+    name,
+    "Imported GeoJSON Polygon/MultiPolygon features",
+    "",
+    new window.astroviewer.MetadataManager([]),
+  );
+  footprintSet.addGeoJSONFeatures(features);
+  state.AstroAPI.showTerraFootprintSet(footprintSet);
+
+  return {
+    kind: "polygons",
+    overlay: footprintSet,
+    featureCount: polygonFeatures.length,
+  };
+}
+
+function tryCreateLiveGeoJSONOverlays(name, geojson) {
   try {
-    console.time("[earth import] total");
+    const groups = collectEarthGeoJSONGeometry(geojson);
+    const overlays = [
+      createEarthPointOverlay(name, groups.points),
+      createEarthPolygonOverlay(name, groups.polygons),
+      createEarthLineOverlay(name, groups.lines),
+    ].filter(Boolean);
 
-    console.time("[earth import] parseGeoJSON");
-    const features = window.astroviewer.GeoJSONParser.parseGeoJSON(geojson);
-    console.timeEnd("[earth import] parseGeoJSON");
-
-    console.log(
-      "[earth import] features:",
-      features.length,
-      "points:",
-      features.reduce(
-        (total, feature) =>
-          total +
-          feature.polygons.reduce((sum, polygon) => sum + polygon.length, 0),
-        0,
-      ),
-    );
-
-    console.time("[earth import] createTerraFootprintSet");
-    const fpSetGL = state.AstroAPI.createTerraFootprintSet(
-      name,
-      "",
-      "",
-      new window.astroviewer.MetadataManager([]),
-    );
-    console.timeEnd("[earth import] createTerraFootprintSet");
-
-    console.time("[earth import] addGeoJSONFeatures");
-    fpSetGL.addGeoJSONFeatures(features);
-    console.timeEnd("[earth import] addGeoJSONFeatures");
-
-    console.time("[earth import] showTerraFootprintSet");
-    state.AstroAPI.showTerraFootprintSet(fpSetGL);
-    console.timeEnd("[earth import] showTerraFootprintSet");
-
-    const center = firstGeoJSONCoordinate(features);
-
+    const center = firstRawGeoJSONCoordinate(groups);
     if (center && typeof state.AstroAPI.goTo === "function") {
       state.AstroAPI.goTo(center.lonDeg, center.latDeg);
     }
 
-    console.timeEnd("[earth import] total");
-
-    return fpSetGL;
+    return overlays;
   } catch (e) {
-    console.error("[importer] live GeoJSON footprint import failed", e);
-
-    return null;
+    console.error("[importer] live GeoJSON import failed", e);
+    return [];
   }
 }
 
@@ -823,26 +1018,30 @@ function wireEarthImporter() {
     const fileName = lastEarthParsed.filename || "Imported GeoJSON";
 
     try {
-      const live = tryCreateLiveGeoJSONFootprintSet(
+      const overlays = tryCreateLiveGeoJSONOverlays(
         fileName,
         lastEarthParsed.geojson,
       );
 
-      if (!live) {
-        return setStatus(`GeoJSON import failed: ${fileName}`);
+      if (!overlays.length) {
+        return setStatus(`GeoJSON import found no supported geometries: ${fileName}`);
       }
 
-      addEarthGeoJSONOverlay(
-        fileName,
-        live,
-        geoJSONFeatureCount(lastEarthParsed.geojson),
-      );
+      for (const result of overlays) {
+        addEarthGeoJSONOverlay(
+          fileName,
+          result.overlay,
+          result.featureCount,
+          result.kind,
+        );
+      }
 
       renderEarthGeoJSONManager();
 
-      setStatus(
-        `Imported Earth GeoJSON: ${fileName} (${geoJSONFeatureCount(lastEarthParsed.geojson)} features)`,
-      );
+      const imported = overlays
+        .map((result) => `${result.kind} ${result.featureCount}`)
+        .join(", ");
+      setStatus(`Imported Earth GeoJSON: ${fileName} (${imported})`);
     } catch (e) {
       setStatus("Earth import error: " + (e.message || e));
     }

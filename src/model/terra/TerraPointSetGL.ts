@@ -10,6 +10,7 @@
  */
 
 import { CatalogueGL } from '../catalogues/CatalogueGL.js'
+import { mat4 } from 'gl-matrix'
 import { MetadataColumn } from '../MetadataColumn.js'
 import { MetadataManager } from '../MetadataManager.js'
 import { Point } from '../Point.js'
@@ -71,13 +72,67 @@ export class TerraPointSetGL extends CatalogueGL {
     ;(this as unknown as CatalogueRuntimeState)._bufferInitialised = false
   }
 
+  protected findNearestSourceIndex(
+    inMouseHelper: MouseHelper,
+    inMatrix: Float32Array,
+    viewMatrix: Float32Array,
+    projectionMatrix: Float32Array,
+  ): number | null {
+    if (inMouseHelper.xyz == null) return null
+
+    const canvas = this.getCanvas()
+    const width = canvas.clientWidth
+    const height = canvas.clientHeight
+    if (!width || !height) return null
+
+    const modelView = mat4.create()
+    const mvp = mat4.create()
+    mat4.multiply(modelView, viewMatrix, inMatrix)
+    mat4.multiply(mvp, projectionMatrix, modelView)
+
+    const mousePoint = new Point(
+      {
+        x: inMouseHelper.xyz[0],
+        y: inMouseHelper.xyz[1],
+        z: inMouseHelper.xyz[2],
+      },
+      CoordsType.CARTESIAN,
+    )
+    const mouseScreen = this.projectPointToScreen(mousePoint, mvp, width, height)
+    if (!mouseScreen) return null
+
+    let nearestIndex: number | null = null
+    let nearestDistancePx = Number.POSITIVE_INFINITY
+
+    for (let index = 0; index < this._sources.length; index += 1) {
+      const source = this._sources[index]
+      if (!source) continue
+
+      const sourceScreen = this.projectPointToScreen(source.point, mvp, width, height)
+      if (!sourceScreen) continue
+
+      const distancePx = Math.hypot(
+        sourceScreen[0] - mouseScreen[0],
+        sourceScreen[1] - mouseScreen[1],
+      )
+      if (
+        distancePx <= this.getHitRadiusPx(source) &&
+        distancePx < nearestDistancePx
+      ) {
+        nearestDistancePx = distancePx
+        nearestIndex = index
+      }
+    }
+
+    return nearestIndex
+  }
+
   draw(
     inMatrix: Float32Array,
     inMouseHelper: MouseHelper,
     viewMatrix: Float32Array,
     projectionMatrix: Float32Array,
   ) {
-    this._oldMouseCoords = inMouseHelper?.xyz ?? null
     super.draw(inMatrix, inMouseHelper, viewMatrix, projectionMatrix)
   }
 }

@@ -527,25 +527,25 @@
                 <div style="margin-top:8px; border-top:1px dashed #444; padding-top:8px;">
                     <label>Import geographic GeoJSON</label>
 
-                    <div class="row">
+                    <div class="stack">
                         <input id="earthImportFile" type="file"
                             accept=".json,.geojson,application/json,application/geo+json" />
 
-                        <select id="earthImportType">
-                            <option value="geojson">GeoJSON footprint set</option>
-                        </select>
+                        <div class="row">
+                            <button id="btnEarthImport">
+                                Import
+                            </button>
 
-                        <button id="btnEarthImport">
-                            Import
-                        </button>
-
-                        <button id="btnClearEarthImports" class="secondary">
-                            Clear imports
-                        </button>
+                            <button id="btnClearEarthImports" class="secondary">
+                                Clear imports
+                            </button>
+                        </div>
                     </div>
 
                     <div class="hint">
-                        Import a GeoJSON FeatureCollection as a geographic Earth Observation overlay.
+                        Geometry is detected automatically. Supported GeoJSON: Point, MultiPoint,
+                        LineString, MultiLineString, Polygon and MultiPolygon, including mixed
+                        FeatureCollections.
                     </div>
 
                     <div class="stack" style="margin-top:12px;">

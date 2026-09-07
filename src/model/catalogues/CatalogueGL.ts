@@ -789,7 +789,11 @@ export class CatalogueGL {
   private static readonly HIT_PADDING_PX = 3;
   private static readonly CANDIDATE_RADIUS_PX = 16;
 
-  private getHitRadiusPx(source: Source): number {
+  protected getCanvas(): HTMLCanvasElement {
+    return this._webgl.canvas as HTMLCanvasElement;
+  }
+
+  protected getHitRadiusPx(source: Source): number {
     const markerSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
     return Math.max(
       CatalogueGL.MIN_HIT_RADIUS_PX,
@@ -810,7 +814,7 @@ export class CatalogueGL {
     return CatalogueGL.CANDIDATE_RADIUS_PX * radPerPixel;
   }
 
-  private projectPointToScreen(
+  protected projectPointToScreen(
     point: Point,
     mvp: mat4,
     width: number,
@@ -945,7 +949,7 @@ export class CatalogueGL {
     const idx = this.hoveredIndexes[0];
     return this._sources[idx] ?? null;
   }
-  private findNearestSourceIndex(
+  protected findNearestSourceIndex(
     in_mouseHelper: MouseHelper,
     in_mMatrix: Float32Array,
     vMatrix: Float32Array,
