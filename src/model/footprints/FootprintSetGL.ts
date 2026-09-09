@@ -876,6 +876,20 @@ export class FootprintSetGL {
         this._webgl.UNSIGNED_INT,
         0,
       );
+
+      // Keep selection visually distinct from hover without relying on
+      // non-portable line widths. Reuse the selected geometry as small
+      // vertex markers; POINT_SIZE is supported for POINTS in WebGL2.
+      this._webgl.uniform1f(
+        this._footprintShaderProgram.locations.pointSize,
+        4.0,
+      );
+      this._webgl.drawElements(
+        this._webgl.POINTS,
+        this.selectedVertexPosition.length / 3 + this.nSlectedPrimitiveFlags,
+        this._webgl.UNSIGNED_INT,
+        0,
+      );
     }
 
     this._webgl.bindBuffer(
