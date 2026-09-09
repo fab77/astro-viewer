@@ -65,7 +65,7 @@
     "prod": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=production && npm run web",
     "build": "npm run clean && tsc -p tsconfig.build.json && webpack --mode=production",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
-    "web": "shx rm -rf public && shx mkdir -p public/javascripts public/css public/test-data && cp dist/* public/javascripts/ && cp -R src/html/javascripts/* public/javascripts/ && cp -R src/html/css/* public/css/ && cp -R src/html/test-data/* public/test-data/ && cp src/html/*.html public/",
+    "web": "shx rm -rf public && shx mkdir -p public/javascripts public/css public/test-data && cp dist/* public/javascripts/ && cp -R src/html/javascripts/* public/javascripts/ && cp -R src/html/css/* public/css/ && cp -R src/html/test-data/* public/test-data/ && cp src/html/*.html public/ && node scripts/stamp_demo_version.mjs",
     "start-server": "npm run build && npm run web && node scripts/serve_test_ui.mjs",
     "all": "npm run start-server",
     "prepublishOnly": "npm run build"
