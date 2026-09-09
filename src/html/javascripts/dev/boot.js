@@ -627,6 +627,14 @@ function wireUI() {
     }
   });
 
+  el("meshHipsColor")?.addEventListener("input", (ev) => {
+    state.AstroAPI?.setMeshHiPSColor?.(parseHexColor(ev.target.value));
+  });
+
+  el("meshHipsWireframe")?.addEventListener("change", (ev) => {
+    state.AstroAPI?.setMeshHiPSWireframe?.(!!ev.target.checked);
+  });
+
   el("btnLoadMeshHiPS")?.addEventListener("click", async () => {
     const url = el("meshHipsUrl").value.trim();
     const orderRaw = el("meshHipsOrder").value.trim();

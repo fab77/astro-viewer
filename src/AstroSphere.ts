@@ -1096,6 +1096,14 @@ class AstroSphere {
     this._activeBaseLayer = "meships";
   }
 
+  setMeshHiPSColor(color: [number, number, number, number]): void {
+    this._activeMeshHiPS?.setColor(color);
+  }
+
+  setMeshHiPSWireframe(wireframe: boolean): void {
+    this._activeMeshHiPS?.setWireframe(wireframe);
+  }
+
   activateWMTS(config: WMTSLayerConfig) {
     this._activeDomain = "earth";
     const adapter = new WMTSAdapter(config);

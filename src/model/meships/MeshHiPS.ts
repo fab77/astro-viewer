@@ -19,6 +19,8 @@ export class MeshHiPS extends AbstractSkyEntity {
   private _currentOrder: number;
   private _visibleTiles: MeshHiPSTileCoord[] = [];
   private _coverageTiles: MeshHiPSTileCoord[] = [];
+  private _color: [number, number, number, number];
+  private _wireframe: boolean;
 
   constructor(
     radius: number,
@@ -34,6 +36,8 @@ export class MeshHiPS extends AbstractSkyEntity {
     this._shaderProgram = new MeshHiPSShaderProgram(webgl);
     this._shaderProgram.enableProgram();
     this._currentOrder = _descriptor.selectedOrder;
+    this._color = [..._descriptor.color];
+    this._wireframe = _descriptor.wireframe;
   }
 
   get currentOrder(): number {
@@ -62,6 +66,14 @@ export class MeshHiPS extends AbstractSkyEntity {
 
   getProperty(key: string): string | undefined {
     return this._descriptor.getProperty(key);
+  }
+
+  setColor(color: [number, number, number, number]): void {
+    this._color = [...color];
+  }
+
+  setWireframe(wireframe: boolean): void {
+    this._wireframe = wireframe;
   }
 
   refreshOrder(fovDeg: number | undefined): number {
@@ -115,8 +127,8 @@ export class MeshHiPS extends AbstractSkyEntity {
             pMatrix,
             vMatrix,
             mMatrix,
-            this._descriptor.color,
-            this._descriptor.wireframe,
+            this._color,
+            this._wireframe,
           );
       }
     }
