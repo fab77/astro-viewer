@@ -754,6 +754,33 @@ function tryCreateLiveGeoJSONOverlays(name, geojson) {
   }
 }
 
+export function importEarthGeoJSON(fileName, geojson) {
+  const name = fileName || "Imported GeoJSON";
+  const overlays = tryCreateLiveGeoJSONOverlays(name, geojson);
+
+  if (!overlays.length) {
+    throw new Error(`GeoJSON import found no supported geometries: ${name}`);
+  }
+
+  for (const result of overlays) {
+    addEarthGeoJSONOverlay(
+      name,
+      result.overlay,
+      result.featureCount,
+      result.kind,
+    );
+  }
+
+  renderEarthGeoJSONManager();
+
+  return {
+    overlays,
+    summary: overlays
+      .map((result) => `${result.kind} ${result.featureCount}`)
+      .join(", "),
+  };
+}
+
 export function wireImporterControls() {
   wireAstronomyImporter();
   wireAstronomyFootprintImporter();
@@ -1018,30 +1045,8 @@ function wireEarthImporter() {
     const fileName = lastEarthParsed.filename || "Imported GeoJSON";
 
     try {
-      const overlays = tryCreateLiveGeoJSONOverlays(
-        fileName,
-        lastEarthParsed.geojson,
-      );
-
-      if (!overlays.length) {
-        return setStatus(`GeoJSON import found no supported geometries: ${fileName}`);
-      }
-
-      for (const result of overlays) {
-        addEarthGeoJSONOverlay(
-          fileName,
-          result.overlay,
-          result.featureCount,
-          result.kind,
-        );
-      }
-
-      renderEarthGeoJSONManager();
-
-      const imported = overlays
-        .map((result) => `${result.kind} ${result.featureCount}`)
-        .join(", ");
-      setStatus(`Imported Earth GeoJSON: ${fileName} (${imported})`);
+      const result = importEarthGeoJSON(fileName, lastEarthParsed.geojson);
+      setStatus(`Imported Earth GeoJSON: ${fileName} (${result.summary})`);
     } catch (e) {
       setStatus("Earth import error: " + (e.message || e));
     }

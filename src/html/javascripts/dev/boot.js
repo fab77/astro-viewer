@@ -11,6 +11,7 @@
 
 import { wireHoveredMetadata } from "./hoveredMetadata.js";
 import { wireAstronomyOverlayDemos } from "./astronomyOverlays.js";
+import { wireEarthGeoJSONDemos } from "./earthDemos.js";
 import {
   el,
   setStatus,
@@ -341,6 +342,7 @@ async function bootstrap() {
     wireCoords();
 
     wireAstronomyOverlayDemos();
+    wireEarthGeoJSONDemos();
     wireHoveredMetadata();
 
     wireXYZDiagnostics();
