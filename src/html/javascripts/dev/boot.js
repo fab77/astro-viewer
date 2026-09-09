@@ -92,6 +92,21 @@ const domainInitializationState = {
   mesh: false,
 };
 
+let activeDemoDomain = "astronomy";
+let earthUsesOpenStreetMap = false;
+
+function syncEarthMapAttribution() {
+  const attribution = el("earthMapAttribution");
+  if (attribution) {
+    attribution.hidden = activeDemoDomain !== "earth" || !earthUsesOpenStreetMap;
+  }
+}
+
+function setEarthUsesOpenStreetMap(usesOpenStreetMap) {
+  earthUsesOpenStreetMap = !!usesOpenStreetMap;
+  syncEarthMapAttribution();
+}
+
 function syncResetNorthUpButton() {
   const keepNorthUpChk = el("keepCameraNorthUpChk");
   const resetNorthUpBtn = el("btnResetAxesOrientation");
@@ -115,6 +130,9 @@ function setLonLatGridVisible(visible) {
 }
 
 async function activateDemoDomain(domain) {
+  activeDemoDomain = domain;
+  syncEarthMapAttribution();
+
   try {
     if (domain === "astronomy") {
       state.AstroAPI?.setActiveDomain?.("astronomy");
@@ -392,6 +410,7 @@ function loadEarthMapPreset(presetKey) {
 
   if (preset.type === "xyz") {
     loadXYZ(preset.urlTemplate, commonOptions);
+    setEarthUsesOpenStreetMap(presetKey === "osm");
     return;
   }
 
@@ -407,6 +426,7 @@ function loadEarthMapPreset(presetKey) {
     dimensions: {},
     ...commonOptions,
   });
+  setEarthUsesOpenStreetMap(false);
 }
 
 function addEarthRasterOverlayPreset(presetKey) {
@@ -691,6 +711,9 @@ function wireUI() {
         maxConcurrentRequests,
       });
 
+      setEarthUsesOpenStreetMap(
+        /^https?:\/\/tile\.openstreetmap\.org\//i.test(urlTemplate),
+      );
       setLonLatGridVisible(lonLatGridWanted);
     } catch (e) {
       setStatus("XYZ load error: " + (e.message || e));

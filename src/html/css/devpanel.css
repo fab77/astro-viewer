@@ -687,6 +687,27 @@ body.sidebar-collapsed #gridhpx {
     letter-spacing: .08em;
 }
 
+.map-attribution {
+    position: fixed;
+    right: 12px;
+    bottom: calc(var(--av-status-height) + 10px);
+    z-index: 24;
+    padding: 4px 7px;
+    border: 1px solid var(--av-border);
+    border-radius: 4px;
+    background: rgba(3, 9, 17, .82);
+    font-size: 10px;
+    backdrop-filter: blur(8px);
+}
+
+.map-attribution[hidden] {
+    display: none;
+}
+
+.map-attribution a {
+    color: var(--av-text-secondary);
+}
+
 .loading-indicator {
     position: fixed;
     top: calc(var(--av-header-height) + 12px);
