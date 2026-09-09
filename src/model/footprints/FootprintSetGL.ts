@@ -10,7 +10,7 @@
  */
 
 import { Footprint } from "./Footprint.js";
-import { colorHex2RGB } from "../../utils/Utils.js";
+import { colorHex2RGB, interactionColorsFromHex } from "../../utils/Utils.js";
 
 import { FootprintShaderProgram } from "../../shader/FootprintShaderProgram.js";
 
@@ -761,9 +761,11 @@ export class FootprintSetGL {
       this.checkSelection(in_mouseHelper);
     }
 
+    const interactionColors = interactionColorsFromHex(this._shapeColor);
+
     if (this._hoveredFootprints.length > 0) {
       // TODO POINT_SIZE doesn't have any effect on line thickness!! it only applies to points
-      const rgb = colorHex2RGB("#00FF00");
+      const rgb = interactionColors.hover;
       const alpha = 1.0;
       this._webgl.uniform4f(
         this._footprintShaderProgram.locations.color,
@@ -820,7 +822,7 @@ export class FootprintSetGL {
     }
 
     if (this._selectedFootprints.length > 0) {
-      const rgb = colorHex2RGB("#ECB462");
+      const rgb = interactionColors.selected;
       const alpha = 1.0;
       this._webgl.uniform4f(
         this._footprintShaderProgram.locations.color,

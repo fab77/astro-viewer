@@ -17,6 +17,8 @@ type GL = WebGL2RenderingContext;
 
 type UniformNames = {
   vertex_color: string,
+  hover_color: string,
+  selected_color: string,
   m_perspective: string,
   m_model_view: string,
 }
@@ -32,6 +34,8 @@ type Locations = {
   pMatrix: WebGLUniformLocation | null
   mvMatrix: WebGLUniformLocation | null
   color: WebGLUniformLocation | null
+  hoverColor: WebGLUniformLocation | null
+  selectedColor: WebGLUniformLocation | null
   position: number
   hovered: number
   pointSize: number
@@ -54,6 +58,8 @@ export class CatalogueShaderProgram {
     this._webgl = webgl
     this.gl_uniforms = {
       vertex_color: 'u_fragcolor',
+      hover_color: 'u_hovercolor',
+      selected_color: 'u_selectedcolor',
       m_perspective: 'uPMatrix',
       m_model_view: 'uMVMatrix'
     }
@@ -69,6 +75,8 @@ export class CatalogueShaderProgram {
       pMatrix: null,
       mvMatrix: null,
       color: null,
+      hoverColor: null,
+      selectedColor: null,
       position: -1,
       hovered: -1,
       pointSize: -1,
@@ -140,6 +148,14 @@ export class CatalogueShaderProgram {
     this.locations.color = gl.getUniformLocation(
       this.shaderProgram as WebGLProgram,
       this.gl_uniforms.vertex_color
+    )
+    this.locations.hoverColor = gl.getUniformLocation(
+      this.shaderProgram as WebGLProgram,
+      this.gl_uniforms.hover_color
+    )
+    this.locations.selectedColor = gl.getUniformLocation(
+      this.shaderProgram as WebGLProgram,
+      this.gl_uniforms.selected_color
     )
 
 

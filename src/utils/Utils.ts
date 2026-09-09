@@ -70,6 +70,33 @@ export function colorHex2RGB(hexColor: string): [number, number, number] {
   return [parseFloat(rgb1), parseFloat(rgb2), parseFloat(rgb3)];
 }
 
+export type InteractionColors = {
+  hover: [number, number, number];
+  selected: [number, number, number];
+};
+
+/**
+ * Derive interaction colours from the object's normal colour.
+ * Dark colours move towards white; light colours move towards black.
+ * Selection uses the stronger contrast so selected > hover > normal.
+ */
+export function interactionColorsFromHex(hexColor: string): InteractionColors {
+  const base = colorHex2RGB(hexColor);
+  const luminance = 0.2126 * base[0] + 0.7152 * base[1] + 0.0722 * base[2];
+  const target = luminance < 0.55 ? 1.0 : 0.0;
+
+  const mix = (amount: number): [number, number, number] => [
+    base[0] + (target - base[0]) * amount,
+    base[1] + (target - base[1]) * amount,
+    base[2] + (target - base[2]) * amount,
+  ];
+
+  return {
+    hover: mix(0.45),
+    selected: mix(0.45),
+  };
+}
+
 export function degToRad(degrees: number): number {
   return (degrees / 180) * Math.PI;
 }

@@ -12,7 +12,7 @@
 import { Source, SourceMediaKind, SourceMediaStyle } from "../Source.js";
 import { Point } from "../Point.js";
 import { CoordsType } from "../..//utils/CoordsType.js";
-import { colorHex2RGB } from "../../utils/Utils.js";
+import { colorHex2RGB, interactionColorsFromHex } from "../../utils/Utils.js";
 import MouseHelper from "../../utils/MouseHelper.js";
 import { CatalogueShaderProgram } from "../../shader/CatalogueShaderProgram.js";
 import { MetadataManager } from "../MetadataManager.js";
@@ -1147,6 +1147,22 @@ export class CatalogueGL {
       );
     }
 
+    const interactionColors = interactionColorsFromHex(this._shapeColor);
+    if (this._catalogueShaderProgram.locations.hoverColor) {
+      this._webgl.uniform4f(
+        this._catalogueShaderProgram.locations.hoverColor,
+        ...interactionColors.hover,
+        1.0,
+      );
+    }
+    if (this._catalogueShaderProgram.locations.selectedColor) {
+      this._webgl.uniform4f(
+        this._catalogueShaderProgram.locations.selectedColor,
+        ...interactionColors.selected,
+        1.0,
+      );
+    }
+
     // selected flags
     for (let s = 0; s < this.selectedIndexes.length; s++) {
       const idx = this.selectedIndexes[s];
@@ -1158,7 +1174,7 @@ export class CatalogueGL {
     // clear old hovered
     for (let k = 0; k < this.hoveredIndexes.length; k++) {
       const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
-      // if (this.vertexCataloguePosition[base + 3] == 2.0) continue; // selected, skip hover
+      if (this.selectedIndexes.includes(this.hoveredIndexes[k])) continue;
 
       this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
       this.vertexCataloguePosition[base + 4] =
@@ -1198,7 +1214,7 @@ export class CatalogueGL {
       const idx = this.hoveredIndexes[i];
       const base = idx * CatalogueGL.ELEM_SIZE;
 
-      // if (this.vertexCataloguePosition[base + 3] == 2.0) continue; // selected, skip hover
+      if (this.selectedIndexes.includes(idx)) continue;
       this.vertexCataloguePosition[base + 3] = 1.0; // hovered
       this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
     }

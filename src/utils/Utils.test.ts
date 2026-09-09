@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import {
   decDMSToDeg,
   decDegToDMS,
+  interactionColorsFromHex,
   raHMSToDeg,
   raDegToHMS,
 } from "./Utils.js";
@@ -36,5 +37,19 @@ describe("astronomical sexagesimal coordinate conversions", () => {
 
     expect(raHMSToDeg(raDegToHMS(ra))).toBeCloseTo(ra);
     expect(decDMSToDeg(decDegToDMS(dec))).toBeCloseTo(dec);
+  });
+});
+
+describe("interaction colours", () => {
+  it("moves dark base colours towards white", () => {
+    const colors = interactionColorsFromHex("#003366");
+    expect(colors.hover[0]).toBeGreaterThan(0);
+    expect(colors.selected).toEqual(colors.hover);
+  });
+
+  it("moves light base colours towards black", () => {
+    const colors = interactionColorsFromHex("#ffff00");
+    expect(colors.hover[0]).toBeLessThan(1);
+    expect(colors.selected).toEqual(colors.hover);
   });
 });
