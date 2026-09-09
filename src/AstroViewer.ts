@@ -400,6 +400,14 @@ export class AstroViewer {
     this.astroSphere.activateMeshHiPS(new MeshHiPSDescriptor(config));
   }
 
+  setMeshHiPSColor(color: [number, number, number, number]): void {
+    this.astroSphere.setMeshHiPSColor(color);
+  }
+
+  setMeshHiPSWireframe(wireframe: boolean): void {
+    this.astroSphere.setMeshHiPSWireframe(wireframe);
+  }
+
   setXYZMaxConcurrentRequests(value: number): void {
     xyzTileRequestScheduler.setMaxConcurrent(value);
   }

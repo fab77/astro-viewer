@@ -77,10 +77,6 @@ export function wireCoords() {
 
   refreshCenter();
 
-  // el("btnEarthRefreshCenter")?.addEventListener("click", refreshCenter);
-
-  // el("btnMeshRefreshCenter")?.addEventListener("click", refreshCenter);
-
   /*
    * Keep center coordinates synchronized with camera movement.
    */
