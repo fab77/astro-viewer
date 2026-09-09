@@ -12,6 +12,7 @@
 // catalogueManager.js
 import { el, setStatus } from './ui.js';
 import { state, catalogueKey, persistBasic } from './state.js';
+import { forgetInspectorSelection } from './hoveredMetadata.js';
 
 const HEX6 = /^#?[0-9a-fA-F]{6}$/;
 function sanitizeHex(v) {
@@ -181,6 +182,7 @@ export function wireCatalogueManagerControls() {
     if (ev.target.classList.contains('row-del')) {
       try {
         state.AstroAPI?.deleteCatalogue?.(cat);
+        forgetInspectorSelection(cat);
         state.CAT_LIST.splice(idx, 1);
         state.CAT_VIS.delete(key);
         state.CAT_SIZEBY.delete(key);

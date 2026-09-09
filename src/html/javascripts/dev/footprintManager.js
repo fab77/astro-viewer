@@ -11,6 +11,7 @@
 
 import { el, setStatus } from './ui.js';
 import { state, persistBasic } from './state.js';
+import { forgetInspectorSelection } from './hoveredMetadata.js';
 
 const HEX6 = /^#?[0-9a-fA-F]{6}$/;
 const sanitizeHex = (v) => {
@@ -119,6 +120,7 @@ export function wireFootprintManagerControls() {
     if (ev.target.classList.contains('row-fp-del')) {
       try {
         state.AstroAPI?.deleteFootprintSet?.(fp);
+        forgetInspectorSelection(fp);
         state.FP_LIST.splice(idx, 1);
         state.FP_VIS.delete(key);
         state.FP_COLOR.delete(key);

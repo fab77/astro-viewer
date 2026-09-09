@@ -12,6 +12,11 @@ import {
   clearEarthGeoJSONOverlays,
   renderEarthGeoJSONManager,
 } from "./earthGeoJSONManager.js";
+import { forgetInspectorSelection } from "./hoveredMetadata.js";
+import {
+  isAstronomyDemoCatalogue,
+  isAstronomyDemoFootprintSet,
+} from "./astronomyOverlays.js";
 
 function parseCSV(text) {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length);
@@ -79,6 +84,11 @@ function guessColumnType(sampleValues) {
 let lastAstronomyParsed = null;
 let lastAstronomyFootprintParsed = null;
 let lastEarthParsed = null;
+
+// Track manual Astronomy imports explicitly. This avoids coupling import
+// lifecycle to TAP-backed arrays or ad-hoc properties on runtime objects.
+const astronomyCatalogueImports = new Set();
+const astronomyFootprintImports = new Set();
 
 function isGeoJSON(value) {
   return (
@@ -876,10 +886,28 @@ function wireAstronomyImporter() {
   });
 
   btnClear?.addEventListener("click", () => {
+    const imported = new Set([
+      ...astronomyCatalogueImports,
+      ...state.CAT_LIST.filter(isAstronomyDemoCatalogue),
+    ]);
+
+    for (const catalogue of imported) {
+      try {
+        state.AstroAPI?.deleteCatalogue?.(catalogue);
+      } catch {}
+      forgetInspectorSelection(catalogue);
+
+      const key = catalogueKey(catalogue);
+      state.CAT_VIS.delete(key);
+      state.CAT_SIZEBY.delete(key);
+      state.CAT_HUEBY.delete(key);
+      state.CAT_COLOR.delete(key);
+    }
+
     state.CAT_LIST = state.CAT_LIST.filter(
-      (catalogue) =>
-        !(catalogue.id && String(catalogue.id).startsWith("import-cat-")),
+      (catalogue) => !imported.has(catalogue),
     );
+    astronomyCatalogueImports.clear();
 
     lastAstronomyParsed = null;
 
@@ -969,24 +997,25 @@ function wireAstronomyFootprintImporter() {
   });
 
   btnClear?.addEventListener("click", () => {
-    const imported = state.FP_LIST.filter(
-      (footprint) =>
-        footprint.id && String(footprint.id).startsWith("import-fp-"),
-    );
+    const imported = new Set([
+      ...astronomyFootprintImports,
+      ...state.FP_LIST.filter(isAstronomyDemoFootprintSet),
+    ]);
 
     for (const footprint of imported) {
       try {
         state.AstroAPI?.deleteFootprintSet?.(footprint);
       } catch {}
+      forgetInspectorSelection(footprint);
       const key = footprint.name || String(footprint.id) || footprint.table || JSON.stringify(footprint);
       state.FP_VIS.delete(key);
       state.FP_COLOR.delete(key);
     }
 
     state.FP_LIST = state.FP_LIST.filter(
-      (footprint) =>
-        !(footprint.id && String(footprint.id).startsWith("import-fp-")),
+      (footprint) => !imported.has(footprint),
     );
+    astronomyFootprintImports.clear();
 
     lastAstronomyFootprintParsed = null;
     renderFootprintManager();
@@ -1073,7 +1102,8 @@ function importAstronomyCatalogue(fileName, parsed, mapping) {
   );
 
   if (live) {
-    state.CAT_LIST.push(live);
+    astronomyCatalogueImports.add(live);
+    state.CAT_LIST = [...state.CAT_LIST, live];
 
     // A new import starts with the standard visual styling, even when a
     // catalogue with the same name was configured in an earlier session.
@@ -1093,7 +1123,8 @@ function importAstronomyCatalogue(fileName, parsed, mapping) {
 
   const descriptor = makeCatalogueDescriptor(objects, fileName);
 
-  state.CAT_LIST.push(descriptor);
+  astronomyCatalogueImports.add(descriptor);
+  state.CAT_LIST = [...state.CAT_LIST, descriptor];
 
   renderCatalogueManager();
   persistBasic();
@@ -1115,7 +1146,8 @@ function importAstronomyFootprints(fileName, parsed, mapping) {
   );
 
   if (live) {
-    state.FP_LIST.push(live);
+    astronomyFootprintImports.add(live);
+    state.FP_LIST = [...state.FP_LIST, live];
 
     const key = live.name || String(live.id) || live.table || JSON.stringify(live);
     const initialColor = "#ffaa00";
@@ -1143,7 +1175,8 @@ function importAstronomyFootprints(fileName, parsed, mapping) {
 
   const descriptor = makeFootprintDescriptor(objects, fileName);
 
-  state.FP_LIST.push(descriptor);
+  astronomyFootprintImports.add(descriptor);
+  state.FP_LIST = [...state.FP_LIST, descriptor];
 
   renderFootprintManager();
   persistBasic();

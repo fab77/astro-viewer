@@ -9,7 +9,7 @@
  * See LICENSE.md, LICENSE-AGPL.md, and LICENSE-COMMERCIAL.md for details.
  */
 
-import { wireHoveredMetadata } from "./hoveredMetadata.js";
+import { syncInspectorToActiveDomain, wireHoveredMetadata } from "./hoveredMetadata.js";
 import { wireAstronomyOverlayDemos } from "./astronomyOverlays.js";
 import { wireEarthGeoJSONDemos } from "./earthDemos.js";
 import {
@@ -118,12 +118,14 @@ async function activateDemoDomain(domain) {
   try {
     if (domain === "astronomy") {
       state.AstroAPI?.setActiveDomain?.("astronomy");
+      syncInspectorToActiveDomain();
       setStatus("Astronomy ready. Load a layer or add surveys to the stack.");
       return;
     }
 
     if (domain === "earth") {
       state.AstroAPI?.setActiveDomain?.("earth");
+      syncInspectorToActiveDomain();
 
       if (!domainInitializationState.earth) {
         applyWMTSPreset(DEFAULT_EARTH_PRESET);
@@ -164,6 +166,7 @@ async function activateDemoDomain(domain) {
 
     if (domain === "mesh") {
       state.AstroAPI?.setActiveDomain?.("mesh");
+      syncInspectorToActiveDomain();
 
       if (!domainInitializationState.mesh) {
         const meshUrl = el("meshHipsUrl");

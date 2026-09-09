@@ -6,6 +6,7 @@
 
 import { el, setStatus } from './ui.js';
 import { state } from './state.js';
+import { forgetInspectorSelection } from './hoveredMetadata.js';
 
 const DEFAULT_COLOR = '#00fff2';
 let nextOverlayId = 1;
@@ -45,6 +46,8 @@ function deleteOverlay(entry) {
   } else {
     state.AstroAPI?.deleteTerraFootprintSet?.(entry.overlay);
   }
+
+  forgetInspectorSelection(entry.overlay);
 }
 
 export function addEarthGeoJSONOverlay(name, overlay, featureCount, kind = 'polygons') {

@@ -9,6 +9,20 @@ import { footprintKey, renderFootprintManager } from "./footprintManager.js";
 const CATALOGUE_FIXTURE = "./test-data/astronomy/hsc_m51_sources.json";
 const FOOTPRINT_FIXTURE = "./test-data/astronomy/hst_m51_observations.json";
 
+// Demo overlays are transient UI data, like Earth GeoJSON demos. Keep their
+// ownership explicit so Astronomy "Clear imports" can remove them without
+// treating unrelated catalogues or footprint sets as imports.
+const demoCatalogues = new WeakSet();
+const demoFootprintSets = new WeakSet();
+
+export function isAstronomyDemoCatalogue(catalogue) {
+  return demoCatalogues.has(catalogue);
+}
+
+export function isAstronomyDemoFootprintSet(footprintSet) {
+  return demoFootprintSets.has(footprintSet);
+}
+
 export function wireAstronomyOverlayDemos() {
   const astronomy = document.querySelector('[data-dev-tab-panel="astronomy"]');
 
@@ -96,6 +110,7 @@ async function loadCatalogueFixture() {
   try {
     const fixture = await loadFixture(CATALOGUE_FIXTURE);
     const live = createCatalogue(fixture);
+    demoCatalogues.add(live);
     state.CAT_LIST.push(live);
     renderCatalogueManager();
     goToFixture(fixture);
@@ -112,6 +127,7 @@ async function loadFootprintFixture() {
   try {
     const fixture = await loadFixture(FOOTPRINT_FIXTURE);
     const live = createFootprintSet(fixture);
+    demoFootprintSets.add(live);
     state.FP_LIST.push(live);
 
     const key = footprintKey(live);

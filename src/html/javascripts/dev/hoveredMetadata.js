@@ -14,6 +14,25 @@ let hoveredSourceDetail = null;
 
 const selectedSources = new Map();
 const selectedFootprints = new Map();
+const selectionDomains = new WeakMap();
+
+export function syncInspectorToActiveDomain() {
+  hoveredSourceDetail = null;
+  lastSignature = '';
+  renderCombined([]);
+}
+
+export function forgetInspectorSelection(owner) {
+  if (!owner) return;
+  selectedSources.delete(owner);
+  selectedFootprints.delete(owner);
+  lastSignature = '';
+  renderCombined();
+}
+
+function activeDomain() {
+  return state.AstroAPI?.getActiveDomain?.() || 'astronomy';
+}
 
 export function wireHoveredMetadata() {
   const canvas = document.getElementById('astrocanvas');
@@ -48,15 +67,20 @@ export function wireHoveredMetadata() {
   };
 
   const clearInspectorSelection = () => {
-    for (const catalogue of selectedSources.keys()) {
+    const domain = activeDomain();
+
+    for (const catalogue of [...selectedSources.keys()]) {
+      if (selectionDomains.get(catalogue) !== domain) continue;
       catalogue?.clearSelection?.();
-    }
-    for (const footprintSet of selectedFootprints.keys()) {
-      footprintSet?.clearSelection?.();
+      selectedSources.delete(catalogue);
     }
 
-    selectedSources.clear();
-    selectedFootprints.clear();
+    for (const footprintSet of [...selectedFootprints.keys()]) {
+      if (selectionDomains.get(footprintSet) !== domain) continue;
+      footprintSet?.clearSelection?.();
+      selectedFootprints.delete(footprintSet);
+    }
+
     hoveredSourceDetail = null;
 
     if (rafId) {
@@ -104,6 +128,7 @@ function updateSelectedSources(detail) {
     sources = new Set();
     selectedSources.set(catalogue, sources);
   }
+  selectionDomains.set(catalogue, activeDomain());
 
   for (const item of detail?.selectionState || []) {
     if (!item?.source) continue;
@@ -123,6 +148,7 @@ function updateSelectedFootprints(detail) {
     footprints = new Set();
     selectedFootprints.set(footprintSet, footprints);
   }
+  selectionDomains.set(footprintSet, activeDomain());
 
   for (const item of detail?.selectionState || []) {
     if (!item?.footprint) continue;
@@ -182,14 +208,17 @@ function currentFootprintSets() {
 
 function renderSelectedCards() {
   const cards = [];
+  const domain = activeDomain();
 
   for (const [catalogue, sources] of selectedSources) {
+    if (selectionDomains.get(catalogue) !== domain) continue;
     for (const source of sources) {
       cards.push(renderSourceCard({ source, catalogue }, true));
     }
   }
 
   for (const [footprintSet, footprints] of selectedFootprints) {
+    if (selectionDomains.get(footprintSet) !== domain) continue;
     for (const footprint of footprints) {
       cards.push(renderFootprintCard(footprintSet, footprint, true));
     }
