@@ -53,6 +53,8 @@ export default class ShaderManager {
     in float v_brightness;
 
     uniform vec4 u_fragcolor;
+    uniform vec4 u_hovercolor;
+    uniform vec4 u_selectedcolor;
 
     out vec4 fragColor;
 
@@ -109,11 +111,12 @@ export default class ShaderManager {
       #endif
 
       if (v_selected == 1.0){
-        // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
-        fragColor = vec4(1.0, 0.0, 0.0, 1.0) * (alpha);
+        fragColor = u_hovercolor * alpha;
       } else if (v_selected == 2.0){
-        // gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
-        fragColor = vec4(1.0, 1.0, 0.0, 1.0) * (alpha);
+        // Persistent selection: keep the dataset colour as an outer ring
+        // and use the hover colour for the fill. This remains visible for
+        // both light and dark user-selected base colours.
+        fragColor = (r > 0.72 ? u_fragcolor : u_hovercolor) * alpha;
       }else{
         if (r < 0.4) {
           discard;

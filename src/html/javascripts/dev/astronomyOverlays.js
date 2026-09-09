@@ -17,6 +17,7 @@ export function wireAstronomyOverlayDemos() {
   const cataloguePanel = document.createElement("details");
   cataloguePanel.id = "astronomyCatalogueDemo";
   cataloguePanel.open = true;
+  cataloguePanel.hidden = true;
   cataloguePanel.dataset.uiPanel = "astronomy:data";
 
   cataloguePanel.innerHTML = `
