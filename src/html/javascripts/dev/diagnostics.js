@@ -44,20 +44,29 @@ export function wireXYZDiagnostics() {
   const update = () => {
     const stats = state.AstroAPI?.getXYZDebugStats?.();
     const fov = state.AstroAPI?.getFoV?.();
-    const fovEl = el("xyzDiagFoV");
+
+    const astronomyFovEl = el("astronomyFoV");
+    const xyzFovEl = el("xyzDiagFoV");
+
     const summaryEl = el("xyzDiagSummary");
     const cacheEl = el("xyzDiagCache");
     const requestsEl = el("xyzDiagRequests");
     const backoffEl = el("xyzDiagBackoff");
 
-    if (!fovEl || !summaryEl || !cacheEl || !requestsEl || !backoffEl) {
-      return;
+    const fovText = fov
+      ? `FoV: min ${fov.minFoV?.toFixed?.(4) ?? "—"}° · x ${fov.xFoV?.toFixed?.(4) ?? "—"}° · y ${fov.yFoV?.toFixed?.(4) ?? "—"}°`
+      : "FoV: —";
+
+    if (astronomyFovEl) {
+      astronomyFovEl.value = fovText;
     }
 
-    if (fov) {
-      fovEl.value = `FoV: min ${fov.minFoV?.toFixed?.(4) ?? "—"}° · x ${fov.xFoV?.toFixed?.(4) ?? "—"}° · y ${fov.yFoV?.toFixed?.(4) ?? "—"}°`;
-    } else {
-      fovEl.value = "FoV: —";
+    if (xyzFovEl) {
+      xyzFovEl.value = fovText;
+    }
+
+    if (!summaryEl || !cacheEl || !requestsEl || !backoffEl) {
+      return;
     }
 
     if (!stats) {

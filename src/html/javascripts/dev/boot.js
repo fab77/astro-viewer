@@ -11,6 +11,7 @@
 
 import { wireHoveredMetadata } from "./hoveredMetadata.js";
 import { wireAstronomyOverlayDemos } from "./astronomyOverlays.js";
+import { wireEarthGeoJSONDemos } from "./earthDemos.js";
 import {
   el,
   setStatus,
@@ -21,7 +22,7 @@ import {
 import { state, loadPersisted, persistBasic } from "./state.js";
 import { loadHiPS, wireHiPSControls } from "./hips.js";
 import { loadMeshHiPS } from "./meships.js";
-import { loadWMTS, loadXYZ } from "./xyz.js";
+import { addWMTSRasterOverlay, addXYZRasterOverlay, loadWMTS, loadXYZ } from "./xyz.js";
 import { loadTapRepo, showFootprint, hideFootprints } from "./tap.js";
 import {
   renderCatalogueManager,
@@ -41,6 +42,10 @@ import {
 } from "./wmtsCapabilities.js";
 import { wireImporterControls } from "./importer.js";
 import { wireSatelliteFootprintDemo } from "./satelliteFootprintDemo.js";
+import {
+  renderEarthGeoJSONManager,
+  wireEarthGeoJSONManagerControls,
+} from "./earthGeoJSONManager.js";
 
 (function applyFixedProxy() {
   const FIXED_PROXY_BASE = ""; // set if needed
@@ -61,7 +66,39 @@ const DEFAULT_ASTRONOMY_HIPS = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
 
 const DEFAULT_EARTH_PRESET = "esriWorldImagery";
 
+const XYZ_PRESETS = {
+  osm: {
+    label: "OpenStreetMap",
+    type: "xyz",
+    urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    minZoom: 0,
+    maxZoom: 19,
+  },
+  openTopoMap: {
+    label: "OpenTopoMap",
+    type: "xyz",
+    urlTemplate: "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+    minZoom: 0,
+    maxZoom: 17,
+  },
+};
+
+
 const DEFAULT_MESH_HIPS = "/meships-local/mhips-moon/";
+
+const domainInitializationState = {
+  astronomy: false,
+  earth: false,
+  mesh: false,
+};
+
+function syncResetNorthUpButton() {
+  const keepNorthUpChk = el("keepCameraNorthUpChk");
+  const resetNorthUpBtn = el("btnResetAxesOrientation");
+  if (resetNorthUpBtn && keepNorthUpChk) {
+    resetNorthUpBtn.disabled = keepNorthUpChk.checked;
+  }
+}
 
 function setLonLatGridVisible(visible) {
   const isVisible = !!state.AstroAPI?.isLonLatGridVisible?.();
@@ -80,104 +117,79 @@ function setLonLatGridVisible(visible) {
 async function activateDemoDomain(domain) {
   try {
     if (domain === "astronomy") {
-      if (
-        state.AstroAPI?.isLonLatGridVisible?.() &&
-        state.AstroAPI?.toggleLonLatGrid
-      ) {
-        state.AstroAPI.toggleLonLatGrid();
-      }
-
-      const lonLatChk = el("lonLatGridChk");
-      if (lonLatChk) {
-        lonLatChk.checked = false;
-      }
-
-      const hipsInput = el("hipsUrl");
-
-      if (hipsInput) {
-        hipsInput.value = DEFAULT_ASTRONOMY_HIPS;
-      }
-
-      await loadHiPS(DEFAULT_ASTRONOMY_HIPS);
-
-      setStatus("Astronomy: DSS Color loaded.");
+      state.AstroAPI?.setActiveDomain?.("astronomy");
+      setStatus("Astronomy ready. Load a layer or add surveys to the stack.");
       return;
     }
 
     if (domain === "earth") {
-      applyWMTSPreset(DEFAULT_EARTH_PRESET);
+      state.AstroAPI?.setActiveDomain?.("earth");
 
-      const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
+      if (!domainInitializationState.earth) {
+        applyWMTSPreset(DEFAULT_EARTH_PRESET);
 
-      loadWMTS({
-        baseUrl: preset.baseUrl,
-        urlTemplate: preset.urlTemplate || undefined,
-        layer: preset.preferredLayer,
-        tileMatrixSet: preset.tileMatrixSet,
-        style: preset.style,
-        format: preset.format,
-        requestEncoding: preset.requestEncoding,
-        dimensions: {},
-        minZoom: Number(el("xyzMinZoom")?.value ?? 0),
-        maxZoom: Number(el("xyzMaxZoom")?.value ?? 8),
-        segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
-        maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
-        maxConcurrentRequests: Number(
-          el("xyzMaxConcurrentRequests")?.value ?? 4,
-        ),
-      });
+        const preset = WMTS_PRESETS[DEFAULT_EARTH_PRESET];
 
-      // Earth demo starts with all grids disabled.
-      if (
-        state.AstroAPI?.isHealpixGridVisible?.() &&
-        state.AstroAPI?.toggleHealpixGrid
-      ) {
-        state.AstroAPI.toggleHealpixGrid();
+        loadWMTS({
+          baseUrl: preset.baseUrl,
+          urlTemplate: preset.urlTemplate || undefined,
+          layer: preset.preferredLayer,
+          tileMatrixSet: preset.tileMatrixSet,
+          style: preset.style,
+          format: preset.format,
+          requestEncoding: preset.requestEncoding,
+          dimensions: {},
+          minZoom: Number(el("xyzMinZoom")?.value ?? 0),
+          maxZoom: Number(el("xyzMaxZoom")?.value ?? 8),
+          segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+          maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+          maxConcurrentRequests: Number(
+            el("xyzMaxConcurrentRequests")?.value ?? 4,
+          ),
+        });
+
+        // Earth starts with its own lon/lat grid disabled. Astronomy grid
+        // visibility is domain-owned and must not be changed here.
+        setLonLatGridVisible(false);
+
+
+        domainInitializationState.earth = true;
+        setStatus("Earth Observation: Esri World Imagery loaded.");
+        return;
       }
 
-      if (
-        state.AstroAPI?.isEquatorialGridVisible?.() &&
-        state.AstroAPI?.toggleEquatorialGrid
-      ) {
-        state.AstroAPI.toggleEquatorialGrid();
-      }
-
-      setLonLatGridVisible(false);
-
-      const healpixChk = el("healpixGridChk");
-      if (healpixChk) {
-        healpixChk.checked = false;
-      }
-
-      const equatorialChk = el("equatorialGridChk");
-      if (equatorialChk) {
-        equatorialChk.checked = false;
-      }
-
-      setStatus("Earth Observation: Esri World Imagery loaded.");
+      setStatus("Earth Observation ready.");
       return;
     }
 
     if (domain === "mesh") {
-      const meshUrl = el("meshHipsUrl");
+      state.AstroAPI?.setActiveDomain?.("mesh");
 
-      if (meshUrl) {
-        meshUrl.value = DEFAULT_MESH_HIPS;
+      if (!domainInitializationState.mesh) {
+        const meshUrl = el("meshHipsUrl");
+
+        if (meshUrl) {
+          meshUrl.value = DEFAULT_MESH_HIPS;
+        }
+
+        const orderRaw = el("meshHipsOrder")?.value.trim() ?? "";
+
+        await loadMeshHiPS(DEFAULT_MESH_HIPS, {
+          order: orderRaw === "" ? undefined : Number(orderRaw),
+
+          maxCachedTiles: Number(el("meshHipsMaxCachedTiles")?.value ?? 384),
+
+          color: parseHexColor(el("meshHipsColor")?.value ?? "#b8dbff"),
+
+          wireframe: !!el("meshHipsWireframe")?.checked,
+        });
+
+        domainInitializationState.mesh = true;
+        setStatus("3D / Mesh: Moon MeshHiPS loaded.");
+        return;
       }
 
-      const orderRaw = el("meshHipsOrder")?.value.trim() ?? "";
-
-      await loadMeshHiPS(DEFAULT_MESH_HIPS, {
-        order: orderRaw === "" ? undefined : Number(orderRaw),
-
-        maxCachedTiles: Number(el("meshHipsMaxCachedTiles")?.value ?? 384),
-
-        color: parseHexColor(el("meshHipsColor")?.value ?? "#b8dbff"),
-
-        wireframe: !!el("meshHipsWireframe")?.checked,
-      });
-
-      setStatus("3D / Mesh: Moon MeshHiPS loaded.");
+      setStatus("3D / Mesh ready.");
     }
   } catch (error) {
     console.error(error);
@@ -230,6 +242,7 @@ async function bootstrap() {
       if (keepNorthUpChk && typeof AC.isKeepCameraNorthUp === "function") {
         keepNorthUpChk.checked = !!AC.isKeepCameraNorthUp();
       }
+      syncResetNorthUpButton();
       if (viewfinderChk && typeof AC.isViewfinderVisible === "function") {
         viewfinderChk.checked = !!AC.isViewfinderVisible();
       }
@@ -304,9 +317,10 @@ async function bootstrap() {
     if (xyzMaxZoomInput) {
       xyzMaxZoomInput.value = "8";
     }
-    // Load HiPS using resolved URL
+    
+    // Load the default Astronomy HiPS as the initial base layer.
     await loadHiPS(defaultHiPS.trim());
-
+    domainInitializationState.astronomy = true;
     AC.run();
 
     wireDevTabs(activateDemoDomain);
@@ -318,6 +332,9 @@ async function bootstrap() {
     renderFootprintManager();
     wireFootprintManagerControls();
 
+    renderEarthGeoJSONManager();
+    wireEarthGeoJSONManagerControls();
+
     wireImporterControls();
     wireSatelliteFootprintDemo();
 
@@ -325,6 +342,7 @@ async function bootstrap() {
     wireCoords();
 
     wireAstronomyOverlayDemos();
+    wireEarthGeoJSONDemos();
     wireHoveredMetadata();
 
     wireXYZDiagnostics();
@@ -338,8 +356,261 @@ async function bootstrap() {
   }
 }
 
+function getEarthMapPreset(presetKey) {
+  const xyzPreset = XYZ_PRESETS[presetKey];
+  if (xyzPreset) {
+    return xyzPreset;
+  }
+
+  const wmtsPreset = WMTS_PRESETS[presetKey];
+  if (!wmtsPreset) {
+    return null;
+  }
+
+  return {
+    ...wmtsPreset,
+    type: "wmts",
+  };
+}
+
+function loadEarthMapPreset(presetKey) {
+  const preset = getEarthMapPreset(presetKey);
+  if (!preset) {
+    throw new Error(`Unknown Earth map preset: ${presetKey}`);
+  }
+
+  const commonOptions = {
+    minZoom: preset.minZoom ?? Number(el("xyzMinZoom")?.value ?? 0),
+    maxZoom: preset.maxZoom ?? Number(el("xyzMaxZoom")?.value ?? 8),
+    segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+    maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+    maxConcurrentRequests: Number(el("xyzMaxConcurrentRequests")?.value ?? 4),
+  };
+
+  if (preset.type === "xyz") {
+    loadXYZ(preset.urlTemplate, commonOptions);
+    return;
+  }
+
+  applyWMTSPreset(presetKey);
+  loadWMTS({
+    baseUrl: preset.baseUrl,
+    urlTemplate: preset.urlTemplate || undefined,
+    layer: preset.preferredLayer,
+    tileMatrixSet: preset.tileMatrixSet,
+    style: preset.style,
+    format: preset.format,
+    requestEncoding: preset.requestEncoding,
+    dimensions: {},
+    ...commonOptions,
+  });
+}
+
+function addEarthRasterOverlayPreset(presetKey) {
+  const preset = getEarthMapPreset(presetKey);
+  if (!preset) {
+    throw new Error(`Unknown Earth raster overlay preset: ${presetKey}`);
+  }
+
+  const commonOptions = {
+    minZoom: preset.minZoom ?? Number(el("xyzMinZoom")?.value ?? 0),
+    maxZoom: preset.maxZoom ?? Number(el("xyzMaxZoom")?.value ?? 8),
+    segmentsPerSide: Number(el("xyzSegments")?.value ?? 48),
+    maxCachedTiles: Number(el("xyzMaxCachedTiles")?.value ?? 384),
+  };
+
+  if (preset.type === "xyz") {
+    addXYZRasterOverlay(preset.urlTemplate, {
+      name: preset.label,
+      ...commonOptions,
+    });
+  } else {
+    addWMTSRasterOverlay({
+      baseUrl: preset.baseUrl,
+      urlTemplate: preset.urlTemplate || undefined,
+      layer: preset.preferredLayer,
+      tileMatrixSet: preset.tileMatrixSet,
+      style: preset.style,
+      format: preset.format,
+      requestEncoding: preset.requestEncoding,
+      dimensions: {},
+      ...commonOptions,
+    });
+  }
+
+  renderEarthRasterOverlays();
+}
+
+function renderEarthRasterOverlays() {
+  const container = el("earthRasterOverlays");
+  if (!container) return;
+
+  const overlays = state.AstroAPI?.getEarthRasterOverlays?.() ?? [];
+  container.replaceChildren();
+
+  const removeAllButton = el("btnRemoveAllEarthRasterOverlays");
+  if (removeAllButton) removeAllButton.disabled = overlays.length === 0;
+
+  if (overlays.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "No raster overlays.";
+    container.appendChild(empty);
+    return;
+  }
+
+  for (const overlay of overlays) {
+    const card = document.createElement("div");
+    card.className = "earth-raster-card";
+
+    const header = document.createElement("div");
+    header.className = "earth-raster-header";
+
+    const visible = document.createElement("input");
+    visible.type = "checkbox";
+    visible.checked = overlay.visible;
+    visible.title = "Visible";
+    visible.addEventListener("change", () => {
+      state.AstroAPI.setEarthRasterOverlayVisible(overlay.id, visible.checked);
+    });
+
+    const name = document.createElement("strong");
+    name.className = "earth-raster-name";
+    name.textContent = overlay.name;
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "secondary";
+    remove.textContent = "Remove";
+    remove.addEventListener("click", () => {
+      state.AstroAPI.removeEarthRasterOverlay(overlay.id);
+      renderEarthRasterOverlays();
+    });
+
+    header.append(visible, name, remove);
+
+    const meta = document.createElement("div");
+    meta.className = "earth-raster-meta";
+    meta.textContent = overlay.sourceType.toUpperCase();
+
+    const opacityRow = document.createElement("div");
+    opacityRow.className = "earth-raster-opacity";
+
+    const opacity = document.createElement("input");
+    opacity.type = "range";
+    opacity.min = "0";
+    opacity.max = "1";
+    opacity.step = "0.05";
+    opacity.value = String(overlay.opacity);
+
+    const opacityValue = document.createElement("span");
+    opacityValue.className = "earth-raster-opacity-value mono";
+    opacityValue.textContent = `${Math.round(overlay.opacity * 100)}%`;
+
+    opacity.addEventListener("input", () => {
+      const value = Number(opacity.value);
+      state.AstroAPI.setEarthRasterOverlayOpacity(overlay.id, value);
+      opacityValue.textContent = `${Math.round(value * 100)}%`;
+    });
+
+    opacityRow.append(opacity, opacityValue);
+    card.append(header, meta, opacityRow);
+    container.appendChild(card);
+  }
+}
+
+function showEarthMapMetadata(presetKey) {
+  const preset = getEarthMapPreset(presetKey);
+  if (!preset) {
+    return;
+  }
+
+  const title = el("earthMapMetadataTitle");
+  const body = el("earthMapMetadataBody");
+  const dialog = el("earthMapMetadataDialog");
+  if (!title || !body || !dialog) {
+    return;
+  }
+
+  title.textContent = preset.label;
+
+  const rows = preset.type === "xyz"
+    ? [
+        ["Protocol", "XYZ"],
+        ["URL template", preset.urlTemplate],
+        ["Zoom", `${preset.minZoom}-${preset.maxZoom}`],
+      ]
+    : [
+        ["Protocol", "WMTS"],
+        ["Layer", preset.preferredLayer],
+        ["TileMatrixSet", preset.tileMatrixSet],
+        ["Style", preset.style],
+        ["Format", preset.format],
+        ["Encoding", preset.requestEncoding.toUpperCase()],
+        ["Zoom", `${preset.minZoom}-${preset.maxZoom}`],
+        ["Capabilities", preset.capabilitiesUrl],
+      ];
+
+  body.replaceChildren();
+  for (const [label, value] of rows) {
+    const labelEl = document.createElement("div");
+    labelEl.className = "metadata-label";
+    labelEl.textContent = label;
+
+    const valueEl = document.createElement("div");
+    valueEl.className = "metadata-value mono";
+    valueEl.textContent = value || "—";
+
+    body.append(labelEl, valueEl);
+  }
+
+  dialog.showModal();
+}
+
 function wireUI() {
   wireHiPSControls();
+
+  el("btnLoadEarthMap")?.addEventListener("click", () => {
+    const presetKey = el("earthMapPreset")?.value;
+    if (!presetKey) return;
+
+    const lonLatGridWanted = !!el("lonLatGridChk")?.checked;
+    try {
+      loadEarthMapPreset(presetKey);
+      setLonLatGridVisible(lonLatGridWanted);
+    } catch (e) {
+      setStatus("Earth map load error: " + (e.message || e));
+    }
+  });
+
+  el("btnEarthMapMetadata")?.addEventListener("click", () => {
+    const presetKey = el("earthMapPreset")?.value;
+    if (presetKey) showEarthMapMetadata(presetKey);
+  });
+
+  el("btnAddEarthRasterOverlay")?.addEventListener("click", () => {
+    const presetKey = el("earthRasterOverlayPreset")?.value;
+    if (!presetKey) return;
+
+    try {
+      addEarthRasterOverlayPreset(presetKey);
+      setStatus("Earth raster overlay added.");
+    } catch (e) {
+      setStatus("Earth raster overlay error: " + (e.message || e));
+    }
+  });
+
+  el("btnRemoveAllEarthRasterOverlays")?.addEventListener("click", () => {
+    state.AstroAPI?.removeAllEarthRasterOverlays?.();
+    renderEarthRasterOverlays();
+    setStatus("Earth raster overlays removed.");
+  });
+
+  renderEarthRasterOverlays();
+
+  el("btnCloseEarthMapMetadata")?.addEventListener("click", () => {
+    el("earthMapMetadataDialog")?.close();
+  });
 
   el("btnLoadHiPS")?.addEventListener("click", async () => {
     const url = el("hipsUrl").value.trim();
@@ -561,12 +832,7 @@ function wireUI() {
     }
   });
 
-  // camera + minimise
-  el("btnCamInfo")?.addEventListener("click", () => {
-    const p = state.AstroAPI?.camera?.getCameraPosition?.();
-    if (!p) return setStatus("Camera API unavailable.");
-    setStatus(`Camera @ [${p.map((n) => n.toFixed(3)).join(", ")}]`);
-  });
+  // minimise
   el("btnTogglePanel")?.addEventListener("click", minimisePanel);
   el("restoreBtn")?.addEventListener("click", restorePanel);
 
@@ -617,6 +883,8 @@ function wireUI() {
       ev.target.checked = !!state.AstroAPI?.isKeepCameraNorthUp?.();
     } catch (e) {
       ev.target.checked = !ev.target.checked;
+    } finally {
+      syncResetNorthUpButton();
     }
   });
 

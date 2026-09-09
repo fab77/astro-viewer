@@ -10,7 +10,7 @@
  */
 
 import { bootSetup } from "./Config.js";
-import Camera from "./Camera.js";
+import Camera, { type CameraViewState } from "./Camera.js";
 import RayPickingUtils from "./utils/RayPickingUtils.js";
 import global from "./Global.js";
 import MouseHelper from "./utils/MouseHelper.js";
@@ -91,8 +91,22 @@ export type CameraChangedDetail = {
   getFoVPolygon: Point[];
 };
 
+export type ViewerDomain = "astronomy" | "earth" | "mesh";
+
 export type AstroSphereOptions = {
   gridLabelContainers?: GridLabelContainers;
+};
+
+export type EarthRasterOverlayInfo = {
+  id: string;
+  name: string;
+  sourceType: "xyz" | "wmts";
+  visible: boolean;
+  opacity: number;
+};
+
+type EarthRasterOverlay = EarthRasterOverlayInfo & {
+  map: XYZMap;
 };
 
 /**
@@ -128,15 +142,21 @@ class AstroSphere {
   private _activeHiPSLayers: HiPS[] = [];
 
   private _activeXYZ2: XYZMap | null = null;
+  private _earthRasterOverlays: EarthRasterOverlay[] = [];
+  private _earthRasterOverlaySequence = 0;
   private _activeMeshHiPS: MeshHiPS | null = null;
   private _activeBaseLayer: "hips" | "xyz" | "meships" | null = null;
+  private _activeDomain: ViewerDomain = "astronomy";
+  private domainCameraStates: Partial<Record<ViewerDomain, CameraViewState>> = {};
 
   private startup = true;
 
   private fov: SphereFoV;
 
-  private activeCatalogues: CatalogueGL[] = [];
-  private activeFootprintSets: FootprintSetGL[] = [];
+  private astronomyCatalogues: CatalogueGL[] = [];
+  private earthPointSets: CatalogueGL[] = [];
+  private astronomyFootprintSets: FootprintSetGL[] = [];
+  private earthFootprintSets: FootprintSetGL[] = [];
   private activePolylineSets: TerraPolylineSetGL[] = [];
   private activeSensorCones: SensorConeGL[] = [];
   private activeSatelliteObjects: SatelliteObjectGL[] = [];
@@ -496,8 +516,7 @@ class AstroSphere {
   }
 
   private emitCameraChanged(reason: string) {
-    // avoid dispatch before scene is ready
-    if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS) return;
+    // Camera interaction remains meaningful even when no base layer is active.
     if (!(this._healpixGrid as any)?.fovObj) return;
 
     const detail = this.getCurrentStatus();
@@ -599,9 +618,14 @@ class AstroSphere {
           this.mouseHelper.update(mousePoint);
           this.updateLastMousePoint();
 
-          for (const cat of this.activeCatalogues) {
+          for (const cat of this.getActivePointSets()) {
+            const activeModelMatrix = this.getActiveDomainModelMatrix();
+            if (!activeModelMatrix) continue;
             const clickResult = cat.selectPrimarySourceFromClick(
               this.mouseHelper,
+              activeModelMatrix,
+              this._camera.getCameraMatrix() as Float32Array,
+              this._perspectiveMatrixManager.pMatrix as Float32Array,
             );
             if (!clickResult?.sources.length) continue;
             this._webgl.canvas.dispatchEvent(
@@ -617,7 +641,7 @@ class AstroSphere {
             );
           }
 
-          for (const fset of this.activeFootprintSets) {
+          for (const fset of this.getActiveFootprintSets()) {
             const clickResult = fset.selectPrimaryFootprintFromClick(
               this.mouseHelper,
             );
@@ -757,8 +781,15 @@ class AstroSphere {
       this.mouseHelper.update(mousePoint);
       this.updateLastMousePoint();
 
-      for (const cat of this.activeCatalogues) {
-        const pickResult = cat.getSourcesFromPointer(this.mouseHelper);
+      for (const cat of this.getActivePointSets()) {
+        const activeModelMatrix = this.getActiveDomainModelMatrix();
+        if (!activeModelMatrix) continue;
+        const pickResult = cat.getSourcesFromPointer(
+          this.mouseHelper,
+          activeModelMatrix,
+          this._camera.getCameraMatrix() as Float32Array,
+          this._perspectiveMatrixManager.pMatrix as Float32Array,
+        );
         if (!pickResult?.sources.length) continue;
 
         this._webgl.canvas.dispatchEvent(
@@ -776,7 +807,7 @@ class AstroSphere {
         break;
       }
 
-      for (const fset of this.activeFootprintSets) {
+      for (const fset of this.getActiveFootprintSets()) {
         const pickResult = fset.getFootprintsFromPointer(this.mouseHelper);
         if (!pickResult?.footprints.length) continue;
 
@@ -912,25 +943,32 @@ class AstroSphere {
   }
 
   activateHiPS(hipsDescriptor: HiPSDescriptor): HiPS {
-    const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
-
-    for (const hips of this._activeHiPSLayers) {
-      tileBuffer.removeHiPS(hips);
+    if (this._activeHiPSLayers.length > 0) {
+      throw new Error(
+        "Cannot load a HiPS base layer while stacked layers are active.",
+      );
     }
 
-    this._activeHiPSLayers = [];
+    const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+
+    if (this._activeHiPS) {
+      tileBuffer.removeHiPS(this._activeHiPS);
+    }
 
     const hips = this.createHiPS(hipsDescriptor);
 
-    this._activeHiPSLayers.push(hips);
     this._activeHiPS = hips;
+    this._activeDomain = "astronomy";
     this._activeBaseLayer = "hips";
 
     return hips;
   }
 
   setHiPSOpacity(hips: HiPS, opacity: number): void {
-    if (!this._activeHiPSLayers.includes(hips)) {
+    const isBaseLayer =
+      this._activeHiPSLayers.length === 0 && this._activeHiPS === hips;
+
+    if (!isBaseLayer && !this._activeHiPSLayers.includes(hips)) {
       throw new Error("HiPS layer is not active in this AstroSphere.");
     }
 
@@ -942,6 +980,15 @@ class AstroSphere {
       String(url).replace(/\/+$/, "");
 
     const descriptorURL = normalizeURL(hipsDescriptor.url);
+
+    // Entering stack mode discards the standalone base HiPS. Base mode and
+    // stack mode are intentionally mutually exclusive.
+    if (this._activeHiPSLayers.length === 0 && this._activeHiPS) {
+      const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
+
+      tileBuffer.removeHiPS(this._activeHiPS);
+      this._activeHiPS = null;
+    }
 
     const existing = this._activeHiPSLayers.find(
       (hips) => normalizeURL(hips.baseURL) === descriptorURL,
@@ -955,6 +1002,7 @@ class AstroSphere {
 
     this._activeHiPSLayers.push(hips);
     this._activeHiPS = hips;
+    this._activeDomain = "astronomy";
     this._activeBaseLayer = "hips";
 
     return hips;
@@ -989,8 +1037,12 @@ class AstroSphere {
   removeAllHiPS(): void {
     const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
 
-    for (const hips of this._activeHiPSLayers) {
-      tileBuffer.removeHiPS(hips);
+    if (this._activeHiPSLayers.length === 0 && this._activeHiPS) {
+      tileBuffer.removeHiPS(this._activeHiPS);
+    } else {
+      for (const hips of this._activeHiPSLayers) {
+        tileBuffer.removeHiPS(hips);
+      }
     }
 
     this._activeHiPSLayers = [];
@@ -1017,6 +1069,7 @@ class AstroSphere {
     this._activeBaseLayer = "xyz";
   }
   activateXYZ2(config: XYZMapDescriptor) {
+    this._activeDomain = "earth";
     this._activeXYZ2 = new XYZMap(
       1,
       [0.0, 0.0, 0.0],
@@ -1030,6 +1083,7 @@ class AstroSphere {
   }
 
   activateMeshHiPS(descriptor: MeshHiPSDescriptor) {
+    this._activeDomain = "mesh";
     this._activeMeshHiPS = new MeshHiPS(
       descriptor.meshRadius,
       [0.0, 0.0, 0.0],
@@ -1043,6 +1097,7 @@ class AstroSphere {
   }
 
   activateWMTS(config: WMTSLayerConfig) {
+    this._activeDomain = "earth";
     const adapter = new WMTSAdapter(config);
     const xyzConfig = adapter.toXYZLayerConfig();
     this._activeXYZ2 = new XYZMap(
@@ -1066,29 +1121,200 @@ class AstroSphere {
     this._activeBaseLayer = "xyz";
   }
 
-  // Catalogue section
+  addXYZRasterOverlay(config: XYZMapDescriptor): EarthRasterOverlayInfo {
+    const map = new XYZMap(
+      1,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      config,
+      this._webgl,
+      this.gridLabelContainers,
+    );
+    return this.addEarthRasterOverlay(config.name, "xyz", map);
+  }
+
+  addWMTSRasterOverlay(config: WMTSLayerConfig): EarthRasterOverlayInfo {
+    const adapter = new WMTSAdapter(config);
+    const xyzConfig = adapter.toXYZLayerConfig();
+    const name = config.layer ? `WMTS ${config.layer}` : "WMTS Earth Raster Overlay";
+    const map = new XYZMap(
+      1,
+      [0.0, 0.0, 0.0],
+      0,
+      0,
+      new XYZMapDescriptor(
+        name,
+        xyzConfig.urlTemplate,
+        xyzConfig.minZoom ?? 0,
+        xyzConfig.maxZoom ?? 8,
+        xyzConfig.segmentsPerSide ?? 48,
+        xyzConfig.maxCachedTiles ?? 384,
+        8,
+        xyzConfig.urlResolver,
+      ),
+      this._webgl,
+      this.gridLabelContainers,
+    );
+    return this.addEarthRasterOverlay(name, "wmts", map);
+  }
+
+  getEarthRasterOverlays(): EarthRasterOverlayInfo[] {
+    return this._earthRasterOverlays.map(({ map: _map, ...overlay }) => ({ ...overlay }));
+  }
+
+  setEarthRasterOverlayOpacity(id: string, opacity: number): void {
+    const overlay = this._earthRasterOverlays.find((entry) => entry.id === id);
+    if (!overlay) return;
+
+    overlay.opacity = Math.min(1, Math.max(0, opacity));
+    overlay.map.setOpacity(overlay.opacity);
+  }
+
+  setEarthRasterOverlayVisible(id: string, visible: boolean): void {
+    const overlay = this._earthRasterOverlays.find((entry) => entry.id === id);
+    if (overlay) overlay.visible = visible;
+  }
+
+  removeEarthRasterOverlay(id: string): void {
+    this._earthRasterOverlays = this._earthRasterOverlays.filter((entry) => entry.id !== id);
+  }
+
+  removeAllEarthRasterOverlays(): void {
+    this._earthRasterOverlays = [];
+  }
+
+  private addEarthRasterOverlay(
+    name: string,
+    sourceType: "xyz" | "wmts",
+    map: XYZMap,
+  ): EarthRasterOverlayInfo {
+    const overlay: EarthRasterOverlay = {
+      id: `earth-raster-${++this._earthRasterOverlaySequence}`,
+      name,
+      sourceType,
+      visible: true,
+      opacity: 0.65,
+      map,
+    };
+    map.setOpacity(overlay.opacity);
+    this._earthRasterOverlays.push(overlay);
+
+    const { map: _map, ...info } = overlay;
+    return { ...info };
+  }
+
+  setActiveDomain(domain: ViewerDomain): void {
+    if (domain !== this._activeDomain) {
+      this.clearGridLabelsForDomain(this._activeDomain);
+      this.domainCameraStates[this._activeDomain] = this._camera.getViewState();
+
+      const targetCameraState = this.domainCameraStates[domain];
+      if (targetCameraState) {
+        this._camera.restoreViewState(targetCameraState);
+      }
+
+      this.inertiaX = 0;
+      this.inertiaY = 0;
+      this.zoomInertia = 0;
+      this._cameraStatusChanged = true;
+    }
+
+    this._activeDomain = domain;
+
+    if (domain === "astronomy") {
+      this._activeBaseLayer = this._activeHiPS ? "hips" : null;
+    } else if (domain === "earth") {
+      this._activeBaseLayer = this._activeXYZ2 ? "xyz" : null;
+    } else {
+      this._activeBaseLayer = this._activeMeshHiPS ? "meships" : null;
+    }
+
+    // A hover from the previous vertical must not leak into the new one.
+    this.lastHoveredSource = null;
+    this.lastHoveredCatalogue = null;
+  }
+
+  private clearGridLabelsForDomain(domain: ViewerDomain): void {
+    if (domain === "astronomy") {
+      this._healpixGrid?.clearLabels();
+      this._equatorialGrid?.clearLabels();
+      return;
+    }
+
+    if (domain === "earth") {
+      this._activeXYZ2?.clearLonLatGridLabels?.();
+    }
+  }
+
+  get activeDomain(): ViewerDomain {
+    return this._activeDomain;
+  }
+
+  private getActivePointSets(): CatalogueGL[] {
+    if (this._activeDomain === "astronomy") return this.astronomyCatalogues;
+    if (this._activeDomain === "earth") return this.earthPointSets;
+    return [];
+  }
+
+  private getActiveFootprintSets(): FootprintSetGL[] {
+    if (this._activeDomain === "astronomy") return this.astronomyFootprintSets;
+    if (this._activeDomain === "earth") return this.earthFootprintSets;
+    return [];
+  }
+
+  // Astronomy catalogue ownership
   async showCatalogue(cat: CatalogueGL) {
-    // console.log(cat)
-    if (cat) this.activeCatalogues.push(cat);
+    if (cat && !this.astronomyCatalogues.includes(cat)) {
+      this.astronomyCatalogues.push(cat);
+    }
     return cat;
   }
 
   deleteCatalogue(catalogue: CatalogueGL) {
-    this.activeCatalogues = this.activeCatalogues.filter(
+    this.astronomyCatalogues = this.astronomyCatalogues.filter(
       (c) => c !== catalogue,
     );
   }
-  // End Catalogue section
 
-  // Footprint section
+  // Earth point-set ownership. TerraPointSetGL still extends CatalogueGL in
+  // 3.12, but it no longer shares the Astronomy lifecycle collection.
+  async showTerraPointSet(pointSet: CatalogueGL) {
+    if (pointSet && !this.earthPointSets.includes(pointSet)) {
+      this.earthPointSets.push(pointSet);
+    }
+    return pointSet;
+  }
+
+  deleteTerraPointSet(pointSet: CatalogueGL) {
+    this.earthPointSets = this.earthPointSets.filter((set) => set !== pointSet);
+  }
+
+  // Astronomy footprint ownership
   async showFootprintSet(fset: FootprintSetGL) {
-    // console.log(fset)
-    if (fset) this.activeFootprintSets.push(fset);
+    if (fset && !this.astronomyFootprintSets.includes(fset)) {
+      this.astronomyFootprintSets.push(fset);
+    }
     return fset;
   }
 
   deleteFootprintSet(footprintSet: FootprintSetGL) {
-    this.activeFootprintSets = this.activeFootprintSets.filter(
+    this.astronomyFootprintSets = this.astronomyFootprintSets.filter(
+      (fst) => fst !== footprintSet,
+    );
+  }
+
+  // Earth footprint ownership. TerraFootprintSetGL still reuses the common
+  // FootprintSetGL rendering implementation, but has an independent lifecycle.
+  async showTerraFootprintSet(footprintSet: FootprintSetGL) {
+    if (footprintSet && !this.earthFootprintSets.includes(footprintSet)) {
+      this.earthFootprintSets.push(footprintSet);
+    }
+    return footprintSet;
+  }
+
+  deleteTerraFootprintSet(footprintSet: FootprintSetGL) {
+    this.earthFootprintSets = this.earthFootprintSets.filter(
       (fst) => fst !== footprintSet,
     );
   }
@@ -1130,8 +1356,8 @@ class AstroSphere {
   }
 
   getHoveredFootprints(): HoveredFootprintDetail[] {
-    let footprintsHovered: HoveredFootprintDetail[] = [];
-    this.activeFootprintSets.forEach((fset) => {
+    const footprintsHovered: HoveredFootprintDetail[] = [];
+    this.getActiveFootprintSets().forEach((fset) => {
       footprintsHovered.push(fset.hoveredFootprints);
     });
     return footprintsHovered;
@@ -1452,7 +1678,6 @@ class AstroSphere {
   draw(canvas: HTMLCanvasElement) {
     if (this._refreshingStatus) return;
     if (!this._webgl) return;
-    if (!this._activeHiPS && !this._activeXYZ2 && !this._activeMeshHiPS) return;
 
     if (!this._healpixGrid || Object.keys(this._healpixGrid).length === 0)
       return;
@@ -1628,10 +1853,11 @@ class AstroSphere {
       this._webgl.ONE_MINUS_SRC_ALPHA,
     );
 
-    if (this._activeBaseLayer === "hips" && this._activeHiPSLayers.length > 0) {
-      const maxHiPSOrder = Math.max(
-        ...this._activeHiPSLayers.map((hips) => hips.maxOrder),
-      );
+    if (this._activeBaseLayer === "hips" && this._activeHiPS) {
+      const maxHiPSOrder =
+        this._activeHiPSLayers.length > 0
+          ? Math.max(...this._activeHiPSLayers.map((hips) => hips.maxOrder))
+          : this._activeHiPS.maxOrder;
 
       const visibleOrder = Math.min(
         this._healpixGrid.visibleorder,
@@ -1690,13 +1916,20 @@ class AstroSphere {
 
     if (this._activeBaseLayer === "xyz") {
       this._activeXYZ2?.draw(skyEntityDrawInput);
+      for (const overlay of this._earthRasterOverlays) {
+        if (overlay.visible) {
+          overlay.map.draw(skyEntityDrawInput, true);
+        }
+      }
     }
     if (this._activeBaseLayer === "meships") {
       this._activeMeshHiPS?.draw(skyEntityDrawInput);
     }
 
-    this._healpixGrid.draw(skyEntityDrawInput);
-    this._equatorialGrid.draw(skyEntityDrawInput);
+    if (this._activeDomain === "astronomy") {
+      this._healpixGrid.draw(skyEntityDrawInput);
+      this._equatorialGrid.draw(skyEntityDrawInput);
+    }
 
     this._webgl.enable(this._webgl.DEPTH_TEST);
     this._webgl.disable(this._webgl.CULL_FACE);
@@ -1718,11 +1951,8 @@ class AstroSphere {
       });
     }
 
-    this.activeCatalogues.forEach((cat) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
+    this.getActivePointSets().forEach((cat) => {
+      const activeModelMatrix = this.getActiveDomainModelMatrix();
       if (activeModelMatrix) {
         cat.draw(
           activeModelMatrix as Float32Array,
@@ -1735,11 +1965,8 @@ class AstroSphere {
 
     this.emitHoveredSourceIfChanged();
 
-    this.activeFootprintSets.forEach((fst) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
+    this.getActiveFootprintSets().forEach((fst) => {
+      const activeModelMatrix = this.getActiveDomainModelMatrix();
       if (activeModelMatrix) {
         fst.draw(
           activeModelMatrix as Float32Array,
@@ -1750,55 +1977,64 @@ class AstroSphere {
       }
     });
 
-    this.activePolylineSets.forEach((polylineSet) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
-      if (activeModelMatrix) {
-        polylineSet.draw(
-          activeModelMatrix as Float32Array,
-          this.mouseHelper,
-          this._camera.getCameraMatrix() as Float32Array,
-          this._perspectiveMatrixManager.pMatrix as Float32Array,
-        );
-      }
-    });
+    if (this._activeDomain === "earth") {
+      this.activePolylineSets.forEach((polylineSet) => {
+        const activeModelMatrix = this.getActiveDomainModelMatrix();
+        if (activeModelMatrix) {
+          polylineSet.draw(
+            activeModelMatrix as Float32Array,
+            this.mouseHelper,
+            this._camera.getCameraMatrix() as Float32Array,
+            this._perspectiveMatrixManager.pMatrix as Float32Array,
+          );
+        }
+      });
 
-    this.activeSensorCones.forEach((sensorCone) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
-      if (activeModelMatrix) {
-        sensorCone.draw(
-          this._perspectiveMatrixManager.pMatrix as Float32Array,
-          this._camera.getCameraMatrix() as Float32Array,
-          activeModelMatrix as Float32Array,
-        );
-      }
-    });
+      this.activeSensorCones.forEach((sensorCone) => {
+        const activeModelMatrix = this.getActiveDomainModelMatrix();
+        if (activeModelMatrix) {
+          sensorCone.draw(
+            this._perspectiveMatrixManager.pMatrix as Float32Array,
+            this._camera.getCameraMatrix() as Float32Array,
+            activeModelMatrix as Float32Array,
+          );
+        }
+      });
 
-    this.activeSatelliteObjects.forEach((satelliteObject) => {
-      const activeModelMatrix =
-        this._activeHiPS?.getModelMatrix() ??
-        this._activeXYZ2?.getModelMatrix() ??
-        this._activeMeshHiPS?.getModelMatrix();
-      if (activeModelMatrix) {
-        satelliteObject.draw(
-          this._perspectiveMatrixManager.pMatrix as Float32Array,
-          this._camera.getCameraMatrix() as Float32Array,
-          activeModelMatrix as Float32Array,
-        );
-      }
-    });
+      this.activeSatelliteObjects.forEach((satelliteObject) => {
+        const activeModelMatrix = this.getActiveDomainModelMatrix();
+        if (activeModelMatrix) {
+          satelliteObject.draw(
+            this._perspectiveMatrixManager.pMatrix as Float32Array,
+            this._camera.getCameraMatrix() as Float32Array,
+            activeModelMatrix as Float32Array,
+          );
+        }
+      });
+    }
+  }
+
+  private getActiveDomainModelMatrix(): Float32Array | null {
+    if (this._activeDomain === "astronomy") {
+      return (
+        this._activeHiPS?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
+      ) as Float32Array;
+    }
+    if (this._activeDomain === "earth") {
+      return (
+        this._activeXYZ2?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
+      ) as Float32Array;
+    }
+    return (
+      this._activeMeshHiPS?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
+    ) as Float32Array;
   }
 
   private emitHoveredSourceIfChanged() {
     let nextHoveredSource: Source | null = null;
     let nextHoveredCatalogue: CatalogueGL | null = null;
 
-    for (const cat of this.activeCatalogues) {
+    for (const cat of this.getActivePointSets()) {
       const hovered = cat.getPrimaryHoveredSource();
       if (!hovered) continue;
       nextHoveredSource = hovered;

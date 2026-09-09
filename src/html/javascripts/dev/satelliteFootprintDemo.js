@@ -106,6 +106,7 @@ let loadedDemo = {
 
 export function wireSatelliteFootprintDemo() {
   el('btnLoadSatelliteFootprintDemo')?.addEventListener('click', loadSatelliteFootprintDemo);
+  el('btnResetSatelliteFootprintDemo')?.addEventListener('click', resetSatelliteFootprintDemo);
   el('btnSatelliteTimelinePlay')?.addEventListener('click', () => loadedDemo.handle?.play());
   el('btnSatelliteTimelinePause')?.addEventListener('click', () => loadedDemo.handle?.pause());
   el('satelliteTimelineSeek')?.addEventListener('input', (event) => {
@@ -145,6 +146,7 @@ async function loadSatelliteFootprintDemo() {
     });
     loadedDemo.handle = loadedDemo.adapter.load(track);
     setTimelineControlsEnabled(true);
+    setResetDemoEnabled(true);
 
     if (typeof api.goTo === 'function') {
       api.goTo(-3.7, 40.4);
@@ -167,6 +169,19 @@ async function loadSpainRegionsGeoJSON() {
     throw new Error(`Unable to load Spain regions GeoJSON: ${response.status} ${response.statusText}`);
   }
   return response.json();
+}
+
+function resetSatelliteFootprintDemo() {
+  const api = state.AstroAPI;
+  if (!api) return;
+
+  removeExistingDemo(api);
+  setStatus('ISS Spain ObservationTrack demo reset.');
+}
+
+function setResetDemoEnabled(enabled) {
+  const reset = el('btnResetSatelliteFootprintDemo');
+  if (reset) reset.disabled = !enabled;
 }
 
 function setTimelineControlsEnabled(enabled) {
@@ -199,6 +214,7 @@ function removeExistingDemo(api) {
   loadedDemo.handle?.dispose();
   loadedDemo.adapter?.clear();
   setTimelineControlsEnabled(false);
+  setResetDemoEnabled(false);
 
   loadedDemo = {
     adapter: null,

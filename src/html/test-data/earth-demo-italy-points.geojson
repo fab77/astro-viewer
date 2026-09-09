@@ -1,0 +1,176 @@
+{
+  "type": "FeatureCollection",
+  "name": "AstroViewer Earth demo - Italy point sources",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "city-1",
+      "properties": {
+        "name": "Rome",
+        "region": "Lazio",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Rome"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          12.4964,
+          41.9028
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-2",
+      "properties": {
+        "name": "Milan",
+        "region": "Lombardia",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Milan"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          9.19,
+          45.4642
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-3",
+      "properties": {
+        "name": "Naples",
+        "region": "Campania",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Naples"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          14.2681,
+          40.8518
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-4",
+      "properties": {
+        "name": "Turin",
+        "region": "Piemonte",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Turin"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          7.6869,
+          45.0703
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-5",
+      "properties": {
+        "name": "Palermo",
+        "region": "Sicilia",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Palermo"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.3615,
+          38.1157
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-6",
+      "properties": {
+        "name": "Genoa",
+        "region": "Liguria",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Genoa"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          8.9463,
+          44.4056
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-7",
+      "properties": {
+        "name": "Bologna",
+        "region": "Emilia-Romagna",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Bologna"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.3426,
+          44.4949
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-8",
+      "properties": {
+        "name": "Florence",
+        "region": "Toscana",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Florence"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          11.2558,
+          43.7696
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-9",
+      "properties": {
+        "name": "Bari",
+        "region": "Puglia",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Bari"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          16.8719,
+          41.1171
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "city-10",
+      "properties": {
+        "name": "Cagliari",
+        "region": "Sardegna",
+        "kind": "demo-point",
+        "description": "Demo Earth point source for Cagliari"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          9.1217,
+          39.2238
+        ]
+      }
+    }
+  ]
+}

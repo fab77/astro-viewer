@@ -5,6 +5,7 @@ import { TerraPointSetGL } from './TerraPointSetGL.js'
 
 function createMockWebGL(): WebGL2RenderingContext {
   const gl = {
+    canvas: { clientWidth: 800, clientHeight: 600 },
     ARRAY_BUFFER: 0x8892,
     STATIC_DRAW: 0x88e4,
     FLOAT: 0x1406,
@@ -74,7 +75,7 @@ describe('TerraPointSetGL', () => {
     expect(subject.sources[0].point.latDeg).toBeCloseTo(25.933956)
   })
 
-  it('does not run inherited hover picking while drawing EO markers', () => {
+  it('uses Earth screen-space hover picking without Healpix lookup', () => {
     const subject = createSubject()
     subject.addSources([[
       -17.469501,
@@ -97,4 +98,48 @@ describe('TerraPointSetGL', () => {
 
     expect(mouseHelper.computeNpix).not.toHaveBeenCalled()
   })
+
+  it('picks and toggles an Earth marker without Healpix candidate lookup', () => {
+    const subject = createSubject()
+    subject.addSources([[
+      0,
+      0,
+      'marker',
+      410,
+    ]], createMarkerColumns())
+
+    const source = subject.sources[0]
+    const mouseHelper = {
+      xyz: [source.point.x, source.point.y, source.point.z],
+      computeNpix: jest.fn(() => 0),
+    }
+    const identity = new Float32Array([
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ])
+
+    subject.draw(identity, mouseHelper as never, identity, identity)
+
+    const firstClick = subject.selectPrimarySourceFromClick(
+      mouseHelper as never,
+      identity,
+      identity,
+      identity,
+    )
+    expect(firstClick?.sources).toEqual([source])
+    expect(firstClick?.selectionState[0]?.selected).toBe(true)
+    expect(mouseHelper.computeNpix).not.toHaveBeenCalled()
+
+    const secondClick = subject.selectPrimarySourceFromClick(
+      mouseHelper as never,
+      identity,
+      identity,
+      identity,
+    )
+    expect(secondClick?.selectionState[0]?.selected).toBe(false)
+    expect(mouseHelper.computeNpix).not.toHaveBeenCalled()
+  })
+
 })

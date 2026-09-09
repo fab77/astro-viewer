@@ -304,6 +304,35 @@ describe("AstroSphere HiPS layers", () => {
     expect(subject.activeHiPS).toBe(hipsB);
   });
 
+  it("clears the HiPS base layer when the last HiPS is removed", () => {
+    const hips = { baseURL: "https://example.org/hips/" };
+
+    const tileBuffer = {
+      removeHiPS: jest.fn(),
+    };
+
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+
+    Object.assign(subject, {
+      _activeHiPS: hips,
+      _activeHiPSLayers: [hips],
+      _activeBaseLayer: "hips",
+      _healpixGrid: {
+        visibleTilesManager: {
+          tileBuffer,
+        },
+      },
+    });
+
+    subject.removeHiPS(hips as never);
+
+    expect(tileBuffer.removeHiPS).toHaveBeenCalledWith(hips);
+    expect(subject.activeHiPSLayers).toEqual([]);
+    expect(subject.activeHiPS).toBeNull();
+    expect((subject as any)._activeBaseLayer).toBeNull();
+  });
+
   it("removes all HiPS layers", () => {
     const hipsA = { baseURL: "https://example.org/a/" };
     const hipsB = { baseURL: "https://example.org/b/" };
@@ -334,6 +363,44 @@ describe("AstroSphere HiPS layers", () => {
 
     expect(subject.activeHiPSLayers).toEqual([]);
     expect(subject.activeHiPS).toBeNull();
+  });
+
+  it("loads a standalone HiPS without adding it to the stack", () => {
+    const subject = createHiPSLayersSubject();
+    const descriptor = createHiPSDescriptor("https://example.test/base/");
+
+    const base = subject.activateHiPS(descriptor);
+
+    expect(subject.activeHiPS).toBe(base);
+    expect(subject.activeHiPSLayers).toEqual([]);
+  });
+
+  it("does not allow loading a base HiPS while stacked layers are active", () => {
+    const subject = createHiPSLayersSubject();
+    subject.addHiPS(createHiPSDescriptor("https://example.test/stack/"));
+
+    expect(() =>
+      subject.activateHiPS(createHiPSDescriptor("https://example.test/base/")),
+    ).toThrow("Cannot load a HiPS base layer while stacked layers are active.");
+  });
+
+  it("discards the standalone base HiPS when entering stack mode", () => {
+    const subject = createHiPSLayersSubject();
+    const base = subject.activateHiPS(
+      createHiPSDescriptor("https://example.test/base/"),
+    );
+
+    const stacked = subject.addHiPS(
+      createHiPSDescriptor("https://example.test/stack/"),
+    );
+
+    const tileBuffer = (subject as unknown as {
+      _healpixGrid: { visibleTilesManager: { tileBuffer: { removeHiPS: jest.Mock } } };
+    })._healpixGrid.visibleTilesManager.tileBuffer;
+
+    expect(tileBuffer.removeHiPS).toHaveBeenCalledWith(base);
+    expect(subject.activeHiPSLayers).toEqual([stacked]);
+    expect(subject.activeHiPS).toBe(stacked);
   });
 
   it("changes the active HiPS without changing layer order", () => {
@@ -384,5 +451,169 @@ describe("AstroSphere HiPS layers", () => {
 
     expect(hips1.opacity).toBeCloseTo(0.35);
     expect(hips2.opacity).toBe(1);
+  });
+});
+
+describe("Earth raster overlays", () => {
+  function createEarthRasterSubject() {
+    const firstMap = { setOpacity: jest.fn() };
+    const secondMap = { setOpacity: jest.fn() };
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, any>;
+
+    Object.assign(subject, {
+      _earthRasterOverlays: [
+        {
+          id: "earth-raster-1",
+          name: "Overlay one",
+          sourceType: "xyz",
+          visible: true,
+          opacity: 0.65,
+          map: firstMap,
+        },
+        {
+          id: "earth-raster-2",
+          name: "Overlay two",
+          sourceType: "wmts",
+          visible: true,
+          opacity: 0.65,
+          map: secondMap,
+        },
+      ],
+    });
+
+    return { subject, firstMap, secondMap };
+  }
+
+  it("returns overlay metadata without exposing the renderer", () => {
+    const { subject } = createEarthRasterSubject();
+
+    expect(subject.getEarthRasterOverlays()).toEqual([
+      {
+        id: "earth-raster-1",
+        name: "Overlay one",
+        sourceType: "xyz",
+        visible: true,
+        opacity: 0.65,
+      },
+      {
+        id: "earth-raster-2",
+        name: "Overlay two",
+        sourceType: "wmts",
+        visible: true,
+        opacity: 0.65,
+      },
+    ]);
+  });
+
+  it("updates overlay visibility and clamps opacity", () => {
+    const { subject, firstMap } = createEarthRasterSubject();
+
+    subject.setEarthRasterOverlayVisible("earth-raster-1", false);
+    subject.setEarthRasterOverlayOpacity("earth-raster-1", 1.5);
+
+    expect(subject.getEarthRasterOverlays()[0]).toMatchObject({
+      visible: false,
+      opacity: 1,
+    });
+    expect(firstMap.setOpacity).toHaveBeenCalledWith(1);
+  });
+
+  it("removes one or all overlays", () => {
+    const { subject } = createEarthRasterSubject();
+
+    subject.removeEarthRasterOverlay("earth-raster-1");
+    expect(subject.getEarthRasterOverlays().map((overlay) => overlay.id)).toEqual([
+      "earth-raster-2",
+    ]);
+
+    subject.removeAllEarthRasterOverlays();
+    expect(subject.getEarthRasterOverlays()).toEqual([]);
+  });
+});
+
+describe("AstroSphere domain ownership", () => {
+  function createDomainSubject() {
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+
+    Object.assign(subject, {
+      _activeDomain: "astronomy",
+      _activeBaseLayer: "hips",
+      _activeHiPS: { getModelMatrix: jest.fn() },
+      _activeXYZ2: { getModelMatrix: jest.fn() },
+      _activeMeshHiPS: { getModelMatrix: jest.fn() },
+      _camera: {
+        getViewState: jest.fn(() => ({ domain: (subject as any)._activeDomain })),
+        restoreViewState: jest.fn(),
+      },
+      domainCameraStates: {},
+      inertiaX: 0,
+      inertiaY: 0,
+      zoomInertia: 0,
+      astronomyCatalogues: [],
+      earthPointSets: [],
+      astronomyFootprintSets: [],
+      earthFootprintSets: [],
+      lastHoveredSource: null,
+      lastHoveredCatalogue: null,
+    });
+
+    return subject;
+  }
+
+  it("restores the existing base-layer kind when switching domains", () => {
+    const subject = createDomainSubject();
+
+    subject.setActiveDomain("earth");
+    expect((subject as any)._activeBaseLayer).toBe("xyz");
+
+    subject.setActiveDomain("mesh");
+    expect((subject as any)._activeBaseLayer).toBe("meships");
+
+    subject.setActiveDomain("astronomy");
+    expect((subject as any)._activeBaseLayer).toBe("hips");
+  });
+
+  it("restores the camera view saved for each domain", () => {
+    const subject = createDomainSubject();
+    const camera = (subject as any)._camera;
+
+    subject.setActiveDomain("earth");
+    expect((subject as any).domainCameraStates.astronomy).toEqual({
+      domain: "astronomy",
+    });
+    expect(camera.restoreViewState).not.toHaveBeenCalled();
+
+    subject.setActiveDomain("astronomy");
+    expect((subject as any).domainCameraStates.earth).toEqual({ domain: "earth" });
+    expect(camera.restoreViewState).toHaveBeenCalledWith({ domain: "astronomy" });
+  });
+
+  it("keeps Astronomy and Earth point ownership separate", async () => {
+    const subject = createDomainSubject();
+    const astronomyCatalogue = {} as any;
+    const earthPointSet = {} as any;
+
+    await subject.showCatalogue(astronomyCatalogue);
+    await subject.showTerraPointSet(earthPointSet);
+
+    expect((subject as any).astronomyCatalogues).toEqual([astronomyCatalogue]);
+    expect((subject as any).earthPointSets).toEqual([earthPointSet]);
+  });
+
+  it("returns hovered footprints only from the active domain", async () => {
+    const subject = createDomainSubject();
+    const astronomyFootprintSet = { hoveredFootprints: { domain: "astronomy" } } as any;
+    const earthFootprintSet = { hoveredFootprints: { domain: "earth" } } as any;
+
+    await subject.showFootprintSet(astronomyFootprintSet);
+    await subject.showTerraFootprintSet(earthFootprintSet);
+
+    subject.setActiveDomain("astronomy");
+    expect(subject.getHoveredFootprints()).toEqual([{ domain: "astronomy" }]);
+
+    subject.setActiveDomain("earth");
+    expect(subject.getHoveredFootprints()).toEqual([{ domain: "earth" }]);
   });
 });
