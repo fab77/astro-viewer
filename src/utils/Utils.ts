@@ -15,13 +15,13 @@
 import { vec3 } from "gl-matrix";
 
 export interface SphericalCoords {
-  phi: number;   // longitude-like angle in degrees
+  phi: number; // longitude-like angle in degrees
   theta: number; // colatitude angle in degrees
 }
 
 export interface AstroCoords {
-  ra: number;   // right ascension in degrees
-  dec: number;  // declination in degrees
+  ra: number; // right ascension in degrees
+  dec: number; // declination in degrees
 }
 
 export interface HMS {
@@ -70,6 +70,33 @@ export function colorHex2RGB(hexColor: string): [number, number, number] {
   return [parseFloat(rgb1), parseFloat(rgb2), parseFloat(rgb3)];
 }
 
+export type InteractionColors = {
+  hover: [number, number, number];
+  selected: [number, number, number];
+};
+
+/**
+ * Derive interaction colours from the object's normal colour.
+ * Dark colours move towards white; light colours move towards black.
+ * Selection uses the stronger contrast so selected > hover > normal.
+ */
+export function interactionColorsFromHex(hexColor: string): InteractionColors {
+  const base = colorHex2RGB(hexColor);
+  const luminance = 0.2126 * base[0] + 0.7152 * base[1] + 0.0722 * base[2];
+  const target = luminance < 0.55 ? 1.0 : 0.0;
+
+  const mix = (amount: number): [number, number, number] => [
+    base[0] + (target - base[0]) * amount,
+    base[1] + (target - base[1]) * amount,
+    base[2] + (target - base[2]) * amount,
+  ];
+
+  return {
+    hover: mix(0.45),
+    selected: mix(0.45),
+  };
+}
+
 export function degToRad(degrees: number): number {
   return (degrees / 180) * Math.PI;
 }
@@ -78,7 +105,10 @@ export function radToDeg(radians: number): number {
   return (radians * 180) / Math.PI;
 }
 
-export function sphericalToAstroDeg(phiDeg: number, thetaDeg: number): AstroCoords {
+export function sphericalToAstroDeg(
+  phiDeg: number,
+  thetaDeg: number,
+): AstroCoords {
   let raDeg = phiDeg;
   if (raDeg < 0) {
     raDeg += 360;
@@ -90,7 +120,7 @@ export function sphericalToAstroDeg(phiDeg: number, thetaDeg: number): AstroCoor
 export function sphericalToCartesian(
   phiDeg: number,
   thetaDeg: number,
-  r: number = 1
+  r: number = 1,
 ): [number, number, number] {
   const x = r * Math.sin(degToRad(thetaDeg)) * Math.cos(degToRad(phiDeg));
   const y = r * Math.sin(degToRad(thetaDeg)) * Math.sin(degToRad(phiDeg));
@@ -98,7 +128,10 @@ export function sphericalToCartesian(
   return [x, y, z];
 }
 
-export function astroDegToSpherical(raDeg: number, decDeg: number): SphericalCoords {
+export function astroDegToSpherical(
+  raDeg: number,
+  decDeg: number,
+): SphericalCoords {
   let phiDeg = raDeg;
   if (phiDeg < 0) {
     phiDeg += 360;
@@ -127,4 +160,13 @@ export function decDegToDMS(decDeg: number): DMS {
   d = d * sign;
 
   return { d, m, s };
+}
+
+export function raHMSToDeg(hms: HMS): number {
+  return 15 * (hms.h + hms.m / 60 + hms.s / 3600);
+}
+
+export function decDMSToDeg(dms: DMS): number {
+  const sign = dms.d < 0 || Object.is(dms.d, -0) ? -1 : 1;
+  return sign * (Math.abs(dms.d) + dms.m / 60 + dms.s / 3600);
 }

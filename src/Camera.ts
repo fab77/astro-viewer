@@ -24,6 +24,13 @@ import global from "./Global.js";
 
 type Vec3Tuple = [number, number, number];
 
+export type CameraViewState = {
+  position: Vec3Tuple;
+  viewMatrix: mat4;
+  translationMatrix: mat4;
+  rotationMatrix: mat4;
+};
+
 interface CameraLike {
   getCameraMatrix(): mat4;
 }
@@ -523,6 +530,24 @@ class Camera implements CameraLike {
       return [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]];
     }
     return [inv[12], inv[13], inv[14]];
+  }
+
+  getViewState(): CameraViewState {
+    return {
+      position: [this.cam_pos[0], this.cam_pos[1], this.cam_pos[2]],
+      viewMatrix: mat4.clone(this.vMatrix),
+      translationMatrix: mat4.clone(this.T),
+      rotationMatrix: mat4.clone(this.R),
+    };
+  }
+
+  restoreViewState(state: CameraViewState): void {
+    this.cancelFlyTo();
+    this.cam_pos = vec3.fromValues(...state.position);
+    this.vMatrix = mat4.clone(state.viewMatrix);
+    this.T = mat4.clone(state.translationMatrix);
+    this.R = mat4.clone(state.rotationMatrix);
+    this.move = vec3.create();
   }
 
   setCameraMatrix(viewMatrix: Float32Array<ArrayBufferLike>) {

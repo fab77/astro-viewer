@@ -19,6 +19,7 @@ type XYZLocations = {
   vMatrix: WebGLUniformLocation | null
   sampler: WebGLUniformLocation | null
   colorMapIdx: WebGLUniformLocation | null
+  opacity: WebGLUniformLocation | null
   vertexPositionAttribute: number
   textureCoordAttribute: number
 }
@@ -29,6 +30,7 @@ export class XYZShaderProgram {
   private _shaderProgram?: WebGLProgram
   private _colorMapBlockIndex: number | null = null
   private _colorMapBuffer: WebGLBuffer | null = null
+  private _opacity = 1
   private _runtimeColorMap:
     | { r: Float32Array; g: Float32Array; b: Float32Array }
     | undefined
@@ -49,6 +51,7 @@ export class XYZShaderProgram {
       vMatrix: null,
       sampler: null,
       colorMapIdx: null,
+      opacity: null,
       vertexPositionAttribute: -1,
       textureCoordAttribute: -1,
     }
@@ -70,6 +73,10 @@ export class XYZShaderProgram {
 
   enableProgram(): void {
     this._webgl.useProgram(this.shaderProgram)
+  }
+
+  setOpacity(opacity: number): void {
+    this._opacity = Math.min(1, Math.max(0, opacity))
   }
 
   setRuntimeColorMap(
@@ -95,6 +102,7 @@ export class XYZShaderProgram {
     this.locations.vMatrix = gl.getUniformLocation(program, 'uVMatrix')
     this.locations.sampler = gl.getUniformLocation(program, 'uSampler')
     this.locations.colorMapIdx = gl.getUniformLocation(program, 'cmapIdx')
+    this.locations.opacity = gl.getUniformLocation(program, 'uOpacity')
     this.locations.vertexPositionAttribute = gl.getAttribLocation(program, 'aVertexPosition')
     this.locations.textureCoordAttribute = gl.getAttribLocation(program, 'aTextureCoord')
 
@@ -103,6 +111,7 @@ export class XYZShaderProgram {
     gl.uniformMatrix4fv(this.locations.mMatrix, false, mMatrix)
     gl.uniform1i(this.locations.sampler, 0)
     gl.uniform1i(this.locations.colorMapIdx, colorMapIdx)
+    gl.uniform1f(this.locations.opacity, this._opacity)
 
     if (colorMapIdx >= 2) {
       this.uploadColorMap(colorMapIdx)
@@ -133,6 +142,7 @@ export class XYZShaderProgram {
       in vec2 vTextureCoord;
       uniform sampler2D uSampler;
       uniform int cmapIdx;
+      uniform float uOpacity;
 
       layout (std140) uniform colormap {
         float r_palette[256];
@@ -147,7 +157,7 @@ export class XYZShaderProgram {
 
         if (cmapIdx == 1) {
           float gray = 0.21 * color.r + 0.71 * color.g + 0.07 * color.b;
-          outColor = vec4(vec3(gray), color.a);
+          outColor = vec4(vec3(gray), color.a * uOpacity);
           return;
         }
 
@@ -160,12 +170,12 @@ export class XYZShaderProgram {
             r_palette[rIndex] / 256.0,
             g_palette[gIndex] / 256.0,
             b_palette[bIndex] / 256.0,
-            color.a
+            color.a * uOpacity
           );
           return;
         }
 
-        outColor = color;
+        outColor = vec4(color.rgb, color.a * uOpacity);
       }`,
     )
 

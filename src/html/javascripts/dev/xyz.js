@@ -77,3 +77,44 @@ export function loadWMTS(config = {}) {
     `🗺️ WMTS loaded (${config.requestEncoding ?? 'kvp'} ${config.layer}/${config.tileMatrixSet}, time ${config.time ?? '∅'}, zoom ${config.minZoom ?? 0}-${config.maxZoom ?? 6}).`
   )
 }
+
+
+export function addXYZRasterOverlay(urlTemplate, options = {}) {
+  if (!state.AstroAPI?.addXYZRasterOverlay) {
+    throw new Error('AstroAPI.addXYZRasterOverlay unavailable')
+  }
+
+  return state.AstroAPI.addXYZRasterOverlay({
+    name: options.name ?? 'XYZ Earth Raster Overlay',
+    urlTemplate,
+    minZoom: options.minZoom,
+    maxZoom: options.maxZoom,
+    segmentsPerSide: options.segmentsPerSide,
+    maxCachedTiles: options.maxCachedTiles,
+  })
+}
+
+export function addWMTSRasterOverlay(config = {}) {
+  if (!state.AstroAPI?.addWMTSRasterOverlay) {
+    throw new Error('AstroAPI.addWMTSRasterOverlay unavailable')
+  }
+
+  return state.AstroAPI.addWMTSRasterOverlay({
+    baseUrl: config.baseUrl,
+    urlTemplate: config.urlTemplate,
+    layer: config.layer,
+    tileMatrixSet: config.tileMatrixSet,
+    style: config.style,
+    time: config.time,
+    format: config.format,
+    requestEncoding: config.requestEncoding,
+    version: config.version,
+    dimensions: config.dimensions,
+    matrixLabels: config.matrixLabels,
+    minZoom: config.minZoom,
+    maxZoom: config.maxZoom,
+    segmentsPerSide: config.segmentsPerSide,
+    maxCachedTiles: config.maxCachedTiles,
+    flipY: config.flipY,
+  })
+}

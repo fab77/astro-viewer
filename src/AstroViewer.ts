@@ -15,7 +15,12 @@ import { HiPSDescriptor } from "./model/hips/HiPSDescriptor.js";
 import { SphereFoV } from "./model/SphereFoV.js";
 import { Point } from "./model/Point.js";
 import { CatalogueGL } from "./model/catalogues/CatalogueGL.js";
-import type { CameraChangedDetail, PointCoordinates } from "./AstroSphere.js";
+import type {
+  CameraChangedDetail,
+  EarthRasterOverlayInfo,
+  PointCoordinates,
+  ViewerDomain,
+} from "./AstroSphere.js";
 import {
   FootprintSetGL,
   HoveredFootprintDetail,
@@ -200,7 +205,7 @@ export class AstroViewer {
   }
 
   showTerraPointSet(pointSet: TerraPointSetGL) {
-    this.astroSphere.showCatalogue(pointSet);
+    this.astroSphere.showTerraPointSet(pointSet);
   }
 
   hideTerraPointSet(pointSet: TerraPointSetGL, isVisible: boolean) {
@@ -208,7 +213,7 @@ export class AstroViewer {
   }
 
   deleteTerraPointSet(pointSet: TerraPointSetGL) {
-    this.astroSphere.deleteCatalogue(pointSet);
+    this.astroSphere.deleteTerraPointSet(pointSet);
   }
 
   createTerraFootprintSet(
@@ -227,7 +232,7 @@ export class AstroViewer {
   }
 
   showTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
-    this.astroSphere.showFootprintSet(footprintSet);
+    this.astroSphere.showTerraFootprintSet(footprintSet);
   }
 
   hideTerraFootprintSet(footprintSet: TerraFootprintSetGL, isVisible: boolean) {
@@ -235,7 +240,7 @@ export class AstroViewer {
   }
 
   deleteTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
-    this.astroSphere.deleteFootprintSet(footprintSet);
+    this.astroSphere.deleteTerraFootprintSet(footprintSet);
   }
 
   createTerraPolylineSet(
@@ -319,6 +324,14 @@ export class AstroViewer {
     return bootSetup.defaultHipsUrl;
   }
 
+  setActiveDomain(domain: ViewerDomain): void {
+    this.astroSphere.setActiveDomain(domain);
+  }
+
+  getActiveDomain(): ViewerDomain {
+    return this.astroSphere.activeDomain;
+  }
+
   activateHiPS(hipsDescriptor: HiPSDescriptor): void {
     this.astroSphere.activateHiPS(hipsDescriptor);
   }
@@ -345,8 +358,54 @@ export class AstroViewer {
     this.astroSphere.activateWMTS(config);
   }
 
+  addXYZRasterOverlay(config: XYZLayerConfig & { name?: string }): EarthRasterOverlayInfo {
+    const descriptor = new XYZMapDescriptor(
+      config.name ?? "XYZ Earth Raster Overlay",
+      config.urlTemplate,
+      config.minZoom ?? 0,
+      config.maxZoom ?? 8,
+      config.segmentsPerSide ?? 48,
+      config.maxCachedTiles ?? 384,
+      8,
+      config.urlResolver,
+    );
+    return this.astroSphere.addXYZRasterOverlay(descriptor);
+  }
+
+  addWMTSRasterOverlay(config: WMTSLayerConfig): EarthRasterOverlayInfo {
+    return this.astroSphere.addWMTSRasterOverlay(config);
+  }
+
+  getEarthRasterOverlays(): EarthRasterOverlayInfo[] {
+    return this.astroSphere.getEarthRasterOverlays();
+  }
+
+  setEarthRasterOverlayOpacity(id: string, opacity: number): void {
+    this.astroSphere.setEarthRasterOverlayOpacity(id, opacity);
+  }
+
+  setEarthRasterOverlayVisible(id: string, visible: boolean): void {
+    this.astroSphere.setEarthRasterOverlayVisible(id, visible);
+  }
+
+  removeEarthRasterOverlay(id: string): void {
+    this.astroSphere.removeEarthRasterOverlay(id);
+  }
+
+  removeAllEarthRasterOverlays(): void {
+    this.astroSphere.removeAllEarthRasterOverlays();
+  }
+
   activateMeshHiPS(config: MeshHiPSConfig): void {
     this.astroSphere.activateMeshHiPS(new MeshHiPSDescriptor(config));
+  }
+
+  setMeshHiPSColor(color: [number, number, number, number]): void {
+    this.astroSphere.setMeshHiPSColor(color);
+  }
+
+  setMeshHiPSWireframe(wireframe: boolean): void {
+    this.astroSphere.setMeshHiPSWireframe(wireframe);
   }
 
   setXYZMaxConcurrentRequests(value: number): void {

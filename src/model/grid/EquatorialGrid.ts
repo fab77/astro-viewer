@@ -253,6 +253,10 @@ export class EquatorialGrid extends AbstractSkyEntity {
 
 	}
 
+	clearLabels(): void {
+		this.gridText.resetDivSets();
+	}
+
 	isVisible(): boolean {
 		return this.showGrid
 	}

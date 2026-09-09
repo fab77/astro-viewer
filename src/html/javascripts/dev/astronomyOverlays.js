@@ -4,57 +4,95 @@
 import { el, setStatus } from "./ui.js";
 import { state } from "./state.js";
 import { renderCatalogueManager } from "./catalogueManager.js";
-import { renderFootprintManager } from "./footprintManager.js";
+import { footprintKey, renderFootprintManager } from "./footprintManager.js";
 
 const CATALOGUE_FIXTURE = "./test-data/astronomy/hsc_m51_sources.json";
 const FOOTPRINT_FIXTURE = "./test-data/astronomy/hst_m51_observations.json";
+
+// Demo overlays are transient UI data, like Earth GeoJSON demos. Keep their
+// ownership explicit so Astronomy "Clear imports" can remove them without
+// treating unrelated catalogues or footprint sets as imports.
+const demoCatalogues = new WeakSet();
+const demoFootprintSets = new WeakSet();
+
+export function isAstronomyDemoCatalogue(catalogue) {
+  return demoCatalogues.has(catalogue);
+}
+
+export function isAstronomyDemoFootprintSet(footprintSet) {
+  return demoFootprintSets.has(footprintSet);
+}
 
 export function wireAstronomyOverlayDemos() {
   const astronomy = document.querySelector('[data-dev-tab-panel="astronomy"]');
 
   if (!astronomy || el("astronomyOverlayDemo")) return;
 
-  const panel = document.createElement("details");
-  panel.id = "astronomyOverlayDemo";
-  panel.open = true;
+  const cataloguePanel = document.createElement("details");
+  cataloguePanel.id = "astronomyCatalogueDemo";
+  cataloguePanel.open = true;
+  cataloguePanel.hidden = true;
+  cataloguePanel.dataset.uiPanel = "astronomy:data";
 
-  panel.innerHTML = `
-    <summary>Astronomy overlays</summary>
+  cataloguePanel.innerHTML = `
+    <summary>Catalogue demo</summary>
     <div class="stack" style="margin-top:8px;">
       <div class="hint">
-        Local fixtures generated from ESASky TAP around M51.
+        Local HSC fixture generated from ESASky TAP around M51.
       </div>
 
-      <div class="row">
-        <button
-          id="btnLoadHscCatalogueDemo"
-          class="secondary"
-          type="button"
-        >
-          Load HSC catalogue (~40)
-        </button>
-
-        <button
-          id="btnLoadHstFootprintsDemo"
-          class="secondary"
-          type="button"
-        >
-          Load HST observations (~40)
-        </button>
-      </div>
+      <button
+        id="btnLoadHscCatalogueDemo"
+        class="secondary"
+        type="button"
+      >
+        Load HSC catalogue (~40)
+      </button>
 
       <div class="hint">
-        Hover a source or observation footprint to inspect its metadata below.
+        Hover a source to inspect its metadata.
       </div>
     </div>
   `;
 
-  const hoverPanel = el("hoverPanel");
+  const overlayPanel = document.createElement("details");
+  overlayPanel.id = "astronomyOverlayDemo";
+  overlayPanel.open = true;
+  overlayPanel.dataset.uiPanel = "astronomy:overlays";
 
-  if (hoverPanel) {
-    astronomy.insertBefore(panel, hoverPanel);
+  overlayPanel.innerHTML = `
+    <summary>Observation demo</summary>
+    <div class="stack" style="margin-top:8px;">
+      <div class="hint">
+        Local HST observation fixture generated from ESASky TAP around M51.
+      </div>
+
+      <button
+        id="btnLoadHstFootprintsDemo"
+        class="secondary"
+        type="button"
+      >
+        Load HST observations (~40)
+      </button>
+
+      <div class="hint">
+        Hover an observation footprint to inspect its metadata.
+      </div>
+    </div>
+  `;
+
+  const catalogueManager = el("catalogueManagerPanel");
+  if (catalogueManager?.parentNode) {
+    catalogueManager.parentNode.insertBefore(cataloguePanel, catalogueManager);
   } else {
-    astronomy.appendChild(panel);
+    astronomy.appendChild(cataloguePanel);
+  }
+
+  const stcsManager = el("stcsManagerPanel");
+  if (stcsManager?.parentNode) {
+    stcsManager.parentNode.insertBefore(overlayPanel, stcsManager);
+  } else {
+    astronomy.appendChild(overlayPanel);
   }
 
   el("btnLoadHscCatalogueDemo")?.addEventListener(
@@ -72,6 +110,7 @@ async function loadCatalogueFixture() {
   try {
     const fixture = await loadFixture(CATALOGUE_FIXTURE);
     const live = createCatalogue(fixture);
+    demoCatalogues.add(live);
     state.CAT_LIST.push(live);
     renderCatalogueManager();
     goToFixture(fixture);
@@ -88,7 +127,15 @@ async function loadFootprintFixture() {
   try {
     const fixture = await loadFixture(FOOTPRINT_FIXTURE);
     const live = createFootprintSet(fixture);
+    demoFootprintSets.add(live);
     state.FP_LIST.push(live);
+
+    const key = footprintKey(live);
+    const color = "#ffaa00";
+    state.FP_VIS.set(key, true);
+    state.FP_COLOR.set(key, color);
+    state.AstroAPI.changeFootprintSetColor?.(live, color);
+
     renderFootprintManager();
     goToFixture(fixture);
     setStatus(

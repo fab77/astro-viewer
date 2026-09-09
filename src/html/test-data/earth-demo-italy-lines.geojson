@@ -1,0 +1,96 @@
+{
+  "type": "FeatureCollection",
+  "name": "AstroViewer Earth demo - Italy lines",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "line-1",
+      "properties": {
+        "name": "North-South demo track",
+        "kind": "demo-line",
+        "description": "Synthetic line for AstroViewer Earth UI testing"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            9.19,
+            45.4642
+          ],
+          [
+            11.3426,
+            44.4949
+          ],
+          [
+            11.2558,
+            43.7696
+          ],
+          [
+            12.4964,
+            41.9028
+          ],
+          [
+            14.2681,
+            40.8518
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "line-2",
+      "properties": {
+        "name": "Tyrrhenian demo track",
+        "kind": "demo-line",
+        "description": "Synthetic line for AstroViewer Earth UI testing"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            8.9463,
+            44.4056
+          ],
+          [
+            11.2558,
+            43.7696
+          ],
+          [
+            12.4964,
+            41.9028
+          ],
+          [
+            14.2681,
+            40.8518
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "line-3",
+      "properties": {
+        "name": "Islands demo track",
+        "kind": "demo-line",
+        "description": "Synthetic line for AstroViewer Earth UI testing"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            9.1217,
+            39.2238
+          ],
+          [
+            12.4964,
+            41.9028
+          ],
+          [
+            13.3615,
+            38.1157
+          ]
+        ]
+      }
+    }
+  ]
+}

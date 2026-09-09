@@ -12,13 +12,14 @@
 import { Source, SourceMediaKind, SourceMediaStyle } from "../Source.js";
 import { Point } from "../Point.js";
 import { CoordsType } from "../..//utils/CoordsType.js";
-import { colorHex2RGB } from "../../utils/Utils.js";
+import { colorHex2RGB, interactionColorsFromHex } from "../../utils/Utils.js";
 import MouseHelper from "../../utils/MouseHelper.js";
 import { CatalogueShaderProgram } from "../../shader/CatalogueShaderProgram.js";
 import { MetadataManager } from "../MetadataManager.js";
 import { MetadataColumn } from "../MetadataColumn.js";
 import { VisibleTilesManager } from "../hips/VisibleTilesManager.js";
 import { mat4, vec3, vec4 } from "gl-matrix";
+import { Pointing, Vec3 } from "astrospatial-core/healpix";
 import global from "../../Global.js";
 
 export type ClickedSourceState = {
@@ -52,7 +53,7 @@ export class CatalogueGL {
   _kind: string = "CatalogueGL";
   static ELEM_SIZE: number = 6;
   static BYTES_X_ELEM: number = new Float32Array().BYTES_PER_ELEMENT;
-  static STANDARD_SHAPE_SIZE: number = 10.0;
+  static STANDARD_SHAPE_SIZE: number = 16.0;
   static STANDARD_SHAPE_HUE: number = 3.0;
 
   _ready: boolean;
@@ -364,9 +365,14 @@ export class CatalogueGL {
     this._bufferInitialised = false;
   }
 
-  private getColumnIndex(columnsmeta: MetadataColumn[], columnName?: string): number {
+  private getColumnIndex(
+    columnsmeta: MetadataColumn[],
+    columnName?: string,
+  ): number {
     if (!columnName) return -1;
-    return columnsmeta.find((column) => column.name === columnName)?.index ?? -1;
+    return (
+      columnsmeta.find((column) => column.name === columnName)?.index ?? -1
+    );
   }
 
   private readCell(
@@ -391,7 +397,9 @@ export class CatalogueGL {
 
     const rawKind = String(
       this.readCell(row, columnsmeta, mediaColumns.type) ?? "sprite",
-    ).trim().toLowerCase();
+    )
+      .trim()
+      .toLowerCase();
     const kind: SourceMediaKind =
       rawKind === "model"
         ? "model"
@@ -408,14 +416,18 @@ export class CatalogueGL {
     const rotationDeg = Number(
       this.readCell(row, columnsmeta, mediaColumns.rotation),
     );
-    const opacity = Number(this.readCell(row, columnsmeta, mediaColumns.opacity));
+    const opacity = Number(
+      this.readCell(row, columnsmeta, mediaColumns.opacity),
+    );
 
     return {
       kind,
       src,
       scale: Number.isFinite(scale) && scale > 0 ? scale : undefined,
       rotationDeg: Number.isFinite(rotationDeg) ? rotationDeg : undefined,
-      opacity: Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : undefined,
+      opacity: Number.isFinite(opacity)
+        ? Math.max(0, Math.min(1, opacity))
+        : undefined,
     };
   }
 
@@ -471,7 +483,10 @@ export class CatalogueGL {
     return this._mediaOverlayHost;
   }
 
-  private ensureMediaElement(index: number, style: SourceMediaStyle): HTMLImageElement {
+  private ensureMediaElement(
+    index: number,
+    style: SourceMediaStyle,
+  ): HTMLImageElement {
     let img = this._mediaElements[index];
     if (!img) {
       img = document.createElement("img");
@@ -533,10 +548,19 @@ export class CatalogueGL {
     if (!mat4.invert(invView, vMatrix)) return true;
 
     const cameraPos = vec3.fromValues(invView[12], invView[13], invView[14]);
-    const worldPoint4 = vec4.fromValues(source.point.x, source.point.y, source.point.z, 1);
+    const worldPoint4 = vec4.fromValues(
+      source.point.x,
+      source.point.y,
+      source.point.z,
+      1,
+    );
     vec4.transformMat4(worldPoint4, worldPoint4, in_mMatrix);
 
-    const worldPoint = vec3.fromValues(worldPoint4[0], worldPoint4[1], worldPoint4[2]);
+    const worldPoint = vec3.fromValues(
+      worldPoint4[0],
+      worldPoint4[1],
+      worldPoint4[2],
+    );
     const normal = vec3.normalize(vec3.create(), worldPoint);
     const toCamera = vec3.subtract(vec3.create(), cameraPos, worldPoint);
 
@@ -548,7 +572,9 @@ export class CatalogueGL {
     vMatrix: Float32Array,
     pMatrix: Float32Array,
   ): void {
-    const sourcesWithMedia = this._sources.filter((source) => !!source.mediaStyle?.src);
+    const sourcesWithMedia = this._sources.filter(
+      (source) => !!source.mediaStyle?.src,
+    );
     if (!sourcesWithMedia.length) {
       this.clearMediaOverlay();
       return;
@@ -579,7 +605,12 @@ export class CatalogueGL {
         continue;
       }
 
-      const projected = vec4.fromValues(source.point.x, source.point.y, source.point.z, 1);
+      const projected = vec4.fromValues(
+        source.point.x,
+        source.point.y,
+        source.point.z,
+        1,
+      );
       vec4.transformMat4(projected, projected, mvp);
       if (!projected[3]) {
         if (img) img.style.display = "none";
@@ -754,33 +785,61 @@ export class CatalogueGL {
     this._bufferInitialised = true;
   }
 
-  private getSelectionRadius(): number {
-    const order = this._visibleTilesManager.getVisibleOrder();
-    switch (order) {
-      case 0:
-      case 1:
-      case 2:
-        // return 0.005;
-        return 0.01;
-      case 3:
-      // return 0.001;
-      case 4:
-      // return 0.0009;
-      case 5:
-        // return 0.0005;
-        return 0.005;
-      case 6:
-      // return 0.0001;
-      case 7:
-      // return 0.00009;
-      case 8:
-        // return 0.00005;
-        return 0.001;
-      case 9:
-        return 0.0005;
-      default:
-        return 0.0001;
+  private static readonly MIN_HIT_RADIUS_PX = 6;
+  private static readonly HIT_PADDING_PX = 3;
+  private static readonly CANDIDATE_RADIUS_PX = 16;
+
+  protected getCanvas(): HTMLCanvasElement {
+    return this._webgl.canvas as HTMLCanvasElement;
+  }
+
+  protected getHitRadiusPx(source: Source): number {
+    const markerSize = source.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
+    return Math.max(
+      CatalogueGL.MIN_HIT_RADIUS_PX,
+      markerSize / 2 + CatalogueGL.HIT_PADDING_PX,
+    );
+  }
+
+  private getCandidateSearchRadiusRad(pMatrix: Float32Array): number {
+    const canvas = this._webgl.canvas as HTMLCanvasElement;
+    const width = Math.max(1, canvas.clientWidth);
+    const height = Math.max(1, canvas.clientHeight);
+
+    // pMatrix[0] and pMatrix[5] are the perspective scale factors for X/Y.
+    // Convert a small screen-space radius to a conservative angular radius.
+    const fovXRad = 2 * Math.atan(1 / Math.abs(pMatrix[0]));
+    const fovYRad = 2 * Math.atan(1 / Math.abs(pMatrix[5]));
+    const radPerPixel = Math.max(fovXRad / width, fovYRad / height);
+    return CatalogueGL.CANDIDATE_RADIUS_PX * radPerPixel;
+  }
+
+  protected projectPointToScreen(
+    point: Point,
+    mvp: mat4,
+    width: number,
+    height: number,
+  ): [number, number] | null {
+    const projected = vec4.fromValues(point.x, point.y, point.z, 1);
+    vec4.transformMat4(projected, projected, mvp);
+    if (projected[3] <= 0) return null;
+
+    const ndcX = projected[0] / projected[3];
+    const ndcY = projected[1] / projected[3];
+    return [(ndcX * 0.5 + 0.5) * width, (1 - (ndcY * 0.5 + 0.5)) * height];
+  }
+
+  public clearSelection(): void {
+    for (const idx of this.selectedIndexes) {
+      const base = idx * CatalogueGL.ELEM_SIZE;
+      if (base + 4 >= this.vertexCataloguePosition.length) continue;
+
+      this.vertexCataloguePosition[base + 3] = 0.0;
+      this.vertexCataloguePosition[base + 4] =
+        this._sources[idx]?.shapeSize ?? CatalogueGL.STANDARD_SHAPE_SIZE;
     }
+
+    this.selectedIndexes = [];
   }
 
   private setSelectedIndexes(selectedIndex: number[]) {
@@ -810,8 +869,16 @@ export class CatalogueGL {
    */
   getSourcesFromPointer(
     in_mouseHelper: MouseHelper,
+    in_mMatrix: Float32Array,
+    vMatrix: Float32Array,
+    pMatrix: Float32Array,
   ): CataloguePickResult | null {
-    const pickedIndexes = this.checkClicking(in_mouseHelper);
+    const pickedIndexes = this.checkClicking(
+      in_mouseHelper,
+      in_mMatrix,
+      vMatrix,
+      pMatrix,
+    );
     if (!pickedIndexes.length) {
       return {
         sources: [],
@@ -834,8 +901,16 @@ export class CatalogueGL {
    */
   selectPrimarySourceFromClick(
     in_mouseHelper: MouseHelper,
+    in_mMatrix: Float32Array,
+    vMatrix: Float32Array,
+    pMatrix: Float32Array,
   ): CatalogueClickResult | null {
-    const picked = this.getSourcesFromPointer(in_mouseHelper);
+    const picked = this.getSourcesFromPointer(
+      in_mouseHelper,
+      in_mMatrix,
+      vMatrix,
+      pMatrix,
+    );
     const clickedIndexes = picked?.pickedIndexes ?? [];
     // if (!clickedIndexes.length) {
     //     this.setSelectedIndexes([]);
@@ -874,37 +949,81 @@ export class CatalogueGL {
     const idx = this.hoveredIndexes[0];
     return this._sources[idx] ?? null;
   }
-  private findNearestSourceIndex(in_mouseHelper: MouseHelper): number | null {
-    if (
-      in_mouseHelper.x == null ||
-      in_mouseHelper.y == null ||
-      in_mouseHelper.z == null
-    ) {
-      return null;
+  protected findNearestSourceIndex(
+    in_mouseHelper: MouseHelper,
+    in_mMatrix: Float32Array,
+    vMatrix: Float32Array,
+    pMatrix: Float32Array,
+  ): number | null {
+    if (in_mouseHelper.xyz == null) return null;
+
+    const healpix = global.getHealpix(global.selectionOrder);
+    const mouseVec = new Vec3(...in_mouseHelper.xyz);
+    const mousePointing = new Pointing(mouseVec, false);
+    const searchRadiusRad = this.getCandidateSearchRadiusRad(pMatrix);
+    const rangeSet = healpix.queryDiscInclusive(mousePointing, searchRadiusRad, 4);
+    const pixels = rangeSet.r;
+
+    const candidateIndexes = new Set<number>();
+
+    for (const pixel of pixels) {
+      const indexes = this._healpixDensityMap.get(pixel);
+      if (!indexes) continue;
+
+      indexes.forEach((idx) => candidateIndexes.add(idx));
     }
+    if (!candidateIndexes.size) return null;
 
-    const mousePix = in_mouseHelper.computeNpix();
-    if (mousePix == null) return null;
+    const canvas = this._webgl.canvas as HTMLCanvasElement;
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    if (!width || !height) return null;
 
-    const candidates = this._healpixDensityMap.get(mousePix);
-    if (!candidates?.length) return null;
+    const modelView = mat4.create();
+    const mvp = mat4.create();
+    mat4.multiply(modelView, vMatrix, in_mMatrix);
+    mat4.multiply(mvp, pMatrix, modelView);
 
-    const selR = this.getSelectionRadius();
+    const mousePoint = new Point(
+      {
+        x: in_mouseHelper.xyz[0],
+        y: in_mouseHelper.xyz[1],
+        z: in_mouseHelper.xyz[2],
+      },
+      CoordsType.CARTESIAN,
+    );
+    const mouseScreen = this.projectPointToScreen(
+      mousePoint,
+      mvp,
+      width,
+      height,
+    );
+    if (!mouseScreen) return null;
 
     let nearestIndex: number | null = null;
-    let nearestDistance = Number.POSITIVE_INFINITY;
+    let nearestDistancePx = Number.POSITIVE_INFINITY;
 
-    for (const sourceIdx of candidates) {
+    for (const sourceIdx of candidateIndexes) {
       const source = this._sources[sourceIdx];
       if (!source) continue;
 
-      const dx = source.point.x - in_mouseHelper.x;
-      const dy = source.point.y - in_mouseHelper.y;
-      const dz = source.point.z - in_mouseHelper.z;
-      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const sourceScreen = this.projectPointToScreen(
+        source.point,
+        mvp,
+        width,
+        height,
+      );
+      if (!sourceScreen) continue;
 
-      if (dist <= selR && dist < nearestDistance) {
-        nearestDistance = dist;
+      const distancePx = Math.hypot(
+        sourceScreen[0] - mouseScreen[0],
+        sourceScreen[1] - mouseScreen[1],
+      );
+      if (
+        distancePx <= this.getHitRadiusPx(source) &&
+        distancePx < nearestDistancePx
+      ) {
+        nearestDistancePx = distancePx;
         nearestIndex = sourceIdx;
       }
     }
@@ -912,13 +1031,33 @@ export class CatalogueGL {
     return nearestIndex;
   }
 
-  private checkClicking(in_mouseHelper: MouseHelper): number[] {
-    const nearestIndex = this.findNearestSourceIndex(in_mouseHelper);
+  private checkClicking(
+    in_mouseHelper: MouseHelper,
+    in_mMatrix: Float32Array,
+    vMatrix: Float32Array,
+    pMatrix: Float32Array,
+  ): number[] {
+    const nearestIndex = this.findNearestSourceIndex(
+      in_mouseHelper,
+      in_mMatrix,
+      vMatrix,
+      pMatrix,
+    );
     return nearestIndex == null ? [] : [nearestIndex];
   }
 
-  private checkHovering(in_mouseHelper: MouseHelper): number[] {
-    const nearestIndex = this.findNearestSourceIndex(in_mouseHelper);
+  private checkHovering(
+    in_mouseHelper: MouseHelper,
+    in_mMatrix: Float32Array,
+    vMatrix: Float32Array,
+    pMatrix: Float32Array,
+  ): number[] {
+    const nearestIndex = this.findNearestSourceIndex(
+      in_mouseHelper,
+      in_mMatrix,
+      vMatrix,
+      pMatrix,
+    );
     return nearestIndex == null ? [] : [nearestIndex];
   }
 
@@ -1008,6 +1147,22 @@ export class CatalogueGL {
       );
     }
 
+    const interactionColors = interactionColorsFromHex(this._shapeColor);
+    if (this._catalogueShaderProgram.locations.hoverColor) {
+      this._webgl.uniform4f(
+        this._catalogueShaderProgram.locations.hoverColor,
+        ...interactionColors.hover,
+        1.0,
+      );
+    }
+    if (this._catalogueShaderProgram.locations.selectedColor) {
+      this._webgl.uniform4f(
+        this._catalogueShaderProgram.locations.selectedColor,
+        ...interactionColors.selected,
+        1.0,
+      );
+    }
+
     // selected flags
     for (let s = 0; s < this.selectedIndexes.length; s++) {
       const idx = this.selectedIndexes[s];
@@ -1019,7 +1174,7 @@ export class CatalogueGL {
     // clear old hovered
     for (let k = 0; k < this.hoveredIndexes.length; k++) {
       const base = this.hoveredIndexes[k] * CatalogueGL.ELEM_SIZE;
-      // if (this.vertexCataloguePosition[base + 3] == 2.0) continue; // selected, skip hover
+      if (this.selectedIndexes.includes(this.hoveredIndexes[k])) continue;
 
       this.vertexCataloguePosition[base + 3] = 0.0; // not hovered
       this.vertexCataloguePosition[base + 4] =
@@ -1037,7 +1192,12 @@ export class CatalogueGL {
       //     this.vertexCataloguePosition[base + 4] = this._sources[this.hoveredIndexes[k]].shapeSize; // size
       // }
 
-      this.hoveredIndexes = this.checkHovering(in_mouseHelper);
+      this.hoveredIndexes = this.checkHovering(
+        in_mouseHelper,
+        in_mMatrix,
+        vMatrix,
+        pMatrix,
+      );
 
       // // new hovered
       // for (let i = 0; i < this.hoveredIndexes.length; i++) {
@@ -1054,7 +1214,7 @@ export class CatalogueGL {
       const idx = this.hoveredIndexes[i];
       const base = idx * CatalogueGL.ELEM_SIZE;
 
-      // if (this.vertexCataloguePosition[base + 3] == 2.0) continue; // selected, skip hover
+      if (this.selectedIndexes.includes(idx)) continue;
       this.vertexCataloguePosition[base + 3] = 1.0; // hovered
       this.vertexCataloguePosition[base + 4] = this._sources[idx].shapeSize; // size
     }
