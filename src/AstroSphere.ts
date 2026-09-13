@@ -1442,37 +1442,104 @@ class AstroSphere {
     );
   }
 
-  changeFoV(deg: number) {
-    const distance = this._healpixGrid.getFoV().computeDistanceFromAngle(deg);
-    this._camera.translate(distance);
-    this.fov = this._healpixGrid.refreshFoV(
-      this._camera,
-      this._perspectiveMatrixManager.pMatrix,
-    );
-    this._camera.refreshFoV(this.fov.minFoV);
-  }
+  /**
+   * Set the minimum angular field of view, in degrees.
+   *
+   * The FoV measured by SphereFoV is monotonic with the outside-sphere radial
+   * camera distance. Solve that distance numerically so the public API has an
+   * absolute, aspect-ratio-independent meaning: getFoV().minFoV ~= deg.
+   */
+  setFoV(deg: number): void {
+    if (!Number.isFinite(deg) || deg <= 0 || deg >= 180) {
+      throw new RangeError(`FoV must be > 0 and < 180 degrees. Received ${deg}.`);
+    }
 
-  changeFoV2(deg: number) {
-    const newCameraPos = this._healpixGrid
-      .getFoV()
-      .computeCameraPositionForFoV(deg);
-    this._camera.setCameraPosition(newCameraPos);
-  }
+    if (global.insideSphere) {
+      throw new Error("setFoV() is currently supported only outside the sphere.");
+    }
 
-  changeFoV3(deg: number) {
-    const newPos = this._healpixGrid
-      .getFoV()
-      .computeCameraPositionForAngularDiameter(deg);
-    this._camera.setCameraPosition(newPos);
+    this._camera.cancelFlyTo();
+    this.zoomInertia = 0;
 
-    // Recompute projection after moving the camera
+    const minDistance = 1.000001;
+    const maxDistance = 4.0;
+    const tolerance = Math.max(1e-5, deg * 0.001);
+    const maxIterations = 40;
+
+    let low = minDistance;
+    let high = maxDistance;
+    let bestDistance = this._camera.getRadialDistance();
+    let bestError = Number.POSITIVE_INFINITY;
+
+    for (let iteration = 0; iteration < maxIterations; iteration += 1) {
+      const candidateDistance = (low + high) / 2;
+      this._camera.setRadialDistance(candidateDistance);
+
+      this._perspectiveMatrixManager.computePerspectiveMatrix(
+        this.canvas,
+        this._camera,
+        bootSetup.camera_fov_deg,
+        bootSetup.camera_near_plane,
+        global.insideSphere,
+      );
+
+      const candidateFoV = this._healpixGrid.refreshFoV(
+        this._camera,
+        this._perspectiveMatrixManager.pMatrix,
+      );
+      const measuredFoV = candidateFoV.minFoV;
+      const error = Math.abs(measuredFoV - deg);
+
+      if (error < bestError) {
+        bestError = error;
+        bestDistance = candidateDistance;
+      }
+
+      if (error <= tolerance) {
+        break;
+      }
+
+      // Wider FoV requires a larger radial distance. A 180-degree fallback is
+      // therefore safely treated as the upper side of the search interval.
+      if (measuredFoV >= deg || measuredFoV >= 179.999) {
+        high = candidateDistance;
+      } else {
+        low = candidateDistance;
+      }
+    }
+
+    this._camera.setRadialDistance(bestDistance);
     this._perspectiveMatrixManager.computePerspectiveMatrix(
       this.canvas,
       this._camera,
       bootSetup.camera_fov_deg,
       bootSetup.camera_near_plane,
-      false,
+      global.insideSphere,
     );
+    this.fov = this._healpixGrid.refreshFoV(
+      this._camera,
+      this._perspectiveMatrixManager.pMatrix,
+    );
+    this._camera.refreshFoV(this.fov.minFoV);
+
+    this.lastCameraMotionAt = performance.now();
+    this._cameraStatusChanged = true;
+    this.emitCameraChanged("set-fov");
+  }
+
+  /** @deprecated Use setFoV(). */
+  changeFoV(deg: number): void {
+    this.setFoV(deg);
+  }
+
+  /** @deprecated Use setFoV(). */
+  changeFoV2(deg: number): void {
+    this.setFoV(deg);
+  }
+
+  /** @deprecated Use setFoV(). */
+  changeFoV3(deg: number): void {
+    this.setFoV(deg);
   }
 
   getInsideSphere(): boolean {

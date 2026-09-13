@@ -566,6 +566,28 @@ class Camera implements CameraLike {
     this.refreshViewMatrix();
   }
 
+  /**
+   * Set the radial camera distance while preserving the current pointing.
+   *
+   * Outside-sphere navigation stores the camera radius in cam_pos[2];
+   * changing only that component is the same radial motion used by zoom(),
+   * without changing the current rotation matrix.
+   */
+  setRadialDistance(distance: number): void {
+    if (!Number.isFinite(distance) || distance <= 1) {
+      throw new RangeError(`Camera radial distance must be > 1. Received ${distance}.`);
+    }
+
+    this.cancelFlyTo();
+    this.cam_pos[2] = distance;
+    mat4.translate(this.T, mat4.create(), this.cam_pos);
+    this.refreshViewMatrix();
+  }
+
+  getRadialDistance(): number {
+    return this.cam_pos[2];
+  }
+
   getCameraAngle(): SphericalCoords {
     const [x, y, z] = this.getCameraPosition();
     const posVec = vec3.fromValues(x, y, z);

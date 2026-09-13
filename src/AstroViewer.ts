@@ -655,15 +655,23 @@ export class AstroViewer {
     return this.astroSphere.getFoVPolygon();
   }
 
-  changeFoV(deg: number) {
-    (this, this.astroSphere.changeFoV(deg));
+  setFoV(deg: number): void {
+    this.astroSphere.setFoV(deg);
   }
 
-  changeFoV2(deg: number) {
-    (this, this.astroSphere.changeFoV2(deg));
+  /** @deprecated Use setFoV(). */
+  changeFoV(deg: number): void {
+    this.setFoV(deg);
   }
-  changeFoV3(deg: number) {
-    (this, this.astroSphere.changeFoV3(deg));
+
+  /** @deprecated Use setFoV(). */
+  changeFoV2(deg: number): void {
+    this.setFoV(deg);
+  }
+
+  /** @deprecated Use setFoV(). */
+  changeFoV3(deg: number): void {
+    this.setFoV(deg);
   }
 
   getInsideSphere(): boolean {
