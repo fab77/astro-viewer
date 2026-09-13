@@ -172,6 +172,7 @@ class AstroSphere {
   private lockedNorthSouthDecDeg: number | null = null;
   private keepCameraNorthUp = true;
   private gridLabelContainers?: GridLabelContainers;
+  private fovAnimationResolve: (() => void) | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -550,6 +551,7 @@ class AstroSphere {
       canvas.setPointerCapture(event.pointerId);
       this.mouseDown = true;
       this._camera.cancelFlyTo();
+      this.cancelFoVAnimation();
 
       const rect = canvas.getBoundingClientRect();
       this.lastMouseX = event.clientX - rect.left; // locale al canvas
@@ -740,6 +742,7 @@ class AstroSphere {
       const currentFov = this._healpixGrid.getMinFoV();
       const zoomStep = this.computeZoomStep(currentFov, event.deltaY);
       this._camera.cancelFlyTo();
+      this.cancelFoVAnimation();
 
       // Apply wheel zoom immediately and discard any queued inertia so reversing
       // direction feels responsive instead of "buffered".
@@ -1442,25 +1445,27 @@ class AstroSphere {
     );
   }
 
-  /**
-   * Set the minimum angular field of view, in degrees.
-   *
-   * The FoV measured by SphereFoV is monotonic with the outside-sphere radial
-   * camera distance. Solve that distance numerically so the public API has an
-   * absolute, aspect-ratio-independent meaning: getFoV().minFoV ~= deg.
-   */
-  setFoV(deg: number): void {
+  private validateFoV(deg: number): void {
     if (!Number.isFinite(deg) || deg <= 0 || deg >= 180) {
       throw new RangeError(`FoV must be > 0 and < 180 degrees. Received ${deg}.`);
     }
 
     if (global.insideSphere) {
-      throw new Error("setFoV() is currently supported only outside the sphere.");
+      throw new Error("FoV navigation is currently supported only outside the sphere.");
     }
+  }
 
-    this._camera.cancelFlyTo();
-    this.zoomInertia = 0;
+  /**
+   * Resolve the radial camera distance that produces the requested minimum FoV.
+   *
+   * The search temporarily samples radial distances, then restores the original
+   * camera distance before returning. Callers can therefore either apply the
+   * result immediately or animate toward it.
+   */
+  private findRadialDistanceForFoV(deg: number): number {
+    this.validateFoV(deg);
 
+    const originalDistance = this._camera.getRadialDistance();
     const minDistance = 1.000001;
     const maxDistance = 4.0;
     const tolerance = Math.max(1e-5, deg * 0.001);
@@ -1468,7 +1473,7 @@ class AstroSphere {
 
     let low = minDistance;
     let high = maxDistance;
-    let bestDistance = this._camera.getRadialDistance();
+    let bestDistance = originalDistance;
     let bestError = Number.POSITIVE_INFINITY;
 
     for (let iteration = 0; iteration < maxIterations; iteration += 1) {
@@ -1499,8 +1504,6 @@ class AstroSphere {
         break;
       }
 
-      // Wider FoV requires a larger radial distance. A 180-degree fallback is
-      // therefore safely treated as the upper side of the search interval.
       if (measuredFoV >= deg || measuredFoV >= 179.999) {
         high = candidateDistance;
       } else {
@@ -1508,7 +1511,43 @@ class AstroSphere {
       }
     }
 
-    this._camera.setRadialDistance(bestDistance);
+    this._camera.setRadialDistance(originalDistance);
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    );
+    this.fov = this._healpixGrid.refreshFoV(
+      this._camera,
+      this._perspectiveMatrixManager.pMatrix,
+    );
+    this._camera.refreshFoV(this.fov.minFoV);
+
+    return bestDistance;
+  }
+
+  private finishFoVAnimation(): void {
+    const resolve = this.fovAnimationResolve;
+    this.fovAnimationResolve = null;
+    resolve?.();
+  }
+
+  private cancelFoVAnimation(): void {
+    this._camera.cancelRadialAnimation();
+    this.finishFoVAnimation();
+  }
+
+  /** Set the minimum angular field of view immediately, in degrees. */
+  setFoV(deg: number): void {
+    this.validateFoV(deg);
+    this.cancelFoVAnimation();
+    this._camera.cancelFlyTo();
+    this.zoomInertia = 0;
+
+    const targetDistance = this.findRadialDistanceForFoV(deg);
+    this._camera.setRadialDistance(targetDistance);
     this._perspectiveMatrixManager.computePerspectiveMatrix(
       this.canvas,
       this._camera,
@@ -1525,6 +1564,53 @@ class AstroSphere {
     this.lastCameraMotionAt = performance.now();
     this._cameraStatusChanged = true;
     this.emitCameraChanged("set-fov");
+  }
+
+  async flyToFoV(deg: number, durationMs = 1200): Promise<void> {
+    this.validateFoV(deg);
+
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      throw new RangeError(
+        `FoV animation duration must be >= 0 ms. Received ${durationMs}.`,
+      );
+    }
+
+    if (durationMs === 0) {
+      this.setFoV(deg);
+      return;
+    }
+
+    this.cancelFoVAnimation();
+    this.zoomInertia = 0;
+
+    const targetDistance = this.findRadialDistanceForFoV(deg);
+    this._camera.flyToRadialDistance(targetDistance, durationMs);
+    this.lastCameraMotionAt = performance.now();
+    this._cameraStatusChanged = true;
+
+    return new Promise<void>((resolve) => {
+      this.fovAnimationResolve = resolve;
+    });
+  }
+
+  async zoomIn(steps = 1, durationMs = 500): Promise<void> {
+    this.validateZoomSteps(steps);
+    const targetFoV = this.getFoV().minFoV / Math.pow(2, steps);
+    return this.flyToFoV(targetFoV, durationMs);
+  }
+
+  async zoomOut(steps = 1, durationMs = 500): Promise<void> {
+    this.validateZoomSteps(steps);
+    const targetFoV = this.getFoV().minFoV * Math.pow(2, steps);
+    return this.flyToFoV(targetFoV, durationMs);
+  }
+
+  private validateZoomSteps(steps: number): void {
+    if (!Number.isInteger(steps) || steps < 1) {
+      throw new RangeError(
+        `Zoom steps must be a positive integer. Received ${steps}.`,
+      );
+    }
   }
 
   /** @deprecated Use setFoV(). */
@@ -1551,6 +1637,7 @@ class AstroSphere {
     this.inertiaX = 0;
     this.inertiaY = 0;
     this.zoomInertia = 0;
+    this.cancelFoVAnimation();
     global.insideSphere = !global.insideSphere;
     // console.log(global.insideSphere)
     this._camera.toggleInsideSphere();
@@ -1805,6 +1892,24 @@ class AstroSphere {
       );
     }
 
+    const fovFlying = this._camera.updateRadialAnimation(now);
+    const fovAnimationFinished =
+      fovFlying && !this._camera.isRadialAnimationActive();
+
+    if (fovFlying) {
+      this.zoomInertia = 0;
+      this.lastCameraMotionAt = now;
+      this._cameraStatusChanged = true;
+
+      this._perspectiveMatrixManager.computePerspectiveMatrix(
+        canvas,
+        this._camera,
+        bootSetup.camera_fov_deg,
+        bootSetup.camera_near_plane,
+        global.insideSphere,
+      );
+    }
+
     // Zoom inertia
     if (this.zoomInertia !== 0) {
       if (Math.abs(this.zoomInertia) > 0.0001) {
@@ -1871,6 +1976,10 @@ class AstroSphere {
       this.fov = nextFoV;
       this._camera.refreshFoV(this.fov.minFoV);
       this.prevFov = this.fov.minFoV;
+    }
+
+    if (fovAnimationFinished) {
+      this.finishFoVAnimation();
     }
 
     // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
@@ -1967,6 +2076,7 @@ class AstroSphere {
       Math.abs(this.zoomInertia) > 0.0001 ||
       Math.abs(this.inertiaX) > 0.02 ||
       Math.abs(this.inertiaY) > 0.02 ||
+      this._camera.isRadialAnimationActive() ||
       nowForGrid - this.lastCameraMotionAt < 220;
 
     const skyEntityDrawInput: SkyEntityDrawInput = {

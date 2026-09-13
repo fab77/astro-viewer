@@ -659,6 +659,18 @@ export class AstroViewer {
     this.astroSphere.setFoV(deg);
   }
 
+  flyToFoV(deg: number, durationMs = 1200): Promise<void> {
+    return this.astroSphere.flyToFoV(deg, durationMs);
+  }
+
+  zoomIn(steps = 1, durationMs = 500): Promise<void> {
+    return this.astroSphere.zoomIn(steps, durationMs);
+  }
+
+  zoomOut(steps = 1, durationMs = 500): Promise<void> {
+    return this.astroSphere.zoomOut(steps, durationMs);
+  }
+
   /** @deprecated Use setFoV(). */
   changeFoV(deg: number): void {
     this.setFoV(deg);
