@@ -66,6 +66,13 @@ class Camera implements CameraLike {
     durationMs: number;
   } | null = null;
 
+  private radialAnimation: {
+    startDistance: number;
+    targetDistance: number;
+    startTime: number;
+    durationMs: number;
+  } | null = null;
+
   constructor(in_position: vec3, in_sphere: boolean) {
     this.init(in_position, in_sphere);
   }
@@ -271,6 +278,56 @@ class Camera implements CameraLike {
 
   cancelFlyTo(): void {
     this.flyToAnimation = null;
+  }
+
+  flyToRadialDistance(distance: number, durationMs = 1200): void {
+    if (!Number.isFinite(distance) || distance <= 1) {
+      throw new RangeError(
+        `Camera radial distance must be > 1. Received ${distance}.`,
+      );
+    }
+
+    this.radialAnimation = {
+      startDistance: this.cam_pos[2],
+      targetDistance: distance,
+      startTime: performance.now(),
+      durationMs: Math.max(1, durationMs),
+    };
+  }
+
+  updateRadialAnimation(now: number): boolean {
+    const animation = this.radialAnimation;
+
+    if (!animation) {
+      return false;
+    }
+
+    const elapsed = now - animation.startTime;
+    const progress = Math.min(1, elapsed / animation.durationMs);
+    const easedProgress =
+      progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+    const distance =
+      animation.startDistance +
+      (animation.targetDistance - animation.startDistance) * easedProgress;
+
+    this.setRadialDistance(distance);
+
+    if (progress >= 1) {
+      this.setRadialDistance(animation.targetDistance);
+      this.radialAnimation = null;
+    }
+
+    return true;
+  }
+
+  isRadialAnimationActive(): boolean {
+    return this.radialAnimation !== null;
+  }
+
+  cancelRadialAnimation(): void {
+    this.radialAnimation = null;
   }
 
   toggleInsideSphere(): void {
@@ -564,6 +621,27 @@ class Camera implements CameraLike {
     // Do NOT touch this.R here (keep orientation)
     // Recompute view: vMatrix = inv(T) * inv(R)
     this.refreshViewMatrix();
+  }
+
+  /**
+   * Set the radial camera distance while preserving the current pointing.
+   *
+   * Outside-sphere navigation stores the camera radius in cam_pos[2];
+   * changing only that component is the same radial motion used by zoom(),
+   * without changing the current rotation matrix.
+   */
+  setRadialDistance(distance: number): void {
+    if (!Number.isFinite(distance) || distance <= 1) {
+      throw new RangeError(`Camera radial distance must be > 1. Received ${distance}.`);
+    }
+
+    this.cam_pos[2] = distance;
+    mat4.translate(this.T, mat4.create(), this.cam_pos);
+    this.refreshViewMatrix();
+  }
+
+  getRadialDistance(): number {
+    return this.cam_pos[2];
   }
 
   getCameraAngle(): SphericalCoords {
