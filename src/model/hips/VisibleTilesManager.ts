@@ -138,8 +138,10 @@ export class VisibleTilesManager implements HealpixVisibilityState {
       }
     } else {
       const geomhealpix: Healpix = global.getHealpix(order);
-      const maxX = (webgl as GL).canvas.width;
-      const maxY = (webgl as GL).canvas.height;
+      const canvas = (webgl as GL).canvas as HTMLCanvasElement;
+      const canvasRect = canvas.getBoundingClientRect();
+      const maxX = canvasRect.width;
+      const maxY = canvasRect.height;
 
       // Sample a grid of screen points, project to the sphere, then to galactic
       for (let i = 0; i <= maxX; i += maxX / 30) {
