@@ -33,6 +33,7 @@ export class TileBuffer {
   private _webgl: WebGL2RenderingContext;
   private _visibleTileManager: VisibleTilesManager;
   private _hipsShaderProgram;
+  private _tileAcquisitionEnabled = true;
 
   constructor(
     minutesToLiveInCache = 1,
@@ -76,8 +77,15 @@ export class TileBuffer {
     this._galActiveHiPS.set(hips, new Map());
   }
 
+  /** Enable or suspend creation of missing HiPS tiles. */
+  setTileAcquisitionEnabled(enabled: boolean): void {
+    this._tileAcquisitionEnabled = enabled;
+  }
+
   /** Preload/add tile for every registered equatorial HiPS. */
   addTile(order: number, tileno: number): void {
+    if (!this._tileAcquisitionEnabled) return;
+
     for (const hips of this._activeHiPS.keys()) {
       if (order > hips.maxOrder) {
         continue;
@@ -93,6 +101,8 @@ export class TileBuffer {
 
   /** Preload/add tile for every registered galactic HiPS. */
   addGalTile(order: number, tileno: number): void {
+    if (!this._tileAcquisitionEnabled) return;
+
     for (const hips of this._galActiveHiPS.keys()) {
       if (order > hips.maxOrder) {
         continue;
@@ -156,6 +166,56 @@ export class TileBuffer {
       }
     }
     return this._galTiles.get(tileKey)!;
+  }
+
+  /**
+   * Return an equatorial tile for rendering. While acquisition is suspended,
+   * only tiles already active or cached are returned; missing tiles are not
+   * created.
+   */
+  getRenderableTile(
+    tileno: number,
+    order: number,
+    hips: HiPS,
+  ): Tile | undefined {
+    if (this._tileAcquisitionEnabled) {
+      return this.getTile(tileno, order, hips);
+    }
+
+    const tileKey = this.key(order, tileno, hips);
+    const activeTile = this._tiles.get(tileKey);
+    if (activeTile) return activeTile;
+
+    const cachedTile = this._cachedTiles.get(tileKey);
+    if (!cachedTile) return undefined;
+
+    this._tiles.set(tileKey, cachedTile);
+    this._cachedTiles.delete(tileKey);
+    cachedTile.resetCacheTime0();
+    return cachedTile;
+  }
+
+  /** Galactic counterpart of getRenderableTile(). */
+  getRenderableGalTile(
+    tileno: number,
+    order: number,
+    hips: HiPS,
+  ): Tile | undefined {
+    if (this._tileAcquisitionEnabled) {
+      return this.getGalTile(tileno, order, hips);
+    }
+
+    const tileKey = this.key(order, tileno, hips);
+    const activeTile = this._galTiles.get(tileKey);
+    if (activeTile) return activeTile;
+
+    const cachedTile = this._galCachedTiles.get(tileKey);
+    if (!cachedTile) return undefined;
+
+    this._galTiles.set(tileKey, cachedTile);
+    this._galCachedTiles.delete(tileKey);
+    cachedTile.resetCacheTime0();
+    return cachedTile;
   }
 
   /** Move a tile (equatorial or galactic) into cache. */

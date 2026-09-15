@@ -476,8 +476,13 @@ class AncestorTile {
         }
 
         const childTile = this._isGalacticHips
-          ? this._tileBuffer.getGalTile(childTileNo, childrenOrder, this._hips)
-          : this._tileBuffer.getTile(childTileNo, childrenOrder, this._hips);
+          ? this._tileBuffer.getRenderableGalTile(
+              childTileNo,
+              childrenOrder,
+              this._hips,
+            )
+          : this._tileBuffer.getRenderableTile(childTileNo, childrenOrder, this._hips);
+        if (!childTile) continue;
 
         childTile.draw(
           visibleOrder,

@@ -117,6 +117,10 @@ export class VisibleTilesManager implements HealpixVisibilityState {
       order = 3;
     }
 
+    // Visibility state is frame-local. Do not retain ancestors from previous
+    // camera positions, otherwise a flyTo accumulates the whole travelled path.
+    this._ancestorsMap.clear();
+    this._galAncestorsMap.clear();
     this._ancestorsMap.set(order, []);
     this._galAncestorsMap.set(order, []);
 
