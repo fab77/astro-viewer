@@ -495,8 +495,14 @@ export default class AllSky {
       }
 
       const childTile = this._isGalacticHips
-        ? this._tileBuffer.getGalTile(tileno, childrenOrder, this._hips)
-        : this._tileBuffer.getTile(tileno, childrenOrder, this._hips);
+        ? this._tileBuffer.getRenderableGalTile(
+            tileno,
+            childrenOrder,
+            this._hips,
+          )
+        : this._tileBuffer.getRenderableTile(tileno, childrenOrder, this._hips);
+
+      if (!childTile) continue;
 
       childTile.draw(
         visibleOrder,

@@ -2038,6 +2038,13 @@ class AstroSphere {
     );
 
     if (this._activeBaseLayer === "hips" && this._activeHiPS) {
+      // During directional flyTo navigation, keep visibility current but render
+      // only HiPS tiles that are already available. Final-view refinement
+      // resumes automatically on the first frame after the flight.
+      this._healpixGrid.visibleTilesManager.tileBuffer.setTileAcquisitionEnabled(
+        !cameraFlying,
+      );
+
       const maxHiPSOrder =
         this._activeHiPSLayers.length > 0
           ? Math.max(...this._activeHiPSLayers.map((hips) => hips.maxOrder))
