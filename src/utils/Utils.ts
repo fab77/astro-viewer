@@ -93,7 +93,7 @@ export function interactionColorsFromHex(hexColor: string): InteractionColors {
 
   return {
     hover: mix(0.45),
-    selected: mix(0.45),
+    selected: mix(0.75),
   };
 }
 

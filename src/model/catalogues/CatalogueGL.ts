@@ -961,7 +961,11 @@ export class CatalogueGL {
     const mouseVec = new Vec3(...in_mouseHelper.xyz);
     const mousePointing = new Pointing(mouseVec, false);
     const searchRadiusRad = this.getCandidateSearchRadiusRad(pMatrix);
-    const rangeSet = healpix.queryDiscInclusive(mousePointing, searchRadiusRad, 4);
+    const rangeSet = healpix.queryDiscInclusive(
+      mousePointing,
+      searchRadiusRad,
+      4,
+    );
     const pixels = rangeSet.r;
 
     const candidateIndexes = new Set<number>();
@@ -1147,18 +1151,29 @@ export class CatalogueGL {
       );
     }
 
-    const interactionColors = interactionColorsFromHex(this._shapeColor);
+    // const interactionColors = interactionColorsFromHex(this._shapeColor);
+
+    // Complementary RGB colour for catalogue interactions.
+    // Keep the original catalogue colour unchanged.
+    const complementaryColor = rgb.map((component) => 1.0 - component) as [
+      number,
+      number,
+      number,
+    ];
+
     if (this._catalogueShaderProgram.locations.hoverColor) {
       this._webgl.uniform4f(
         this._catalogueShaderProgram.locations.hoverColor,
-        ...interactionColors.hover,
+        // ...interactionColors.hover,
+        ...complementaryColor,
         1.0,
       );
     }
     if (this._catalogueShaderProgram.locations.selectedColor) {
       this._webgl.uniform4f(
         this._catalogueShaderProgram.locations.selectedColor,
-        ...interactionColors.selected,
+        // ...interactionColors.selected,
+        ...complementaryColor,
         1.0,
       );
     }

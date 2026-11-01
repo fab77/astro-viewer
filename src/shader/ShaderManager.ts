@@ -110,14 +110,29 @@ export default class ShaderManager {
         alpha = 1.0 - smoothstep(1.0 - delta, 1.0 + delta, r);
       #endif
 
-      if (v_selected == 1.0){
-        fragColor = u_hovercolor * alpha;
-      } else if (v_selected == 2.0){
-        // Persistent selection: keep the dataset colour as an outer ring
-        // and use the hover colour for the fill. This remains visible for
-        // both light and dark user-selected base colours.
+      if (v_selected == 1.0) {
+        // Hover: original catalogue colour on the outer ring,
+        // complementary colour in the centre.
         fragColor = (r > 0.72 ? u_fragcolor : u_hovercolor) * alpha;
-      }else{
+
+      } else if (v_selected == 2.0) {
+        // Selected: same ring and fill, plus a contrasting centre dot.
+        if (r < 0.09) {
+          float luminance = dot(
+            u_selectedcolor.rgb,
+            vec3(0.2126, 0.7152, 0.0722)
+          );
+
+          vec3 dotColor = luminance > 0.5
+            ? vec3(0.0)
+            : vec3(1.0);
+
+          fragColor = vec4(dotColor, 1.0) * alpha;
+        } else {
+          fragColor = (r > 0.72 ? u_fragcolor : u_selectedcolor) * alpha;
+        }
+
+      } else {
         if (r < 0.4) {
           discard;
         }

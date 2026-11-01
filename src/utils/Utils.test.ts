@@ -44,12 +44,12 @@ describe("interaction colours", () => {
   it("moves dark base colours towards white", () => {
     const colors = interactionColorsFromHex("#003366");
     expect(colors.hover[0]).toBeGreaterThan(0);
-    expect(colors.selected).toEqual(colors.hover);
+    expect(colors.selected[0]).toBeGreaterThan(colors.hover[0]);
   });
 
   it("moves light base colours towards black", () => {
     const colors = interactionColorsFromHex("#ffff00");
     expect(colors.hover[0]).toBeLessThan(1);
-    expect(colors.selected).toEqual(colors.hover);
+    expect(colors.selected[0]).toBeLessThan(colors.hover[0]);
   });
 });
