@@ -76,6 +76,8 @@ export class FootprintSetGL {
 
   selectedVertexPositionBuffer!: WebGLBuffer;
   selectedIndexBuffer!: WebGLBuffer;
+  private selectedFillBuffer!: WebGLBuffer;
+  private selectedFillVertices: Float32Array = new Float32Array(0);
 
   indexes!: Uint32Array;
   footprintPolygons: Footprint[] = [];
@@ -97,7 +99,8 @@ export class FootprintSetGL {
   totSelectedPoints!: number;
   nSlectedPrimitiveFlags: number = 0;
   _shapeColor = "#00fff2ff";
-  protected _coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC = CoordsType.ASTRO;
+  protected _coordsType: CoordsType.ASTRO | CoordsType.GEOGRAPHIC =
+    CoordsType.ASTRO;
 
   protected _bufferInitialised = false;
   private _webgl: WebGL2RenderingContext;
@@ -153,6 +156,7 @@ export class FootprintSetGL {
     this.totSelectedPoints = 0;
     this.selectedIndexes = [];
     this.selectedElementIndexes = new Uint32Array();
+    this.selectedFillVertices = new Float32Array();
   }
 
   private initGLBuffers(): void {
@@ -165,6 +169,7 @@ export class FootprintSetGL {
 
     this.selectedVertexPositionBuffer = this._webgl.createBuffer();
     this.selectedIndexBuffer = this._webgl.createBuffer();
+    this.selectedFillBuffer = this._webgl.createBuffer();
   }
 
   public setIsVisible(visibility: boolean) {
@@ -420,10 +425,12 @@ export class FootprintSetGL {
       this.selectedVertexPosition = new Float32Array();
       this.selectedElementIndexes = new Uint32Array();
       this.nSlectedPrimitiveFlags = 0;
+      this.selectedFillVertices = new Float32Array();
       return;
     }
 
     this.initSelectionBuffer();
+    this.selectedFillVertices = this.buildSelectedFillVertices();
   }
 
   getFootprintsFromPointer(
@@ -525,30 +532,29 @@ export class FootprintSetGL {
   // }
 
   private FootprintPolygonMatches(left: Footprint, right: Footprint): boolean {
-          if (left === right) return true;
-  
-          const leftConvexPoly = left.convexPolygons;
-          const rightConvexPoly = right.convexPolygons;
-          if (
-              leftConvexPoly !== rightConvexPoly ||
-              leftConvexPoly !== rightConvexPoly
-          ) {
-              return false;
-          }
-  
-          if (left.details.length !== right.details.length) {
-              return false;
-          }
-  
-          for (let i = 0; i < left.details.length; i++) {
-              if (!Object.is(left.details[i], right.details[i])) {
-                  return false;
-              }
-          }
-  
-          return true;
+    if (left === right) return true;
+
+    const leftConvexPoly = left.convexPolygons;
+    const rightConvexPoly = right.convexPolygons;
+    if (
+      leftConvexPoly !== rightConvexPoly ||
+      leftConvexPoly !== rightConvexPoly
+    ) {
+      return false;
+    }
+
+    if (left.details.length !== right.details.length) {
+      return false;
+    }
+
+    for (let i = 0; i < left.details.length; i++) {
+      if (!Object.is(left.details[i], right.details[i])) {
+        return false;
       }
-  
+    }
+
+    return true;
+  }
 
   private findFootprintPolygonIndex(footprint: Footprint): number {
     const footprintIndex = this.footprintPolygons.indexOf(footprint);
@@ -563,40 +569,39 @@ export class FootprintSetGL {
 
   extHighlightFootprint(footprint: Footprint, highlighted: boolean) {
     const sIdx = this.findFootprintPolygonIndex(footprint);
-        if (sIdx < 0) return;
-        const base = sIdx * FootprintSetGL.ELEM_SIZE;
-        if (highlighted) {
-            if (!this.hoveredIndexes.includes(sIdx)) {
-                this.hoveredIndexes.push(sIdx);
-            }
-        } else {
-            
-            if (base + 4 >= this.vertexCataloguePosition.length) return;
-            const i = this.hoveredIndexes.indexOf(sIdx);
-            if (i >= 0) {
-                this.hoveredIndexes.splice(i, 1);
-            }
-        }
+    if (sIdx < 0) return;
+    const base = sIdx * FootprintSetGL.ELEM_SIZE;
+    if (highlighted) {
+      if (!this.hoveredIndexes.includes(sIdx)) {
+        this.hoveredIndexes.push(sIdx);
+      }
+    } else {
+      if (base + 4 >= this.vertexCataloguePosition.length) return;
+      const i = this.hoveredIndexes.indexOf(sIdx);
+      if (i >= 0) {
+        this.hoveredIndexes.splice(i, 1);
+      }
+    }
   }
 
   extAddPolygons2Selected(footprint: Footprint) {
     if (!this._bufferInitialised) {
-            this.initBuffer();
-        }
-        const sIdx = this.findFootprintPolygonIndex(footprint);
-        if (sIdx < 0) return;
-        const base = sIdx * FootprintSetGL.ELEM_SIZE;
-        
-        if (!this.selectedIndexes.includes(sIdx)) {
-            this.selectedIndexes.push(sIdx);
-        } else {
-            if (base + 4 >= this.vertexCataloguePosition.length) return;
-            const i = this.selectedIndexes.indexOf(sIdx);
-            if (i >= 0) {
-                this.selectedIndexes.splice(i, 1);
-            }
-        }
-        this.refreshSelectedFootprints();
+      this.initBuffer();
+    }
+    const sIdx = this.findFootprintPolygonIndex(footprint);
+    if (sIdx < 0) return;
+    const base = sIdx * FootprintSetGL.ELEM_SIZE;
+
+    if (!this.selectedIndexes.includes(sIdx)) {
+      this.selectedIndexes.push(sIdx);
+    } else {
+      if (base + 4 >= this.vertexCataloguePosition.length) return;
+      const i = this.selectedIndexes.indexOf(sIdx);
+      if (i >= 0) {
+        this.selectedIndexes.splice(i, 1);
+      }
+    }
+    this.refreshSelectedFootprints();
   }
 
   initHoveringBuffer() {
@@ -733,6 +738,64 @@ export class FootprintSetGL {
     }
   }
 
+  /** Triangulate selected simple rings in the same 2D projection used for picking.
+   * A failed/degenerate ring is left unfilled; its outline remains visible.
+   */
+  private buildSelectedFillVertices(): Float32Array {
+    const vertices: number[] = [];
+    const cross = (a: {x: number; y: number}, b: {x: number; y: number}, c: {x: number; y: number}) =>
+      (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+
+    for (const footprint of this._selectedFootprints) {
+      const projected = footprint.selectionObj?.poly4selection;
+      if (!projected) continue;
+      footprint.polygons.forEach((ring, ringIndex) => {
+        const coords = projected[ringIndex];
+        if (!coords || coords.length !== ring.length || ring.length < 3) return;
+        const indices = ring.map((_, i) => i);
+        // STC-S normally omits the duplicated closing vertex; fromPolygons may not.
+        if (indices.length > 3 &&
+            Math.abs(coords[0].x - coords[indices[indices.length - 1]].x) < 1e-12 &&
+            Math.abs(coords[0].y - coords[indices[indices.length - 1]].y) < 1e-12) indices.pop();
+        if (indices.length < 3) return;
+        const area = indices.reduce((sum, idx, i) => {
+          const next = indices[(i + 1) % indices.length];
+          return sum + coords[idx].x * coords[next].y - coords[next].x * coords[idx].y;
+        }, 0);
+        if (Math.abs(area) < 1e-14) return;
+        const orientation = Math.sign(area);
+        const triangles: number[] = [];
+        let attempts = 0;
+        while (indices.length > 3 && attempts++ < ring.length * ring.length) {
+          let clipped = false;
+          for (let i = 0; i < indices.length; i++) {
+            const a = indices[(i + indices.length - 1) % indices.length];
+            const b = indices[i];
+            const c = indices[(i + 1) % indices.length];
+            if (orientation * cross(coords[a], coords[b], coords[c]) <= 1e-14) continue;
+            const contains = indices.some(idx => idx !== a && idx !== b && idx !== c &&
+              orientation * cross(coords[a], coords[b], coords[idx]) >= -1e-14 &&
+              orientation * cross(coords[b], coords[c], coords[idx]) >= -1e-14 &&
+              orientation * cross(coords[c], coords[a], coords[idx]) >= -1e-14);
+            if (contains) continue;
+            triangles.push(a, b, c);
+            indices.splice(i, 1);
+            clipped = true;
+            break;
+          }
+          if (!clipped) break;
+        }
+        if (indices.length !== 3) return;
+        triangles.push(...indices);
+        for (const idx of triangles) {
+          const point = ring[idx];
+          vertices.push(point.x, point.y, point.z);
+        }
+      });
+    }
+    return new Float32Array(vertices);
+  }
+
   changeColor(color: string): void {
     this._shapeColor = color;
   }
@@ -751,11 +814,6 @@ export class FootprintSetGL {
     if (!this._webgl) return;
 
     this._footprintShaderProgram.enableShaders(pMatrix, in_mMatrix, vMatrix);
-    // this._footprintShaderProgram.enableShaders(
-    //   computePerspectiveMatrixSingleton.pMatrix as Float32Array,
-    //   in_mMatrix,
-    //   vMatrix
-    // )
 
     if (in_mouseHelper != null && in_mouseHelper.xyz != this.oldMouseCoords) {
       this.checkSelection(in_mouseHelper);
@@ -823,6 +881,36 @@ export class FootprintSetGL {
 
     if (this._selectedFootprints.length > 0) {
       const rgb = interactionColors.selected;
+      if (this.selectedFillVertices.length > 0) {
+        this._webgl.uniform4f(this._footprintShaderProgram.locations.color,
+          rgb[0], rgb[1], rgb[2], 0.25);
+        this._webgl.bindBuffer(this._webgl.ARRAY_BUFFER, this.selectedFillBuffer);
+        this._webgl.bufferData(this._webgl.ARRAY_BUFFER,
+          this.selectedFillVertices, this._webgl.DYNAMIC_DRAW);
+        this._webgl.vertexAttribPointer(
+          this._footprintShaderProgram.locations.position,
+          FootprintSetGL.ELEM_SIZE, this._webgl.FLOAT, false,
+          FootprintSetGL.BYTES_X_ELEM * FootprintSetGL.ELEM_SIZE, 0);
+        this._webgl.enableVertexAttribArray(this._footprintShaderProgram.locations.position);
+
+        // Keep translucent fills from writing depth and push them slightly
+        // behind the outlines. Preserve the incoming GL state.
+        const previousDepthMask = this._webgl.getParameter(this._webgl.DEPTH_WRITEMASK) as boolean;
+        const previousOffsetEnabled = this._webgl.isEnabled(this._webgl.POLYGON_OFFSET_FILL);
+        const previousOffsetFactor = this._webgl.getParameter(this._webgl.POLYGON_OFFSET_FACTOR) as number;
+        const previousOffsetUnits = this._webgl.getParameter(this._webgl.POLYGON_OFFSET_UNITS) as number;
+        this._webgl.depthMask(false);
+        this._webgl.enable(this._webgl.POLYGON_OFFSET_FILL);
+        this._webgl.polygonOffset(1, 1);
+        try {
+          this._webgl.drawArrays(this._webgl.TRIANGLES, 0,
+            this.selectedFillVertices.length / FootprintSetGL.ELEM_SIZE);
+        } finally {
+          this._webgl.depthMask(previousDepthMask);
+          this._webgl.polygonOffset(previousOffsetFactor, previousOffsetUnits);
+          if (!previousOffsetEnabled) this._webgl.disable(this._webgl.POLYGON_OFFSET_FILL);
+        }
+      }
       const alpha = 1.0;
       this._webgl.uniform4f(
         this._footprintShaderProgram.locations.color,
