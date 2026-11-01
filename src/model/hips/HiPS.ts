@@ -25,6 +25,10 @@ import { HealpixGrid } from "../grid/HealpixGrid.js";
 import { HiPSCoverage } from "./HiPSCoverage.js";
 import type { FitsTileData } from "./FitsTileLoader.js";
 
+export function normalizeHiPSBaseURL(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
 export type HiPSFITSScaleFunction =
   | "linear"
   | "sqrt"
@@ -131,7 +135,7 @@ export class HiPS extends AbstractSkyEntity {
     this._healpixGrid = healpixGrid;
 
     this._format = this.selectDefaultFormat(descriptor.imgFormats);
-    this._baseurl = descriptor.url;
+    this._baseurl = normalizeHiPSBaseURL(descriptor.url);
     this._maxorder = descriptor.maxOrder;
     this._minorder = descriptor.minOrder;
 
