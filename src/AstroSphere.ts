@@ -1450,9 +1450,6 @@ class AstroSphere {
       throw new RangeError(`FoV must be > 0 and < 180 degrees. Received ${deg}.`);
     }
 
-    if (global.insideSphere) {
-      throw new Error("FoV navigation is currently supported only outside the sphere.");
-    }
   }
 
   /**
@@ -1466,15 +1463,58 @@ class AstroSphere {
     this.validateFoV(deg);
 
     const originalDistance = this._camera.getRadialDistance();
-    const minDistance = 1.000001;
-    const maxDistance = 4.0;
+    const inside = global.insideSphere;
+    const minDistance = inside ? -0.9885 : 1.000001;
+    const maxDistance = inside ? -0.005 : 4.0;
     const tolerance = Math.max(1e-5, deg * 0.001);
     const maxIterations = 40;
+
+    const measureFoV = (distance: number): number => {
+      this._camera.setRadialDistance(distance);
+      this._perspectiveMatrixManager.computePerspectiveMatrix(
+        this.canvas, this._camera, bootSetup.camera_fov_deg,
+        bootSetup.camera_near_plane, inside,
+      );
+      return this._healpixGrid.refreshFoV(
+        this._camera, this._perspectiveMatrixManager.pMatrix,
+      ).minFoV;
+    };
 
     let low = minDistance;
     let high = maxDistance;
     let bestDistance = originalDistance;
     let bestError = Number.POSITIVE_INFINITY;
+
+    // Keep the outside-sphere search unchanged. Inside, determine the
+    // direction from the measured endpoints instead of assuming it.
+    let insideIncreasing = false;
+    if (inside) {
+      try {
+        const lowFoV = measureFoV(low);
+        const highFoV = measureFoV(high);
+        if (!Number.isFinite(lowFoV) || !Number.isFinite(highFoV)) {
+          throw new RangeError("Cannot measure inside-sphere FoV limits.");
+        }
+        const minimum = Math.min(lowFoV, highFoV);
+        const maximum = Math.max(lowFoV, highFoV);
+        if (deg < minimum - tolerance || deg > maximum + tolerance) {
+          throw new RangeError(
+            `Inside-sphere FoV ${deg}° is outside the reachable range ${minimum.toFixed(3)}°–${maximum.toFixed(3)}°.`
+          );
+        }
+        insideIncreasing = highFoV > lowFoV;
+      } finally {
+        this._camera.setRadialDistance(originalDistance);
+        this._perspectiveMatrixManager.computePerspectiveMatrix(
+          this.canvas, this._camera, bootSetup.camera_fov_deg,
+          bootSetup.camera_near_plane, inside,
+        );
+        this.fov = this._healpixGrid.refreshFoV(
+          this._camera, this._perspectiveMatrixManager.pMatrix,
+        );
+        this._camera.refreshFoV(this.fov.minFoV);
+      }
+    }
 
     for (let iteration = 0; iteration < maxIterations; iteration += 1) {
       const candidateDistance = (low + high) / 2;
@@ -1504,7 +1544,13 @@ class AstroSphere {
         break;
       }
 
-      if (measuredFoV >= deg || measuredFoV >= 179.999) {
+      if (inside) {
+        if ((measuredFoV >= deg) === insideIncreasing) {
+          high = candidateDistance;
+        } else {
+          low = candidateDistance;
+        }
+      } else if (measuredFoV >= deg || measuredFoV >= 179.999) {
         high = candidateDistance;
       } else {
         low = candidateDistance;
