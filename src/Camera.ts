@@ -281,11 +281,7 @@ class Camera implements CameraLike {
   }
 
   flyToRadialDistance(distance: number, durationMs = 1200): void {
-    if (!Number.isFinite(distance) || distance <= 1) {
-      throw new RangeError(
-        `Camera radial distance must be > 1. Received ${distance}.`,
-      );
-    }
+    this.validateRadialDistance(distance);
 
     this.radialAnimation = {
       startDistance: this.cam_pos[2],
@@ -630,12 +626,25 @@ class Camera implements CameraLike {
    * changing only that component is the same radial motion used by zoom(),
    * without changing the current rotation matrix.
    */
-  setRadialDistance(distance: number): void {
-    if (!Number.isFinite(distance) || distance <= 1) {
-      throw new RangeError(`Camera radial distance must be > 1. Received ${distance}.`);
+  private validateRadialDistance(distance: number): void {
+    // Allow Float32Array rounding at the inside-sphere boundaries.
+    const epsilon = 1e-7;
+    const valid = global.insideSphere
+      ? distance >= -0.9885 - epsilon && distance <= -0.005 + epsilon
+      : distance > 1;
+    if (!Number.isFinite(distance) || !valid) {
+      throw new RangeError(
+        `Camera radial distance is outside the ${global.insideSphere ? "inside" : "outside"} sphere range. Received ${distance}.`,
+      );
     }
+  }
 
-    this.cam_pos[2] = distance;
+  setRadialDistance(distance: number): void {
+    this.validateRadialDistance(distance);
+
+    this.cam_pos[2] = global.insideSphere
+      ? Math.max(-0.9885, Math.min(-0.005, distance))
+      : distance;
     mat4.translate(this.T, mat4.create(), this.cam_pos);
     this.refreshViewMatrix();
   }
