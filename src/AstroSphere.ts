@@ -67,6 +67,10 @@ import { TerraPolylineSetGL } from "./model/terra/TerraPolylineSetGL.js";
 import { SatelliteObjectGL } from "./model/terra/SatelliteObjectGL.js";
 import { SensorConeGL } from "./model/terra/SensorConeGL.js";
 import { mat4, vec3, vec4 } from "gl-matrix";
+import type {
+  ViewerRuntimeState,
+  RuntimeHiPSLayerState,
+} from "./ViewerStateManager.js";
 
 export type PointCoordinates = {
   astroDeg: AstroCoords;
@@ -147,7 +151,8 @@ class AstroSphere {
   private _activeMeshHiPS: MeshHiPS | null = null;
   private _activeBaseLayer: "hips" | "xyz" | "meships" | null = null;
   private _activeDomain: ViewerDomain = "astronomy";
-  private domainCameraStates: Partial<Record<ViewerDomain, CameraViewState>> = {};
+  private domainCameraStates: Partial<Record<ViewerDomain, CameraViewState>> =
+    {};
 
   private startup = true;
 
@@ -1148,7 +1153,9 @@ class AstroSphere {
   addWMTSRasterOverlay(config: WMTSLayerConfig): EarthRasterOverlayInfo {
     const adapter = new WMTSAdapter(config);
     const xyzConfig = adapter.toXYZLayerConfig();
-    const name = config.layer ? `WMTS ${config.layer}` : "WMTS Earth Raster Overlay";
+    const name = config.layer
+      ? `WMTS ${config.layer}`
+      : "WMTS Earth Raster Overlay";
     const map = new XYZMap(
       1,
       [0.0, 0.0, 0.0],
@@ -1171,7 +1178,9 @@ class AstroSphere {
   }
 
   getEarthRasterOverlays(): EarthRasterOverlayInfo[] {
-    return this._earthRasterOverlays.map(({ map: _map, ...overlay }) => ({ ...overlay }));
+    return this._earthRasterOverlays.map(({ map: _map, ...overlay }) => ({
+      ...overlay,
+    }));
   }
 
   setEarthRasterOverlayOpacity(id: string, opacity: number): void {
@@ -1188,7 +1197,9 @@ class AstroSphere {
   }
 
   removeEarthRasterOverlay(id: string): void {
-    this._earthRasterOverlays = this._earthRasterOverlays.filter((entry) => entry.id !== id);
+    this._earthRasterOverlays = this._earthRasterOverlays.filter(
+      (entry) => entry.id !== id,
+    );
   }
 
   removeAllEarthRasterOverlays(): void {
@@ -1272,6 +1283,153 @@ class AstroSphere {
     if (this._activeDomain === "astronomy") return this.astronomyFootprintSets;
     if (this._activeDomain === "earth") return this.earthFootprintSets;
     return [];
+  }
+
+  /** Capture an astronomy session without copying scientific datasets or tiles. */
+  captureRuntimeState(): ViewerRuntimeState {
+    if (this._activeDomain !== "astronomy") {
+      throw new Error("Only astronomy viewer states are supported.");
+    }
+    const hipsLayers = this._activeHiPSLayers.length
+      ? this._activeHiPSLayers
+      : this._activeHiPS
+        ? [this._activeHiPS]
+        : [];
+    const captureHiPS = (hips: HiPS): RuntimeHiPSLayerState => ({
+      url: hips.baseURL,
+      propertiesRawText: hips.propertiesRawText,
+      opacity: hips.opacity,
+      format: hips.format,
+      colorMapName: hips.colorMap.name as ColorMapName,
+      fitsStretch: { ...hips.fitsStretch },
+    });
+    return {
+      version: 1,
+      domain: "astronomy",
+      camera: {
+        view: this._camera.getViewState(),
+        fovDeg: this.fov.minFoV,
+        insideSphere: global.insideSphere,
+      },
+      hips: {
+        mode:
+          hipsLayers.length === 0
+            ? "none"
+            : this._activeHiPSLayers.length
+              ? "stack"
+              : "base",
+        layers: hipsLayers.map(captureHiPS),
+        activeIndex: hipsLayers.indexOf(this._activeHiPS!),
+      },
+      catalogues: this.astronomyCatalogues.map((instance) => ({
+        instance,
+        visible: instance.isVisible,
+        color: instance.shapeColor,
+        selectedIndexes: [...instance.selectedIndexes],
+      })),
+      footprintSets: this.astronomyFootprintSets.map((instance) => ({
+        instance,
+        visible: instance.isVisible,
+        color: instance.shapeColor,
+        selectedIndexes: [...instance.selectedIndexes],
+      })),
+      grids: {
+        healpixVisible: this._healpixGrid.isVisible(),
+        equatorialVisible: this._equatorialGrid.isVisible(),
+      },
+    };
+  }
+
+  /** Apply a runtime snapshot. Tile downloads continue after this returns. */
+  async restoreRuntimeState(state: ViewerRuntimeState): Promise<void> {
+    if (state.version !== 1 || state.domain !== "astronomy") {
+      throw new Error("Unsupported viewer state.");
+    }
+    if (this._activeDomain !== "astronomy") {
+      throw new Error("Restore requires an astronomy viewer.");
+    }
+
+    // Stop navigation before restoring the saved geometry.
+    this.cancelFoVAnimation();
+    this._camera.cancelFlyTo();
+    this.inertiaX = 0;
+    this.inertiaY = 0;
+    this.zoomInertia = 0;
+
+    if (global.insideSphere !== state.camera.insideSphere) {
+      this.toggleInsideSphere();
+    }
+    this.setFoV(state.camera.fovDeg);
+    this._camera.restoreViewState(state.camera.view);
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    );
+    this.fov = this._healpixGrid.refreshFoV(
+      this._camera,
+      this._perspectiveMatrixManager.pMatrix,
+    );
+    this._camera.refreshFoV(this.fov.minFoV);
+    this.updateCentralPoint();
+
+    // HiPS are recreated from metadata. Old tiles can be evicted normally.
+    this.removeAllHiPS();
+    const restoredHiPS: HiPS[] = [];
+    for (const layer of state.hips.layers) {
+      const descriptor = new HiPSDescriptor(layer.propertiesRawText, layer.url);
+      const hips =
+        state.hips.mode === "base"
+          ? this.activateHiPS(descriptor)
+          : this.addHiPS(descriptor);
+      hips.changeFormat(layer.format);
+      hips.setOpacity(layer.opacity);
+      hips.changeColorMap(ColorMaps[layer.colorMapName]);
+      hips.setFITSScaleFunction(
+        layer.fitsStretch.scaleFunction,
+        layer.fitsStretch.scaleParam,
+      );
+      hips.setFITSRangeMode(layer.fitsStretch.rangeMode);
+      restoredHiPS.push(hips);
+    }
+    if (state.hips.mode === "stack" && state.hips.activeIndex >= 0) {
+      this.setActiveHiPS(restoredHiPS[state.hips.activeIndex]);
+    }
+
+    // Restore the scene membership and the saved presentation independently.
+    for (const cat of this.astronomyCatalogues) {
+      if (!state.catalogues.some((saved) => saved.instance === cat)) {
+        this.deleteCatalogue(cat);
+      }
+    }
+    const pendingSceneUpdates: Promise<unknown>[] = [];
+    for (const saved of state.catalogues) {
+      pendingSceneUpdates.push(this.showCatalogue(saved.instance));
+      saved.instance.setIsVisible(saved.visible);
+      saved.instance.changeColor(saved.color);
+      saved.instance.restoreSelection(saved.selectedIndexes);
+    }
+    for (const footprint of this.astronomyFootprintSets) {
+      if (!state.footprintSets.some((saved) => saved.instance === footprint)) {
+        this.deleteFootprintSet(footprint);
+      }
+    }
+    for (const saved of state.footprintSets) {
+      pendingSceneUpdates.push(this.showFootprintSet(saved.instance));
+      saved.instance.setIsVisible(saved.visible);
+      saved.instance.changeColor(saved.color);
+      saved.instance.restoreSelection(saved.selectedIndexes);
+    }
+    if (this._healpixGrid.isVisible() !== state.grids.healpixVisible) {
+      this._healpixGrid.toggleShowGrid();
+    }
+    if (this._equatorialGrid.isVisible() !== state.grids.equatorialVisible) {
+      this._equatorialGrid.toggleShowGrid();
+    }
+    this._cameraStatusChanged = true;
+    await Promise.all(pendingSceneUpdates);
   }
 
   // Astronomy catalogue ownership
@@ -1447,9 +1605,10 @@ class AstroSphere {
 
   private validateFoV(deg: number): void {
     if (!Number.isFinite(deg) || deg <= 0 || deg >= 180) {
-      throw new RangeError(`FoV must be > 0 and < 180 degrees. Received ${deg}.`);
+      throw new RangeError(
+        `FoV must be > 0 and < 180 degrees. Received ${deg}.`,
+      );
     }
-
   }
 
   /**
@@ -1472,11 +1631,15 @@ class AstroSphere {
     const measureFoV = (distance: number): number => {
       this._camera.setRadialDistance(distance);
       this._perspectiveMatrixManager.computePerspectiveMatrix(
-        this.canvas, this._camera, bootSetup.camera_fov_deg,
-        bootSetup.camera_near_plane, inside,
+        this.canvas,
+        this._camera,
+        bootSetup.camera_fov_deg,
+        bootSetup.camera_near_plane,
+        inside,
       );
       return this._healpixGrid.refreshFoV(
-        this._camera, this._perspectiveMatrixManager.pMatrix,
+        this._camera,
+        this._perspectiveMatrixManager.pMatrix,
       ).minFoV;
     };
 
@@ -1499,18 +1662,22 @@ class AstroSphere {
         const maximum = Math.max(lowFoV, highFoV);
         if (deg < minimum - tolerance || deg > maximum + tolerance) {
           throw new RangeError(
-            `Inside-sphere FoV ${deg}° is outside the reachable range ${minimum.toFixed(3)}°–${maximum.toFixed(3)}°.`
+            `Inside-sphere FoV ${deg}° is outside the reachable range ${minimum.toFixed(3)}°–${maximum.toFixed(3)}°.`,
           );
         }
         insideIncreasing = highFoV > lowFoV;
       } finally {
         this._camera.setRadialDistance(originalDistance);
         this._perspectiveMatrixManager.computePerspectiveMatrix(
-          this.canvas, this._camera, bootSetup.camera_fov_deg,
-          bootSetup.camera_near_plane, inside,
+          this.canvas,
+          this._camera,
+          bootSetup.camera_fov_deg,
+          bootSetup.camera_near_plane,
+          inside,
         );
         this.fov = this._healpixGrid.refreshFoV(
-          this._camera, this._perspectiveMatrixManager.pMatrix,
+          this._camera,
+          this._perspectiveMatrixManager.pMatrix,
         );
         this._camera.refreshFoV(this.fov.minFoV);
       }
@@ -1545,7 +1712,7 @@ class AstroSphere {
       }
 
       if (inside) {
-        if ((measuredFoV >= deg) === insideIncreasing) {
+        if (measuredFoV >= deg === insideIncreasing) {
           high = candidateDistance;
         } else {
           low = candidateDistance;
@@ -2143,13 +2310,13 @@ class AstroSphere {
     };
 
     if (this._activeBaseLayer === "hips") {
-      for (const hips of this._activeHiPSLayers) {
-        if (hips !== this._activeHiPS) {
+      if (this._activeHiPSLayers.length > 0) {
+        for (const hips of this._activeHiPSLayers) {
           hips.draw(skyEntityDrawInput);
         }
+      } else {
+        this._activeHiPS?.draw(skyEntityDrawInput);
       }
-
-      this._activeHiPS?.draw(skyEntityDrawInput);
     }
 
     if (this._activeBaseLayer === "xyz") {
@@ -2254,18 +2421,15 @@ class AstroSphere {
 
   private getActiveDomainModelMatrix(): Float32Array | null {
     if (this._activeDomain === "astronomy") {
-      return (
-        this._activeHiPS?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
-      ) as Float32Array;
+      return (this._activeHiPS?.getModelMatrix() ??
+        this._healpixGrid.getModelMatrix()) as Float32Array;
     }
     if (this._activeDomain === "earth") {
-      return (
-        this._activeXYZ2?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
-      ) as Float32Array;
+      return (this._activeXYZ2?.getModelMatrix() ??
+        this._healpixGrid.getModelMatrix()) as Float32Array;
     }
-    return (
-      this._activeMeshHiPS?.getModelMatrix() ?? this._healpixGrid.getModelMatrix()
-    ) as Float32Array;
+    return (this._activeMeshHiPS?.getModelMatrix() ??
+      this._healpixGrid.getModelMatrix()) as Float32Array;
   }
 
   private emitHoveredSourceIfChanged() {
