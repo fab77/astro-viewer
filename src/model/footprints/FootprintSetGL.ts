@@ -172,6 +172,20 @@ export class FootprintSetGL {
     this.selectedFillBuffer = this._webgl.createBuffer();
   }
 
+  /** Release owned WebGL buffers when no scene or snapshot uses this set. */
+  dispose(): void {
+    if (!this._bufferInitialised) return;
+    for (const buffer of [
+      this.vertexCataloguePositionBuffer, this.indexBuffer,
+      this.hoveredVertexPositionBuffer, this.hoveredIndexBuffer,
+      this.selectedVertexPositionBuffer, this.selectedIndexBuffer,
+      this.selectedFillBuffer,
+    ]) {
+      if (buffer) this._webgl.deleteBuffer(buffer);
+    }
+    this._bufferInitialised = false;
+  }
+
   public setIsVisible(visibility: boolean) {
     this._isVisible = visibility;
   }
@@ -391,6 +405,11 @@ export class FootprintSetGL {
     }
 
     return clickedIndexes;
+  }
+
+  public restoreSelection(indexes: readonly number[]): void {
+    this.clearSelection();
+    this.setSelectedIndexes([...indexes]);
   }
 
   public clearSelection(): void {

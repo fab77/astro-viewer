@@ -11,6 +11,7 @@
 
 // import global from './Global.js'
 import AstroSphere from "./AstroSphere.js";
+import ViewerStateManager from "./ViewerStateManager.js";
 import { HiPSDescriptor } from "./model/hips/HiPSDescriptor.js";
 import { SphereFoV } from "./model/SphereFoV.js";
 import { Point } from "./model/Point.js";
@@ -76,6 +77,7 @@ export type AstroViewerOptions = {
 
 export class AstroViewer {
   private astroSphere!: AstroSphere;
+  private stateManager!: ViewerStateManager;
   private canvas!: HTMLCanvasElement;
   private webgl!: GL2WithViewport;
   private rafId: number | null = null;
@@ -87,10 +89,46 @@ export class AstroViewer {
   private viewfinderVisible = bootSetup.showViewfinder;
   private viewfinderColor = "rgba(75,148,226,0.68)";
   private options: AstroViewerOptions = {};
+  private hipsFades = new Map<HiPS, { cancel: () => void }>();
+
+  private cancelHiPSFade(hips: HiPS): void {
+    this.hipsFades.get(hips)?.cancel();
+  }
+
+  private cancelAllHiPSFades(): void {
+    for (const fade of [...this.hipsFades.values()]) fade.cancel();
+  }
 
   // API
   run(): number {
     return this.tick();
+  }
+
+  // Named runtime snapshots (astronomy only).
+  saveState(name: string): void {
+    this.stateManager.saveState(name);
+  }
+
+  getStateNames(): string[] {
+    return this.stateManager.getStateNames();
+  }
+
+  hasState(name: string): boolean {
+    return this.stateManager.hasState(name);
+  }
+
+  restoreState(name: string): Promise<void> {
+    // A restored HiPS stack contains new instances; old animations must stop.
+    if (this.hasState(name)) this.cancelAllHiPSFades();
+    return this.stateManager.restoreState(name);
+  }
+
+  deleteState(name: string): boolean {
+    return this.stateManager.deleteState(name);
+  }
+
+  clearStates(): void {
+    this.stateManager.clearStates();
   }
 
   // CATALOGUES
@@ -120,6 +158,7 @@ export class AstroViewer {
 
   deleteCatalogue(catalogue: CatalogueGL) {
     this.astroSphere.deleteCatalogue(catalogue);
+    this.stateManager.onSceneResourcesChanged();
   }
 
   changeCatalogueRA(catalogue: CatalogueGL, raColumnName: string): CatalogueGL {
@@ -185,6 +224,7 @@ export class AstroViewer {
 
   deleteFootprintSet(footprintSet: FootprintSetGL) {
     this.astroSphere.deleteFootprintSet(footprintSet);
+    this.stateManager.onSceneResourcesChanged();
   }
 
   // TERRA OVERLAYS
@@ -333,6 +373,7 @@ export class AstroViewer {
   }
 
   activateHiPS(hipsDescriptor: HiPSDescriptor): void {
+    this.cancelAllHiPSFades();
     this.astroSphere.activateHiPS(hipsDescriptor);
   }
 
@@ -434,7 +475,7 @@ export class AstroViewer {
     if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching properties`);
     const propsText = await resp.text();
     const desc = new HiPSDescriptor(propsText, hipsUrl);
-    this.astroSphere.activateHiPS(desc);
+    this.activateHiPS(desc);
     return desc.surveyName;
     // this.activateHiPS(desc);
   }
@@ -470,7 +511,59 @@ export class AstroViewer {
   }
 
   setHiPSOpacity(hips: HiPS, opacity: number): void {
+    this.cancelHiPSFade(hips);
     this.astroSphere.setHiPSOpacity(hips, opacity);
+  }
+
+  /** Animate an active HiPS layer from its current opacity to the target.
+   * A new fade or a manual opacity change cancels the previous fade.
+   * Cancelled fades resolve early; removed/restored layers are never updated.
+   */
+  fadeHiPSOpacity(hips: HiPS, targetOpacity: number, durationMs = 2500): Promise<void> {
+    if (!Number.isFinite(targetOpacity) || targetOpacity < 0 || targetOpacity > 1) {
+      return Promise.reject(new RangeError("HiPS opacity must be between 0 and 1."));
+    }
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      return Promise.reject(new RangeError("Fade duration must be non-negative."));
+    }
+
+    this.cancelHiPSFade(hips);
+    // Validate membership before scheduling any frames.
+    try {
+      this.astroSphere.setHiPSOpacity(hips, hips.opacity);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    if (durationMs === 0 || hips.opacity === targetOpacity) {
+      this.astroSphere.setHiPSOpacity(hips, targetOpacity);
+      return Promise.resolve();
+    }
+
+    const initialOpacity = hips.opacity;
+    return new Promise<void>((resolve) => {
+      let frameId: number | undefined;
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        if (frameId !== undefined) cancelAnimationFrame(frameId);
+        if (this.hipsFades.get(hips) === fade) this.hipsFades.delete(hips);
+        resolve();
+      };
+      const fade = { cancel: finish };
+      this.hipsFades.set(hips, fade);
+      let start: number | undefined;
+      const tick = (now: number) => {
+        if (finished) return;
+        if (start === undefined) start = now;
+        const t = Math.min(1, (now - start) / durationMs);
+        const eased = t * t * (3 - 2 * t);
+        this.astroSphere.setHiPSOpacity(hips, initialOpacity + (targetOpacity - initialOpacity) * eased);
+        if (t === 1) finish();
+        else frameId = requestAnimationFrame(tick);
+      };
+      frameId = requestAnimationFrame(tick);
+    });
   }
 
   changeColorMap(colorMapName: ColorMapName) {
@@ -502,10 +595,12 @@ export class AstroViewer {
   }
 
   removeHiPS(hips: HiPS): void {
+    this.cancelHiPSFade(hips);
     this.astroSphere.removeHiPS(hips);
   }
 
   removeAllHiPS(): void {
+    this.cancelAllHiPSFades();
     this.astroSphere.removeAllHiPS();
   }
 
@@ -774,6 +869,7 @@ export class AstroViewer {
     this.astroSphere = new AstroSphere(this.canvas, this.webgl, {
       gridLabelContainers: this.options.gridLabelContainers,
     });
+    this.stateManager = new ViewerStateManager(this.astroSphere);
   }
 
   private initViewfinder(): void {

@@ -138,6 +138,19 @@ export class CatalogueGL {
     this._isVisible = true;
   }
 
+  /** Release owned WebGL buffers when no scene or snapshot uses this catalogue. */
+  dispose(): void {
+    if (this.vertexCataloguePositionBuffer) {
+      this._webgl.deleteBuffer(this.vertexCataloguePositionBuffer);
+      this.vertexCataloguePositionBuffer = null;
+    }
+    if (this.vertexhoveredCataloguePositionBuffer) {
+      this._webgl.deleteBuffer(this.vertexhoveredCataloguePositionBuffer);
+      this.vertexhoveredCataloguePositionBuffer = null;
+    }
+    this._bufferInitialised = false;
+  }
+
   setIsVisible(visibility: boolean) {
     this._isVisible = visibility;
   }
@@ -827,6 +840,11 @@ export class CatalogueGL {
     const ndcX = projected[0] / projected[3];
     const ndcY = projected[1] / projected[3];
     return [(ndcX * 0.5 + 0.5) * width, (1 - (ndcY * 0.5 + 0.5)) * height];
+  }
+
+  public restoreSelection(indexes: readonly number[]): void {
+    this.clearSelection();
+    this.setSelectedIndexes([...indexes]);
   }
 
   public clearSelection(): void {
