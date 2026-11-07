@@ -28,6 +28,7 @@ import {
 } from "./model/footprints/FootprintSetGL.js";
 import { bootSetup } from "./Config.js";
 import { MetadataManager } from "./model/MetadataManager.js";
+import type { AstroTable } from "astrospatial-core/metadata";
 import Camera from "./Camera.js";
 import { ReadonlyMat4 } from "gl-matrix";
 import ColorMaps, { ColorMap, ColorMapName } from "./model/ColorMaps.js";
@@ -70,6 +71,15 @@ type GL2WithViewport = WebGL2RenderingContext;
 //   viewportWidth: number
 //   viewportHeight: number
 // }
+
+/** Presentation metadata for a table-backed astronomy overlay. */
+export interface AstroTableLayerOptions {
+  name: string;
+  description?: string;
+  providerUrl?: string;
+  /** When false, create and populate without displaying the overlay. */
+  visible?: boolean;
+}
 
 export type AstroViewerOptions = {
   gridLabelContainers?: GridLabelContainers;
@@ -148,6 +158,19 @@ export class AstroViewer {
     );
   }
 
+  /** Create, populate and optionally display a catalogue from normalized tabular data. */
+  addCatalogue(table: AstroTable, options: AstroTableLayerOptions): CatalogueGL {
+    const catalogue = this.createCatalogue(
+      options.name,
+      options.description ?? "",
+      options.providerUrl ?? "",
+      new MetadataManager(table.columns),
+    );
+    catalogue.addSources(table.rows, table.columns);
+    if (options.visible !== false) this.showCatalogue(catalogue);
+    return catalogue;
+  }
+
   showCatalogue(catalogue: CatalogueGL) {
     this.astroSphere.showCatalogue(catalogue);
   }
@@ -212,6 +235,19 @@ export class AstroViewer {
       metadataManager,
       this.webgl,
     );
+  }
+
+  /** Create, populate and optionally display footprints from normalized tabular data. */
+  addFootprintSet(table: AstroTable, options: AstroTableLayerOptions): FootprintSetGL {
+    const footprintSet = this.createFootprintSet(
+      options.name,
+      options.description ?? "",
+      options.providerUrl ?? "",
+      new MetadataManager(table.columns),
+    );
+    footprintSet.addFootprints(table.rows, table.columns);
+    if (options.visible !== false) this.showFootprintSet(footprintSet);
+    return footprintSet;
   }
 
   showFootprintSet(footprintSet: FootprintSetGL) {
@@ -564,6 +600,51 @@ export class AstroViewer {
       };
       frameId = requestAnimationFrame(tick);
     });
+  }
+
+  /**
+   * Crossfade between two already-added HiPS layers.
+   * This controls opacity only; callers remain responsible for survey loading
+   * and tile readiness. Cancellation leaves the incoming layer hidden.
+   */
+  async transitionToHiPS(
+    next: HiPS,
+    options: {
+      previous?: HiPS | null;
+      durationMs?: number;
+      signal?: AbortSignal;
+    } = {},
+  ): Promise<void> {
+    const { previous = this.getActiveHiPS(), durationMs = 1400, signal } = options;
+    if (signal?.aborted) throw new DOMException("HiPS transition aborted", "AbortError");
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      throw new RangeError("Transition duration must be non-negative.");
+    }
+    if (previous === next) {
+      this.setActiveHiPS(next);
+      this.setHiPSOpacity(next, 1);
+      return;
+    }
+    this.setHiPSOpacity(next, 0);
+    this.setActiveHiPS(next);
+    const cancel = () => {
+      this.cancelHiPSFade(next);
+      if (previous) this.cancelHiPSFade(previous);
+    };
+    signal?.addEventListener("abort", cancel, { once: true });
+    try {
+      await Promise.all([
+        this.fadeHiPSOpacity(next, 1, durationMs),
+        ...(previous ? [this.fadeHiPSOpacity(previous, 0, durationMs)] : []),
+      ]);
+      if (signal?.aborted) {
+        this.setHiPSOpacity(next, 0);
+        if (previous) this.setHiPSOpacity(previous, 1);
+        throw new DOMException("HiPS transition aborted", "AbortError");
+      }
+    } finally {
+      signal?.removeEventListener("abort", cancel);
+    }
   }
 
   changeColorMap(colorMapName: ColorMapName) {
