@@ -10,7 +10,8 @@
  */
 
 export { AstroViewer } from './AstroViewer.js';
-export type { AstroViewerOptions } from './AstroViewer.js';
+export type { AstroViewerOptions, AstroTableLayerOptions } from './AstroViewer.js';
+export type { AstroTable } from 'astrospatial-core/metadata';
 export { HiPSDescriptor } from './model/hips/HiPSDescriptor.js';
 export { SphereFoV as FoV } from './model/SphereFoV.js'
 export { SphereFoV } from './model/SphereFoV.js'
