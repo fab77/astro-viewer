@@ -88,7 +88,7 @@
     "webpack-cli": "^5.0.0"
   },
   "dependencies": {
-    "astrospatial-core": "0.4.2",
+    "astrospatial-core": "^0.4.3",
     "cross-fetch": "^3.2.0",
     "gl-matrix": "^3.4.4",
     "jsfitsio": "^3.1.0",
