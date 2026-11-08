@@ -961,6 +961,7 @@ class AstroSphere {
 
     if (this._activeHiPS) {
       tileBuffer.removeHiPS(this._activeHiPS);
+      this._activeHiPS.dispose();
     }
 
     const hips = this.createHiPS(hipsDescriptor);
@@ -995,6 +996,7 @@ class AstroSphere {
       const tileBuffer = this._healpixGrid.visibleTilesManager.tileBuffer;
 
       tileBuffer.removeHiPS(this._activeHiPS);
+      this._activeHiPS.dispose();
       this._activeHiPS = null;
     }
 
@@ -1024,6 +1026,7 @@ class AstroSphere {
     }
 
     this._healpixGrid.visibleTilesManager.tileBuffer.removeHiPS(hips);
+    hips.dispose();
     this._activeHiPSLayers.splice(index, 1);
 
     if (this._activeHiPSLayers.length === 0) {
@@ -1047,9 +1050,11 @@ class AstroSphere {
 
     if (this._activeHiPSLayers.length === 0 && this._activeHiPS) {
       tileBuffer.removeHiPS(this._activeHiPS);
+      this._activeHiPS.dispose();
     } else {
       for (const hips of this._activeHiPSLayers) {
         tileBuffer.removeHiPS(hips);
+        hips.dispose();
       }
     }
 
@@ -2045,6 +2050,10 @@ class AstroSphere {
     return this._activeHiPS.getDebugStats();
   }
 
+  private shouldDrawHiPS(hips: HiPS): boolean {
+    return hips.opacity > 0 || hips === this._activeHiPS;
+  }
+
   getMeshHiPSDebugStats(): MeshHiPSDebugStats | null {
     if (!this._activeMeshHiPS) return null;
     return this._activeMeshHiPS.getDebugStats();
@@ -2251,9 +2260,6 @@ class AstroSphere {
     );
 
     if (this._activeBaseLayer === "hips" && this._activeHiPS) {
-      // During directional flyTo navigation, keep visibility current but render
-      // only HiPS tiles that are already available. Final-view refinement
-      // resumes automatically on the first frame after the flight.
       this._healpixGrid.visibleTilesManager.tileBuffer.setTileAcquisitionEnabled(
         !cameraFlying,
       );
@@ -2312,7 +2318,9 @@ class AstroSphere {
     if (this._activeBaseLayer === "hips") {
       if (this._activeHiPSLayers.length > 0) {
         for (const hips of this._activeHiPSLayers) {
-          hips.draw(skyEntityDrawInput);
+          if (this.shouldDrawHiPS(hips)) {
+            hips.draw(skyEntityDrawInput);
+          }
         }
       } else {
         this._activeHiPS?.draw(skyEntityDrawInput);

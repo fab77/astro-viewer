@@ -55,6 +55,7 @@ export default class Tile {
 
   private _ready = false;
   private _abort = false;
+  private _disposed = false;
   private _image!: HTMLImageElement;
   private _textureLoaded = false;
   private _texture?: WebGLTexture;
@@ -65,8 +66,6 @@ export default class Tile {
 
   private _cacheTime0?: number;
   private _inView = true;
-  private _amIStillInFoV_requsetID: number;
-
   // geometry buffers
   private vertexPosition: Float32Array[] = [];
   private vertexPositionBuffer: WebGLBuffer[] = [];
@@ -103,15 +102,38 @@ export default class Tile {
 
     this._order = order;
 
-    this._amIStillInFoV_requsetID = window.setInterval(() => {
-      this.amIStillInFoV();
-    }, 5000);
-
     this.initImage();
   }
 
-  destroyIntervals(): void {
-    window.clearInterval(this._amIStillInFoV_requsetID);
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._abort = true;
+    this._ready = false;
+
+    if (this._image) {
+      this._image.onload = null;
+      this._image.onerror = null;
+      this._image.removeAttribute("src");
+    }
+
+    if (this._texture) {
+      this._webgl.deleteTexture(this._texture);
+      this._texture = undefined;
+    }
+
+    for (const buffer of this.vertexPositionBuffer) {
+      this._webgl.deleteBuffer(buffer);
+    }
+    this.vertexPositionBuffer = [];
+    this.vertexPosition = [];
+
+    if (this.vertexIndexBuffer) {
+      this._webgl.deleteBuffer(this.vertexIndexBuffer);
+      this.vertexIndexBuffer = undefined;
+    }
+
+    this._fitsTile = undefined;
   }
 
   getReadyState(): boolean {
@@ -138,8 +160,6 @@ export default class Tile {
     if (this._order > this._maxorder) {
       this._ready = false;
       this._abort = true;
-      this.destroyIntervals();
-
       console.warn(
         `[Tile] Skipping tile request above max order: requested order ${this._order}, max order ${this._maxorder}, url ${this._baseurl}`,
       );
@@ -162,12 +182,14 @@ export default class Tile {
   private loadImage(): void {
     this._image = new Image();
 
-    this._image.onload = () => this.imageLoaded();
+    this._image.onload = () => {
+      if (!this._disposed) this.imageLoaded();
+    };
 
     this._image.onerror = () => {
+      if (this._disposed) return;
       this._ready = false;
       this._abort = true;
-      this.destroyIntervals();
     };
 
     this._image.crossOrigin = "anonymous";
@@ -176,15 +198,18 @@ export default class Tile {
 
   private async loadFits(): Promise<void> {
     try {
-      this._fitsTile = await loadFitsTile(this._texurl);
-      this._hips.observeFITSDataRange(this._fitsTile);
+      const fitsTile = await loadFitsTile(this._texurl);
+      if (this._disposed) return;
+
+      this._fitsTile = fitsTile;
+      this._hips.observeFITSDataRange(fitsTile);
       this._ready = true;
     } catch (error) {
+      if (this._disposed) return;
       console.error(`[Tile] Unable to load FITS tile ${this._texurl}`, error);
 
       this._ready = false;
       this._abort = true;
-      this.destroyIntervals();
     }
   }
 
@@ -423,7 +448,6 @@ export default class Tile {
     // newTileBuffer.moveTileToCache(this._tileno, this._order, this._hips)
     this._tileBuffer.moveTileToCache(this._tileno, this._order, this._hips);
     this._inView = false;
-    this.destroyIntervals();
   }
 
   amIStillInFoV(): void {
