@@ -204,9 +204,9 @@ describe("AstroSphere HiPS layers", () => {
     const subject = Object.create(AstroSphere.prototype) as AstroSphere &
       Record<string, unknown>;
 
-    const hipsA = { baseURL: "https://example.org/a/" };
-    const hipsB = { baseURL: "https://example.org/b/" };
-    const hipsC = { baseURL: "https://example.org/c/" };
+    const hipsA = { baseURL: "https://example.org/a/", dispose: jest.fn() };
+    const hipsB = { baseURL: "https://example.org/b/", dispose: jest.fn() };
+    const hipsC = { baseURL: "https://example.org/c/", dispose: jest.fn() };
 
     const createHiPS = jest
       .fn()
@@ -243,9 +243,9 @@ describe("AstroSphere HiPS layers", () => {
   });
 
   it("removes a HiPS layer without affecting the remaining layers", () => {
-    const hipsA = { baseURL: "https://example.org/a/" };
-    const hipsB = { baseURL: "https://example.org/b/" };
-    const hipsC = { baseURL: "https://example.org/c/" };
+    const hipsA = { baseURL: "https://example.org/a/", dispose: jest.fn() };
+    const hipsB = { baseURL: "https://example.org/b/", dispose: jest.fn() };
+    const hipsC = { baseURL: "https://example.org/c/", dispose: jest.fn() };
 
     const tileBuffer = {
       removeHiPS: jest.fn(),
@@ -269,15 +269,16 @@ describe("AstroSphere HiPS layers", () => {
 
     expect(tileBuffer.removeHiPS).toHaveBeenCalledTimes(1);
     expect(tileBuffer.removeHiPS).toHaveBeenCalledWith(hipsB);
+    expect(hipsB.dispose).toHaveBeenCalledTimes(1);
 
     expect(subject.activeHiPSLayers).toEqual([hipsA, hipsC]);
     expect(subject.activeHiPS).toBe(hipsC);
   });
 
   it("falls back to the previous HiPS when the active HiPS is removed", () => {
-    const hipsA = { baseURL: "https://example.org/a/" };
-    const hipsB = { baseURL: "https://example.org/b/" };
-    const hipsC = { baseURL: "https://example.org/c/" };
+    const hipsA = { baseURL: "https://example.org/a/", dispose: jest.fn() };
+    const hipsB = { baseURL: "https://example.org/b/", dispose: jest.fn() };
+    const hipsC = { baseURL: "https://example.org/c/", dispose: jest.fn() };
 
     const tileBuffer = {
       removeHiPS: jest.fn(),
@@ -300,12 +301,16 @@ describe("AstroSphere HiPS layers", () => {
     subject.removeHiPS(hipsC as never);
 
     expect(tileBuffer.removeHiPS).toHaveBeenCalledWith(hipsC);
+    expect(hipsC.dispose).toHaveBeenCalledTimes(1);
     expect(subject.activeHiPSLayers).toEqual([hipsA, hipsB]);
     expect(subject.activeHiPS).toBe(hipsB);
   });
 
   it("clears the HiPS base layer when the last HiPS is removed", () => {
-    const hips = { baseURL: "https://example.org/hips/" };
+    const hips = {
+      baseURL: "https://example.org/hips/",
+      dispose: jest.fn(),
+    };
 
     const tileBuffer = {
       removeHiPS: jest.fn(),
@@ -328,14 +333,15 @@ describe("AstroSphere HiPS layers", () => {
     subject.removeHiPS(hips as never);
 
     expect(tileBuffer.removeHiPS).toHaveBeenCalledWith(hips);
+    expect(hips.dispose).toHaveBeenCalledTimes(1);
     expect(subject.activeHiPSLayers).toEqual([]);
     expect(subject.activeHiPS).toBeNull();
     expect((subject as any)._activeBaseLayer).toBeNull();
   });
 
   it("removes all HiPS layers", () => {
-    const hipsA = { baseURL: "https://example.org/a/" };
-    const hipsB = { baseURL: "https://example.org/b/" };
+    const hipsA = { baseURL: "https://example.org/a/", dispose: jest.fn() };
+    const hipsB = { baseURL: "https://example.org/b/", dispose: jest.fn() };
 
     const tileBuffer = {
       removeHiPS: jest.fn(),
@@ -360,9 +366,25 @@ describe("AstroSphere HiPS layers", () => {
     expect(tileBuffer.removeHiPS).toHaveBeenCalledTimes(2);
     expect(tileBuffer.removeHiPS).toHaveBeenNthCalledWith(1, hipsA);
     expect(tileBuffer.removeHiPS).toHaveBeenNthCalledWith(2, hipsB);
+    expect(hipsA.dispose).toHaveBeenCalledTimes(1);
+    expect(hipsB.dispose).toHaveBeenCalledTimes(1);
 
     expect(subject.activeHiPSLayers).toEqual([]);
     expect(subject.activeHiPS).toBeNull();
+  });
+
+  it("skips hidden HiPS layers unless they are the active preload target", () => {
+    const hidden = { opacity: 0 };
+    const visible = { opacity: 0.5 };
+    const activeHidden = { opacity: 0 };
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+
+    Object.assign(subject, { _activeHiPS: activeHidden });
+
+    expect((subject as any).shouldDrawHiPS(hidden)).toBe(false);
+    expect((subject as any).shouldDrawHiPS(visible)).toBe(true);
+    expect((subject as any).shouldDrawHiPS(activeHidden)).toBe(true);
   });
 
   it("loads a standalone HiPS without adding it to the stack", () => {
@@ -389,6 +411,7 @@ describe("AstroSphere HiPS layers", () => {
     const base = subject.activateHiPS(
       createHiPSDescriptor("https://example.test/base/"),
     );
+    base.dispose = jest.fn();
 
     const stacked = subject.addHiPS(
       createHiPSDescriptor("https://example.test/stack/"),
@@ -399,6 +422,7 @@ describe("AstroSphere HiPS layers", () => {
     })._healpixGrid.visibleTilesManager.tileBuffer;
 
     expect(tileBuffer.removeHiPS).toHaveBeenCalledWith(base);
+    expect(base.dispose).toHaveBeenCalledTimes(1);
     expect(subject.activeHiPSLayers).toEqual([stacked]);
     expect(subject.activeHiPS).toBe(stacked);
   });
@@ -428,9 +452,11 @@ describe("AstroSphere HiPS layers", () => {
     const hips1 = subject.addHiPS(
       createHiPSDescriptor("https://example.test/hips1/"),
     );
+    hips1.dispose = jest.fn();
 
     subject.removeHiPS(hips1);
 
+    expect(hips1.dispose).toHaveBeenCalledTimes(1);
     expect(() => subject.setActiveHiPS(hips1)).toThrow(
       "HiPS layer is not active in this AstroSphere.",
     );

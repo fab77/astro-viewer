@@ -19,6 +19,7 @@ import { loadFitsTile, type FitsTileData } from "./FitsTileLoader.js";
 
 export default class AllSky {
   private _ready = false;
+  private _disposed = false;
   private _hips: HiPS;
 
   private _format: string;
@@ -79,9 +80,12 @@ export default class AllSky {
   private loadImage(): void {
     this._image = new Image();
 
-    this._image.onload = () => this.imageLoaded();
+    this._image.onload = () => {
+      if (!this._disposed) this.imageLoaded();
+    };
 
     this._image.onerror = () => {
+      if (this._disposed) return;
       console.error("File not found? %s", this._texurl);
     };
 
@@ -91,8 +95,11 @@ export default class AllSky {
 
   private async loadFits(): Promise<void> {
     try {
-      this._fitsTile = await loadFitsTile(this._texurl);
-      this._hips.observeFITSDataRange(this._fitsTile);
+      const fitsTile = await loadFitsTile(this._texurl);
+      if (this._disposed) return;
+
+      this._fitsTile = fitsTile;
+      this._hips.observeFITSDataRange(fitsTile);
 
       this.textureLoaded();
       this.initModelBuffer();
@@ -100,11 +107,38 @@ export default class AllSky {
       this._textureLoaded = true;
       this._ready = true;
     } catch (error) {
+      if (this._disposed) return;
       console.error(
         `[AllSky] Unable to load FITS atlas ${this._texurl}`,
         error,
       );
     }
+  }
+
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._ready = false;
+
+    if (this._image) {
+      this._image.onload = null;
+      this._image.onerror = null;
+      this._image.removeAttribute("src");
+    }
+
+    if (this._texture) {
+      this._webgl.deleteTexture(this._texture);
+      this._texture = null;
+    }
+
+    if (this.vertexPositionBuffer) {
+      this._webgl.deleteBuffer(this.vertexPositionBuffer);
+    }
+    if (this.vertexIndexBuffer) {
+      this._webgl.deleteBuffer(this.vertexIndexBuffer);
+    }
+
+    this._fitsTile = undefined;
   }
 
   private imageLoaded(): void {
@@ -449,13 +483,13 @@ export default class AllSky {
       3 * 4,
     );
 
-    for (let t = 0; t < this._maxTiles; t++) {
-      if (!allSkyTiles2Skip.includes(t)) {
+    for (let tileNo = 0; tileNo < this._maxTiles; tileNo++) {
+      if (!allSkyTiles2Skip.includes(tileNo)) {
         gl.drawElements(
           gl.TRIANGLES,
           6 * this._numFacesXTile,
           gl.UNSIGNED_SHORT,
-          12 * t * this._numFacesXTile,
+          12 * tileNo * this._numFacesXTile,
         );
       }
     }

@@ -56,7 +56,7 @@ export class TileBuffer {
 
     this._cleanerId = window.setInterval(() => {
       this.cacheCleaner();
-    }, 10_000);
+    }, 1000);
   }
 
   /** Register an equatorial HiPS into the buffer. */
@@ -87,6 +87,10 @@ export class TileBuffer {
     if (!this._tileAcquisitionEnabled) return;
 
     for (const hips of this._activeHiPS.keys()) {
+      if (hips.opacity <= 0) {
+        continue;
+      }
+
       if (order > hips.maxOrder) {
         continue;
       }
@@ -104,6 +108,10 @@ export class TileBuffer {
     if (!this._tileAcquisitionEnabled) return;
 
     for (const hips of this._galActiveHiPS.keys()) {
+      if (hips.opacity <= 0) {
+        continue;
+      }
+
       if (order > hips.maxOrder) {
         continue;
       }
@@ -238,6 +246,13 @@ export class TileBuffer {
 
   /** Periodically purge stale cached tiles. */
   private cacheCleaner(): void {
+    for (const tile of Array.from(this._tiles.values())) {
+      tile.amIStillInFoV();
+    }
+    for (const tile of Array.from(this._galTiles.values())) {
+      tile.amIStillInFoV();
+    }
+
     const now = Date.now();
 
     for (const [tileKey, tile] of this._cachedTiles) {
@@ -247,7 +262,7 @@ export class TileBuffer {
         t0 !== undefined &&
         now - t0 > this._cacheAliveMilliSeconds
       ) {
-        tile.destroyIntervals();
+        tile.dispose();
         this._cachedTiles.delete(tileKey);
       }
     }
@@ -259,7 +274,7 @@ export class TileBuffer {
         t0 !== undefined &&
         now - t0 > this._cacheAliveMilliSeconds
       ) {
-        tile.destroyIntervals();
+        tile.dispose();
         this._galCachedTiles.delete(tileKey);
       }
     }
@@ -294,7 +309,7 @@ export class TileBuffer {
           continue;
         }
 
-        tile.destroyIntervals();
+        tile.dispose();
         tiles.delete(tileKey);
       }
     };
@@ -305,9 +320,23 @@ export class TileBuffer {
     clearTiles(this._galCachedTiles);
   }
 
-  /** Optional: call to stop internal timers if you dispose this buffer. */
   dispose(): void {
-    window.clearInterval(this._cleanerId);
+    globalThis.clearInterval(this._cleanerId);
+
+    const tiles = new Set([
+      ...this._tiles.values(),
+      ...this._cachedTiles.values(),
+      ...this._galTiles.values(),
+      ...this._galCachedTiles.values(),
+    ]);
+    for (const tile of tiles) tile.dispose();
+
+    this._tiles.clear();
+    this._cachedTiles.clear();
+    this._galTiles.clear();
+    this._galCachedTiles.clear();
+    this._activeHiPS.clear();
+    this._galActiveHiPS.clear();
   }
 
   get size(): number {

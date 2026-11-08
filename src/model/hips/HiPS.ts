@@ -267,6 +267,8 @@ export class HiPS extends AbstractSkyEntity {
      * current format, so both active and cached resources are discarded.
      */
     tileBuffer.invalidateHiPS(this);
+    this._allSkyTile?.dispose();
+    for (const ancestor of this._ancestorTiles) ancestor.dispose();
     /*
      * Change format before recreating AllSky/AncestorTile because their
      * constructors read hips.format.
@@ -277,6 +279,16 @@ export class HiPS extends AbstractSkyEntity {
      * with, so they must be recreated.
      */
     this.initBaseTiles();
+  }
+
+  dispose(): void {
+    this._allSkyTile?.dispose();
+    this._allSkyTile = null;
+
+    for (const ancestor of this._ancestorTiles) ancestor.dispose();
+    this._ancestorTiles = [];
+
+    this._robustFITSRanges = [];
   }
 
   get availableFormats(): readonly string[] {
