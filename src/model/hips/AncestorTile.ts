@@ -28,6 +28,7 @@ class AncestorTile {
   private _order: number;
 
   private _ready = false;
+  private _disposed = false;
   private _format: string;
 
   private _isGalacticHips: boolean;
@@ -73,9 +74,38 @@ class AncestorTile {
     this.initImage();
   }
 
-  // Kept for API parity; there is no interval created in this class.
   destroyIntervals(): void {
     // no-op
+  }
+
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._ready = false;
+
+    if (this._image) {
+      this._image.onload = null;
+      this._image.onerror = null;
+      this._image.removeAttribute("src");
+    }
+
+    if (this._texture) {
+      this._webgl.deleteTexture(this._texture);
+      this._texture = null;
+    }
+
+    if (this.vertexPositionBuffer) {
+      for (const buffer of this.vertexPositionBuffer) {
+        this._webgl.deleteBuffer(buffer);
+      }
+      this.vertexPositionBuffer = [];
+    }
+
+    if (this.vertexIndexBuffer) {
+      this._webgl.deleteBuffer(this.vertexIndexBuffer);
+    }
+
+    this._fitsTile = undefined;
   }
 
   private initImage(): void {
@@ -95,8 +125,11 @@ class AncestorTile {
 
   private async loadFits(): Promise<void> {
     try {
-      this._fitsTile = await loadFitsTile(this._texurl);
-      this._hips.observeFITSDataRange(this._fitsTile);
+      const fitsTile = await loadFitsTile(this._texurl);
+      if (this._disposed) return;
+
+      this._fitsTile = fitsTile;
+      this._hips.observeFITSDataRange(fitsTile);
 
       this.textureLoaded();
 
@@ -124,6 +157,7 @@ class AncestorTile {
 
       this._ready = true;
     } catch (error) {
+      if (this._disposed) return;
       console.error(
         `[AncestorTile] Unable to load FITS tile ${this._texurl}`,
         error,
