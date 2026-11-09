@@ -1765,6 +1765,60 @@ class AstroSphere {
     });
   }
 
+  async rotateEarthLongitude(
+    deltaLongitudeDeg: number,
+    durationMs = 12000,
+  ): Promise<void> {
+    if (this._activeDomain !== "earth") {
+      throw new Error(
+        "Earth longitude rotation requires the Earth domain to be active.",
+      );
+    }
+    if (!Number.isFinite(deltaLongitudeDeg)) {
+      throw new RangeError("Earth longitude rotation must be finite.");
+    }
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      throw new RangeError(
+        `Camera animation duration must be >= 0 ms. Received ${durationMs}.`,
+      );
+    }
+
+    const center = this.updateCentralPoint();
+    if (!center) {
+      throw new Error("Earth camera center is unavailable.");
+    }
+
+    this.cancelFlyToAnimation();
+    this.inertiaX = 0;
+    this.inertiaY = 0;
+
+    const startLongitudeDeg = center.astroDeg.ra;
+    const latitudeDeg = center.astroDeg.dec;
+
+    if (durationMs === 0 || deltaLongitudeDeg === 0) {
+      this._camera.goTo(
+        startLongitudeDeg + deltaLongitudeDeg,
+        latitudeDeg,
+      );
+      this.lastCameraMotionAt = performance.now();
+      this._cameraStatusChanged = true;
+      return;
+    }
+
+    this._camera.rotateLongitude(
+      startLongitudeDeg,
+      latitudeDeg,
+      deltaLongitudeDeg,
+      durationMs,
+    );
+    this.lastCameraMotionAt = performance.now();
+    this._cameraStatusChanged = true;
+
+    return new Promise<void>((resolve) => {
+      this.flyToAnimationResolve = resolve;
+    });
+  }
+
   getActiveCoordinateMode(): "equatorial" | "galactic" | "lonlat" {
     if (this._activeBaseLayer === "xyz") {
       return "lonlat";

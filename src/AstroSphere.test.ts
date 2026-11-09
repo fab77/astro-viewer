@@ -700,6 +700,7 @@ describe("AstroSphere awaitable navigation", () => {
     const camera = {
       cancelFlyTo: jest.fn(),
       flyTo: jest.fn(),
+      rotateLongitude: jest.fn(),
       goTo: jest.fn(),
     };
 
@@ -710,6 +711,10 @@ describe("AstroSphere awaitable navigation", () => {
       flyToAnimationResolve: null,
       lastCameraMotionAt: 0,
       _cameraStatusChanged: false,
+      _activeDomain: "earth",
+      updateCentralPoint: jest.fn(() => ({
+        astroDeg: { ra: 12.5, dec: 22 },
+      })),
     });
 
     return { subject, camera };
@@ -765,6 +770,38 @@ describe("AstroSphere awaitable navigation", () => {
     await expect(subject.flyTo(0, 0, -1)).rejects.toThrow(
       "Camera animation duration must be >= 0 ms.",
     );
+  });
+
+  it("starts an awaitable full Earth longitude rotation", async () => {
+    const { subject, camera } = createNavigationSubject();
+    let resolved = false;
+
+    const rotation = subject.rotateEarthLongitude(360, 12000).then(() => {
+      resolved = true;
+    });
+
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    expect(camera.rotateLongitude).toHaveBeenCalledWith(
+      12.5,
+      22,
+      360,
+      12000,
+    );
+
+    (subject as any).finishFlyToAnimation();
+    await rotation;
+    expect(resolved).toBe(true);
+  });
+
+  it("rejects Earth longitude rotation outside the Earth domain", async () => {
+    const { subject, camera } = createNavigationSubject();
+    (subject as any)._activeDomain = "astronomy";
+
+    await expect(subject.rotateEarthLongitude(360, 12000)).rejects.toThrow(
+      "Earth longitude rotation requires the Earth domain to be active.",
+    );
+    expect(camera.rotateLongitude).not.toHaveBeenCalled();
   });
 });
 
