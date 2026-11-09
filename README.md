@@ -62,6 +62,13 @@ Install AstroViewer from npm:
 npm install astro-viewer
 ```
 
+To combine rendering with name resolution, TAP queries and HiPS discovery,
+install the render-independent service package as well:
+
+```bash
+npm install astro-viewer astrospatial-services
+```
+
 AstroViewer requires Node.js 22 or later for development and package tooling.
 
 The rendering engine itself runs in a browser-compatible environment with WebGL2 support.
@@ -72,26 +79,26 @@ The rendering engine itself runs in a browser-compatible environment with WebGL2
 
 ### ES Modules
 
-```js
-import { AstroViewer } from "astro-viewer";
-
-const canvas = document.getElementById("astrocanvas");
-
-const viewer = new AstroViewer(canvas);
-```
-
-Example HTML:
-
 ```html
-<canvas id="astrocanvas"></canvas>
+<canvas id="astrocanvas" style="width: 100vw; height: 100vh"></canvas>
 
 <script type="module">
   import { AstroViewer } from "astro-viewer";
 
   const canvas = document.getElementById("astrocanvas");
   const viewer = new AstroViewer(canvas);
+  viewer.run();
+
+  const optical = await viewer.addHiPSFromUrl(
+    "https://cdn.skies.esac.esa.int/DSSColor/",
+  );
+  viewer.setActiveHiPS(optical);
+  viewer.goTo(202.4696, 47.1953); // M51, RA and Dec in degrees
 </script>
 ```
+
+AstroViewer is framework-independent. The same instance can be created from
+React, Vue, Angular or any application that owns an `HTMLCanvasElement`.
 
 ---
 
@@ -99,26 +106,29 @@ Example HTML:
 
 AstroViewer supports HiPS (Hierarchical Progressive Surveys) as native astronomical map layers.
 
-A HiPS survey can be activated using a `HiPSDescriptor`:
+A HiPS survey can be loaded directly from its service URL:
 
 ```js
-import { AstroViewer, HiPSDescriptor } from "astro-viewer";
-
-const canvas = document.getElementById("astrocanvas");
-
-const viewer = new AstroViewer(canvas);
-
-const hipsUrl = "https://alasky.cds.unistra.fr/DSS/DSSColor/";
-
-const response = await fetch(`${hipsUrl}properties`);
-const properties = await response.text();
-
-const descriptor = new HiPSDescriptor(properties, new URL(hipsUrl));
-
-viewer.activateHiPS(descriptor, false);
+const optical = await viewer.addHiPSFromUrl(
+  "https://cdn.skies.esac.esa.int/DSSColor/",
+);
+viewer.setActiveHiPS(optical);
 ```
 
 AstroViewer supports standard HiPS image tiles as well as FITS-based HiPS datasets.
+
+For applications that already have HiPS properties, the lower-level descriptor
+API remains available:
+
+```js
+import { HiPSDescriptor } from "astro-viewer";
+
+const baseUrl = "https://cdn.skies.esac.esa.int/DSSColor/";
+const properties = await fetch(`${baseUrl}properties`).then((response) =>
+  response.text(),
+);
+const optical = viewer.addHiPS(new HiPSDescriptor(properties, baseUrl));
+```
 
 When a survey exposes multiple supported tile formats, the active format can be changed at runtime.
 
@@ -130,7 +140,7 @@ Multiple HiPS surveys can coexist within the same AstroViewer instance.
 
 ```js
 const hips1 = await viewer.addHiPSFromUrl(
-  "https://alasky.cds.unistra.fr/DSS/DSSColor/",
+  "https://cdn.skies.esac.esa.int/DSSColor/",
 );
 
 const hips2 = await viewer.addHiPSFromUrl("https://example.org/another-hips/");
@@ -173,6 +183,20 @@ Opacity values range from `0` (transparent) to `1` (fully opaque).
 
 This allows multiple astronomical surveys to be visually combined and compared.
 
+An opacity of `0` keeps the layer registered but prevents it from acquiring new
+detailed tiles. Existing tiles may remain cached for a later transition. Use
+`removeHiPS()` when the layer is no longer needed and its WebGL and tile resources
+should be released:
+
+```js
+viewer.setHiPSOpacity(hips2, 0); // hidden, still part of the layer stack
+viewer.removeHiPS(hips2);       // removed and disposed by AstroViewer
+```
+
+Applications should not call a layer's internal `dispose()` method directly.
+AstroViewer owns the layer lifecycle and releases resources through
+`removeHiPS()` and `removeAllHiPS()`.
+
 ---
 
 ## HiPS Formats
@@ -213,6 +237,23 @@ The display range and scaling parameters can be changed at runtime, allowing sci
 
 Color maps can also be applied at runtime to FITS-based HiPS data.
 
+```js
+viewer.setActiveHiPS(fitsLayer);
+viewer.changeHiPSFormat("fits");
+viewer.setHiPSFITSRangeMode("robust");
+viewer.setHiPSFITSScaleFunction("asinh");
+viewer.changeColorMap("cubehelix");
+```
+
+Available formats and visualization options depend on the active survey. Query
+the advertised formats before switching:
+
+```js
+if (viewer.getActiveHiPSFormats().includes("fits")) {
+  viewer.changeHiPSFormat("fits");
+}
+```
+
 ---
 
 ## HiPS Coverage
@@ -247,6 +288,22 @@ An optional duration can be specified in milliseconds:
 viewer.flyTo(firstDeg, secondDeg, 1500);
 ```
 
+Field of view can be changed immediately or animated:
+
+```js
+viewer.setFoV(20);
+await viewer.flyToFoV(1.2, 1800);
+```
+
+To move the viewpoint inside the celestial sphere:
+
+```js
+if (!viewer.getInsideSphere()) {
+  viewer.toggleInsideSphere();
+}
+viewer.flyTo(266.4051, -28.9362, 3200); // Galactic Centre
+```
+
 The coordinate semantics depend on the active visualization domain:
 
 - Astronomy uses right ascension and declination.
@@ -254,6 +311,110 @@ The coordinate semantics depend on the active visualization domain:
 - Planetary and MeshHiPS visualization uses longitude and latitude.
 
 Fly To uses spherical interpolation and integrates with the viewer rendering loop. User interaction interrupts an active Fly To operation, allowing normal interactive navigation to resume immediately.
+
+---
+
+## Integration with astrospatial-services
+
+`astro-viewer` renders scientific data. `astrospatial-services` provides
+render-independent clients for discovering and retrieving that data. Keeping
+the packages separate allows the same service clients to be used without a
+WebGL viewer.
+
+### Resolve a target with CDS Sesame
+
+Resolve an astronomical name and navigate to the returned ICRS coordinates:
+
+```js
+import { AstroViewer } from "astro-viewer";
+import { SesameService } from "astrospatial-services/astronomy/name-resolver";
+
+const viewer = new AstroViewer(document.getElementById("astrocanvas"));
+viewer.run();
+const sesame = new SesameService();
+const target = await sesame.resolve("M51");
+
+if (target) {
+  viewer.flyTo(target.raDeg, target.decDeg, 1800);
+  await viewer.flyToFoV(1.2, 1200);
+}
+```
+
+`resolve()` returns `null` when the name is not resolved. Network, timeout and
+malformed-response failures reject with a `ServiceError`.
+
+### Discover surveys through a HiPS node
+
+Use `HiPSNodeService` to inspect a node, select a survey and pass its service URL
+to AstroViewer:
+
+```js
+import { HiPSNodeService } from "astrospatial-services/astronomy/hips";
+
+const hipsNode = new HiPSNodeService();
+const surveys = await hipsNode.listSurveys(
+  "https://example.org/hips-node/hipslist",
+);
+
+const dss = surveys.find((survey) =>
+  survey.metadata.obs_title?.toLowerCase().includes("dss"),
+);
+
+if (dss) {
+  const properties = await hipsNode.getProperties(dss.serviceUrl);
+  console.log(properties.title, properties.order, properties.tileFormats);
+
+  const layer = await viewer.addHiPSFromUrl(dss.serviceUrl);
+  viewer.setActiveHiPS(layer);
+}
+```
+
+Replace the example URL with the HiPS node used by your application. The exact
+node URL is deployment-specific. `listSurveys()` expects a CDS-style `hipslist`,
+while `getProperties()` reads the selected survey's standard `properties`
+resource.
+
+### Query a TAP service and render a catalogue
+
+The TAP client can execute synchronous ADQL queries. A CSV result can be
+normalized to the shared `AstroTable` model and rendered as an AstroViewer
+catalogue:
+
+```js
+import { TapService } from "astrospatial-services/astronomy/tap";
+import { parseCsvTable } from "astrospatial-services";
+
+const tap = new TapService({
+  endpoint: "https://gea.esac.esa.int/tap-server/tap",
+});
+
+const result = await tap.querySync({
+  adql: `
+    SELECT TOP 100 source_id, ra, dec, phot_g_mean_mag
+    FROM gaiadr3.gaia_source
+    WHERE 1 = CONTAINS(
+      POINT('ICRS', ra, dec),
+      CIRCLE('ICRS', 202.4696, 47.1953, 0.2)
+    )
+  `,
+  format: "csv",
+});
+
+const table = parseCsvTable(result.body, {
+  mapping: { ra: "ra", dec: "dec", name: "source_id" },
+  numericColumns: ["ra", "dec", "phot_g_mean_mag"],
+});
+
+const catalogue = viewer.addCatalogue(table, {
+  name: "Gaia DR3 around M51",
+  providerUrl: "https://gea.esac.esa.int/tap-server/tap",
+});
+
+viewer.changeCatalogueColor(catalogue, "#66ccff");
+```
+
+TAP table names and columns vary by service. Applications can inspect them with
+`listSchemas()`, `listTables()` and `listColumns()` before constructing ADQL.
 
 ---
 
@@ -400,7 +561,7 @@ npm run build
 Run the development server:
 
 ```bash
-npm start
+npm run start-server
 ```
 
 Before publishing or merging a release, the package contents can be inspected with:
