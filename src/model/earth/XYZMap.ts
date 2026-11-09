@@ -73,6 +73,10 @@ export class XYZMap extends AbstractSkyEntity {
     this._xyzShaderProgram.setOpacity(this._opacity)
   }
 
+  get opacity(): number {
+    return this._opacity
+  }
+
   changeColorMap(colorMap: ColorMap): void {
     this._colorMap = colorMap
     switch (colorMap.name) {

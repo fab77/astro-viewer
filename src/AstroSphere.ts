@@ -1211,6 +1211,17 @@ class AstroSphere {
     overlay.map.setOpacity(overlay.opacity);
   }
 
+  getEarthBaseMapOpacity(): number | null {
+    return this._activeXYZ2?.opacity ?? null;
+  }
+
+  setEarthBaseMapOpacity(opacity: number): void {
+    if (!this._activeXYZ2) {
+      throw new Error("No active Earth base map.");
+    }
+    this._activeXYZ2.setOpacity(opacity);
+  }
+
   setEarthRasterOverlayVisible(id: string, visible: boolean): void {
     const overlay = this._earthRasterOverlays.find((entry) => entry.id === id);
     if (overlay) overlay.visible = visible;
@@ -2403,7 +2414,9 @@ class AstroSphere {
     }
 
     if (this._activeBaseLayer === "xyz") {
-      this._activeXYZ2?.draw(skyEntityDrawInput, false, false);
+      if (this._activeXYZ2 && this._activeXYZ2.opacity > 0) {
+        this._activeXYZ2.draw(skyEntityDrawInput, false, false);
+      }
       for (const overlay of this._earthRasterOverlays) {
         if (overlay.visible && overlay.opacity > 0) {
           overlay.map.draw(skyEntityDrawInput, true);
