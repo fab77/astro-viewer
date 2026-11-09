@@ -27,7 +27,7 @@ export async function loadHiPS(baseUrl) {
     }
 
     const propsText = await resp.text();
-    const desc = new astroviewer.HiPSDescriptor(propsText, new URL(hipsUrl));
+    const desc = new astroviewer.HiPSDescriptor(propsText, hipsUrl);
 
     state.AstroAPI.activateHiPS(desc, false);
 
@@ -72,7 +72,7 @@ export async function loadHiPS2(baseUrl) {
   }
 
   const propsText = await resp.text();
-  const desc = new astroviewer.HiPSDescriptor(propsText, new URL(hipsUrl));
+  const desc = new astroviewer.HiPSDescriptor(propsText, hipsUrl);
 
   state.AstroAPI2.activateHiPS(desc, false);
 
