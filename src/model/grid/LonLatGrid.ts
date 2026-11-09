@@ -341,20 +341,75 @@ export class LatLonGrid extends AbstractSkyEntity {
 
     const centerLon = this.normalizeLon(center.phi > 180 ? center.phi - 360 : center.phi);
     const centerLat = 90 - center.theta;
-    const lonLine = this.normalizeLon(this.roundToStep(centerLon, this._lonStep));
-    const latLine = Math.max(-90 + this._latStep, Math.min(90 - this._latStep, this.roundToStep(centerLat, this._latStep)));
+    const canvasRect = (super.webgl.canvas as HTMLCanvasElement).getBoundingClientRect();
+    const maxLabelsPerAxis = input.cameraMoving ? 5 : 9;
+    const minimumLabelDistance = input.cameraMoving ? 90 : 70;
+    const lonSpan = Math.min(180, Math.max(this._fovDeg * 0.7, this._lonStep * 2));
+    const latSpan = Math.min(90, Math.max(this._fovDeg * 0.7, this._latStep * 2));
 
-    const lonLabelPoint = this.lonLatToCartesian(lonLine, Math.max(-80, Math.min(80, centerLat)));
-    const latLabelPoint = this.lonLatToCartesian(centerLon, latLine);
+    const lonLines = [...new Set(
+      this.buildLonRange(centerLon, lonSpan, this._lonStep)
+        .map((lon) => Number(this.normalizeLon(lon).toFixed(8))),
+    )].sort((a, b) => {
+      const distanceA = Math.abs(this.normalizeLon(a - centerLon));
+      const distanceB = Math.abs(this.normalizeLon(b - centerLon));
+      return distanceA - distanceB;
+    });
+    const latLines = this.buildLatRange(centerLat, latSpan, this._latStep)
+      .filter((lat) => lat > -90 && lat < 90)
+      .sort((a, b) => Math.abs(a - centerLat) - Math.abs(b - centerLat));
 
-    const lonScreen = this.projectPointToScreen(lonLabelPoint, mMatrix, pMatrix, vMatrix);
-    if (lonScreen) {
-      this.gridText.addLonLatDivSet(`${lonLine.toFixed(0)}° lon`, lonScreen.x, lonScreen.y, 'lon');
+    const lonLabelPositions: Array<{ x: number; y: number }> = [];
+    for (const lonLine of lonLines) {
+      if (lonLabelPositions.length >= maxLabelsPerAxis) break;
+
+      const point = this.lonLatToCartesian(
+        lonLine,
+        Math.max(-80, Math.min(80, centerLat)),
+      );
+      const screen = this.projectPointToScreen(point, mMatrix, pMatrix, vMatrix);
+      if (!screen ||
+          screen.x < canvasRect.left + 30 || screen.x > canvasRect.right - 80 ||
+          screen.y < canvasRect.top + 20 || screen.y > canvasRect.bottom - 35) {
+        continue;
+      }
+      if (lonLabelPositions.some((position) =>
+        Math.hypot(position.x - screen.x, position.y - screen.y) < minimumLabelDistance)) {
+        continue;
+      }
+
+      lonLabelPositions.push(screen);
+      this.gridText.addLonLatDivSet(
+        `${this.formatCoordinate(lonLine)}° lon`,
+        screen.x,
+        screen.y,
+        'lon',
+      );
     }
 
-    const latScreen = this.projectPointToScreen(latLabelPoint, mMatrix, pMatrix, vMatrix);
-    if (latScreen) {
-      this.gridText.addLonLatDivSet(`${latLine.toFixed(0)}° lat`, latScreen.x, latScreen.y, 'lat');
+    const latLabelPositions: Array<{ x: number; y: number }> = [];
+    for (const latLine of latLines) {
+      if (latLabelPositions.length >= maxLabelsPerAxis) break;
+
+      const point = this.lonLatToCartesian(centerLon, latLine);
+      const screen = this.projectPointToScreen(point, mMatrix, pMatrix, vMatrix);
+      if (!screen ||
+          screen.x < canvasRect.left + 30 || screen.x > canvasRect.right - 80 ||
+          screen.y < canvasRect.top + 20 || screen.y > canvasRect.bottom - 35) {
+        continue;
+      }
+      if (latLabelPositions.some((position) =>
+        Math.hypot(position.x - screen.x, position.y - screen.y) < minimumLabelDistance)) {
+        continue;
+      }
+
+      latLabelPositions.push(screen);
+      this.gridText.addLonLatDivSet(
+        `${this.formatCoordinate(latLine)}° lat`,
+        screen.x,
+        screen.y,
+        'lat',
+      );
     }
 
     this.gridText.resetDivSets();
@@ -373,7 +428,7 @@ export class LatLonGrid extends AbstractSkyEntity {
 
     const clipspace = vec4.fromValues(point[0], point[1], point[2], 1);
     vec4.transformMat4(clipspace, clipspace, mvpMatrix);
-    if (Math.abs(clipspace[3]) < 1e-6) {
+    if (clipspace[3] <= 1e-6) {
       return null;
     }
 
@@ -393,6 +448,12 @@ export class LatLonGrid extends AbstractSkyEntity {
   private roundToStep(value: number, step: number): number {
     if (step <= 0) return value;
     return Math.round(value / step) * step;
+  }
+
+  private formatCoordinate(value: number): string {
+    const decimals = this._lonStep < 1 || this._latStep < 1 ? 2 : 0;
+    const normalized = Math.abs(value) < 1e-8 ? 0 : value;
+    return normalized.toFixed(decimals);
   }
 
   private normalizeLon(lonDeg: number): number {
