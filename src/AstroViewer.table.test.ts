@@ -24,6 +24,31 @@ function createSubject() {
   return { subject, catalogue, footprint, createCatalogue, createFootprintSet, showCatalogue, showFootprintSet };
 }
 
+function createEarthSubject() {
+  const subject = Object.create(AstroViewer.prototype) as AstroViewer;
+  const pointSet = { addSources: jest.fn() };
+  const footprint = { addFootprints: jest.fn() };
+  const createTerraPointSet = jest.fn(() => pointSet);
+  const createTerraFootprintSet = jest.fn(() => footprint);
+  const showTerraPointSet = jest.fn();
+  const showTerraFootprintSet = jest.fn();
+  Object.assign(subject, {
+    createTerraPointSet,
+    createTerraFootprintSet,
+    showTerraPointSet,
+    showTerraFootprintSet,
+  });
+  return {
+    subject,
+    pointSet,
+    footprint,
+    createTerraPointSet,
+    createTerraFootprintSet,
+    showTerraPointSet,
+    showTerraFootprintSet,
+  };
+}
+
 describe("AstroTable public overlay APIs", () => {
   it("creates and displays a catalogue with existing metadata and rows", () => {
     const ctx = createSubject();
@@ -54,5 +79,46 @@ describe("AstroTable public overlay APIs", () => {
     const ctx = createSubject();
     ctx.subject.addFootprintSet(table, { name: "hidden", visible: false });
     expect(ctx.showFootprintSet).not.toHaveBeenCalled();
+  });
+});
+
+describe("AstroTable Earth overlay APIs", () => {
+  it("creates and displays an Earth point set", () => {
+    const ctx = createEarthSubject();
+
+    const result = ctx.subject.addTerraPointSet(table, {
+      name: "cities",
+      description: "Earth cities",
+      providerUrl: "https://example.org",
+    });
+
+    expect(result).toBe(ctx.pointSet);
+    expect(ctx.createTerraPointSet).toHaveBeenCalledWith(
+      "cities",
+      "Earth cities",
+      "https://example.org",
+      expect.any(MetadataManager),
+    );
+    expect(ctx.pointSet.addSources).toHaveBeenCalledWith(
+      table.rows,
+      table.columns,
+    );
+    expect(ctx.showTerraPointSet).toHaveBeenCalledWith(ctx.pointSet);
+  });
+
+  it("creates hidden Earth footprints without displaying them", () => {
+    const ctx = createEarthSubject();
+
+    const result = ctx.subject.addTerraFootprintSet(table, {
+      name: "regions",
+      visible: false,
+    });
+
+    expect(result).toBe(ctx.footprint);
+    expect(ctx.footprint.addFootprints).toHaveBeenCalledWith(
+      table.rows,
+      table.columns,
+    );
+    expect(ctx.showTerraFootprintSet).not.toHaveBeenCalled();
   });
 });

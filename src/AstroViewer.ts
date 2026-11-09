@@ -331,6 +331,22 @@ export class AstroViewer {
     );
   }
 
+  /** Create, populate and optionally display Earth points from normalized tabular data. */
+  addTerraPointSet(
+    table: AstroTable,
+    options: AstroTableLayerOptions,
+  ): TerraPointSetGL {
+    const pointSet = this.createTerraPointSet(
+      options.name,
+      options.description ?? "",
+      options.providerUrl ?? "",
+      new MetadataManager(table.columns),
+    );
+    pointSet.addSources(table.rows, table.columns);
+    if (options.visible !== false) this.showTerraPointSet(pointSet);
+    return pointSet;
+  }
+
   showTerraPointSet(pointSet: TerraPointSetGL) {
     this.astroSphere.showTerraPointSet(pointSet);
   }
@@ -357,6 +373,22 @@ export class AstroViewer {
       metadataManager,
       this.webgl,
     );
+  }
+
+  /** Create, populate and optionally display Earth footprints from normalized tabular data. */
+  addTerraFootprintSet(
+    table: AstroTable,
+    options: AstroTableLayerOptions,
+  ): TerraFootprintSetGL {
+    const footprintSet = this.createTerraFootprintSet(
+      options.name,
+      options.description ?? "",
+      options.providerUrl ?? "",
+      new MetadataManager(table.columns),
+    );
+    footprintSet.addFootprints(table.rows, table.columns);
+    if (options.visible !== false) this.showTerraFootprintSet(footprintSet);
+    return footprintSet;
   }
 
   showTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
