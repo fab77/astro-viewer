@@ -1331,10 +1331,49 @@ class AstroSphere {
     return [];
   }
 
-  /** Capture an astronomy session without copying scientific datasets or tiles. */
+  /** Capture the active session without copying scientific datasets or tiles. */
   captureRuntimeState(): ViewerRuntimeState {
+    if (this._activeDomain === "earth") {
+      return {
+        version: 1,
+        domain: "earth",
+        camera: {
+          view: this._camera.getViewState(),
+          fovDeg: this.fov.minFoV,
+          insideSphere: global.insideSphere,
+        },
+        baseMap: this._activeXYZ2
+          ? {
+              descriptor: this._activeXYZ2.descriptor,
+              opacity: this._activeXYZ2.opacity,
+            }
+          : null,
+        rasterOverlays: this._earthRasterOverlays.map((overlay) => ({
+          name: overlay.name,
+          sourceType: overlay.sourceType,
+          descriptor: overlay.map.descriptor,
+          opacity: overlay.opacity,
+          visible: overlay.visible,
+        })),
+        pointSets: this.earthPointSets.map((instance) => ({
+          instance,
+          visible: instance.isVisible,
+          color: instance.shapeColor,
+          selectedIndexes: [...instance.selectedIndexes],
+        })),
+        footprintSets: this.earthFootprintSets.map((instance) => ({
+          instance,
+          visible: instance.isVisible,
+          color: instance.shapeColor,
+          selectedIndexes: [...instance.selectedIndexes],
+        })),
+        grids: {
+          lonLatVisible: this.isLonLatGridVisible(),
+        },
+      };
+    }
     if (this._activeDomain !== "astronomy") {
-      throw new Error("Only astronomy viewer states are supported.");
+      throw new Error("Runtime states are not supported for the mesh domain.");
     }
     const hipsLayers = this._activeHiPSLayers.length
       ? this._activeHiPSLayers
@@ -1386,10 +1425,27 @@ class AstroSphere {
     };
   }
 
+  getLiveRuntimeResources(): {
+    catalogues: CatalogueGL[];
+    footprintSets: FootprintSetGL[];
+  } {
+    return {
+      catalogues: [...this.astronomyCatalogues, ...this.earthPointSets],
+      footprintSets: [
+        ...this.astronomyFootprintSets,
+        ...this.earthFootprintSets,
+      ],
+    };
+  }
+
   /** Apply a runtime snapshot. Tile downloads continue after this returns. */
   async restoreRuntimeState(state: ViewerRuntimeState): Promise<void> {
-    if (state.version !== 1 || state.domain !== "astronomy") {
+    if (state.version !== 1) {
       throw new Error("Unsupported viewer state.");
+    }
+    if (state.domain === "earth") {
+      await this.restoreEarthRuntimeState(state);
+      return;
     }
     if (this._activeDomain !== "astronomy") {
       throw new Error("Restore requires an astronomy viewer.");
@@ -1473,6 +1529,100 @@ class AstroSphere {
     }
     if (this._equatorialGrid.isVisible() !== state.grids.equatorialVisible) {
       this._equatorialGrid.toggleShowGrid();
+    }
+    this._cameraStatusChanged = true;
+    await Promise.all(pendingSceneUpdates);
+  }
+
+  private async restoreEarthRuntimeState(
+    state: Extract<ViewerRuntimeState, { domain: "earth" }>,
+  ): Promise<void> {
+    if (this._activeDomain !== "earth") {
+      throw new Error("Restore requires an Earth viewer.");
+    }
+
+    this.cancelFoVAnimation();
+    this.cancelFlyToAnimation();
+    this.inertiaX = 0;
+    this.inertiaY = 0;
+    this.zoomInertia = 0;
+
+    if (global.insideSphere !== state.camera.insideSphere) {
+      this.toggleInsideSphere();
+    }
+    this.setFoV(state.camera.fovDeg);
+    this._camera.restoreViewState(state.camera.view);
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    );
+    this.fov = this._healpixGrid.refreshFoV(
+      this._camera,
+      this._perspectiveMatrixManager.pMatrix,
+    );
+    this._camera.refreshFoV(this.fov.minFoV);
+    this.updateCentralPoint();
+
+    if (state.baseMap) {
+      this.activateXYZ2(state.baseMap.descriptor);
+      this.setEarthBaseMapOpacity(state.baseMap.opacity);
+    } else if (this._activeXYZ2) {
+      this._activeXYZ2.clearLonLatGridLabels();
+      this._activeXYZ2.dispose();
+      this._activeXYZ2 = null;
+      this._activeBaseLayer = null;
+    }
+
+    this.removeAllEarthRasterOverlays();
+    for (const saved of state.rasterOverlays) {
+      const map = new XYZMap(
+        1,
+        [0.0, 0.0, 0.0],
+        0,
+        0,
+        saved.descriptor,
+        this._webgl,
+        this.gridLabelContainers,
+      );
+      const restored = this.addEarthRasterOverlay(
+        saved.name,
+        saved.sourceType,
+        map,
+      );
+      this.setEarthRasterOverlayOpacity(restored.id, saved.opacity);
+      this.setEarthRasterOverlayVisible(restored.id, saved.visible);
+    }
+
+    for (const pointSet of this.earthPointSets) {
+      if (!state.pointSets.some((saved) => saved.instance === pointSet)) {
+        this.deleteTerraPointSet(pointSet);
+      }
+    }
+    const pendingSceneUpdates: Promise<unknown>[] = [];
+    for (const saved of state.pointSets) {
+      pendingSceneUpdates.push(this.showTerraPointSet(saved.instance));
+      saved.instance.setIsVisible(saved.visible);
+      saved.instance.changeColor(saved.color);
+      saved.instance.restoreSelection(saved.selectedIndexes);
+    }
+    for (const footprint of this.earthFootprintSets) {
+      if (!state.footprintSets.some((saved) => saved.instance === footprint)) {
+        this.deleteTerraFootprintSet(footprint);
+      }
+    }
+    for (const saved of state.footprintSets) {
+      pendingSceneUpdates.push(this.showTerraFootprintSet(saved.instance));
+      saved.instance.setIsVisible(saved.visible);
+      saved.instance.changeColor(saved.color);
+      saved.instance.restoreSelection(saved.selectedIndexes);
+    }
+
+    if (this._activeXYZ2 &&
+        this.isLonLatGridVisible() !== state.grids.lonLatVisible) {
+      this.toggleLonLatGrid();
     }
     this._cameraStatusChanged = true;
     await Promise.all(pendingSceneUpdates);

@@ -767,3 +767,121 @@ describe("AstroSphere awaitable navigation", () => {
     );
   });
 });
+
+describe("AstroSphere Earth runtime state", () => {
+  it("captures the Earth map stack, grid and scientific overlays", () => {
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+    const baseDescriptor = { name: "base" };
+    const overlayDescriptor = { name: "overlay" };
+    const pointSet = {
+      isVisible: true,
+      shapeColor: "#112233",
+      selectedIndexes: [1],
+    };
+    const footprintSet = {
+      isVisible: false,
+      shapeColor: "#445566",
+      selectedIndexes: [2],
+    };
+    Object.assign(subject, {
+      _activeDomain: "earth",
+      _camera: { getViewState: jest.fn(() => ({ position: [0, 0, 2] })) },
+      fov: { minFoV: 12 },
+      _activeXYZ2: { descriptor: baseDescriptor, opacity: 0.8 },
+      _earthRasterOverlays: [{
+        id: "earth-raster-1",
+        name: "overlay",
+        sourceType: "xyz",
+        opacity: 0.4,
+        visible: false,
+        map: { descriptor: overlayDescriptor },
+      }],
+      earthPointSets: [pointSet],
+      earthFootprintSets: [footprintSet],
+      isLonLatGridVisible: jest.fn(() => true),
+    });
+
+    const state = subject.captureRuntimeState();
+
+    expect(state).toMatchObject({
+      domain: "earth",
+      camera: { fovDeg: 12 },
+      baseMap: { descriptor: baseDescriptor, opacity: 0.8 },
+      rasterOverlays: [{
+        name: "overlay",
+        sourceType: "xyz",
+        descriptor: overlayDescriptor,
+        opacity: 0.4,
+        visible: false,
+      }],
+      grids: { lonLatVisible: true },
+    });
+    if (state.domain !== "earth") throw new Error("Expected Earth state");
+    expect(state.pointSets[0].instance).toBe(pointSet);
+    expect(state.footprintSets[0].instance).toBe(footprintSet);
+  });
+
+  it("restores Earth camera, base map opacity and grid state", async () => {
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+    const descriptor = { name: "saved base" };
+    const camera = {
+      restoreViewState: jest.fn(),
+      refreshFoV: jest.fn(),
+    };
+    const activateXYZ2 = jest.fn();
+    const setEarthBaseMapOpacity = jest.fn();
+    const toggleLonLatGrid = jest.fn();
+    Object.assign(subject, {
+      _activeDomain: "earth",
+      _camera: camera,
+      _activeXYZ2: {},
+      _activeBaseLayer: "xyz",
+      _earthRasterOverlays: [],
+      earthPointSets: [],
+      earthFootprintSets: [],
+      inertiaX: 0,
+      inertiaY: 0,
+      zoomInertia: 0,
+      canvas: {},
+      _perspectiveMatrixManager: {
+        pMatrix: new Float32Array(16),
+        computePerspectiveMatrix: jest.fn(),
+      },
+      _healpixGrid: {
+        refreshFoV: jest.fn(() => ({ minFoV: 9 })),
+      },
+      cancelFoVAnimation: jest.fn(),
+      cancelFlyToAnimation: jest.fn(),
+      setFoV: jest.fn(),
+      updateCentralPoint: jest.fn(),
+      activateXYZ2,
+      setEarthBaseMapOpacity,
+      removeAllEarthRasterOverlays: jest.fn(),
+      isLonLatGridVisible: jest.fn(() => false),
+      toggleLonLatGrid,
+    });
+    const state = {
+      version: 1,
+      domain: "earth",
+      camera: {
+        view: { position: [0, 0, 2] },
+        fovDeg: 9,
+        insideSphere: false,
+      },
+      baseMap: { descriptor, opacity: 0.7 },
+      rasterOverlays: [],
+      pointSets: [],
+      footprintSets: [],
+      grids: { lonLatVisible: true },
+    } as any;
+
+    await subject.restoreRuntimeState(state);
+
+    expect(activateXYZ2).toHaveBeenCalledWith(descriptor);
+    expect(setEarthBaseMapOpacity).toHaveBeenCalledWith(0.7);
+    expect(camera.restoreViewState).toHaveBeenCalledWith(state.camera.view);
+    expect(toggleLonLatGrid).toHaveBeenCalledTimes(1);
+  });
+});

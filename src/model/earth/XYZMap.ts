@@ -77,6 +77,10 @@ export class XYZMap extends AbstractSkyEntity {
     return this._opacity
   }
 
+  get descriptor(): XYZMapDescriptor {
+    return this._descriptor
+  }
+
   changeColorMap(colorMap: ColorMap): void {
     this._colorMap = colorMap
     switch (colorMap.name) {
