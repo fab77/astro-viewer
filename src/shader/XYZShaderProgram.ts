@@ -113,6 +113,11 @@ export class XYZShaderProgram {
     gl.uniform1i(this.locations.colorMapIdx, colorMapIdx)
     gl.uniform1f(this.locations.opacity, this._opacity)
 
+    if (this._colorMapBuffer && this._colorMapBlockIndex !== null) {
+      gl.uniformBlockBinding(program, this._colorMapBlockIndex, 0)
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._colorMapBuffer)
+    }
+
     if (colorMapIdx >= 2) {
       this.uploadColorMap(colorMapIdx)
     }
