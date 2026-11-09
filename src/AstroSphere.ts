@@ -177,6 +177,7 @@ class AstroSphere {
   private lockedNorthSouthDecDeg: number | null = null;
   private keepCameraNorthUp = true;
   private gridLabelContainers?: GridLabelContainers;
+  private flyToAnimationResolve: (() => void) | null = null;
   private fovAnimationResolve: (() => void) | null = null;
 
   constructor(
@@ -555,7 +556,7 @@ class AstroSphere {
     const handleMouseDown = (event: PointerEvent) => {
       canvas.setPointerCapture(event.pointerId);
       this.mouseDown = true;
-      this._camera.cancelFlyTo();
+      this.cancelFlyToAnimation();
       this.cancelFoVAnimation();
 
       const rect = canvas.getBoundingClientRect();
@@ -746,7 +747,7 @@ class AstroSphere {
     const handleMouseWheel = (event: WheelEvent) => {
       const currentFov = this._healpixGrid.getMinFoV();
       const zoomStep = this.computeZoomStep(currentFov, event.deltaY);
-      this._camera.cancelFlyTo();
+      this.cancelFlyToAnimation();
       this.cancelFoVAnimation();
 
       // Apply wheel zoom immediately and discard any queued inertia so reversing
@@ -1385,7 +1386,7 @@ class AstroSphere {
 
     // Stop navigation before restoring the saved geometry.
     this.cancelFoVAnimation();
-    this._camera.cancelFlyTo();
+    this.cancelFlyToAnimation();
     this.inertiaX = 0;
     this.inertiaY = 0;
     this.zoomInertia = 0;
@@ -1568,11 +1569,39 @@ class AstroSphere {
   // End Footprint section
 
   goTo(raDeg: number, decDeg: number): void {
+    this.cancelFlyToAnimation();
     this._camera.goTo(raDeg, decDeg);
   }
 
-  flyTo(raDeg: number, decDeg: number, durationMs = 1200): void {
+  async flyTo(
+    raDeg: number,
+    decDeg: number,
+    durationMs = 1200,
+  ): Promise<void> {
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      throw new RangeError(
+        `Camera animation duration must be >= 0 ms. Received ${durationMs}.`,
+      );
+    }
+
+    this.cancelFlyToAnimation();
+    this.inertiaX = 0;
+    this.inertiaY = 0;
+
+    if (durationMs === 0) {
+      this._camera.goTo(raDeg, decDeg);
+      this.lastCameraMotionAt = performance.now();
+      this._cameraStatusChanged = true;
+      return;
+    }
+
     this._camera.flyTo(raDeg, decDeg, durationMs);
+    this.lastCameraMotionAt = performance.now();
+    this._cameraStatusChanged = true;
+
+    return new Promise<void>((resolve) => {
+      this.flyToAnimationResolve = resolve;
+    });
   }
 
   getActiveCoordinateMode(): "equatorial" | "galactic" | "lonlat" {
@@ -1781,6 +1810,17 @@ class AstroSphere {
     resolve?.();
   }
 
+  private finishFlyToAnimation(): void {
+    const resolve = this.flyToAnimationResolve;
+    this.flyToAnimationResolve = null;
+    resolve?.();
+  }
+
+  private cancelFlyToAnimation(): void {
+    this._camera.cancelFlyTo();
+    this.finishFlyToAnimation();
+  }
+
   private cancelFoVAnimation(): void {
     this._camera.cancelRadialAnimation();
     this.finishFoVAnimation();
@@ -1790,7 +1830,7 @@ class AstroSphere {
   setFoV(deg: number): void {
     this.validateFoV(deg);
     this.cancelFoVAnimation();
-    this._camera.cancelFlyTo();
+    this.cancelFlyToAnimation();
     this.zoomInertia = 0;
 
     const targetDistance = this.findRadialDistanceForFoV(deg);
@@ -2125,6 +2165,8 @@ class AstroSphere {
 
     const now = performance.now();
     const cameraFlying = this._camera.updateFlyTo(now);
+    const cameraAnimationFinished =
+      cameraFlying && !this._camera.isFlyToActive();
 
     if (cameraFlying) {
       this.inertiaX = 0;
@@ -2232,6 +2274,9 @@ class AstroSphere {
 
     if (fovAnimationFinished) {
       this.finishFoVAnimation();
+    }
+    if (cameraAnimationFinished) {
+      this.finishFlyToAnimation();
     }
 
     // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged

@@ -746,8 +746,8 @@ export class AstroViewer {
     this.astroSphere.goTo(raDeg, decDeg);
   }
 
-  flyTo(raDeg: number, decDeg: number, durationMs = 1200): void {
-    this.astroSphere.flyTo(raDeg, decDeg, durationMs);
+  flyTo(raDeg: number, decDeg: number, durationMs = 1200): Promise<void> {
+    return this.astroSphere.flyTo(raDeg, decDeg, durationMs);
   }
 
   getActiveCoordinateMode(): "equatorial" | "galactic" | "lonlat" {

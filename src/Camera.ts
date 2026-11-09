@@ -280,6 +280,10 @@ class Camera implements CameraLike {
     this.flyToAnimation = null;
   }
 
+  isFlyToActive(): boolean {
+    return this.flyToAnimation !== null;
+  }
+
   flyToRadialDistance(distance: number, durationMs = 1200): void {
     this.validateRadialDistance(distance);
 

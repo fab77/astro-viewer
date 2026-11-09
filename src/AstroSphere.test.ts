@@ -692,3 +692,78 @@ describe("AstroSphere domain ownership", () => {
     expect(subject.getHoveredFootprints()).toEqual([{ domain: "earth" }]);
   });
 });
+
+describe("AstroSphere awaitable navigation", () => {
+  function createNavigationSubject() {
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+    const camera = {
+      cancelFlyTo: jest.fn(),
+      flyTo: jest.fn(),
+      goTo: jest.fn(),
+    };
+
+    Object.assign(subject, {
+      _camera: camera,
+      inertiaX: 1,
+      inertiaY: 1,
+      flyToAnimationResolve: null,
+      lastCameraMotionAt: 0,
+      _cameraStatusChanged: false,
+    });
+
+    return { subject, camera };
+  }
+
+  it("resolves when the directional animation finishes", async () => {
+    const { subject, camera } = createNavigationSubject();
+    let resolved = false;
+
+    const flight = subject.flyTo(12, 34, 500).then(() => {
+      resolved = true;
+    });
+
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    expect(camera.flyTo).toHaveBeenCalledWith(12, 34, 500);
+    expect((subject as any).inertiaX).toBe(0);
+    expect((subject as any).inertiaY).toBe(0);
+
+    (subject as any).finishFlyToAnimation();
+    await flight;
+    expect(resolved).toBe(true);
+  });
+
+  it("settles the previous flight when a new one replaces it", async () => {
+    const { subject } = createNavigationSubject();
+    let firstResolved = false;
+
+    const firstFlight = subject.flyTo(10, 20, 500).then(() => {
+      firstResolved = true;
+    });
+    const secondFlight = subject.flyTo(30, 40, 500);
+
+    await firstFlight;
+    expect(firstResolved).toBe(true);
+
+    (subject as any).finishFlyToAnimation();
+    await secondFlight;
+  });
+
+  it("applies zero-duration navigation immediately", async () => {
+    const { subject, camera } = createNavigationSubject();
+
+    await subject.flyTo(15, -25, 0);
+
+    expect(camera.goTo).toHaveBeenCalledWith(15, -25);
+    expect(camera.flyTo).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid animation durations", async () => {
+    const { subject } = createNavigationSubject();
+
+    await expect(subject.flyTo(0, 0, -1)).rejects.toThrow(
+      "Camera animation duration must be >= 0 ms.",
+    );
+  });
+});
