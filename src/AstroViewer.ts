@@ -100,6 +100,7 @@ export class AstroViewer {
   private viewfinderColor = "rgba(75,148,226,0.68)";
   private options: AstroViewerOptions = {};
   private hipsFades = new Map<HiPS, { cancel: () => void }>();
+  private earthFades = new Map<string, { cancel: () => void }>();
 
   private cancelHiPSFade(hips: HiPS): void {
     this.hipsFades.get(hips)?.cancel();
@@ -107,6 +108,53 @@ export class AstroViewer {
 
   private cancelAllHiPSFades(): void {
     for (const fade of [...this.hipsFades.values()]) fade.cancel();
+  }
+
+  private cancelEarthFade(key: string): void {
+    this.earthFades.get(key)?.cancel();
+  }
+
+  private cancelAllEarthFades(): void {
+    for (const fade of [...this.earthFades.values()]) fade.cancel();
+  }
+
+  private fadeEarthOpacity(
+    key: string,
+    initialOpacity: number,
+    targetOpacity: number,
+    durationMs: number,
+    applyOpacity: (opacity: number) => void,
+  ): Promise<void> {
+    this.cancelEarthFade(key);
+    if (durationMs === 0 || initialOpacity === targetOpacity) {
+      applyOpacity(targetOpacity);
+      return Promise.resolve();
+    }
+
+    return new Promise<void>((resolve) => {
+      let frameId: number | undefined;
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        if (frameId !== undefined) cancelAnimationFrame(frameId);
+        if (this.earthFades.get(key) === fade) this.earthFades.delete(key);
+        resolve();
+      };
+      const fade = { cancel: finish };
+      this.earthFades.set(key, fade);
+      let start: number | undefined;
+      const tick = (now: number) => {
+        if (finished) return;
+        if (start === undefined) start = now;
+        const t = Math.min(1, (now - start) / durationMs);
+        const eased = t * t * (3 - 2 * t);
+        applyOpacity(initialOpacity + (targetOpacity - initialOpacity) * eased);
+        if (t === 1) finish();
+        else frameId = requestAnimationFrame(tick);
+      };
+      frameId = requestAnimationFrame(tick);
+    });
   }
 
   // API
@@ -129,7 +177,10 @@ export class AstroViewer {
 
   restoreState(name: string): Promise<void> {
     // A restored HiPS stack contains new instances; old animations must stop.
-    if (this.hasState(name)) this.cancelAllHiPSFades();
+    if (this.hasState(name)) {
+      this.cancelAllHiPSFades();
+      this.cancelAllEarthFades();
+    }
     return this.stateManager.restoreState(name);
   }
 
@@ -280,6 +331,22 @@ export class AstroViewer {
     );
   }
 
+  /** Create, populate and optionally display Earth points from normalized tabular data. */
+  addTerraPointSet(
+    table: AstroTable,
+    options: AstroTableLayerOptions,
+  ): TerraPointSetGL {
+    const pointSet = this.createTerraPointSet(
+      options.name,
+      options.description ?? "",
+      options.providerUrl ?? "",
+      new MetadataManager(table.columns),
+    );
+    pointSet.addSources(table.rows, table.columns);
+    if (options.visible !== false) this.showTerraPointSet(pointSet);
+    return pointSet;
+  }
+
   showTerraPointSet(pointSet: TerraPointSetGL) {
     this.astroSphere.showTerraPointSet(pointSet);
   }
@@ -290,6 +357,7 @@ export class AstroViewer {
 
   deleteTerraPointSet(pointSet: TerraPointSetGL) {
     this.astroSphere.deleteTerraPointSet(pointSet);
+    this.stateManager.onSceneResourcesChanged();
   }
 
   createTerraFootprintSet(
@@ -307,6 +375,22 @@ export class AstroViewer {
     );
   }
 
+  /** Create, populate and optionally display Earth footprints from normalized tabular data. */
+  addTerraFootprintSet(
+    table: AstroTable,
+    options: AstroTableLayerOptions,
+  ): TerraFootprintSetGL {
+    const footprintSet = this.createTerraFootprintSet(
+      options.name,
+      options.description ?? "",
+      options.providerUrl ?? "",
+      new MetadataManager(table.columns),
+    );
+    footprintSet.addFootprints(table.rows, table.columns);
+    if (options.visible !== false) this.showTerraFootprintSet(footprintSet);
+    return footprintSet;
+  }
+
   showTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
     this.astroSphere.showTerraFootprintSet(footprintSet);
   }
@@ -317,6 +401,7 @@ export class AstroViewer {
 
   deleteTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
     this.astroSphere.deleteTerraFootprintSet(footprintSet);
+    this.stateManager.onSceneResourcesChanged();
   }
 
   createTerraPolylineSet(
@@ -418,6 +503,7 @@ export class AstroViewer {
   }
 
   activateXYZ2(config: XYZLayerConfig & { name?: string }): void {
+    this.cancelEarthFade("base");
     const descriptor = new XYZMapDescriptor(
       config.name ?? "XYZ Earth2 Layer",
       config.urlTemplate,
@@ -432,6 +518,7 @@ export class AstroViewer {
   }
 
   activateWMTS(config: WMTSLayerConfig): void {
+    this.cancelEarthFade("base");
     this.astroSphere.activateWMTS(config);
   }
 
@@ -458,7 +545,113 @@ export class AstroViewer {
   }
 
   setEarthRasterOverlayOpacity(id: string, opacity: number): void {
+    this.cancelEarthFade(`overlay:${id}`);
     this.astroSphere.setEarthRasterOverlayOpacity(id, opacity);
+  }
+
+  setEarthBaseMapOpacity(opacity: number): void {
+    this.cancelEarthFade("base");
+    this.astroSphere.setEarthBaseMapOpacity(opacity);
+  }
+
+  getEarthBaseMapOpacity(): number | null {
+    return this.astroSphere.getEarthBaseMapOpacity();
+  }
+
+  fadeEarthBaseMapOpacity(
+    targetOpacity: number,
+    durationMs = 1400,
+  ): Promise<void> {
+    if (!Number.isFinite(targetOpacity) || targetOpacity < 0 || targetOpacity > 1) {
+      return Promise.reject(new RangeError("Earth opacity must be between 0 and 1."));
+    }
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      return Promise.reject(new RangeError("Fade duration must be non-negative."));
+    }
+    const initialOpacity = this.astroSphere.getEarthBaseMapOpacity();
+    if (initialOpacity === null) {
+      return Promise.reject(new Error("No active Earth base map."));
+    }
+    return this.fadeEarthOpacity(
+      "base",
+      initialOpacity,
+      targetOpacity,
+      durationMs,
+      (opacity) => this.astroSphere.setEarthBaseMapOpacity(opacity),
+    );
+  }
+
+  fadeEarthRasterOverlayOpacity(
+    id: string,
+    targetOpacity: number,
+    durationMs = 1400,
+  ): Promise<void> {
+    if (!Number.isFinite(targetOpacity) || targetOpacity < 0 || targetOpacity > 1) {
+      return Promise.reject(new RangeError("Earth opacity must be between 0 and 1."));
+    }
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      return Promise.reject(new RangeError("Fade duration must be non-negative."));
+    }
+    const overlay = this.getEarthRasterOverlays().find((entry) => entry.id === id);
+    if (!overlay) {
+      return Promise.reject(new Error(`Unknown Earth raster overlay: ${id}`));
+    }
+    return this.fadeEarthOpacity(
+      `overlay:${id}`,
+      overlay.opacity,
+      targetOpacity,
+      durationMs,
+      (opacity) => this.astroSphere.setEarthRasterOverlayOpacity(id, opacity),
+    );
+  }
+
+  transitionToXYZ(
+    config: XYZLayerConfig & { name?: string },
+    options: { durationMs?: number; signal?: AbortSignal } = {},
+  ): Promise<void> {
+    return this.transitionEarthBaseMap(() => this.activateXYZ2(config), options);
+  }
+
+  transitionToWMTS(
+    config: WMTSLayerConfig,
+    options: { durationMs?: number; signal?: AbortSignal } = {},
+  ): Promise<void> {
+    return this.transitionEarthBaseMap(() => this.activateWMTS(config), options);
+  }
+
+  private async transitionEarthBaseMap(
+    activate: () => void,
+    options: { durationMs?: number; signal?: AbortSignal },
+  ): Promise<void> {
+    const { durationMs = 1400, signal } = options;
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      throw new RangeError("Transition duration must be non-negative.");
+    }
+    if (signal?.aborted) {
+      throw new DOMException("Earth transition aborted", "AbortError");
+    }
+
+    const cancel = () => this.cancelEarthFade("base");
+    signal?.addEventListener("abort", cancel, { once: true });
+    try {
+      const hasBaseMap = this.astroSphere.getEarthBaseMapOpacity() !== null;
+      const fadeOutDuration = hasBaseMap ? durationMs / 2 : 0;
+      if (hasBaseMap) {
+        await this.fadeEarthBaseMapOpacity(0, fadeOutDuration);
+      }
+      if (signal?.aborted) {
+        throw new DOMException("Earth transition aborted", "AbortError");
+      }
+
+      activate();
+      this.setEarthBaseMapOpacity(0);
+      await this.fadeEarthBaseMapOpacity(1, durationMs - fadeOutDuration);
+      if (signal?.aborted) {
+        throw new DOMException("Earth transition aborted", "AbortError");
+      }
+    } finally {
+      signal?.removeEventListener("abort", cancel);
+    }
   }
 
   setEarthRasterOverlayVisible(id: string, visible: boolean): void {
@@ -466,10 +659,14 @@ export class AstroViewer {
   }
 
   removeEarthRasterOverlay(id: string): void {
+    this.cancelEarthFade(`overlay:${id}`);
     this.astroSphere.removeEarthRasterOverlay(id);
   }
 
   removeAllEarthRasterOverlays(): void {
+    for (const key of [...this.earthFades.keys()]) {
+      if (key.startsWith("overlay:")) this.cancelEarthFade(key);
+    }
     this.astroSphere.removeAllEarthRasterOverlays();
   }
 
@@ -746,8 +943,19 @@ export class AstroViewer {
     this.astroSphere.goTo(raDeg, decDeg);
   }
 
-  flyTo(raDeg: number, decDeg: number, durationMs = 1200): void {
-    this.astroSphere.flyTo(raDeg, decDeg, durationMs);
+  flyTo(raDeg: number, decDeg: number, durationMs = 1200): Promise<void> {
+    return this.astroSphere.flyTo(raDeg, decDeg, durationMs);
+  }
+
+  /** Rotate continuously around Earth's longitude while preserving latitude. */
+  rotateEarthLongitude(
+    deltaLongitudeDeg: number,
+    durationMs = 12000,
+  ): Promise<void> {
+    return this.astroSphere.rotateEarthLongitude(
+      deltaLongitudeDeg,
+      durationMs,
+    );
   }
 
   getActiveCoordinateMode(): "equatorial" | "galactic" | "lonlat" {

@@ -37,6 +37,7 @@ export class XYZMap extends AbstractSkyEntity {
   private _colorMapIdx = 0
   private _colorMap = ColorMaps['native']
   private _opacity = 1
+  private _disposed = false
 
 
   constructor(
@@ -70,6 +71,14 @@ export class XYZMap extends AbstractSkyEntity {
   setOpacity(opacity: number): void {
     this._opacity = Math.min(1, Math.max(0, opacity))
     this._xyzShaderProgram.setOpacity(this._opacity)
+  }
+
+  get opacity(): number {
+    return this._opacity
+  }
+
+  get descriptor(): XYZMapDescriptor {
+    return this._descriptor
   }
 
   changeColorMap(colorMap: ColorMap): void {
@@ -130,7 +139,17 @@ export class XYZMap extends AbstractSkyEntity {
   }
 
   toggleLonLatGrid(): boolean {
-    return this._latLonGrid.toggleShowGrid()
+    const visible = this._latLonGrid.toggleShowGrid()
+    if (!visible) this._latLonGrid.clearLabels()
+    return visible
+  }
+
+  dispose(): void {
+    if (this._disposed) return
+    this._disposed = true
+    this._tileBuffer.dispose()
+    this._latLonGrid.dispose()
+    this._xyzShaderProgram.dispose()
   }
 
   getFoV(): SphereFoV {
@@ -145,7 +164,12 @@ export class XYZMap extends AbstractSkyEntity {
 
 
 
-  draw(input: SkyEntityDrawInput, asOverlay = false): void {
+  draw(
+    input: SkyEntityDrawInput,
+    asOverlay = false,
+    drawLonLatGrid = true,
+  ): void {
+    if (this._disposed) return
     const vMatrix = input.camera.getCameraMatrix() as Float32Array
     if (!vMatrix) return
 
@@ -221,10 +245,15 @@ export class XYZMap extends AbstractSkyEntity {
       )
       if (blendWasEnabled) this._webgl.enable(this._webgl.BLEND)
       else this._webgl.disable(this._webgl.BLEND)
-    } else {
+    } else if (drawLonLatGrid) {
       this._latLonGrid.draw(input)
     }
 
+  }
+
+  drawLonLatGrid(input: SkyEntityDrawInput): void {
+    if (this._disposed) return
+    this._latLonGrid.draw(input)
   }
 
   private createTile(coord: XYZTileCoord): XYZAnchestorTile {

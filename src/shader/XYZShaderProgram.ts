@@ -113,6 +113,11 @@ export class XYZShaderProgram {
     gl.uniform1i(this.locations.colorMapIdx, colorMapIdx)
     gl.uniform1f(this.locations.opacity, this._opacity)
 
+    if (this._colorMapBuffer && this._colorMapBlockIndex !== null) {
+      gl.uniformBlockBinding(program, this._colorMapBlockIndex, 0)
+      gl.bindBufferBase(gl.UNIFORM_BUFFER, 0, this._colorMapBuffer)
+    }
+
     if (colorMapIdx >= 2) {
       this.uploadColorMap(colorMapIdx)
     }
@@ -187,7 +192,21 @@ export class XYZShaderProgram {
       throw new Error(gl.getProgramInfoLog(this._shaderProgram as WebGLProgram) || 'Could not initialise XYZ shaders')
     }
 
+    gl.deleteShader(vertexShader)
+    gl.deleteShader(fragmentShader)
     this.initColorMapBuffer()
+  }
+
+  dispose(): void {
+    if (this._colorMapBuffer) {
+      this._webgl.deleteBuffer(this._colorMapBuffer)
+      this._colorMapBuffer = null
+    }
+    if (this._shaderProgram) {
+      this._webgl.deleteProgram(this._shaderProgram)
+      this._shaderProgram = undefined
+    }
+    this._colorMapBlockIndex = null
   }
 
   private compileShader(type: number, source: string): WebGLShader {

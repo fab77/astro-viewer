@@ -169,6 +169,12 @@ export class XYZTile implements XYZBufferedTile {
   dispose(): void {
     const gl = this._webgl;
 
+    if (this._image) {
+      this._image.onload = null;
+      this._image.onerror = null;
+      this._image.src = '';
+    }
+
     if (this._texture) {
       gl.deleteTexture(this._texture);
       this._texture = null;

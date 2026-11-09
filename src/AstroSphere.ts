@@ -177,6 +177,7 @@ class AstroSphere {
   private lockedNorthSouthDecDeg: number | null = null;
   private keepCameraNorthUp = true;
   private gridLabelContainers?: GridLabelContainers;
+  private flyToAnimationResolve: (() => void) | null = null;
   private fovAnimationResolve: (() => void) | null = null;
 
   constructor(
@@ -555,7 +556,7 @@ class AstroSphere {
     const handleMouseDown = (event: PointerEvent) => {
       canvas.setPointerCapture(event.pointerId);
       this.mouseDown = true;
-      this._camera.cancelFlyTo();
+      this.cancelFlyToAnimation();
       this.cancelFoVAnimation();
 
       const rect = canvas.getBoundingClientRect();
@@ -746,7 +747,7 @@ class AstroSphere {
     const handleMouseWheel = (event: WheelEvent) => {
       const currentFov = this._healpixGrid.getMinFoV();
       const zoomStep = this.computeZoomStep(currentFov, event.deltaY);
-      this._camera.cancelFlyTo();
+      this.cancelFlyToAnimation();
       this.cancelFoVAnimation();
 
       // Apply wheel zoom immediately and discard any queued inertia so reversing
@@ -1079,11 +1080,10 @@ class AstroSphere {
         config.urlResolver,
       ),
     );
-    this._activeBaseLayer = "xyz";
   }
+
   activateXYZ2(config: XYZMapDescriptor) {
-    this._activeDomain = "earth";
-    this._activeXYZ2 = new XYZMap(
+    const map = new XYZMap(
       1,
       [0.0, 0.0, 0.0],
       0,
@@ -1092,7 +1092,7 @@ class AstroSphere {
       this._webgl,
       this.gridLabelContainers,
     );
-    this._activeBaseLayer = "xyz";
+    this.replaceEarthBaseMap(map);
   }
 
   activateMeshHiPS(descriptor: MeshHiPSDescriptor) {
@@ -1118,10 +1118,9 @@ class AstroSphere {
   }
 
   activateWMTS(config: WMTSLayerConfig) {
-    this._activeDomain = "earth";
     const adapter = new WMTSAdapter(config);
     const xyzConfig = adapter.toXYZLayerConfig();
-    this._activeXYZ2 = new XYZMap(
+    const map = new XYZMap(
       1,
       [0.0, 0.0, 0.0],
       0,
@@ -1139,6 +1138,22 @@ class AstroSphere {
       this._webgl,
       this.gridLabelContainers,
     );
+    this.replaceEarthBaseMap(map);
+  }
+
+  private replaceEarthBaseMap(map: XYZMap): void {
+    const previousMap = this._activeXYZ2;
+    const gridWasVisible = previousMap?.isLonLatGridVisible() ?? false;
+
+    this.setActiveDomain("earth");
+    previousMap?.clearLonLatGridLabels();
+
+    if (map.isLonLatGridVisible() !== gridWasVisible) {
+      map.toggleLonLatGrid();
+    }
+
+    previousMap?.dispose();
+    this._activeXYZ2 = map;
     this._activeBaseLayer = "xyz";
   }
 
@@ -1196,18 +1211,34 @@ class AstroSphere {
     overlay.map.setOpacity(overlay.opacity);
   }
 
+  getEarthBaseMapOpacity(): number | null {
+    return this._activeXYZ2?.opacity ?? null;
+  }
+
+  setEarthBaseMapOpacity(opacity: number): void {
+    if (!this._activeXYZ2) {
+      throw new Error("No active Earth base map.");
+    }
+    this._activeXYZ2.setOpacity(opacity);
+  }
+
   setEarthRasterOverlayVisible(id: string, visible: boolean): void {
     const overlay = this._earthRasterOverlays.find((entry) => entry.id === id);
     if (overlay) overlay.visible = visible;
   }
 
   removeEarthRasterOverlay(id: string): void {
-    this._earthRasterOverlays = this._earthRasterOverlays.filter(
-      (entry) => entry.id !== id,
-    );
+    const index = this._earthRasterOverlays.findIndex((entry) => entry.id === id);
+    if (index === -1) return;
+
+    const [overlay] = this._earthRasterOverlays.splice(index, 1);
+    overlay.map.dispose();
   }
 
   removeAllEarthRasterOverlays(): void {
+    for (const overlay of this._earthRasterOverlays) {
+      overlay.map.dispose();
+    }
     this._earthRasterOverlays = [];
   }
 
@@ -1248,6 +1279,7 @@ class AstroSphere {
     }
 
     this._activeDomain = domain;
+    this.applyDomainBackground(domain);
 
     if (domain === "astronomy") {
       this._activeBaseLayer = this._activeHiPS ? "hips" : null;
@@ -1260,6 +1292,15 @@ class AstroSphere {
     // A hover from the previous vertical must not leak into the new one.
     this.lastHoveredSource = null;
     this.lastHoveredCatalogue = null;
+  }
+
+  private applyDomainBackground(domain: ViewerDomain): void {
+    if (domain === "earth") {
+      this._webgl.clearColor(0, 0, 0, 1);
+      return;
+    }
+
+    this._webgl.clearColor(0, 16 / 255, 50 / 255, 0.7);
   }
 
   private clearGridLabelsForDomain(domain: ViewerDomain): void {
@@ -1290,10 +1331,49 @@ class AstroSphere {
     return [];
   }
 
-  /** Capture an astronomy session without copying scientific datasets or tiles. */
+  /** Capture the active session without copying scientific datasets or tiles. */
   captureRuntimeState(): ViewerRuntimeState {
+    if (this._activeDomain === "earth") {
+      return {
+        version: 1,
+        domain: "earth",
+        camera: {
+          view: this._camera.getViewState(),
+          fovDeg: this.fov.minFoV,
+          insideSphere: global.insideSphere,
+        },
+        baseMap: this._activeXYZ2
+          ? {
+              descriptor: this._activeXYZ2.descriptor,
+              opacity: this._activeXYZ2.opacity,
+            }
+          : null,
+        rasterOverlays: this._earthRasterOverlays.map((overlay) => ({
+          name: overlay.name,
+          sourceType: overlay.sourceType,
+          descriptor: overlay.map.descriptor,
+          opacity: overlay.opacity,
+          visible: overlay.visible,
+        })),
+        pointSets: this.earthPointSets.map((instance) => ({
+          instance,
+          visible: instance.isVisible,
+          color: instance.shapeColor,
+          selectedIndexes: [...instance.selectedIndexes],
+        })),
+        footprintSets: this.earthFootprintSets.map((instance) => ({
+          instance,
+          visible: instance.isVisible,
+          color: instance.shapeColor,
+          selectedIndexes: [...instance.selectedIndexes],
+        })),
+        grids: {
+          lonLatVisible: this.isLonLatGridVisible(),
+        },
+      };
+    }
     if (this._activeDomain !== "astronomy") {
-      throw new Error("Only astronomy viewer states are supported.");
+      throw new Error("Runtime states are not supported for the mesh domain.");
     }
     const hipsLayers = this._activeHiPSLayers.length
       ? this._activeHiPSLayers
@@ -1345,10 +1425,27 @@ class AstroSphere {
     };
   }
 
+  getLiveRuntimeResources(): {
+    catalogues: CatalogueGL[];
+    footprintSets: FootprintSetGL[];
+  } {
+    return {
+      catalogues: [...this.astronomyCatalogues, ...this.earthPointSets],
+      footprintSets: [
+        ...this.astronomyFootprintSets,
+        ...this.earthFootprintSets,
+      ],
+    };
+  }
+
   /** Apply a runtime snapshot. Tile downloads continue after this returns. */
   async restoreRuntimeState(state: ViewerRuntimeState): Promise<void> {
-    if (state.version !== 1 || state.domain !== "astronomy") {
+    if (state.version !== 1) {
       throw new Error("Unsupported viewer state.");
+    }
+    if (state.domain === "earth") {
+      await this.restoreEarthRuntimeState(state);
+      return;
     }
     if (this._activeDomain !== "astronomy") {
       throw new Error("Restore requires an astronomy viewer.");
@@ -1356,7 +1453,7 @@ class AstroSphere {
 
     // Stop navigation before restoring the saved geometry.
     this.cancelFoVAnimation();
-    this._camera.cancelFlyTo();
+    this.cancelFlyToAnimation();
     this.inertiaX = 0;
     this.inertiaY = 0;
     this.zoomInertia = 0;
@@ -1432,6 +1529,100 @@ class AstroSphere {
     }
     if (this._equatorialGrid.isVisible() !== state.grids.equatorialVisible) {
       this._equatorialGrid.toggleShowGrid();
+    }
+    this._cameraStatusChanged = true;
+    await Promise.all(pendingSceneUpdates);
+  }
+
+  private async restoreEarthRuntimeState(
+    state: Extract<ViewerRuntimeState, { domain: "earth" }>,
+  ): Promise<void> {
+    if (this._activeDomain !== "earth") {
+      throw new Error("Restore requires an Earth viewer.");
+    }
+
+    this.cancelFoVAnimation();
+    this.cancelFlyToAnimation();
+    this.inertiaX = 0;
+    this.inertiaY = 0;
+    this.zoomInertia = 0;
+
+    if (global.insideSphere !== state.camera.insideSphere) {
+      this.toggleInsideSphere();
+    }
+    this.setFoV(state.camera.fovDeg);
+    this._camera.restoreViewState(state.camera.view);
+    this._perspectiveMatrixManager.computePerspectiveMatrix(
+      this.canvas,
+      this._camera,
+      bootSetup.camera_fov_deg,
+      bootSetup.camera_near_plane,
+      global.insideSphere,
+    );
+    this.fov = this._healpixGrid.refreshFoV(
+      this._camera,
+      this._perspectiveMatrixManager.pMatrix,
+    );
+    this._camera.refreshFoV(this.fov.minFoV);
+    this.updateCentralPoint();
+
+    if (state.baseMap) {
+      this.activateXYZ2(state.baseMap.descriptor);
+      this.setEarthBaseMapOpacity(state.baseMap.opacity);
+    } else if (this._activeXYZ2) {
+      this._activeXYZ2.clearLonLatGridLabels();
+      this._activeXYZ2.dispose();
+      this._activeXYZ2 = null;
+      this._activeBaseLayer = null;
+    }
+
+    this.removeAllEarthRasterOverlays();
+    for (const saved of state.rasterOverlays) {
+      const map = new XYZMap(
+        1,
+        [0.0, 0.0, 0.0],
+        0,
+        0,
+        saved.descriptor,
+        this._webgl,
+        this.gridLabelContainers,
+      );
+      const restored = this.addEarthRasterOverlay(
+        saved.name,
+        saved.sourceType,
+        map,
+      );
+      this.setEarthRasterOverlayOpacity(restored.id, saved.opacity);
+      this.setEarthRasterOverlayVisible(restored.id, saved.visible);
+    }
+
+    for (const pointSet of this.earthPointSets) {
+      if (!state.pointSets.some((saved) => saved.instance === pointSet)) {
+        this.deleteTerraPointSet(pointSet);
+      }
+    }
+    const pendingSceneUpdates: Promise<unknown>[] = [];
+    for (const saved of state.pointSets) {
+      pendingSceneUpdates.push(this.showTerraPointSet(saved.instance));
+      saved.instance.setIsVisible(saved.visible);
+      saved.instance.changeColor(saved.color);
+      saved.instance.restoreSelection(saved.selectedIndexes);
+    }
+    for (const footprint of this.earthFootprintSets) {
+      if (!state.footprintSets.some((saved) => saved.instance === footprint)) {
+        this.deleteTerraFootprintSet(footprint);
+      }
+    }
+    for (const saved of state.footprintSets) {
+      pendingSceneUpdates.push(this.showTerraFootprintSet(saved.instance));
+      saved.instance.setIsVisible(saved.visible);
+      saved.instance.changeColor(saved.color);
+      saved.instance.restoreSelection(saved.selectedIndexes);
+    }
+
+    if (this._activeXYZ2 &&
+        this.isLonLatGridVisible() !== state.grids.lonLatVisible) {
+      this.toggleLonLatGrid();
     }
     this._cameraStatusChanged = true;
     await Promise.all(pendingSceneUpdates);
@@ -1539,11 +1730,93 @@ class AstroSphere {
   // End Footprint section
 
   goTo(raDeg: number, decDeg: number): void {
+    this.cancelFlyToAnimation();
     this._camera.goTo(raDeg, decDeg);
   }
 
-  flyTo(raDeg: number, decDeg: number, durationMs = 1200): void {
+  async flyTo(
+    raDeg: number,
+    decDeg: number,
+    durationMs = 1200,
+  ): Promise<void> {
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      throw new RangeError(
+        `Camera animation duration must be >= 0 ms. Received ${durationMs}.`,
+      );
+    }
+
+    this.cancelFlyToAnimation();
+    this.inertiaX = 0;
+    this.inertiaY = 0;
+
+    if (durationMs === 0) {
+      this._camera.goTo(raDeg, decDeg);
+      this.lastCameraMotionAt = performance.now();
+      this._cameraStatusChanged = true;
+      return;
+    }
+
     this._camera.flyTo(raDeg, decDeg, durationMs);
+    this.lastCameraMotionAt = performance.now();
+    this._cameraStatusChanged = true;
+
+    return new Promise<void>((resolve) => {
+      this.flyToAnimationResolve = resolve;
+    });
+  }
+
+  async rotateEarthLongitude(
+    deltaLongitudeDeg: number,
+    durationMs = 12000,
+  ): Promise<void> {
+    if (this._activeDomain !== "earth") {
+      throw new Error(
+        "Earth longitude rotation requires the Earth domain to be active.",
+      );
+    }
+    if (!Number.isFinite(deltaLongitudeDeg)) {
+      throw new RangeError("Earth longitude rotation must be finite.");
+    }
+    if (!Number.isFinite(durationMs) || durationMs < 0) {
+      throw new RangeError(
+        `Camera animation duration must be >= 0 ms. Received ${durationMs}.`,
+      );
+    }
+
+    const center = this.updateCentralPoint();
+    if (!center) {
+      throw new Error("Earth camera center is unavailable.");
+    }
+
+    this.cancelFlyToAnimation();
+    this.inertiaX = 0;
+    this.inertiaY = 0;
+
+    const startLongitudeDeg = center.astroDeg.ra;
+    const latitudeDeg = center.astroDeg.dec;
+
+    if (durationMs === 0 || deltaLongitudeDeg === 0) {
+      this._camera.goTo(
+        startLongitudeDeg + deltaLongitudeDeg,
+        latitudeDeg,
+      );
+      this.lastCameraMotionAt = performance.now();
+      this._cameraStatusChanged = true;
+      return;
+    }
+
+    this._camera.rotateLongitude(
+      startLongitudeDeg,
+      latitudeDeg,
+      deltaLongitudeDeg,
+      durationMs,
+    );
+    this.lastCameraMotionAt = performance.now();
+    this._cameraStatusChanged = true;
+
+    return new Promise<void>((resolve) => {
+      this.flyToAnimationResolve = resolve;
+    });
   }
 
   getActiveCoordinateMode(): "equatorial" | "galactic" | "lonlat" {
@@ -1752,6 +2025,17 @@ class AstroSphere {
     resolve?.();
   }
 
+  private finishFlyToAnimation(): void {
+    const resolve = this.flyToAnimationResolve;
+    this.flyToAnimationResolve = null;
+    resolve?.();
+  }
+
+  private cancelFlyToAnimation(): void {
+    this._camera.cancelFlyTo();
+    this.finishFlyToAnimation();
+  }
+
   private cancelFoVAnimation(): void {
     this._camera.cancelRadialAnimation();
     this.finishFoVAnimation();
@@ -1761,7 +2045,7 @@ class AstroSphere {
   setFoV(deg: number): void {
     this.validateFoV(deg);
     this.cancelFoVAnimation();
-    this._camera.cancelFlyTo();
+    this.cancelFlyToAnimation();
     this.zoomInertia = 0;
 
     const targetDistance = this.findRadialDistanceForFoV(deg);
@@ -2071,6 +2355,7 @@ class AstroSphere {
     // global.gl.getExtension('OES_element_index_uint')
     // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
 
+    this.applyDomainBackground(this._activeDomain);
     this._perspectiveMatrixManager.computePerspectiveMatrix(
       canvas,
       this._camera,
@@ -2095,6 +2380,8 @@ class AstroSphere {
 
     const now = performance.now();
     const cameraFlying = this._camera.updateFlyTo(now);
+    const cameraAnimationFinished =
+      cameraFlying && !this._camera.isFlyToActive();
 
     if (cameraFlying) {
       this.inertiaX = 0;
@@ -2202,6 +2489,9 @@ class AstroSphere {
 
     if (fovAnimationFinished) {
       this.finishFoVAnimation();
+    }
+    if (cameraAnimationFinished) {
+      this.finishFlyToAnimation();
     }
 
     // Se la camera è ruotata (anche solo per inerzia), aggiorna punto centrale + emetti cameraChanged
@@ -2328,12 +2618,15 @@ class AstroSphere {
     }
 
     if (this._activeBaseLayer === "xyz") {
-      this._activeXYZ2?.draw(skyEntityDrawInput);
+      if (this._activeXYZ2 && this._activeXYZ2.opacity > 0) {
+        this._activeXYZ2.draw(skyEntityDrawInput, false, false);
+      }
       for (const overlay of this._earthRasterOverlays) {
-        if (overlay.visible) {
+        if (overlay.visible && overlay.opacity > 0) {
           overlay.map.draw(skyEntityDrawInput, true);
         }
       }
+      this._activeXYZ2?.drawLonLatGrid(skyEntityDrawInput);
     }
     if (this._activeBaseLayer === "meships") {
       this._activeMeshHiPS?.draw(skyEntityDrawInput);

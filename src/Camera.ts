@@ -66,6 +66,14 @@ class Camera implements CameraLike {
     durationMs: number;
   } | null = null;
 
+  private longitudeRotationAnimation: {
+    startLongitudeDeg: number;
+    latitudeDeg: number;
+    deltaLongitudeDeg: number;
+    startTime: number;
+    durationMs: number;
+  } | null = null;
+
   private radialAnimation: {
     startDistance: number;
     targetDistance: number;
@@ -163,6 +171,7 @@ class Camera implements CameraLike {
   }
 
   flyTo(raDeg: number, decDeg: number, durationMs = 1200): void {
+    this.cancelFlyTo();
     const targetSpherical = astroDegToSpherical(raDeg, decDeg);
     const targetPositionValues = sphericalToCartesian(
       targetSpherical.phi,
@@ -196,6 +205,30 @@ class Camera implements CameraLike {
   }
 
   updateFlyTo(now: number): boolean {
+    const longitudeRotation = this.longitudeRotationAnimation;
+
+    if (longitudeRotation) {
+      const elapsed = now - longitudeRotation.startTime;
+      const progress = Math.min(1, elapsed / longitudeRotation.durationMs);
+      const easedProgress =
+        progress < 0.5
+          ? 4 * progress * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      const longitudeDeg =
+        longitudeRotation.startLongitudeDeg +
+        longitudeRotation.deltaLongitudeDeg * easedProgress;
+
+      this.goToPhiTheta(
+        astroDegToSpherical(longitudeDeg, longitudeRotation.latitudeDeg),
+      );
+
+      if (progress >= 1) {
+        this.longitudeRotationAnimation = null;
+      }
+
+      return true;
+    }
+
     const animation = this.flyToAnimation;
 
     if (!animation) {
@@ -278,6 +311,30 @@ class Camera implements CameraLike {
 
   cancelFlyTo(): void {
     this.flyToAnimation = null;
+    this.longitudeRotationAnimation = null;
+  }
+
+  isFlyToActive(): boolean {
+    return (
+      this.flyToAnimation !== null ||
+      this.longitudeRotationAnimation !== null
+    );
+  }
+
+  rotateLongitude(
+    startLongitudeDeg: number,
+    latitudeDeg: number,
+    deltaLongitudeDeg: number,
+    durationMs: number,
+  ): void {
+    this.cancelFlyTo();
+    this.longitudeRotationAnimation = {
+      startLongitudeDeg,
+      latitudeDeg,
+      deltaLongitudeDeg,
+      startTime: performance.now(),
+      durationMs: Math.max(1, durationMs),
+    };
   }
 
   flyToRadialDistance(distance: number, durationMs = 1200): void {

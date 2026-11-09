@@ -482,8 +482,8 @@ describe("AstroSphere HiPS layers", () => {
 
 describe("Earth raster overlays", () => {
   function createEarthRasterSubject() {
-    const firstMap = { setOpacity: jest.fn() };
-    const secondMap = { setOpacity: jest.fn() };
+    const firstMap = { setOpacity: jest.fn(), dispose: jest.fn() };
+    const secondMap = { setOpacity: jest.fn(), dispose: jest.fn() };
     const subject = Object.create(AstroSphere.prototype) as AstroSphere &
       Record<string, any>;
 
@@ -546,15 +546,19 @@ describe("Earth raster overlays", () => {
   });
 
   it("removes one or all overlays", () => {
-    const { subject } = createEarthRasterSubject();
+    const { subject, firstMap, secondMap } = createEarthRasterSubject();
 
     subject.removeEarthRasterOverlay("earth-raster-1");
     expect(subject.getEarthRasterOverlays().map((overlay) => overlay.id)).toEqual([
       "earth-raster-2",
     ]);
+    expect(firstMap.dispose).toHaveBeenCalledTimes(1);
+    expect(secondMap.dispose).not.toHaveBeenCalled();
 
     subject.removeAllEarthRasterOverlays();
     expect(subject.getEarthRasterOverlays()).toEqual([]);
+    expect(firstMap.dispose).toHaveBeenCalledTimes(1);
+    expect(secondMap.dispose).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -583,6 +587,7 @@ describe("AstroSphere domain ownership", () => {
       earthFootprintSets: [],
       lastHoveredSource: null,
       lastHoveredCatalogue: null,
+      _webgl: { clearColor: jest.fn() },
     });
 
     return subject;
@@ -599,6 +604,50 @@ describe("AstroSphere domain ownership", () => {
 
     subject.setActiveDomain("astronomy");
     expect((subject as any)._activeBaseLayer).toBe("hips");
+  });
+
+  it("uses a black background for Earth and restores Astronomy blue", () => {
+    const subject = createDomainSubject();
+    const webgl = (subject as any)._webgl;
+
+    subject.setActiveDomain("earth");
+    expect(webgl.clearColor).toHaveBeenLastCalledWith(0, 0, 0, 1);
+
+    subject.setActiveDomain("astronomy");
+    expect(webgl.clearColor).toHaveBeenLastCalledWith(
+      0,
+      16 / 255,
+      50 / 255,
+      0.7,
+    );
+  });
+
+  it("preserves grid visibility and disposes the replaced Earth base map", () => {
+    const subject = createDomainSubject();
+    const previousMap = {
+      isLonLatGridVisible: jest.fn(() => true),
+      clearLonLatGridLabels: jest.fn(),
+      dispose: jest.fn(),
+    };
+    const nextMap = {
+      isLonLatGridVisible: jest.fn(() => false),
+      toggleLonLatGrid: jest.fn(() => true),
+      dispose: jest.fn(),
+    };
+
+    Object.assign(subject, {
+      _activeDomain: "earth",
+      _activeBaseLayer: "xyz",
+      _activeXYZ2: previousMap,
+    });
+
+    (subject as any).replaceEarthBaseMap(nextMap);
+
+    expect(previousMap.clearLonLatGridLabels).toHaveBeenCalledTimes(1);
+    expect(previousMap.dispose).toHaveBeenCalledTimes(1);
+    expect(nextMap.toggleLonLatGrid).toHaveBeenCalledTimes(1);
+    expect((subject as any)._activeXYZ2).toBe(nextMap);
+    expect((subject as any)._activeBaseLayer).toBe("xyz");
   });
 
   it("restores the camera view saved for each domain", () => {
@@ -641,5 +690,235 @@ describe("AstroSphere domain ownership", () => {
 
     subject.setActiveDomain("earth");
     expect(subject.getHoveredFootprints()).toEqual([{ domain: "earth" }]);
+  });
+});
+
+describe("AstroSphere awaitable navigation", () => {
+  function createNavigationSubject() {
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+    const camera = {
+      cancelFlyTo: jest.fn(),
+      flyTo: jest.fn(),
+      rotateLongitude: jest.fn(),
+      goTo: jest.fn(),
+    };
+
+    Object.assign(subject, {
+      _camera: camera,
+      inertiaX: 1,
+      inertiaY: 1,
+      flyToAnimationResolve: null,
+      lastCameraMotionAt: 0,
+      _cameraStatusChanged: false,
+      _activeDomain: "earth",
+      updateCentralPoint: jest.fn(() => ({
+        astroDeg: { ra: 12.5, dec: 22 },
+      })),
+    });
+
+    return { subject, camera };
+  }
+
+  it("resolves when the directional animation finishes", async () => {
+    const { subject, camera } = createNavigationSubject();
+    let resolved = false;
+
+    const flight = subject.flyTo(12, 34, 500).then(() => {
+      resolved = true;
+    });
+
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    expect(camera.flyTo).toHaveBeenCalledWith(12, 34, 500);
+    expect((subject as any).inertiaX).toBe(0);
+    expect((subject as any).inertiaY).toBe(0);
+
+    (subject as any).finishFlyToAnimation();
+    await flight;
+    expect(resolved).toBe(true);
+  });
+
+  it("settles the previous flight when a new one replaces it", async () => {
+    const { subject } = createNavigationSubject();
+    let firstResolved = false;
+
+    const firstFlight = subject.flyTo(10, 20, 500).then(() => {
+      firstResolved = true;
+    });
+    const secondFlight = subject.flyTo(30, 40, 500);
+
+    await firstFlight;
+    expect(firstResolved).toBe(true);
+
+    (subject as any).finishFlyToAnimation();
+    await secondFlight;
+  });
+
+  it("applies zero-duration navigation immediately", async () => {
+    const { subject, camera } = createNavigationSubject();
+
+    await subject.flyTo(15, -25, 0);
+
+    expect(camera.goTo).toHaveBeenCalledWith(15, -25);
+    expect(camera.flyTo).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid animation durations", async () => {
+    const { subject } = createNavigationSubject();
+
+    await expect(subject.flyTo(0, 0, -1)).rejects.toThrow(
+      "Camera animation duration must be >= 0 ms.",
+    );
+  });
+
+  it("starts an awaitable full Earth longitude rotation", async () => {
+    const { subject, camera } = createNavigationSubject();
+    let resolved = false;
+
+    const rotation = subject.rotateEarthLongitude(360, 12000).then(() => {
+      resolved = true;
+    });
+
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+    expect(camera.rotateLongitude).toHaveBeenCalledWith(
+      12.5,
+      22,
+      360,
+      12000,
+    );
+
+    (subject as any).finishFlyToAnimation();
+    await rotation;
+    expect(resolved).toBe(true);
+  });
+
+  it("rejects Earth longitude rotation outside the Earth domain", async () => {
+    const { subject, camera } = createNavigationSubject();
+    (subject as any)._activeDomain = "astronomy";
+
+    await expect(subject.rotateEarthLongitude(360, 12000)).rejects.toThrow(
+      "Earth longitude rotation requires the Earth domain to be active.",
+    );
+    expect(camera.rotateLongitude).not.toHaveBeenCalled();
+  });
+});
+
+describe("AstroSphere Earth runtime state", () => {
+  it("captures the Earth map stack, grid and scientific overlays", () => {
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+    const baseDescriptor = { name: "base" };
+    const overlayDescriptor = { name: "overlay" };
+    const pointSet = {
+      isVisible: true,
+      shapeColor: "#112233",
+      selectedIndexes: [1],
+    };
+    const footprintSet = {
+      isVisible: false,
+      shapeColor: "#445566",
+      selectedIndexes: [2],
+    };
+    Object.assign(subject, {
+      _activeDomain: "earth",
+      _camera: { getViewState: jest.fn(() => ({ position: [0, 0, 2] })) },
+      fov: { minFoV: 12 },
+      _activeXYZ2: { descriptor: baseDescriptor, opacity: 0.8 },
+      _earthRasterOverlays: [{
+        id: "earth-raster-1",
+        name: "overlay",
+        sourceType: "xyz",
+        opacity: 0.4,
+        visible: false,
+        map: { descriptor: overlayDescriptor },
+      }],
+      earthPointSets: [pointSet],
+      earthFootprintSets: [footprintSet],
+      isLonLatGridVisible: jest.fn(() => true),
+    });
+
+    const state = subject.captureRuntimeState();
+
+    expect(state).toMatchObject({
+      domain: "earth",
+      camera: { fovDeg: 12 },
+      baseMap: { descriptor: baseDescriptor, opacity: 0.8 },
+      rasterOverlays: [{
+        name: "overlay",
+        sourceType: "xyz",
+        descriptor: overlayDescriptor,
+        opacity: 0.4,
+        visible: false,
+      }],
+      grids: { lonLatVisible: true },
+    });
+    if (state.domain !== "earth") throw new Error("Expected Earth state");
+    expect(state.pointSets[0].instance).toBe(pointSet);
+    expect(state.footprintSets[0].instance).toBe(footprintSet);
+  });
+
+  it("restores Earth camera, base map opacity and grid state", async () => {
+    const subject = Object.create(AstroSphere.prototype) as AstroSphere &
+      Record<string, unknown>;
+    const descriptor = { name: "saved base" };
+    const camera = {
+      restoreViewState: jest.fn(),
+      refreshFoV: jest.fn(),
+    };
+    const activateXYZ2 = jest.fn();
+    const setEarthBaseMapOpacity = jest.fn();
+    const toggleLonLatGrid = jest.fn();
+    Object.assign(subject, {
+      _activeDomain: "earth",
+      _camera: camera,
+      _activeXYZ2: {},
+      _activeBaseLayer: "xyz",
+      _earthRasterOverlays: [],
+      earthPointSets: [],
+      earthFootprintSets: [],
+      inertiaX: 0,
+      inertiaY: 0,
+      zoomInertia: 0,
+      canvas: {},
+      _perspectiveMatrixManager: {
+        pMatrix: new Float32Array(16),
+        computePerspectiveMatrix: jest.fn(),
+      },
+      _healpixGrid: {
+        refreshFoV: jest.fn(() => ({ minFoV: 9 })),
+      },
+      cancelFoVAnimation: jest.fn(),
+      cancelFlyToAnimation: jest.fn(),
+      setFoV: jest.fn(),
+      updateCentralPoint: jest.fn(),
+      activateXYZ2,
+      setEarthBaseMapOpacity,
+      removeAllEarthRasterOverlays: jest.fn(),
+      isLonLatGridVisible: jest.fn(() => false),
+      toggleLonLatGrid,
+    });
+    const state = {
+      version: 1,
+      domain: "earth",
+      camera: {
+        view: { position: [0, 0, 2] },
+        fovDeg: 9,
+        insideSphere: false,
+      },
+      baseMap: { descriptor, opacity: 0.7 },
+      rasterOverlays: [],
+      pointSets: [],
+      footprintSets: [],
+      grids: { lonLatVisible: true },
+    } as any;
+
+    await subject.restoreRuntimeState(state);
+
+    expect(activateXYZ2).toHaveBeenCalledWith(descriptor);
+    expect(setEarthBaseMapOpacity).toHaveBeenCalledWith(0.7);
+    expect(camera.restoreViewState).toHaveBeenCalledWith(state.camera.view);
+    expect(toggleLonLatGrid).toHaveBeenCalledTimes(1);
   });
 });
