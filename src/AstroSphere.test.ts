@@ -482,8 +482,8 @@ describe("AstroSphere HiPS layers", () => {
 
 describe("Earth raster overlays", () => {
   function createEarthRasterSubject() {
-    const firstMap = { setOpacity: jest.fn() };
-    const secondMap = { setOpacity: jest.fn() };
+    const firstMap = { setOpacity: jest.fn(), dispose: jest.fn() };
+    const secondMap = { setOpacity: jest.fn(), dispose: jest.fn() };
     const subject = Object.create(AstroSphere.prototype) as AstroSphere &
       Record<string, any>;
 
@@ -546,15 +546,19 @@ describe("Earth raster overlays", () => {
   });
 
   it("removes one or all overlays", () => {
-    const { subject } = createEarthRasterSubject();
+    const { subject, firstMap, secondMap } = createEarthRasterSubject();
 
     subject.removeEarthRasterOverlay("earth-raster-1");
     expect(subject.getEarthRasterOverlays().map((overlay) => overlay.id)).toEqual([
       "earth-raster-2",
     ]);
+    expect(firstMap.dispose).toHaveBeenCalledTimes(1);
+    expect(secondMap.dispose).not.toHaveBeenCalled();
 
     subject.removeAllEarthRasterOverlays();
     expect(subject.getEarthRasterOverlays()).toEqual([]);
+    expect(firstMap.dispose).toHaveBeenCalledTimes(1);
+    expect(secondMap.dispose).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -583,6 +587,7 @@ describe("AstroSphere domain ownership", () => {
       earthFootprintSets: [],
       lastHoveredSource: null,
       lastHoveredCatalogue: null,
+      _webgl: { clearColor: jest.fn() },
     });
 
     return subject;
@@ -599,6 +604,50 @@ describe("AstroSphere domain ownership", () => {
 
     subject.setActiveDomain("astronomy");
     expect((subject as any)._activeBaseLayer).toBe("hips");
+  });
+
+  it("uses a black background for Earth and restores Astronomy blue", () => {
+    const subject = createDomainSubject();
+    const webgl = (subject as any)._webgl;
+
+    subject.setActiveDomain("earth");
+    expect(webgl.clearColor).toHaveBeenLastCalledWith(0, 0, 0, 1);
+
+    subject.setActiveDomain("astronomy");
+    expect(webgl.clearColor).toHaveBeenLastCalledWith(
+      0,
+      16 / 255,
+      50 / 255,
+      0.7,
+    );
+  });
+
+  it("preserves grid visibility and disposes the replaced Earth base map", () => {
+    const subject = createDomainSubject();
+    const previousMap = {
+      isLonLatGridVisible: jest.fn(() => true),
+      clearLonLatGridLabels: jest.fn(),
+      dispose: jest.fn(),
+    };
+    const nextMap = {
+      isLonLatGridVisible: jest.fn(() => false),
+      toggleLonLatGrid: jest.fn(() => true),
+      dispose: jest.fn(),
+    };
+
+    Object.assign(subject, {
+      _activeDomain: "earth",
+      _activeBaseLayer: "xyz",
+      _activeXYZ2: previousMap,
+    });
+
+    (subject as any).replaceEarthBaseMap(nextMap);
+
+    expect(previousMap.clearLonLatGridLabels).toHaveBeenCalledTimes(1);
+    expect(previousMap.dispose).toHaveBeenCalledTimes(1);
+    expect(nextMap.toggleLonLatGrid).toHaveBeenCalledTimes(1);
+    expect((subject as any)._activeXYZ2).toBe(nextMap);
+    expect((subject as any)._activeBaseLayer).toBe("xyz");
   });
 
   it("restores the camera view saved for each domain", () => {
