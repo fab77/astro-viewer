@@ -665,14 +665,13 @@ function createEarthPointOverlay(name, points) {
     });
   });
 
-  const pointSet = state.AstroAPI.createTerraPointSet(
-    name,
-    "Imported GeoJSON Point/MultiPoint features",
-    "",
-    new MetadataManager(columns),
+  const pointSet = state.AstroAPI.addTerraPointSet(
+    { rows, columns },
+    {
+      name,
+      description: "Imported GeoJSON Point/MultiPoint features",
+    },
   );
-  pointSet.addSources(rows, columns);
-  state.AstroAPI.showTerraPointSet(pointSet);
 
   return {
     kind: "points",
