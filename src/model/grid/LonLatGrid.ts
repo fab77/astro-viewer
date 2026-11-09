@@ -42,12 +42,13 @@ export class LatLonGrid extends AbstractSkyEntity {
   private _segmentStep = 1;
   private _fovObj: SphereFoV;
   private _fovDeg = 180;
-  private _showGrid = true;
+  private _showGrid = false;
   private _lonArray: Float32Array[] = [];
   private _latArray: Float32Array[] = [];
   private _bufferKey = '';
   private defaultColor = '#41d4d4';
   private gridText: GridTextHelper;
+  private _disposed = false;
 
   constructor(
     radius: number,
@@ -269,7 +270,21 @@ export class LatLonGrid extends AbstractSkyEntity {
     this.gridText.resetDivSets();
   }
 
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+
+    this.clearLabels();
+    const gl = super.webgl as GL;
+    gl.deleteBuffer(this._lonVertexPositionBuffer);
+    gl.deleteBuffer(this._latVertexPositionBuffer);
+    gl.deleteProgram(this._shaderProgram);
+    gl.deleteShader(this._vertexShader);
+    gl.deleteShader(this._fragmentShader);
+  }
+
   draw(input: SkyEntityDrawInput): void {
+    if (this._disposed) return;
     if (!this._showGrid) {
       this.gridText.resetDivSets();
       return;

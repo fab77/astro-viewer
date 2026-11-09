@@ -1079,11 +1079,10 @@ class AstroSphere {
         config.urlResolver,
       ),
     );
-    this._activeBaseLayer = "xyz";
   }
+
   activateXYZ2(config: XYZMapDescriptor) {
-    this._activeDomain = "earth";
-    this._activeXYZ2 = new XYZMap(
+    const map = new XYZMap(
       1,
       [0.0, 0.0, 0.0],
       0,
@@ -1092,7 +1091,7 @@ class AstroSphere {
       this._webgl,
       this.gridLabelContainers,
     );
-    this._activeBaseLayer = "xyz";
+    this.replaceEarthBaseMap(map);
   }
 
   activateMeshHiPS(descriptor: MeshHiPSDescriptor) {
@@ -1118,10 +1117,9 @@ class AstroSphere {
   }
 
   activateWMTS(config: WMTSLayerConfig) {
-    this._activeDomain = "earth";
     const adapter = new WMTSAdapter(config);
     const xyzConfig = adapter.toXYZLayerConfig();
-    this._activeXYZ2 = new XYZMap(
+    const map = new XYZMap(
       1,
       [0.0, 0.0, 0.0],
       0,
@@ -1139,6 +1137,22 @@ class AstroSphere {
       this._webgl,
       this.gridLabelContainers,
     );
+    this.replaceEarthBaseMap(map);
+  }
+
+  private replaceEarthBaseMap(map: XYZMap): void {
+    const previousMap = this._activeXYZ2;
+    const gridWasVisible = previousMap?.isLonLatGridVisible() ?? false;
+
+    this.setActiveDomain("earth");
+    previousMap?.clearLonLatGridLabels();
+
+    if (map.isLonLatGridVisible() !== gridWasVisible) {
+      map.toggleLonLatGrid();
+    }
+
+    previousMap?.dispose();
+    this._activeXYZ2 = map;
     this._activeBaseLayer = "xyz";
   }
 
@@ -1202,12 +1216,17 @@ class AstroSphere {
   }
 
   removeEarthRasterOverlay(id: string): void {
-    this._earthRasterOverlays = this._earthRasterOverlays.filter(
-      (entry) => entry.id !== id,
-    );
+    const index = this._earthRasterOverlays.findIndex((entry) => entry.id === id);
+    if (index === -1) return;
+
+    const [overlay] = this._earthRasterOverlays.splice(index, 1);
+    overlay.map.dispose();
   }
 
   removeAllEarthRasterOverlays(): void {
+    for (const overlay of this._earthRasterOverlays) {
+      overlay.map.dispose();
+    }
     this._earthRasterOverlays = [];
   }
 
@@ -1248,6 +1267,7 @@ class AstroSphere {
     }
 
     this._activeDomain = domain;
+    this.applyDomainBackground(domain);
 
     if (domain === "astronomy") {
       this._activeBaseLayer = this._activeHiPS ? "hips" : null;
@@ -1260,6 +1280,15 @@ class AstroSphere {
     // A hover from the previous vertical must not leak into the new one.
     this.lastHoveredSource = null;
     this.lastHoveredCatalogue = null;
+  }
+
+  private applyDomainBackground(domain: ViewerDomain): void {
+    if (domain === "earth") {
+      this._webgl.clearColor(0, 0, 0, 1);
+      return;
+    }
+
+    this._webgl.clearColor(0, 16 / 255, 50 / 255, 0.7);
   }
 
   private clearGridLabelsForDomain(domain: ViewerDomain): void {
@@ -2071,6 +2100,7 @@ class AstroSphere {
     // global.gl.getExtension('OES_element_index_uint')
     // global.gl.clear(global.gl.COLOR_BUFFER_BIT | global.gl.DEPTH_BUFFER_BIT)
 
+    this.applyDomainBackground(this._activeDomain);
     this._perspectiveMatrixManager.computePerspectiveMatrix(
       canvas,
       this._camera,
@@ -2328,12 +2358,13 @@ class AstroSphere {
     }
 
     if (this._activeBaseLayer === "xyz") {
-      this._activeXYZ2?.draw(skyEntityDrawInput);
+      this._activeXYZ2?.draw(skyEntityDrawInput, false, false);
       for (const overlay of this._earthRasterOverlays) {
-        if (overlay.visible) {
+        if (overlay.visible && overlay.opacity > 0) {
           overlay.map.draw(skyEntityDrawInput, true);
         }
       }
+      this._activeXYZ2?.drawLonLatGrid(skyEntityDrawInput);
     }
     if (this._activeBaseLayer === "meships") {
       this._activeMeshHiPS?.draw(skyEntityDrawInput);

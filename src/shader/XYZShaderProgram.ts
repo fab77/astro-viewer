@@ -187,7 +187,21 @@ export class XYZShaderProgram {
       throw new Error(gl.getProgramInfoLog(this._shaderProgram as WebGLProgram) || 'Could not initialise XYZ shaders')
     }
 
+    gl.deleteShader(vertexShader)
+    gl.deleteShader(fragmentShader)
     this.initColorMapBuffer()
+  }
+
+  dispose(): void {
+    if (this._colorMapBuffer) {
+      this._webgl.deleteBuffer(this._colorMapBuffer)
+      this._colorMapBuffer = null
+    }
+    if (this._shaderProgram) {
+      this._webgl.deleteProgram(this._shaderProgram)
+      this._shaderProgram = undefined
+    }
+    this._colorMapBlockIndex = null
   }
 
   private compileShader(type: number, source: string): WebGLShader {
