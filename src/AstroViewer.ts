@@ -947,6 +947,17 @@ export class AstroViewer {
     return this.astroSphere.flyTo(raDeg, decDeg, durationMs);
   }
 
+  /** Rotate continuously around Earth's longitude while preserving latitude. */
+  rotateEarthLongitude(
+    deltaLongitudeDeg: number,
+    durationMs = 12000,
+  ): Promise<void> {
+    return this.astroSphere.rotateEarthLongitude(
+      deltaLongitudeDeg,
+      durationMs,
+    );
+  }
+
   getActiveCoordinateMode(): "equatorial" | "galactic" | "lonlat" {
     return this.astroSphere.getActiveCoordinateMode();
   }
