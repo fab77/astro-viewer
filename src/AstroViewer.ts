@@ -114,6 +114,10 @@ export class AstroViewer {
     this.earthFades.get(key)?.cancel();
   }
 
+  private cancelAllEarthFades(): void {
+    for (const fade of [...this.earthFades.values()]) fade.cancel();
+  }
+
   private fadeEarthOpacity(
     key: string,
     initialOpacity: number,
@@ -173,7 +177,10 @@ export class AstroViewer {
 
   restoreState(name: string): Promise<void> {
     // A restored HiPS stack contains new instances; old animations must stop.
-    if (this.hasState(name)) this.cancelAllHiPSFades();
+    if (this.hasState(name)) {
+      this.cancelAllHiPSFades();
+      this.cancelAllEarthFades();
+    }
     return this.stateManager.restoreState(name);
   }
 
@@ -334,6 +341,7 @@ export class AstroViewer {
 
   deleteTerraPointSet(pointSet: TerraPointSetGL) {
     this.astroSphere.deleteTerraPointSet(pointSet);
+    this.stateManager.onSceneResourcesChanged();
   }
 
   createTerraFootprintSet(
@@ -361,6 +369,7 @@ export class AstroViewer {
 
   deleteTerraFootprintSet(footprintSet: TerraFootprintSetGL) {
     this.astroSphere.deleteTerraFootprintSet(footprintSet);
+    this.stateManager.onSceneResourcesChanged();
   }
 
   createTerraPolylineSet(

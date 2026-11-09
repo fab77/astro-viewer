@@ -9,6 +9,7 @@ import type { CatalogueGL } from "./model/catalogues/CatalogueGL.js";
 import type { FootprintSetGL } from "./model/footprints/FootprintSetGL.js";
 import type { HiPSFITSStretch } from "./model/hips/HiPS.js";
 import type { ColorMapName } from "./model/ColorMaps.js";
+import type { XYZMapDescriptor } from "./model/earth/XYZMapDescriptor.js";
 
 export interface RuntimeCameraState {
   view: CameraViewState;
@@ -45,7 +46,7 @@ export interface RuntimeFootprintState {
   selectedIndexes: number[];
 }
 
-export interface ViewerRuntimeState {
+export interface AstronomyViewerRuntimeState {
   version: 1;
   domain: "astronomy";
   camera: RuntimeCameraState;
@@ -54,6 +55,32 @@ export interface ViewerRuntimeState {
   footprintSets: RuntimeFootprintState[];
   grids: { healpixVisible: boolean; equatorialVisible: boolean };
 }
+
+export interface RuntimeEarthRasterLayerState {
+  name: string;
+  sourceType: "xyz" | "wmts";
+  descriptor: XYZMapDescriptor;
+  opacity: number;
+  visible: boolean;
+}
+
+export interface EarthViewerRuntimeState {
+  version: 1;
+  domain: "earth";
+  camera: RuntimeCameraState;
+  baseMap: {
+    descriptor: XYZMapDescriptor;
+    opacity: number;
+  } | null;
+  rasterOverlays: RuntimeEarthRasterLayerState[];
+  pointSets: RuntimeCatalogueState[];
+  footprintSets: RuntimeFootprintState[];
+  grids: { lonLatVisible: boolean };
+}
+
+export type ViewerRuntimeState =
+  | AstronomyViewerRuntimeState
+  | EarthViewerRuntimeState;
 
 /** Named runtime snapshots. Scientific datasets are shared, HiPS tiles are not. */
 export default class ViewerStateManager {
@@ -67,11 +94,11 @@ export default class ViewerStateManager {
   saveState(name: string): void {
     this.checkName(name);
     const state = this.sphere.captureRuntimeState();
-    if (state.domain !== "astronomy") {
-      throw new Error("Only astronomy viewer states are supported.");
-    }
     this.states.set(name, state);
-    for (const item of state.catalogues) this.retainedCatalogues.add(item.instance);
+    const catalogues = state.domain === "astronomy"
+      ? state.catalogues
+      : state.pointSets;
+    for (const item of catalogues) this.retainedCatalogues.add(item.instance);
     for (const item of state.footprintSets) this.retainedFootprints.add(item.instance);
     this.releaseUnusedResources();
   }
@@ -102,11 +129,14 @@ export default class ViewerStateManager {
 
   /** Dispose detached resources only after the last snapshot releases them. */
   private releaseUnusedResources(): void {
-    const live = this.sphere.captureRuntimeState();
-    const usedCatalogues = new Set(live.catalogues.map(item => item.instance));
-    const usedFootprints = new Set(live.footprintSets.map(item => item.instance));
+    const live = this.sphere.getLiveRuntimeResources();
+    const usedCatalogues = new Set(live.catalogues);
+    const usedFootprints = new Set(live.footprintSets);
     for (const state of this.states.values()) {
-      for (const item of state.catalogues) usedCatalogues.add(item.instance);
+      const catalogues = state.domain === "astronomy"
+        ? state.catalogues
+        : state.pointSets;
+      for (const item of catalogues) usedCatalogues.add(item.instance);
       for (const item of state.footprintSets) usedFootprints.add(item.instance);
     }
     for (const catalogue of this.retainedCatalogues) {
