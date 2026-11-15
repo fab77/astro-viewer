@@ -418,6 +418,70 @@ TAP table names and columns vary by service. Applications can inspect them with
 
 ---
 
+## Hover and selection events
+
+AstroViewer updates catalogue and footprint interaction state from pointer
+events on the canvas. Applications are responsible for listening to that state
+and rendering their own metadata panels, tables or inspectors.
+
+Catalogue hover and selection are exposed as canvas events:
+
+```js
+canvas.addEventListener("source-hovered", (event) => {
+  const { source, catalogue } = event.detail;
+  renderSourcePreview(source, catalogue);
+});
+
+canvas.addEventListener("source-clicked", (event) => {
+  const { catalogue, selectionState } = event.detail;
+  renderSourceSelection(selectionState, catalogue);
+});
+```
+
+`source-hovered` is also emitted with `source: null` when the pointer leaves the
+currently hovered catalogue source. Applications should clear only their hover
+preview in that case and preserve any selected records.
+
+Footprint selection is exposed through `footprint-clicked`:
+
+```js
+canvas.addEventListener("footprint-clicked", (event) => {
+  const { footprintSet, selectionState } = event.detail;
+  renderFootprintSelection(selectionState, footprintSet);
+});
+```
+
+Footprint hover is read through `viewer.getHoveredFootprints()`. Read it on the
+animation frame following pointer movement so AstroViewer has completed its
+picking update:
+
+```js
+let hoverFrame = 0;
+
+canvas.addEventListener("pointermove", () => {
+  if (hoverFrame) return;
+  hoverFrame = requestAnimationFrame(() => {
+    hoverFrame = 0;
+    renderFootprintPreview(viewer.getHoveredFootprints());
+  });
+});
+
+canvas.addEventListener("pointerleave", () => {
+  cancelAnimationFrame(hoverFrame);
+  hoverFrame = 0;
+  clearFootprintPreview();
+});
+```
+
+The `extHighlightSource()`, `extAddSources2Selected()`,
+`extHighlightFootprint()` and `extAddPolygons2Selected()` methods are for
+external, programmatic coordination—for example, highlighting a map feature
+when the user hovers a table row. They update rendering state directly and do
+not represent canvas pointer events. Do not use them as a replacement for the
+canvas listeners above when responding to user interaction on the viewer.
+
+---
+
 ## Earth Maps
 
 AstroViewer also supports tiled Earth observation maps.
