@@ -20,6 +20,7 @@ export class MeshHiPSDescriptor {
   private _propertiesRawText = ''
   private _propertiesMap: Map<string, string> = new Map()
   private _meshRadius: number | null = null
+  private _tileFormat: 'glb' | 'obj' = 'obj'
 
   constructor(config: MeshHiPSConfig, propertiesText = '') {
     this._baseUrl = this.normalizeBaseUrl(config.baseUrl)
@@ -32,6 +33,9 @@ export class MeshHiPSDescriptor {
     this._fixedOrder = config.order !== undefined
     this._selectedOrder = config.order ?? this._minOrder
     this._maxCachedTiles = config.maxCachedTiles ?? this._maxCachedTiles
+    const tileFormat = this._propertiesMap.get('tile_format')
+      ?? this._propertiesMap.get('hips_tile_format')
+    if (tileFormat === 'glb' || tileFormat === 'obj') this._tileFormat = tileFormat
     // color: prefer explicit config, then properties.mesh_color, then default
     if (config.color) {
       this._color = config.color
@@ -115,13 +119,17 @@ export class MeshHiPSDescriptor {
     return this._meshRadius as number
   }
 
+  get tileFormat(): 'glb' | 'obj' {
+    return this._tileFormat
+  }
+
   getProperty(key: string): string | undefined {
     return this._propertiesMap.get(key)
   }
 
   getTileUrl(order: number, ipix: number): string {
     const dir = Math.floor(ipix / 10_000) * 10_000
-    return `${this._baseUrl}Norder${order}/Dir${dir}/Npix${ipix}.obj`
+    return `${this._baseUrl}Norder${order}/Dir${dir}/Npix${ipix}.${this._tileFormat}`
   }
 
   private parseProperties(propertiesText: string): void {

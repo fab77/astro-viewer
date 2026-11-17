@@ -17,6 +17,7 @@ const contentTypes = new Map([
   [".html", "text/html; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
+  [".glb", "model/gltf-binary"],
   [".obj", "text/plain; charset=utf-8"],
   [".txt", "text/plain; charset=utf-8"],
   ["", "text/plain; charset=utf-8"],
@@ -36,7 +37,7 @@ function resolveStaticPath(urlPath) {
         meshHiPSRoot,
         clean.replace(/^\/meships-local\//, ""),
       ),
-      cacheControl: "public, max-age=3600",
+      cacheControl: "no-store",
     };
   }
 

@@ -194,7 +194,7 @@ export class VisibleTilesManager implements HealpixVisibilityState {
     this._galVisibleTilesByOrder = { pixels: galTiles, order: order };
 
     // Build ancestor pyramids down to order 0
-    for (let o = 1; o < order; o++) {
+    for (let o = 1; o <= order; o++) {
       const tgtOrder = order - o;
       const list = this._ancestorsMap.get(tgtOrder) ?? [];
       this._ancestorsMap.set(tgtOrder, list);
@@ -208,7 +208,7 @@ export class VisibleTilesManager implements HealpixVisibilityState {
       }
     }
 
-    for (let o = 1; o < order; o++) {
+    for (let o = 1; o <= order; o++) {
       const tgtOrder = order - o;
       const list = this._galAncestorsMap.get(tgtOrder) ?? [];
       this._galAncestorsMap.set(tgtOrder, list);

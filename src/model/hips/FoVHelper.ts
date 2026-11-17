@@ -41,7 +41,10 @@ class FoVHelper {
       if (boundary > 0 && fov > boundary * (1 - FoVHelper.LEVEL_HYSTERESIS)) return currentOrder
     } else {
       const boundary = FoVHelper.HIPS_ORDER_MIN_FOV[rawOrder]
-      if (boundary > 0 && fov < boundary * (1 + FoVHelper.LEVEL_HYSTERESIS)) return currentOrder
+      const releaseBoundary = rawOrder === 0
+        ? boundary
+        : boundary * (1 + FoVHelper.LEVEL_HYSTERESIS)
+      if (boundary > 0 && fov < releaseBoundary) return currentOrder
     }
 
     return rawOrder

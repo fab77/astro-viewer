@@ -18,6 +18,7 @@ export class MeshHiPS extends AbstractSkyEntity {
   private _tiles = new Map<string, MeshHiPSTile>();
   private _currentOrder: number;
   private _visibleTiles: MeshHiPSTileCoord[] = [];
+  private _requestedTiles: MeshHiPSTileCoord[] = [];
   private _coverageTiles: MeshHiPSTileCoord[] = [];
   private _color: [number, number, number, number];
   private _wireframe: boolean;
@@ -99,10 +100,20 @@ export class MeshHiPS extends AbstractSkyEntity {
     const vMatrix = input.camera.getCameraMatrix() as Float32Array;
     if (!vMatrix || !input.pMatrix) return;
 
-    this.refreshOrder(input.fovDeg);
+    this._currentOrder = Math.max(
+      this._descriptor.minOrder,
+      Math.min(
+        this._descriptor.maxOrder,
+        this._healpixGrid.visibleTilesManager.visibleTilesByOrder.order,
+      ),
+    );
     this._visibleTiles = this.resolveVisibleTiles();
-    this._coverageTiles = this.resolveCoverageTiles(this._visibleTiles);
-    this.ensureTiles(this._coverageTiles);
+    const hierarchy = this.resolveHierarchyTiles();
+    this._requestedTiles = Array.from(hierarchy.entries()).flatMap(([order, ipixes]) =>
+      ipixes.map((ipix) => ({ order, ipix })),
+    );
+    this.ensureTiles(this._requestedTiles);
+    this._coverageTiles = [];
     this.evictCached();
 
     const gl = this._webgl;
@@ -117,20 +128,14 @@ export class MeshHiPS extends AbstractSkyEntity {
     gl.depthFunc(gl.LEQUAL);
     gl.disable(gl.CULL_FACE);
 
-    const byOrder = this.groupTilesByOrder(this._coverageTiles);
-    const orders = Array.from(byOrder.keys()).sort((a, b) => a - b);
-    for (const order of orders) {
-      for (const coord of byOrder.get(order) ?? []) {
-        this._tiles
-          .get(this.tileKey(coord))
-          ?.draw(
-            pMatrix,
-            vMatrix,
-            mMatrix,
-            this._color,
-            this._wireframe,
-          );
-      }
+    for (const ipix of hierarchy.get(this._descriptor.minOrder) ?? []) {
+      this.drawHierarchy(
+        { order: this._descriptor.minOrder, ipix },
+        hierarchy,
+        pMatrix,
+        vMatrix,
+        mMatrix,
+      );
     }
 
     if (wasCullFace) gl.enable(gl.CULL_FACE);
@@ -172,77 +177,57 @@ export class MeshHiPS extends AbstractSkyEntity {
       }));
     }
 
-    const tileCount = 12 * 4 ** this._currentOrder;
-    return Array.from({ length: tileCount }, (_, ipix) => ({
-      order: this._currentOrder,
-      ipix,
-    }));
+    return [];
   }
 
-  private resolveCoverageTiles(
-    visibleTiles: MeshHiPSTileCoord[],
-  ): MeshHiPSTileCoord[] {
-    const tiles = new Map<string, MeshHiPSTileCoord>();
-
-    const add = (coord: MeshHiPSTileCoord) => {
-      if (
-        coord.order < this._descriptor.minOrder ||
-        coord.order > this._descriptor.maxOrder
-      ) {
-        return;
-      }
-      tiles.set(this.tileKey(coord), coord);
-    };
-
-    for (const coord of visibleTiles) {
-      add(coord);
-      for (
-        let order = coord.order - 1;
-        order >= this._descriptor.minOrder;
-        order--
-      ) {
-        const shift = 2 * (coord.order - order);
-
-        add({
-          order,
-          ipix: coord.ipix >> shift,
-        });
+  private resolveHierarchyTiles(): Map<number, number[]> {
+    const hierarchy = new Map<number, number[]>();
+    for (const [order, ipixes] of this._healpixGrid.visibleTilesManager.ancestorsMap) {
+      if (order >= this._descriptor.minOrder && order <= this._currentOrder) {
+        hierarchy.set(order, ipixes);
       }
     }
+    return hierarchy;
+  }
 
-    const manager: HealpixVisibilityState | undefined =
-      this._healpixGrid.visibleTilesManager;
+  private drawHierarchy(
+    coord: MeshHiPSTileCoord,
+    hierarchy: Map<number, number[]>,
+    pMatrix: Float32Array,
+    vMatrix: Float32Array,
+    mMatrix: Float32Array,
+  ): boolean {
+    const tile = this._tiles.get(this.tileKey(coord));
+    if (!tile?.ready) return false;
 
-    const ancestorsMap = manager?.ancestorsMap;
+    const quadrants = new Set([0, 1, 2, 3]);
+    const childOrder = coord.order + 1;
+    const visibleChildren = hierarchy.get(childOrder);
 
-    if (ancestorsMap) {
-      for (const [order, ipixes] of ancestorsMap) {
+    if (visibleChildren && childOrder <= this._currentOrder) {
+      for (let quadrant = 0; quadrant < 4; quadrant++) {
+        const child = { order: childOrder, ipix: coord.ipix * 4 + quadrant };
         if (
-          order < this._descriptor.minOrder ||
-          order > this._descriptor.maxOrder
+          visibleChildren.includes(child.ipix)
+          && this.drawHierarchy(child, hierarchy, pMatrix, vMatrix, mMatrix)
         ) {
-          continue;
-        }
-
-        for (const ipix of ipixes) {
-          add({ order, ipix });
+          quadrants.delete(quadrant);
         }
       }
     }
 
-    return Array.from(tiles.values());
-  }
-
-  private groupTilesByOrder(
-    coords: MeshHiPSTileCoord[],
-  ): Map<number, MeshHiPSTileCoord[]> {
-    const byOrder = new Map<number, MeshHiPSTileCoord[]>();
-    for (const coord of coords) {
-      const list = byOrder.get(coord.order) ?? [];
-      list.push(coord);
-      byOrder.set(coord.order, list);
+    if (quadrants.size > 0) {
+      tile.draw(
+        pMatrix,
+        vMatrix,
+        mMatrix,
+        this._color,
+        this._wireframe,
+        quadrants,
+      );
+      this._coverageTiles.push(coord);
     }
-    return byOrder;
+    return true;
   }
 
   private ensureTiles(coords: MeshHiPSTileCoord[]): void {
@@ -266,7 +251,7 @@ export class MeshHiPS extends AbstractSkyEntity {
     if (this._tiles.size <= maxCached) return;
 
     const visibleKeys = new Set(
-      this._coverageTiles.map((coord) => this.tileKey(coord)),
+      this._requestedTiles.map((coord) => this.tileKey(coord)),
     );
     const evictable = Array.from(this._tiles.entries())
       .filter(([key]) => !visibleKeys.has(key))

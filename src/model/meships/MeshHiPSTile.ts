@@ -6,6 +6,7 @@
 
 import { MeshHiPSShaderProgram } from '../../shader/MeshHiPSShaderProgram.js'
 import { OBJMeshParser } from './OBJMeshParser.js'
+import { GLBMeshParser } from './GLBMeshParser.js'
 import type { MeshHiPSGpuMesh, MeshHiPSMesh, MeshHiPSTileCoord } from './MeshHiPSTypes.js'
 
 type Mat4 = Float32Array
@@ -57,6 +58,7 @@ export class MeshHiPSTile {
     mMatrix: Mat4,
     color: [number, number, number, number],
     wireframe: boolean,
+    quadrants?: ReadonlySet<number>,
   ): boolean {
     this.touch()
     if (!this._ready || !this._gpuMesh) return false
@@ -88,16 +90,33 @@ export class MeshHiPSTile {
       gl.enableVertexAttribArray(this._shaderProgram.locations.vertexNormalAttribute)
     }
 
-    gl.bindBuffer(
-      gl.ELEMENT_ARRAY_BUFFER,
-      wireframe ? this._gpuMesh.lineIndexBuffer : this._gpuMesh.indexBuffer,
-    )
-    gl.drawElements(
-      wireframe ? gl.LINES : gl.TRIANGLES,
-      wireframe ? this._gpuMesh.lineIndexCount : this._gpuMesh.indexCount,
-      this._gpuMesh.indexType,
-      0,
-    )
+    if (quadrants) {
+      for (const quadrantIndex of quadrants) {
+        const quadrant = this._gpuMesh.quadrants?.[quadrantIndex]
+        if (!quadrant) continue
+        gl.bindBuffer(
+          gl.ELEMENT_ARRAY_BUFFER,
+          wireframe ? quadrant.lineIndexBuffer : quadrant.indexBuffer,
+        )
+        gl.drawElements(
+          wireframe ? gl.LINES : gl.TRIANGLES,
+          wireframe ? quadrant.lineIndexCount : quadrant.indexCount,
+          this._gpuMesh.indexType,
+          0,
+        )
+      }
+    } else {
+      gl.bindBuffer(
+        gl.ELEMENT_ARRAY_BUFFER,
+        wireframe ? this._gpuMesh.lineIndexBuffer : this._gpuMesh.indexBuffer,
+      )
+      gl.drawElements(
+        wireframe ? gl.LINES : gl.TRIANGLES,
+        wireframe ? this._gpuMesh.lineIndexCount : this._gpuMesh.indexCount,
+        this._gpuMesh.indexType,
+        0,
+      )
+    }
 
     gl.disableVertexAttribArray(this._shaderProgram.locations.vertexPositionAttribute)
     if (this._shaderProgram.locations.vertexNormalAttribute >= 0) {
@@ -112,6 +131,10 @@ export class MeshHiPSTile {
     if (this._gpuMesh?.normalBuffer) gl.deleteBuffer(this._gpuMesh.normalBuffer)
     if (this._gpuMesh?.indexBuffer) gl.deleteBuffer(this._gpuMesh.indexBuffer)
     if (this._gpuMesh?.lineIndexBuffer) gl.deleteBuffer(this._gpuMesh.lineIndexBuffer)
+    for (const quadrant of this._gpuMesh?.quadrants ?? []) {
+      gl.deleteBuffer(quadrant.indexBuffer)
+      gl.deleteBuffer(quadrant.lineIndexBuffer)
+    }
     this._gpuMesh = null
     this._ready = false
     this._loading = false
@@ -124,7 +147,9 @@ export class MeshHiPSTile {
     try {
       const resp = await fetch(this._url)
       if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${this._url}`)
-      const mesh = OBJMeshParser.parse(await resp.text())
+      const mesh = this._url.toLowerCase().endsWith('.glb')
+        ? await GLBMeshParser.parse(await resp.arrayBuffer())
+        : OBJMeshParser.parse(await resp.text())
       this._gpuMesh = this.uploadMesh(mesh)
       this._ready = true
       this._failed = false
@@ -148,6 +173,7 @@ export class MeshHiPSTile {
       throw new Error(`Could not create MeshHiPS buffers for ${this.key}`)
     }
     const lineIndices = this.buildLineIndices(mesh.indices)
+    const quadrantIndices = this.buildQuadrantIndices(mesh)
 
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
     gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW)
@@ -161,6 +187,25 @@ export class MeshHiPSTile {
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lineIndexBuffer)
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, lineIndices, gl.STATIC_DRAW)
 
+    const quadrants = quadrantIndices.map((indices) => {
+      const quadrantIndexBuffer = gl.createBuffer()
+      const quadrantLineIndexBuffer = gl.createBuffer()
+      if (!quadrantIndexBuffer || !quadrantLineIndexBuffer) {
+        throw new Error(`Could not create MeshHiPS quadrant buffers for ${this.key}`)
+      }
+      const quadrantLines = this.buildLineIndices(indices)
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadrantIndexBuffer)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadrantLineIndexBuffer)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, quadrantLines, gl.STATIC_DRAW)
+      return {
+        indexBuffer: quadrantIndexBuffer,
+        lineIndexBuffer: quadrantLineIndexBuffer,
+        indexCount: indices.length,
+        lineIndexCount: quadrantLines.length,
+      }
+    })
+
     return {
       positionBuffer,
       normalBuffer,
@@ -169,7 +214,40 @@ export class MeshHiPSTile {
       indexCount: mesh.indices.length,
       lineIndexCount: lineIndices.length,
       indexType: gl.UNSIGNED_INT,
+      quadrants,
     }
+  }
+
+  private buildQuadrantIndices(mesh: MeshHiPSMesh): Uint32Array[] {
+    const verticesPerSide = Math.sqrt(mesh.positions.length / 3)
+    const grid = verticesPerSide - 1
+    if (!Number.isInteger(verticesPerSide) || grid < 2 || grid % 2 !== 0) {
+      throw new Error(`MeshHiPS tile ${this.key} must contain an even square grid`)
+    }
+
+    const half = grid / 2
+    return [0, 1, 2, 3].map((quadrant) => {
+      const startColumn = quadrant % 2 === 0 ? 0 : half
+      const startRow = quadrant < 2 ? 0 : half
+      const indices = new Uint32Array(half * half * 6)
+      let output = 0
+
+      for (let row = startRow; row < startRow + half; row++) {
+        for (let column = startColumn; column < startColumn + half; column++) {
+          const topLeft = row * verticesPerSide + column
+          const topRight = topLeft + 1
+          const bottomLeft = topLeft + verticesPerSide
+          const bottomRight = bottomLeft + 1
+          indices[output++] = topLeft
+          indices[output++] = topRight
+          indices[output++] = bottomRight
+          indices[output++] = topLeft
+          indices[output++] = bottomRight
+          indices[output++] = bottomLeft
+        }
+      }
+      return indices
+    })
   }
 
   private buildLineIndices(indices: Uint32Array): Uint32Array {

@@ -48,4 +48,12 @@ export type MeshHiPSGpuMesh = {
   indexCount: number
   lineIndexCount: number
   indexType: number
+  quadrants?: MeshHiPSGpuQuadrant[]
+}
+
+export type MeshHiPSGpuQuadrant = {
+  indexBuffer: WebGLBuffer
+  lineIndexBuffer: WebGLBuffer
+  indexCount: number
+  lineIndexCount: number
 }
