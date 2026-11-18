@@ -16,6 +16,8 @@ export class MeshHiPSTile {
   private _ready = false
   private _loading = false
   private _failed = false
+  private _disposed = false
+  private _abortController: AbortController | null = null
   private _lastUsedAt = 0
   private _createdAt = Date.now()
 
@@ -60,6 +62,7 @@ export class MeshHiPSTile {
     wireframe: boolean,
     quadrants?: ReadonlySet<number>,
   ): boolean {
+    if (this._disposed) return false
     this.touch()
     if (!this._ready || !this._gpuMesh) return false
 
@@ -126,6 +129,10 @@ export class MeshHiPSTile {
   }
 
   dispose(): void {
+    if (this._disposed) return
+    this._disposed = true
+    this._abortController?.abort()
+    this._abortController = null
     const gl = this._webgl
     if (this._gpuMesh?.positionBuffer) gl.deleteBuffer(this._gpuMesh.positionBuffer)
     if (this._gpuMesh?.normalBuffer) gl.deleteBuffer(this._gpuMesh.normalBuffer)
@@ -138,83 +145,104 @@ export class MeshHiPSTile {
     this._gpuMesh = null
     this._ready = false
     this._loading = false
+    this._failed = false
   }
 
   private async load(): Promise<void> {
-    if (this._loading || this._ready) return
+    if (this._disposed || this._loading || this._ready) return
 
+    const controller = new AbortController()
+    this._abortController = controller
     this._loading = true
     try {
-      const resp = await fetch(this._url)
+      const resp = await fetch(this._url, { signal: controller.signal })
+      if (this._disposed) return
       if (!resp.ok) throw new Error(`HTTP ${resp.status} fetching ${this._url}`)
-      const mesh = this._url.toLowerCase().endsWith('.glb')
-        ? await GLBMeshParser.parse(await resp.arrayBuffer())
-        : OBJMeshParser.parse(await resp.text())
+
+      const data = this._url.toLowerCase().endsWith('.glb')
+        ? await resp.arrayBuffer()
+        : await resp.text()
+      if (this._disposed) return
+
+      const mesh = typeof data === 'string'
+        ? OBJMeshParser.parse(data)
+        : await GLBMeshParser.parse(data)
+      if (this._disposed) return
+
       this._gpuMesh = this.uploadMesh(mesh)
       this._ready = true
       this._failed = false
     } catch (error) {
-      console.warn('[MeshHiPSTile] load failed', this._url, error)
-      this._failed = true
-      this._ready = false
+      if (!this._disposed && !controller.signal.aborted) {
+        console.warn('[MeshHiPSTile] load failed', this._url, error)
+        this._failed = true
+        this._ready = false
+      }
     } finally {
+      if (this._abortController === controller) this._abortController = null
       this._loading = false
     }
   }
 
   private uploadMesh(mesh: MeshHiPSMesh): MeshHiPSGpuMesh {
     const gl = this._webgl
-    const positionBuffer = gl.createBuffer()
-    const normalBuffer = gl.createBuffer()
-    const indexBuffer = gl.createBuffer()
-    const lineIndexBuffer = gl.createBuffer()
-
-    if (!positionBuffer || !normalBuffer || !indexBuffer || !lineIndexBuffer) {
-      throw new Error(`Could not create MeshHiPS buffers for ${this.key}`)
+    const allocatedBuffers: WebGLBuffer[] = []
+    const createBuffer = (): WebGLBuffer => {
+      const buffer = gl.createBuffer()
+      if (!buffer) throw new Error(`Could not create MeshHiPS buffer for ${this.key}`)
+      allocatedBuffers.push(buffer)
+      return buffer
     }
-    const lineIndices = this.buildLineIndices(mesh.indices)
-    const quadrantIndices = this.buildQuadrantIndices(mesh)
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW)
+    try {
+      const positionBuffer = createBuffer()
+      const normalBuffer = createBuffer()
+      const indexBuffer = createBuffer()
+      const lineIndexBuffer = createBuffer()
+      const lineIndices = this.buildLineIndices(mesh.indices)
+      const quadrantIndices = this.buildQuadrantIndices(mesh)
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, mesh.normals, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, mesh.positions, gl.STATIC_DRAW)
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, mesh.normals, gl.STATIC_DRAW)
 
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lineIndexBuffer)
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, lineIndices, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW)
 
-    const quadrants = quadrantIndices.map((indices) => {
-      const quadrantIndexBuffer = gl.createBuffer()
-      const quadrantLineIndexBuffer = gl.createBuffer()
-      if (!quadrantIndexBuffer || !quadrantLineIndexBuffer) {
-        throw new Error(`Could not create MeshHiPS quadrant buffers for ${this.key}`)
-      }
-      const quadrantLines = this.buildLineIndices(indices)
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadrantIndexBuffer)
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW)
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadrantLineIndexBuffer)
-      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, quadrantLines, gl.STATIC_DRAW)
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, lineIndexBuffer)
+      gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, lineIndices, gl.STATIC_DRAW)
+
+      const quadrants = quadrantIndices.map((indices) => {
+        const quadrantIndexBuffer = createBuffer()
+        const quadrantLineIndexBuffer = createBuffer()
+        const quadrantLines = this.buildLineIndices(indices)
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadrantIndexBuffer)
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW)
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, quadrantLineIndexBuffer)
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, quadrantLines, gl.STATIC_DRAW)
+        return {
+          indexBuffer: quadrantIndexBuffer,
+          lineIndexBuffer: quadrantLineIndexBuffer,
+          indexCount: indices.length,
+          lineIndexCount: quadrantLines.length,
+        }
+      })
+
       return {
-        indexBuffer: quadrantIndexBuffer,
-        lineIndexBuffer: quadrantLineIndexBuffer,
-        indexCount: indices.length,
-        lineIndexCount: quadrantLines.length,
+        positionBuffer,
+        normalBuffer,
+        indexBuffer,
+        lineIndexBuffer,
+        indexCount: mesh.indices.length,
+        lineIndexCount: lineIndices.length,
+        indexType: gl.UNSIGNED_INT,
+        quadrants,
       }
-    })
-
-    return {
-      positionBuffer,
-      normalBuffer,
-      indexBuffer,
-      lineIndexBuffer,
-      indexCount: mesh.indices.length,
-      lineIndexCount: lineIndices.length,
-      indexType: gl.UNSIGNED_INT,
-      quadrants,
+    } catch (error) {
+      for (const buffer of allocatedBuffers) gl.deleteBuffer(buffer)
+      throw error
     }
   }
 
