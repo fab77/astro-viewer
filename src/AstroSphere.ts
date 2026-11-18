@@ -1096,8 +1096,8 @@ class AstroSphere {
   }
 
   activateMeshHiPS(descriptor: MeshHiPSDescriptor) {
-    this._activeDomain = "mesh";
-    this._activeMeshHiPS = new MeshHiPS(
+    // Construct the replacement before releasing the previous dataset.
+    const nextMeshHiPS = new MeshHiPS(
       descriptor.meshRadius,
       [0.0, 0.0, 0.0],
       0,
@@ -1106,6 +1106,9 @@ class AstroSphere {
       this._webgl,
       this._healpixGrid,
     );
+    this._activeMeshHiPS?.dispose();
+    this._activeMeshHiPS = nextMeshHiPS;
+    this._activeDomain = "mesh";
     this._activeBaseLayer = "meships";
   }
 

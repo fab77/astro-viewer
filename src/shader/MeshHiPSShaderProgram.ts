@@ -48,6 +48,12 @@ export class MeshHiPSShaderProgram {
     return this._shaderProgram
   }
 
+  dispose(): void {
+    if (!this._shaderProgram) return;
+    this._webgl.deleteProgram(this._shaderProgram);
+    this._shaderProgram = undefined;
+  }
+
   enableProgram(): void {
     this._webgl.useProgram(this.shaderProgram)
   }
@@ -118,6 +124,11 @@ export class MeshHiPSShaderProgram {
     gl.attachShader(this._shaderProgram as WebGLProgram, vertexShader)
     gl.attachShader(this._shaderProgram as WebGLProgram, fragmentShader)
     gl.linkProgram(this._shaderProgram as WebGLProgram)
+
+    // Shaders stay attached to the linked program until that program is deleted.
+    // Marking them for deletion here avoids leaking shader objects on disposal.
+    gl.deleteShader(vertexShader)
+    gl.deleteShader(fragmentShader)
 
     if (!gl.getProgramParameter(this._shaderProgram as WebGLProgram, gl.LINK_STATUS)) {
       throw new Error(gl.getProgramInfoLog(this._shaderProgram as WebGLProgram) || 'Could not initialise MeshHiPS shaders')

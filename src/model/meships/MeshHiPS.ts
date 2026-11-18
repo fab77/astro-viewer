@@ -22,6 +22,7 @@ export class MeshHiPS extends AbstractSkyEntity {
   private _coverageTiles: MeshHiPSTileCoord[] = [];
   private _color: [number, number, number, number];
   private _wireframe: boolean;
+  private _disposed = false;
 
   constructor(
     radius: number,
@@ -78,6 +79,7 @@ export class MeshHiPS extends AbstractSkyEntity {
   }
 
   refreshOrder(fovDeg: number | undefined): number {
+    if (this._disposed) return this._currentOrder;
     if (this._descriptor.fixedOrder) {
       this._currentOrder = this._descriptor.selectedOrder;
       return this._currentOrder;
@@ -97,6 +99,7 @@ export class MeshHiPS extends AbstractSkyEntity {
   }
 
   draw(input: SkyEntityDrawInput): void {
+    if (this._disposed) return;
     const vMatrix = input.camera.getCameraMatrix() as Float32Array;
     if (!vMatrix || !input.pMatrix) return;
 
@@ -158,6 +161,30 @@ export class MeshHiPS extends AbstractSkyEntity {
       loadingTileCount: tiles.filter((tile) => tile.loading).length,
       failedTileCount: tiles.filter((tile) => tile.failed).length,
     };
+  }
+
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+
+    for (const tile of this._tiles.values()) tile.dispose();
+    this._tiles.clear();
+    this._visibleTiles = [];
+    this._requestedTiles = [];
+    this._coverageTiles = [];
+
+    this._shaderProgram.dispose();
+
+    // AbstractSkyEntity.initGL allocates these resources for every entity.
+    const gl = this._webgl;
+    if (this.vertexTextureCoordBuffer) gl.deleteBuffer(this.vertexTextureCoordBuffer);
+    if (this.vertexPositionBuffer) gl.deleteBuffer(this.vertexPositionBuffer);
+    if (this.vertexIndexBuffer) gl.deleteBuffer(this.vertexIndexBuffer);
+    if (this.shaderProgram) gl.deleteProgram(this.shaderProgram);
+    this.vertexTextureCoordBuffer = null;
+    this.vertexPositionBuffer = null;
+    this.vertexIndexBuffer = null;
+    this.shaderProgram = null;
   }
 
   private resolveVisibleTiles(): MeshHiPSTileCoord[] {
